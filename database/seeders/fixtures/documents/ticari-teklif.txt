@@ -1,0 +1,28 @@
+500 MW KARAPINAR GES PROJESİ — TİCARİ TEKLİF DOSYASI
+Doküman No: TEK-00001 · Disiplin: Ticari · Gizlilik: Gizli
+Alıcı: (örnek) ABC Enerji Yatırım A.Ş.
+
+1. TEKLİF KAPSAMI
+Bu teklif, 500 MWp kurulu güce sahip Karapınar Güneş Enerjisi Santrali
+projesinin anahtar teslim (EPC) mühendislik, tedarik ve inşaat işlerini
+kapsar: PV panel/invertör tedariki, OG/YG şalt sahası, SCADA entegrasyonu,
+devreye alma ve 2 yıl işletme desteği.
+
+2. TEKNİK ÖZET
+- 42 adet 1,5 MW string invertör grubu (bkz. ELE-00001, OTM-00001)
+- 34,5/154 kV şebeke bağlantı trafosu
+- Tahmini yıllık üretim: 950 GWh (P50 senaryosu)
+
+3. TİCARİ ŞARTLAR (ÖZET)
+- Sabit fiyat, anahtar teslim sözleşme modeli.
+- Ödeme planı: %10 avans, ilerleme yüzdesine bağlı hakediş, %5 kabul sonrası.
+- Teslim süresi: sözleşme imza tarihinden itibaren 14 ay.
+- Performans garantisi: ilk 2 yıl için yıllık üretim taahhüdünün %95'i.
+
+4. GEÇERLİLİK
+Bu teklif, teklif tarihinden itibaren 60 gün geçerlidir; bu süre sonunda
+fiyat ve teslim takvimi yeniden değerlendirilir.
+
+5. NOT
+Bu, sistem tanıtımı amacıyla oluşturulmuş örnek bir dokümandır; gerçek bir
+ticari teklifi temsil etmez.

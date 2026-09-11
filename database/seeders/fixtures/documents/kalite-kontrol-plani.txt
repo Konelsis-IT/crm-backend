@@ -1,0 +1,30 @@
+KARAPINAR GES PROJESİ — PANEL MONTAJ KALİTE KONTROL PLANI
+Doküman No: KAL-00001 · Disiplin: Kalite · Gizlilik: Şirket İçi
+
+1. AMAÇ
+PV panel montajı, taşıyıcı konstrüksiyon ve string kablolama işlerinin proje
+şartnamesine ve üretici montaj talimatlarına uygunluğunu doğrulamak.
+
+2. KONTROL NOKTALARI
+| # | Kontrol maddesi | Kabul kriteri | Sıklık |
+|---|---|---|---|
+| 1 | Konstrüksiyon zemin ankraj torku | Üretici tork değeri ±%5 | Her sıra |
+| 2 | Panel eğim açısı | Proje açısı ±0,5° | Her masa |
+| 3 | Panel arası boşluk | 10-15 mm | Örnekleme %10 |
+| 4 | DC kablo bağlantı torku | MC4 konnektör spesifikasyonu | Her string |
+| 5 | Topraklama sürekliliği | < 0,1 Ω | Her masa |
+| 6 | Invertör devreye alma kaydı | DVR-00001'e göre kabul edilmiş | Her invertör |
+
+3. UYGUNSUZLUK YÖNETİMİ
+Kontrol sırasında tespit edilen uygunsuzluklar sahada tutanağa geçirilir,
+düzeltici faaliyet ataması yapılır ve yeniden kontrol edilmeden bir sonraki
+imalat adımına geçilmez.
+
+4. KAYIT
+Bu plandaki her satır, ilgili blok için ayrı bir kontrol formu ile
+doldurulur; formların taranmış nüshaları bu dokümanın revizyonuna ek olarak
+sisteme yüklenir.
+
+5. DURUM
+Bu doküman şu anda incelemededir; saha kalite sorumlusunun onayı
+bekleniyor.

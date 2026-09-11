@@ -1,0 +1,49 @@
+<?php
+
+return [
+    'label' => 'Stage review',
+    'plural' => 'Stage reviews',
+
+    'sections' => [
+        'main' => 'Review details',
+    ],
+
+    'fields' => [
+        'comment' => 'Comment',
+        'conditions' => 'Conditions',
+        'created_at' => 'Created at',
+        'decided_at' => 'Decided at',
+        'decision' => 'Decision',
+        'reason' => 'Reason',
+        'reviewer' => 'Reviewer',
+    ],
+
+    'relation' => [
+        'title' => 'Reviews',
+        'empty' => 'No reviews yet.',
+    ],
+
+    'actions' => [
+        'change_status' => 'Change status',
+        'set_status' => 'Set status to \":status\"',
+        'select' => 'Mark as selected',
+        'submit' => 'Submit for review',
+        'review' => 'Record review decision',
+        'publish' => 'Publish',
+        'approve' => 'Approve',
+        'change_focus' => 'Change focus',
+        'waive' => 'Grant waiver',
+        'add_evidence' => 'Add evidence',
+        'accept' => 'Accept',
+    ],
+
+    'messages' => [
+        'status_changed' => 'Status updated.',
+        'done' => 'Done.',
+    ],
+
+    'validation' => [
+        'code_taken' => 'This code is already in use.',
+        'duplicate' => 'This record already exists.',
+    ],
+];

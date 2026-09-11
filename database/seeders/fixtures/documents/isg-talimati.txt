@@ -1,0 +1,31 @@
+YÜKSEK GERİLİM SAHALARINDA İŞ SAĞLIĞI VE GÜVENLİĞİ TALİMATI
+Doküman No: ISG-00001 · Disiplin: İSG · Gizlilik: Şirket İçi
+
+1. KAPSAM
+Bu talimat, Konelsis'in yürüttüğü tüm GES/RES/HES ve şalt sahası projelerinde
+34,5 kV ve üzeri gerilim seviyelerinde çalışan personel ve alt yükleniciler
+için geçerlidir.
+
+2. GENEL KURALLAR
+- YG sahasına giriş, yalnız geçerli SEP (Sorumlu Elektrik Personeli)
+  belgesine sahip personelle ve saha izin formu (work permit) ile yapılır.
+- Çalışma öncesi LOTO (Lockout-Tagout) uygulanır; enerji kesme, topraklama ve
+  kısa devre işlemleri sırasıyla tamamlanmadan ekipmana dokunulmaz.
+- Kişisel koruyucu donanım (KKD): arc-flash sınıfına uygun kıyafet, izoleli
+  eldiven, yüz siperi ve elektrik yalıtımlı ayakkabı zorunludur.
+- Yalnız gerilim ölçümü ile "gerilimsiz" teyidi yapılmadan hiçbir ekipman
+  enerjisiz kabul edilmez.
+
+3. ACİL DURUM
+Elektrik çarpması şüphesinde önce enerji kesilir, sonra müdahale edilir.
+Saha acil durum telefonu ve en yakın sağlık kuruluşu bilgisi giriş
+kapısındaki panoda asılıdır.
+
+4. EĞİTİM
+Sahada çalışacak her personel, işe başlamadan önce bu talimat kapsamında
+oryantasyon eğitimi alır ve katılımı sistemde "okundu/kabul edildi" olarak
+teyit edilir.
+
+5. YÜRÜRLÜK
+Bu talimat, saha açılışından itibaren geçerlidir ve yıllık olarak gözden
+geçirilir.

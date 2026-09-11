@@ -1,0 +1,110 @@
+<?php
+
+return [
+    'label' => 'Business case',
+    'plural' => 'Business cases',
+
+    'sections' => [
+        'identity' => 'Customer and title',
+        'classification' => 'Classification',
+        'commercial' => 'Commercial details',
+        'ownership' => 'Owners',
+        'proposal' => 'First proposal',
+        'conversion' => 'Convert to project',
+        'site' => 'Site address',
+        'main' => 'Business case details',
+        'header' => 'Business case card',
+        'chain' => 'Workflow: Business case → Proposal → Project',
+    ],
+
+    'wizard' => [
+        'case' => 'Business case',
+        'case_description' => 'Customer, title and business details',
+        'proposal' => 'Proposal',
+        'proposal_description' => 'First proposal and its version (optional)',
+        'project' => 'Project',
+        'project_description' => 'Immediate project for a won job (optional)',
+    ],
+
+    'steps' => [
+        'no_proposal' => 'No proposal yet',
+        'proposal_summary' => ':count proposal(s) · selected: :selected',
+        'project_created' => 'Project created: :code',
+        'no_project' => 'No project yet',
+    ],
+
+    'fields' => [
+        'acquisition_stage' => 'Acquisition stage',
+        'classification' => 'Classification',
+        'country' => 'Country',
+        'created_at' => 'Created at',
+        'criticality' => 'Criticality',
+        'currency' => 'Currency',
+        'estimated_value' => 'Estimated value',
+        'legal_entity' => 'Legal entity',
+        'offer_code' => 'TKLF code',
+        'outcome' => 'Outcome',
+        'owner' => 'Owner',
+        'primary_party' => 'Primary party',
+        'project_type_code' => 'Project type',
+        'proposal_owner' => 'Proposal owner',
+        'reason' => 'Reason',
+        'short_description' => 'Short description',
+        'source_kind' => 'Source kind',
+        'title' => 'Title',
+        'create_proposal' => 'Create the first proposal now',
+        'proposal_title' => 'Proposal title',
+        'convert_now' => 'Convert to project immediately',
+        'project_name' => 'Project name',
+        'project' => 'Project',
+        'handoff_status' => 'Operations handoff status',
+        'proposal_count' => 'Proposal count',
+    ],
+
+    'relation' => [
+        'title' => 'Business cases',
+        'empty' => 'No business cases yet.',
+    ],
+
+    'actions' => [
+        'change_status' => 'Change status',
+        'set_status' => 'Set status to \":status\"',
+        'select' => 'Mark as selected',
+        'submit' => 'Submit for review',
+        'review' => 'Record review decision',
+        'publish' => 'Publish',
+        'approve' => 'Approve',
+        'change_focus' => 'Change focus',
+        'waive' => 'Grant waiver',
+        'add_evidence' => 'Add evidence',
+        'accept' => 'Accept',
+        'create' => 'Create business case',
+    ],
+
+    'messages' => [
+        'status_changed' => 'Status updated.',
+        'done' => 'Done.',
+        'created' => 'Business case created: :code',
+    ],
+
+    'help' => [
+        'chain_intro' => 'Every job starts with a single business case (TKLF code). The proposal is prepared and versioned under it; when the job is won, the project (PRJ code) is born through the accepted operations handoff. The three steps follow the same order here.',
+        'edit_intro' => 'The edit screen uses the same three steps as the creation wizard. Fields in the first step are saved with "Save"; the proposal table and the conversion apply instantly.',
+        'proposal_step' => 'When checked, the first proposal (with its TKLF number) and a draft first version are opened together with the business case, which moves to "Preparing proposal". Version details can be changed later from the proposal.',
+        'proposal_title' => 'Leave blank to use the business case title.',
+        'proposal_table' => 'Proposals are opened here; versions, documents and submission are managed in the proposal itself. The business case stage advances automatically when a version goes to review or is submitted.',
+        'project_step' => 'Only for won or direct jobs: the proposal version is approved, the business case is walked to "Won", a handoff is opened and accepted, and the project is created with a PRJ code. In the normal flow leave this step empty and use "Convert to project" once the proposal is won.',
+        'project_name' => 'Leave blank to use the business case title.',
+        'convert_requires_proposal' => 'A proposal must be created before converting to a project.',
+        'project_exists' => 'A project was created for this job (:code); it now runs step by step from the project workspace.',
+        'project_missing' => 'No project yet for this business case. When the proposal is won, "Convert to project" issues the PRJ code; the operations handoff is opened and accepted automatically. A contract can be linked later.',
+        'stage_current' => 'The business case is currently at the ":stage" stage.',
+        'stage_next' => 'Next stage: :stages.',
+        'stage_final' => 'There is no transition after this stage.',
+    ],
+
+    'validation' => [
+        'code_taken' => 'This code is already in use.',
+        'duplicate' => 'This record already exists.',
+    ],
+];

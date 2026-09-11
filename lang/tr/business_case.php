@@ -1,0 +1,110 @@
+<?php
+
+return [
+    'label' => 'İş Dosyası',
+    'plural' => 'İş Dosyaları',
+
+    'sections' => [
+        'identity' => 'Müşteri ve başlık',
+        'classification' => 'Sınıflandırma',
+        'commercial' => 'Ticari bilgiler',
+        'ownership' => 'Sorumlular',
+        'proposal' => 'İlk teklif',
+        'conversion' => 'Projeye dönüştürme',
+        'site' => 'Saha adresi',
+        'main' => 'İş bilgileri',
+        'header' => 'İş dosyası kartı',
+        'chain' => 'İş akışı: İş dosyası → Teklif → Proje',
+    ],
+
+    'wizard' => [
+        'case' => 'İş dosyası',
+        'case_description' => 'Müşteri, başlık ve iş bilgileri',
+        'proposal' => 'Teklif',
+        'proposal_description' => 'İlk teklif ve sürümü (isteğe bağlı)',
+        'project' => 'Proje',
+        'project_description' => 'Kazanılmış iş için hemen proje (isteğe bağlı)',
+    ],
+
+    'steps' => [
+        'no_proposal' => 'Henüz teklif yok',
+        'proposal_summary' => ':count teklif · seçili: :selected',
+        'project_created' => 'Proje oluşturuldu: :code',
+        'no_project' => 'Henüz proje yok',
+    ],
+
+    'fields' => [
+        'acquisition_stage' => 'İş Alım aşaması',
+        'classification' => 'Gizlilik sınıfı',
+        'country' => 'Ülke',
+        'created_at' => 'Oluşturulma',
+        'criticality' => 'Kritiklik',
+        'currency' => 'Para birimi',
+        'estimated_value' => 'Tahmini değer',
+        'legal_entity' => 'Tüzel kişilik',
+        'offer_code' => 'TKLF kodu',
+        'outcome' => 'Sonuç',
+        'owner' => 'Sahip',
+        'primary_party' => 'Müşteri (taraf)',
+        'project_type_code' => 'Proje tipi',
+        'proposal_owner' => 'Teklif sahibi',
+        'reason' => 'Gerekçe',
+        'short_description' => 'Kısa açıklama',
+        'source_kind' => 'Kaynak',
+        'title' => 'Başlık',
+        'create_proposal' => 'İlk teklifi şimdi oluştur',
+        'proposal_title' => 'Teklif başlığı',
+        'convert_now' => 'Hemen projeye dönüştür',
+        'project_name' => 'Proje adı',
+        'project' => 'Proje',
+        'handoff_status' => 'Operasyona devir durumu',
+        'proposal_count' => 'Teklif sayısı',
+    ],
+
+    'relation' => [
+        'title' => 'İş Dosyaları',
+        'empty' => 'Henüz iş dosyası yok.',
+    ],
+
+    'actions' => [
+        'change_status' => 'Durum değiştir',
+        'set_status' => 'Durumu \":status\" yap',
+        'select' => 'Seçili yap',
+        'submit' => 'İncelemeye gönder',
+        'review' => 'İnceleme kararı ver',
+        'publish' => 'Yayımla',
+        'approve' => 'Onayla',
+        'change_focus' => 'Odağı değiştir',
+        'waive' => 'Muafiyet ver',
+        'add_evidence' => 'Kanıt ekle',
+        'accept' => 'Kabul et',
+        'create' => 'İş dosyası oluştur',
+    ],
+
+    'messages' => [
+        'status_changed' => 'Durum güncellendi.',
+        'done' => 'İşlem tamamlandı.',
+        'created' => 'İş dosyası oluşturuldu: :code',
+    ],
+
+    'help' => [
+        'chain_intro' => 'Her iş tek bir iş dosyasıyla başlar (TKLF kodu). Teklif bu dosyaya bağlı hazırlanır ve sürümlenir; iş kazanılınca Operasyona devir kabulüyle proje (PRJ kodu) doğar. Üç adım burada aynı sırayla ilerler.',
+        'edit_intro' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı üç adımı kullanır. İlk adımdaki alanlar "Kaydet" ile kaydedilir; teklif tablosu ve projeye dönüşüm anında uygulanır.',
+        'proposal_step' => 'İşaretliyse iş dosyasıyla birlikte ilk teklif (TKLF numarasıyla) ve taslak ilk sürümü açılır; iş dosyası "Teklif hazırlanıyor" aşamasına geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
+        'proposal_title' => 'Boş bırakılırsa iş dosyası başlığı kullanılır.',
+        'proposal_table' => 'Teklifler burada açılır; sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir. Sürüm incelemeye alındığında veya gönderildiğinde iş dosyası aşaması kendiliğinden ilerler.',
+        'project_step' => 'Yalnız kazanılmış ya da doğrudan yapılacak işler için: teklif sürümü onaylanır, iş dosyası "Kazanıldı" aşamasına yürütülür, Operasyona devir kaydı açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Normal akışta bu adımı boş bırakın; teklif kazanıldığında "Projeye dönüştür" ile yapılır.',
+        'project_name' => 'Boş bırakılırsa iş dosyası başlığı kullanılır.',
+        'convert_requires_proposal' => 'Projeye dönüştürmek için önce teklif oluşturulmalıdır.',
+        'project_exists' => 'Bu iş için proje oluşturuldu (:code); iş artık proje çalışma alanından adım adım yürütülür.',
+        'project_missing' => 'Bu iş dosyası için henüz proje yok. Teklif kazanıldığında "Projeye dönüştür" ile PRJ kodu verilir; Operasyona devir kaydı otomatik açılıp kabul edilir. Sözleşme daha sonra bağlanabilir.',
+        'stage_current' => 'İş dosyası şu an ":stage" aşamasında.',
+        'stage_next' => 'Sıradaki aşama: :stages.',
+        'stage_final' => 'Bu aşamadan sonra geçiş yoktur.',
+    ],
+
+    'validation' => [
+        'code_taken' => 'Bu kod zaten kullanılıyor.',
+        'duplicate' => 'Bu kayıt zaten var.',
+    ],
+];
