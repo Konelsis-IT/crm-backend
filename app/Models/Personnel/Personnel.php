@@ -7,6 +7,8 @@ namespace App\Models\Personnel;
 use App\Enums\Personnel\PersonnelStatus;
 use App\Models\Activity\PersonnelActivity;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Report\Report;
+use App\Models\WorkRequest\WorkRequest;
 use App\Policies\PersonnelPolicy;
 use App\Services\Authorization\RoleResolver;
 use Database\Factories\PersonnelFactory;
@@ -34,7 +36,7 @@ use Spatie\Permission\Traits\HasRoles;
 #[Table('personnel')]
 #[Fillable([
     'full_name', 'email', 'password', 'photo_path', 'national_id', 'phone',
-    'job_title', 'org_unit_id', 'locale', 'timezone', 'status',
+    'job_title', 'title_id', 'org_unit_id', 'locale', 'timezone', 'status',
     'personnel_no', 'hired_on',
 ])]
 #[Hidden(['password', 'remember_token'])]
@@ -81,6 +83,12 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
     public function orgUnit(): BelongsTo
     {
         return $this->belongsTo(OrgUnit::class, 'org_unit_id');
+    }
+
+    /** Unvan (B26, D-88); gorevden (Position/job_title) kasitli olarak ayridir. */
+    public function title(): BelongsTo
+    {
+        return $this->belongsTo(PersonnelTitle::class, 'title_id');
     }
 
     /** Organizasyon birimi/gorev gecmisi. */
@@ -199,5 +207,23 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
             'admin' => $roles->isSystemAdmin($this) || $roles->isAuditor($this) || $roles->hasAnyRole($this),
             default => false,
         };
+    }
+
+    /** Bu kayda bagli raporlar (B10A, D-86). */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'subject_personnel_id');
+    }
+
+    /** Bu kisiye gelen talepler (B11B). */
+    public function incomingWorkRequests(): HasMany
+    {
+        return $this->hasMany(WorkRequest::class, 'target_personnel_id');
+    }
+
+    /** Bu kisinin actigi talepler (B11B). */
+    public function requestedWorkRequests(): HasMany
+    {
+        return $this->hasMany(WorkRequest::class, 'requester_personnel_id');
     }
 }
