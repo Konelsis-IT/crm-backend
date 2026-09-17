@@ -31,6 +31,18 @@ final class ContactLinks
         return $email === '' ? null : 'mailto:'.$email;
     }
 
+    /** Web sitesi baglantisi: sema yoksa https:// eklenir; bos ise null. */
+    public static function website(?string $url): ?string
+    {
+        $url = trim((string) $url);
+
+        if ($url === '') {
+            return null;
+        }
+
+        return preg_match('~^[a-z][a-z0-9+.-]*://~i', $url) === 1 ? $url : 'https://'.$url;
+    }
+
     /** WhatsApp sohbet baglantisi; numara yoksa null. */
     public static function whatsapp(?string $phone): ?string
     {

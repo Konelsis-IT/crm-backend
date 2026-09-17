@@ -12,8 +12,10 @@ use App\Query\WorkRequest\WorkRequestQueries;
 /**
  * Talep (D-84): her aktif personel talep acar; talebi taraflari gorur
  * (talep eden, muhatap kisi, muhatap birimin uyeleri/yoneticisi, sorumlu).
- * Muhatap taraf kabul eder / tamamlar / reddeder; talep eden iptal eder;
- * birim yoneticisi sorumlu atar. Kayit silinmez.
+ * Muhatap taraf kabul eder / tamamlar / reddeder; talep eden iptal eder ve
+ * onay merciini belirler (D-87); birim yoneticisi sorumlu atar. Talep eden
+ * kendi talebini hicbir zaman kabul edemez / tamamlayamaz / reddedemez.
+ * Kayit silinmez.
  */
 final class WorkRequestPolicy
 {
@@ -29,7 +31,8 @@ final class WorkRequestPolicy
         return $this->canRead($personnel)
             || $this->permits($personnel, 'view')
             || $this->isRequesterSide($personnel, $record)
-            || $this->isTargetSide($personnel, $record);
+            || $this->isTargetSide($personnel, $record)
+            || $this->isApprover($personnel, $record);
     }
 
     public function create(Personnel $personnel): bool
@@ -41,7 +44,7 @@ final class WorkRequestPolicy
     public function update(Personnel $personnel, WorkRequest $record): bool
     {
         return $record->status->value === 'open'
-            && ($this->isSystemAdmin($personnel) || $this->permits($personnel, 'update') || $this->isRequester($personnel, $record));
+            && ($this->hasFullAccess($personnel) || $this->permits($personnel, 'update') || $this->isRequester($personnel, $record));
     }
 
     public function accept(Personnel $personnel, WorkRequest $record): bool
@@ -62,7 +65,7 @@ final class WorkRequestPolicy
     public function cancel(Personnel $personnel, WorkRequest $record): bool
     {
         return $record->isOpen()
-            && ($this->isSystemAdmin($personnel) || $this->permits($personnel, 'cancel') || $this->isRequesterSide($personnel, $record));
+            && ($this->hasFullAccess($personnel) || $this->permits($personnel, 'cancel') || $this->isRequesterSide($personnel, $record));
     }
 
     public function reassign(Personnel $personnel, WorkRequest $record): bool
@@ -71,7 +74,7 @@ final class WorkRequestPolicy
             return false;
         }
 
-        return $this->isSystemAdmin($personnel)
+        return $this->hasFullAccess($personnel)
             || $this->permits($personnel, 'reassign')
             || app(WorkRequestQueries::class)->managesUnit((int) $personnel->getKey(), (int) $record->target_org_unit_id);
     }
@@ -116,9 +119,29 @@ final class WorkRequestPolicy
         return false;
     }
 
+    /**
+     * Onaya tabi yapma (D-87): talep eden tarafi, acik talepte, henuz onay
+     * mercii yokken onay merciini belirler.
+     */
+    public function designateApprover(Personnel $personnel, WorkRequest $record): bool
+    {
+        return $record->isOpen()
+            && ! (bool) $record->requires_approval
+            && ($this->hasFullAccess($personnel) || $this->permits($personnel, 'designateApprover') || $this->isRequesterSide($personnel, $record));
+    }
+
+    /**
+     * Kabul / tamamla / reddet muhatap tarafin isidir; talep eden kendi
+     * talebini yonetemez (12 Eylul 2026 netlestirmesi), sistem yoneticisi
+     * olsa bile.
+     */
     private function canHandle(Personnel $personnel, WorkRequest $record): bool
     {
-        return $this->isSystemAdmin($personnel)
+        if ($this->isRequester($personnel, $record)) {
+            return false;
+        }
+
+        return $this->hasFullAccess($personnel)
             || $this->permits($personnel, 'complete')
             || $this->isTargetSide($personnel, $record);
     }
@@ -126,6 +149,14 @@ final class WorkRequestPolicy
     private function isRequester(Personnel $personnel, WorkRequest $record): bool
     {
         return $personnel->isActive() && (int) $record->requester_personnel_id === (int) $personnel->getKey();
+    }
+
+    /** Onaya tabi talebin onay mercii (D-87) talebi gorur. */
+    private function isApprover(Personnel $personnel, WorkRequest $record): bool
+    {
+        return $personnel->isActive()
+            && $record->approver_personnel_id !== null
+            && (int) $record->approver_personnel_id === (int) $personnel->getKey();
     }
 
     private function isRequesterSide(Personnel $personnel, WorkRequest $record): bool

@@ -28,7 +28,7 @@ final class BusinessAlertPolicy
 
     public function acknowledge(Personnel $personnel, BusinessAlert $record): bool
     {
-        return $record->isOpen() && ($this->isSystemAdmin($personnel) || $this->permits($personnel, 'acknowledge') || $this->isOwner($personnel, $record));
+        return $record->isOpen() && ($this->hasFullAccess($personnel) || $this->permits($personnel, 'acknowledge') || $this->isOwner($personnel, $record));
     }
 
     public function create(Personnel $personnel): bool

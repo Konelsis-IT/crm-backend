@@ -22,10 +22,12 @@ return [
 
     'relation' => [
         'title' => 'Licenses',
+        'project_title' => 'Investor licenses',
         'empty' => 'No licenses yet.',
     ],
 
     'actions' => [
+        'open_party' => 'Open investor record',
         'change_status' => 'Change status',
         'set_status' => 'Set status to \":status\"',
         'select' => 'Mark as selected',

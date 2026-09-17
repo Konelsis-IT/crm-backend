@@ -5,37 +5,43 @@ declare(strict_types=1);
 namespace App\Services\Authorization;
 
 use App\Models\Personnel\Personnel;
-use App\Services\Platform\SchemaReadiness;
 
 /**
- * Panel erisim rolu cozumu (M03, karar D-16, D-64, D-65).
+ * Panel erisim rolu cozumu (M03, karar D-16, D-64, D-65, D-89, D-90).
  *
- * Ince taneli, ekran basina yetkiler artik Filament Shield'in urettigi
- * Policy siniflarinda dogrudan $personnel->can('Islem:Kaynak') ile
- * kontrol edilir (bkz. 13 Policy sinifi, D-65). Bu sinif yalniz "panele
- * hic girebilir mi" sorusuna bakar (Personnel::canAccessPanel()); role
- * bagli, izne bagli degildir. system_admin, Shield'in super_admin
- * ayarinda (config/filament-shield.php) tanimli oldugu icin zaten her
- * izne otomatik sahiptir (Gate::before).
+ * Roller gercek is rolleridir ve pozisyonlarla esittir (D-90): her pozisyonun
+ * kendi rolu vardir (`PositionRoleSync`), yetkileri `RoleMatrixSeeder` ile
+ * departmanina gore verilir. Teknik "system_admin" rolu kaldirildi; tam
+ * yetki iki gercek rolde toplanir:
  *
- * B05 (roles) henuz uygulanmadiysa hasRole() sorgusu var olmayan
- * tablolara gider ve SQL hatasi ureterek girisi tamamen kilitler; bu
- * yuzden B05 teyit edilmeden varsayilan-deny doner.
+ *  - Yonetici   : sirket yonetimi, tum ekranlar.
+ *  - Gelistirici: sistemi gelistiren ekip, tum ekranlar.
+ *
+ * Ince taneli, ekran basina yetkiler Filament Shield'in urettigi izin
+ * anahtarlariyla ($personnel->can('Islem:Kaynak')) kontrol edilir; bu sinif
+ * yalniz "panele hic girebilir mi" ve "tam yetkili mi" sorularina bakar.
+ * Yetki yalniz veritabanindan okunur, ortam degiskeni kullanilmaz (D-89).
  */
 final class RoleResolver
 {
-    public const SYSTEM_ADMIN = 'system_admin';
+    public const MANAGER = 'Yönetici';
 
-    public const AUDITOR = 'auditor';
+    public const DEVELOPER = 'Geliştirici';
 
-    public function isSystemAdmin(Personnel $personnel): bool
+    public const AUDITOR = 'Denetçi';
+
+    /** Tum ekranlari goren gercek roller. @var list<string> */
+    public const FULL_ACCESS = [self::MANAGER, self::DEVELOPER];
+
+    /** Tam yetkili rollerden birine sahip mi? */
+    public function hasFullAccess(Personnel $personnel): bool
     {
-        return SchemaReadiness::hasBatch('B05') && $personnel->hasRole(self::SYSTEM_ADMIN);
+        return $personnel->hasAnyRole(self::FULL_ACCESS);
     }
 
     public function isAuditor(Personnel $personnel): bool
     {
-        return SchemaReadiness::hasBatch('B05') && $personnel->hasRole(self::AUDITOR);
+        return $personnel->hasRole(self::AUDITOR);
     }
 
     /**
@@ -44,6 +50,6 @@ final class RoleResolver
      */
     public function hasAnyRole(Personnel $personnel): bool
     {
-        return SchemaReadiness::hasBatch('B05') && $personnel->roles()->exists();
+        return $personnel->roles()->exists();
     }
 }

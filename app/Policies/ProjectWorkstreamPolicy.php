@@ -29,7 +29,7 @@ final class ProjectWorkstreamPolicy
 
     public function update(Personnel $personnel, ProjectWorkstream $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'update');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function delete(Personnel $personnel, ProjectWorkstream $record): bool

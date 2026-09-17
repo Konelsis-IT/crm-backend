@@ -39,6 +39,6 @@ class UiGallery extends Cluster
     {
         $user = auth()->user();
 
-        return $user instanceof Personnel && app(RoleResolver::class)->isSystemAdmin($user);
+        return $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
     }
 }

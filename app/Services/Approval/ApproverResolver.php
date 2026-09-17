@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * - executive: ust yonetim — simdilik system_admin rolu (kurumsal
  *   "yonetim" rolu tanimlanana kadar).
  * - rbac_role: verilen role sahip aktif personel.
+ * - designated_approver: konu kaydinda secilmis onay mercii (SubjectContext).
  * - functional_area_role: fonksiyonel alanlar (SM01) kurulmadigi icin cozulmez.
  *
  * Yalniz aktif personel donulur; bulunamayinca neden (12 SS2.5) verilir.
@@ -47,8 +48,10 @@ final class ApproverResolver
             ResolverType::FunctionalManager => $this->orgUnitManager($context->orgUnitId ?? $this->requesterOrgUnitId($requesterId)),
             ResolverType::ProjectRole => $this->projectRole($context->projectId, (string) $step->role_code),
             ResolverType::FunctionalAreaRole => ResolvedApprovers::none(UnresolvedReason::NoRoleHolder),
-            ResolverType::Executive => $this->roleHolders(RoleResolver::SYSTEM_ADMIN),
+            ResolverType::Executive => $this->roleHolders(RoleResolver::MANAGER),
             ResolverType::RbacRole => $this->roleHolders((string) $step->role_code),
+            // Konu kaydinda secilen onay mercii (D-87): talep acilirken belirlenen kisi.
+            ResolverType::DesignatedApprover => $this->direct($context->designatedApproverPersonnelId),
         };
     }
 
@@ -139,7 +142,7 @@ final class ApproverResolver
 
     private function roleHolders(string $role): ResolvedApprovers
     {
-        if ($role === '' || ! SchemaReadiness::hasBatch('B05')) {
+        if ($role === '') {
             return ResolvedApprovers::none(UnresolvedReason::NoRoleHolder);
         }
 

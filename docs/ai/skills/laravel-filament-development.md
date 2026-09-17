@@ -100,6 +100,36 @@ If custom frontend code is genuinely required:
 
 A broad request to build a feature and full repository access are not frontend approval.
 
+### Date input standard (user decision, 2026-09-16)
+
+There is exactly one date input in this project. Every date-related field, on every page, modal, relation manager, wizard step, and repeater row, is:
+
+- `Filament\Forms\Components\DatePicker` — never `DateTimePicker`; time-of-day is not entered through date fields. `TimePicker` is only for time-only fields.
+- Native browser date input (`AppServiceProvider::configureFilamentDefaults()` applies `->native()`); never write `->native(false)`.
+- Display format `d.m.Y` (the provider sets it as default; `->displayFormat('d.m.Y')` is the only value ever written explicitly).
+- Short width: `FieldGrid::fields()` sizes a `DatePicker` to `FieldGrid::SHORT` (1/6 of a page section, 1/4 of an action modal); never override its column span.
+- Reference implementation: the "Tarihler ve durum" section of `app/Filament/Resources/Projects/RelationManagers/SupplyItemsRelationManager.php`.
+
+Any other date input type, format, or size is forbidden. `tools/safe-verify.php` fails on `DateTimePicker`, `->native(false)`, a non-`d.m.Y` display format, or `->seconds()` under `app/Filament`.
+### Create-and-create-another button is removed (user decision, 2026-09-16)
+
+The "Oluştur & yeni oluştur" (create & create another) button is disabled system-wide and must never come back in any resource, page, relation manager, action, or new development:
+
+- `App\Providers\AppServiceProvider::configureFilamentDefaults()` calls `CreateRecord::disableCreateAnother()` and configures every `CreateAction` with `->createAnother(false)`. Keep both lines.
+- Never write `->createAnother()`, `->createAnother(true)`, `->createAnotherAction()`, `$canCreateAnother = true`, or override `canCreateAnother()` / `getCreateAnotherFormAction()` anywhere under `app/`.
+- Do not design flows that depend on creating another record from the same form; the user saves, then opens a new form.
+- `tools/safe-verify.php` fails when any of these appear or when the provider lines are missing.
+
+### Field width standard (user decision, 2026-09-16)
+
+Do not default new form/infolist fields to a full-width row just because that is the easiest thing to write. `FieldGrid::fields()` already sizes every field by content (`FieldGrid::SHORT`/`NORMAL`/`WIDE`/`HALF`/`FULL`); only reach for `->columnSpanFull()` when the field genuinely needs the whole row (a textarea, an upload, a repeater, a long free-text field). A short field (a code, a date, a two-option select, an amount) belongs at `SHORT`/`NORMAL`, never `FULL`, so several of them share a row instead of stacking one per line.
+
+- Before writing `->columnSpanFull()` on a `TextInput`/`Select`/`Toggle`/short field, check whether it could sit at `FieldGrid::SHORT`, `NORMAL`, `WIDE`, or `HALF` next to its neighbours instead. Only genuinely wide content (textarea, rich text, file upload, repeater, a field that must stand alone) gets `FULL`.
+- Two `Section`s can sit side by side (`w-1/2` each) by giving both `->columnSpan(FieldGrid::HALF)` and putting the parent `Step`/`Schema` on `FieldGrid::COLUMNS` (a `->columns(1)` parent makes any child `columnSpan` a no-op — every child fills the single column regardless of the span you gave it).
+- A `Section` set to `FieldGrid::HALF` must also get its own inner grid narrowed, or its fields collapse into unreadably thin columns. Tailwind breakpoints react to the viewport, not to how wide the section actually renders (there is no container query here): a half-width section whose own grid still claims the full `FieldGrid::COLUMNS` (`xl` 12) sizes a `SHORT` field at `2/12` of the *page*, not of the section it is actually in, so at `xl` it renders at roughly `2/12` of half the page — a few dozen pixels, with the label text wrapping one letter per line. Give that section `FieldGrid::HALF_COLUMNS` instead (`FieldGrid::group($fields, ['my_group' => [..., 'columnSpan' => FieldGrid::HALF, 'columns' => FieldGrid::HALF_COLUMNS]])`) so its own fields size themselves against the space it actually has.
+- After changing a shared layout like this, verify what actually renders — a schema built in a scratch script only proves the `columnSpan`/`columns` values are correct, not that the page looks right. Open the page in the browser preview at a desktop width (`xl` breakpoint, e.g. 1440px) and confirm nothing is visually cramped or wrapped before calling the change done.
+- Reference implementation: `app/Filament/Support/BusinessCaseWizard.php::caseSections()` (the "İş dosyası" step: "Müşteri ve başlık" + "Sınıflandırma" side by side, "Ticari bilgiler" + "Sorumlular" side by side, each narrowed with `FieldGrid::HALF_COLUMNS`).
+
 ## Plugin and dependency boundary
 
 A maintained free Filament plugin may be recommended when it materially fits the requirement. Before recommending it, verify its Laravel/Filament compatibility, license, maintenance status, security posture, and tradeoffs from authoritative sources.

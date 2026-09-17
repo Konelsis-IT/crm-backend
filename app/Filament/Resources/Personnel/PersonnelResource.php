@@ -13,6 +13,9 @@ use App\Filament\Resources\Personnel\RelationManagers\ActivitiesRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\AssignmentHistoryRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\PersonnelCertificationsRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\PositionAssignmentsRelationManager;
+use App\Filament\Resources\WorkRequests\RelationManagers\IncomingWorkRequestsRelationManager;
+use App\Filament\Resources\WorkRequests\RelationManagers\RequestedWorkRequestsRelationManager;
+use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\ReportingHistoryRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\TrainingAttendancesRelationManager;
 use App\Filament\Resources\Personnel\Schemas\PersonnelForm;
@@ -95,6 +98,15 @@ class PersonnelResource extends Resource
         if (SchemaReadiness::hasBatch('B03')) {
             $relations[] = ReportingHistoryRelationManager::class;
             $relations[] = PositionAssignmentsRelationManager::class;
+        }
+
+        if (SchemaReadiness::hasBatch('B10A')) {
+            $relations[] = SubjectReportsRelationManager::class;
+        }
+
+        if (SchemaReadiness::hasBatch('B11B')) {
+            $relations[] = IncomingWorkRequestsRelationManager::class;
+            $relations[] = RequestedWorkRequestsRelationManager::class;
         }
 
         return $relations;

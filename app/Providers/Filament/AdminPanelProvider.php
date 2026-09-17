@@ -18,6 +18,8 @@ use App\Models\Personnel\Personnel;
 use App\Services\Notification\AudienceResolver;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
+use App\Filament\Support\ReleaseNotesSchema;
+use App\Support\ReleaseNotes;
 use App\Support\RoleLabels;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Actions\Action;
@@ -28,6 +30,8 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -70,6 +74,20 @@ class AdminPanelProvider extends PanelProvider
             // Sag ustteki kullanici menusunde giris yapan kisinin rolu ve
             // departmani; salt bilgi amacli, tiklanamaz.
             ->userMenuItems([
+                // Surum notlari (D-91): her surum ayri acilir bolum, en yenisi acik.
+                'release_notes' => Action::make('release_notes')
+                    ->label(fn (): string => __('release.actions.open'))
+                    ->icon(Heroicon::OutlinedSparkles)
+                    ->modalHeading(fn (): string => __('release.modal.heading'))
+                    ->modalDescription(fn (): string => __('release.modal.description'))
+                    ->modalWidth(Width::TwoExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(fn (): string => __('release.actions.close'))
+                    // Yayin tarihi gelmemis surumler gizli; hic yayin yoksa menude yer almaz.
+                    ->visible(fn (): bool => ReleaseNotes::published() !== [])
+                    ->schema(fn (Schema $schema): Schema => $schema
+                        ->columns(1)
+                        ->components(ReleaseNotesSchema::components())),
                 // Bildirim/duyuru gonderme (D-82): panoya gider ve pencereyi acar.
                 'send_notification' => Action::make('send_notification')
                     ->label(fn (): string => __('announcement.actions.send'))
@@ -85,8 +103,7 @@ class AdminPanelProvider extends PanelProvider
                             : '-'
                     ))
                     ->icon(Heroicon::OutlinedKey)
-                    ->disabled()
-                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B05')),
+                    ->disabled(),
                 'current_org_unit' => Action::make('current_org_unit')
                     ->label(fn (): string => __('personnel.fields.department').': '.(
                         auth()->user() instanceof Personnel
@@ -144,17 +161,13 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             // "Hoş geldin" hesap widget'i kaldirildi (11 Eylul 2026, kullanici
             // istegi); oturum kapatma zaten sag ust kullanici menusunde.
-            // Rol/izin yonetim ekrani (D-65): roller ve permissions tablosu
-            // yoksa (B05 teyit edilmeden) plugin kaydedilmez.
-            ->when(
-                SchemaReadiness::hasBatch('B05'),
-                fn (Panel $panel): Panel => $panel->plugin(
-                    FilamentShieldPlugin::make()
-                        // Roller ekrani Ayarlar kumesinde (config/filament-shield.php `cluster`);
-                        // kume icinde ayri bir alt grup basligi olusmasin, sekmelerde son sirada.
-                        ->navigationGroup(null)
-                        ->navigationSort(130),
-                ),
+            // Rol/izin yonetim ekrani (D-65): Ayarlar kumesindeki Roller ekrani.
+            ->plugin(
+                FilamentShieldPlugin::make()
+                    // Roller ekrani Ayarlar kumesinde (config/filament-shield.php `cluster`);
+                    // kume icinde ayri bir alt grup basligi olusmasin, sekmelerde son sirada.
+                    ->navigationGroup(null)
+                    ->navigationSort(130),
             )
             ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,

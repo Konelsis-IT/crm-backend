@@ -60,12 +60,15 @@ final class WorkRequestSubject implements ApprovalSubject
                 (string) $request->target_org_unit_id,
                 $request->priority->value,
                 $request->due_on?->toDateString() ?? '',
+                (string) $request->approver_personnel_id,
             ])),
             label: sprintf('%s · %s', $request->request_no, $request->title),
             url: $url,
             ownerPersonnelId: $ownerId !== null ? (int) $ownerId : null,
             orgUnitId: $request->target_org_unit_id !== null ? (int) $request->target_org_unit_id : ($request->requester_org_unit_id !== null ? (int) $request->requester_org_unit_id : null),
             projectId: $request->project_id !== null ? (int) $request->project_id : null,
+            // Onaya tabi talepte (D-87) secilen onay mercii; "designated_approver" adimi bunu kullanir.
+            designatedApproverPersonnelId: $request->requires_approval && $request->approver_personnel_id !== null ? (int) $request->approver_personnel_id : null,
         );
     }
 
@@ -76,12 +79,12 @@ final class WorkRequestSubject implements ApprovalSubject
 
     public function onApproved(ApprovalRequest $request, ?int $deciderPersonnelId, ?string $comment): void
     {
-        $this->requests()->noteApproval($this->workRequest($request), 'approval_approved', (int) $request->getKey(), $comment);
+        $this->requests()->noteApproval($this->workRequest($request), 'approval_approved', (int) $request->getKey(), $comment, $deciderPersonnelId);
     }
 
     public function onRejected(ApprovalRequest $request, ?int $deciderPersonnelId, ?string $comment): void
     {
-        $this->requests()->noteApproval($this->workRequest($request), 'approval_rejected', (int) $request->getKey(), $comment);
+        $this->requests()->noteApproval($this->workRequest($request), 'approval_rejected', (int) $request->getKey(), $comment, $deciderPersonnelId);
     }
 
     public function onClosed(ApprovalRequest $request): void

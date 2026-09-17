@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models\Acquisition;
 
+use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\ProposalStatus;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\ProposalVersion;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Personnel\Personnel;
 use App\Policies\ProposalPolicy;
+use App\Models\Report\Report;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Table('proposals')]
 #[Fillable([
     'business_case_id', 'proposal_no', 'title', 'owner_employee_id', 'current_version_id', 'status', 'is_selected',
+    'offer_status',
 ])]
 #[UsePolicy(ProposalPolicy::class)]
 class Proposal extends Model
@@ -33,6 +36,7 @@ class Proposal extends Model
     {
         return [
             'status' => ProposalStatus::class,
+            'offer_status' => OfferStatus::class,
             'is_selected' => 'boolean',
         ];
     }
@@ -55,5 +59,11 @@ class Proposal extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(ProposalVersion::class, 'proposal_id');
+    }
+
+    /** Bu kayda bagli raporlar (B10A, D-86). */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'subject_proposal_id');
     }
 }

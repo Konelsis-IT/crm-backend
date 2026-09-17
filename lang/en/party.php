@@ -4,13 +4,44 @@ return [
     'label' => 'Party',
     'plural' => 'Parties',
 
+    'tabs' => [
+        'all' => 'All',
+    ],
+
+    'fields_extra' => [
+        'role_codes' => 'Party type',
+    ],
+
+    'help' => [
+        'archive' => 'The record is not deleted but archived: it leaves the list, can be found with the "Archived" filter and restored at any time.',
+        'restore' => 'The record leaves the archive and returns to the list.',
+        'channels' => 'Company-level contact details independent of a person: email, phone, website. Person details are entered in the contacts list.',
+        'network_note' => 'Where the party is known from: referral, fair, acquaintance, internet…',
+        'role_codes' => 'Pick at least one type; a party can hold several at once (customer and supplier, for example).',
+    ],
+
+    'filters' => [
+        'archive' => 'Archive',
+        'archive_active' => 'Active records',
+        'archive_archived' => 'Archived',
+        'archive_all' => 'All',
+    ],
+
     'sections' => [
+        'side' => 'Summary',
+        'archive' => 'Archive details',
+        'channels' => 'Contact details',
         'main' => 'Party details',
         'organization' => 'Organization details',
         'person' => 'Person details',
     ],
 
     'fields' => [
+        'last_meeting' => 'Last meeting',
+        'meeting_count' => 'Meeting notes',
+        'archive_reason' => 'Archive reason',
+        'archived_at' => 'Archived at',
+        'archived_by' => 'Archived by',
         'consent_status' => 'Consent status',
         'country' => 'Country',
         'created_at' => 'Created at',
@@ -22,18 +53,24 @@ return [
         'is_public_company' => 'Public company',
         'job_title' => 'Job title',
         'legal_name' => 'Legal name',
+        'network_note' => 'Network',
         'party_kind' => 'Kind',
         'party_no' => 'Party no',
         'person_title' => 'Title',
         'reason' => 'Reason',
         'registration_no' => 'Registration no',
-        'roles' => 'Roles',
+        'roles' => 'Type',
         'sector_code' => 'Sector',
         'status' => 'Status',
         'tax_number' => 'Tax number',
         'tax_office' => 'Tax office',
         'trade_name' => 'Trade name',
+        'visit_priority' => 'Visit priority',
         'website_url' => 'Website',
+    ],
+
+    'values' => [
+        'archived' => 'Archived',
     ],
 
     'relation' => [
@@ -42,6 +79,9 @@ return [
     ],
 
     'actions' => [
+        'archive' => 'Archive',
+        'restore' => 'Restore',
+        'add_channel' => 'Add contact detail',
         'change_status' => 'Change status',
         'set_status' => 'Set status to \":status\"',
         'select' => 'Mark as selected',
@@ -56,6 +96,8 @@ return [
     ],
 
     'messages' => [
+        'archived' => 'Party archived.',
+        'restored' => 'Party restored.',
         'status_changed' => 'Status updated.',
         'done' => 'Done.',
     ],

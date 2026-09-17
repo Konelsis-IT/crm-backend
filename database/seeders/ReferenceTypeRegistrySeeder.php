@@ -64,6 +64,7 @@ class ReferenceTypeRegistrySeeder extends Seeder
             ['party_license', 'party_licenses', 'activity.subjects.party_license', 'party'],
             ['party_certificate', 'party_certificates', 'activity.subjects.party_certificate', 'party'],
             ['party_annual_review', 'party_annual_reviews', 'activity.subjects.party_annual_review', 'party'],
+            ['party_meeting_note', 'party_meeting_notes', 'activity.subjects.party_meeting_note', 'party'],
             ['business_case', 'business_cases', 'activity.subjects.business_case', 'acquisition'],
             ['business_code', 'business_codes', 'activity.subjects.business_code', 'acquisition'],
             ['opportunity', 'opportunities', 'activity.subjects.opportunity', 'acquisition'],
@@ -142,6 +143,8 @@ class ReferenceTypeRegistrySeeder extends Seeder
             ['conversation', 'conversations', 'activity.subjects.conversation', 'communication'],
             ['message', 'messages', 'activity.subjects.message', 'communication'],
             ['work_request', 'work_requests', 'activity.subjects.work_request', 'notification'],
+            ['report', 'reports', 'activity.subjects.report', 'reporting'],
+            ['report_item', 'report_items', 'activity.subjects.report_item', 'reporting'],
         ];
 
         foreach ($entries as [$targetType, $tableName, $labelKey, $domain]) {

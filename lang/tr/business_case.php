@@ -15,6 +15,8 @@ return [
         'main' => 'İş bilgileri',
         'header' => 'İş dosyası kartı',
         'chain' => 'İş akışı: İş dosyası → Teklif → Proje',
+        'summary_case' => 'İş dosyası özeti',
+        'summary_proposal' => 'Teklif özeti',
     ],
 
     'wizard' => [
@@ -43,12 +45,14 @@ return [
         'estimated_value' => 'Tahmini değer',
         'legal_entity' => 'Tüzel kişilik',
         'offer_code' => 'TKLF kodu',
+        'offer_type' => 'Teklif tipi',
         'outcome' => 'Sonuç',
-        'owner' => 'Sahip',
+        'owner' => 'Kontrol eden',
         'primary_party' => 'Müşteri (taraf)',
-        'project_type_code' => 'Proje tipi',
-        'proposal_owner' => 'Teklif sahibi',
+        'project_type_code' => 'Proje kategorisi',
+        'proposal_owner' => 'Hazırlayan',
         'reason' => 'Gerekçe',
+        'scope_types' => 'Proje tip seçimi',
         'short_description' => 'Kısa açıklama',
         'source_kind' => 'Kaynak',
         'title' => 'Başlık',
@@ -59,6 +63,16 @@ return [
         'project' => 'Proje',
         'handoff_status' => 'Operasyona devir durumu',
         'proposal_count' => 'Teklif sayısı',
+        'customer_expectations_file' => 'Firmanın beklentileri (belge)',
+        'proposal_letter_file' => 'Teklif mektubu',
+        'attach_references' => 'Referanslar belgesini ekle',
+        'attach_catalog' => 'Genel kataloğu ekle',
+    ],
+
+    'values' => [
+        'yes' => 'Evet',
+        'no' => 'Hayır',
+        'none' => 'Seçilmedi',
     ],
 
     'relation' => [
@@ -68,7 +82,7 @@ return [
 
     'actions' => [
         'change_status' => 'Durum değiştir',
-        'set_status' => 'Durumu \":status\" yap',
+        'set_status' => 'Durumu ":status" yap',
         'select' => 'Seçili yap',
         'submit' => 'İncelemeye gönder',
         'review' => 'İnceleme kararı ver',
@@ -101,6 +115,12 @@ return [
         'stage_current' => 'İş dosyası şu an ":stage" aşamasında.',
         'stage_next' => 'Sıradaki aşama: :stages.',
         'stage_final' => 'Bu aşamadan sonra geçiş yoktur.',
+        'scope_types' => 'Seçilen her tip için kendi alanları ve kapsam listesi yükleme alanı açılır.',
+        'customer_expectations_file' => 'Firmanın teklife ilişkin beklentilerini içeren belge (yüklenirse teklif dokümanlarına eklenir).',
+        'proposal_letter_file' => 'Teklif mektubu dosyası (yüklenirse teklif dokümanlarına eklenir).',
+        'attach_references' => 'Dokümanlar bölümündeki sabit Referanslar belgesi bu teklife bağlanır.',
+        'attach_catalog' => 'Dokümanlar bölümündeki sabit Genel katalog bu teklife bağlanır.',
+        'fixed_document_missing' => 'Referanslar belgesi ve Genel katalog Dokümanlar bölümüne REF / KAT türünde bir kez yüklenmelidir; yüklenince her teklifte otomatik önerilir.',
     ],
 
     'validation' => [

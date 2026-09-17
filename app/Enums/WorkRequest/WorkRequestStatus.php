@@ -11,8 +11,10 @@ use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Talep durumu (D-84): acik -> devam ediyor -> tamamlandi; her acik durumdan
- * ret ve iptal mumkun. Tamamlanan/reddedilen/iptal edilen talep degismez.
+ * Talep durumu (D-84, D-87): acik -> devam ediyor -> tamamlandi; onaya tabi
+ * talepte muhatap tamamlayinca "onay bekliyor" araya girer (B11D): onaylanirsa
+ * tamamlanir, reddedilirse devam ediyora doner. Her acik durumdan ret ve iptal
+ * mumkun. Tamamlanan/reddedilen/iptal edilen talep degismez.
  */
 enum WorkRequestStatus: string implements HasColor, HasIcon, HasLabel
 {
@@ -20,6 +22,7 @@ enum WorkRequestStatus: string implements HasColor, HasIcon, HasLabel
 
     case Open = 'open';
     case InProgress = 'in_progress';
+    case AwaitingApproval = 'awaiting_approval';
     case Done = 'done';
     case Rejected = 'rejected';
     case Cancelled = 'cancelled';
@@ -30,8 +33,9 @@ enum WorkRequestStatus: string implements HasColor, HasIcon, HasLabel
     public function allowedTargets(): array
     {
         return match ($this) {
-            self::Open => [self::InProgress, self::Done, self::Rejected, self::Cancelled],
-            self::InProgress => [self::Done, self::Rejected, self::Cancelled],
+            self::Open => [self::InProgress, self::AwaitingApproval, self::Done, self::Rejected, self::Cancelled],
+            self::InProgress => [self::AwaitingApproval, self::Done, self::Rejected, self::Cancelled],
+            self::AwaitingApproval => [self::Done, self::InProgress, self::Cancelled],
             default => [],
         };
     }
@@ -41,9 +45,16 @@ enum WorkRequestStatus: string implements HasColor, HasIcon, HasLabel
         return in_array($target, $this->allowedTargets(), true);
     }
 
+    /** Muhatabin uzerinde is olan durumlar. */
     public function isOpen(): bool
     {
         return in_array($this, [self::Open, self::InProgress], true);
+    }
+
+    /** Henuz kapanmamis durumlar (onay bekleyen dahil). */
+    public function isActive(): bool
+    {
+        return in_array($this, [self::Open, self::InProgress, self::AwaitingApproval], true);
     }
 
     public function getColor(): string
@@ -51,6 +62,7 @@ enum WorkRequestStatus: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Open => 'warning',
             self::InProgress => 'info',
+            self::AwaitingApproval => 'primary',
             self::Done => 'success',
             self::Rejected => 'danger',
             self::Cancelled => 'gray',
@@ -62,6 +74,7 @@ enum WorkRequestStatus: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Open => Heroicon::OutlinedInbox,
             self::InProgress => Heroicon::OutlinedPlayCircle,
+            self::AwaitingApproval => Heroicon::OutlinedCheckBadge,
             self::Done => Heroicon::OutlinedCheckCircle,
             self::Rejected => Heroicon::OutlinedXCircle,
             self::Cancelled => Heroicon::OutlinedNoSymbol,

@@ -20,7 +20,7 @@ use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -104,8 +104,9 @@ class TransmittalResource extends Resource
                         ->searchable()
                         ->preload()
                         ->native(false),
-                    DateTimePicker::make('issued_at')
-                        ->label(__('transmittal.fields.issued_at')),
+                    DatePicker::make('issued_at')
+                        ->label(__('transmittal.fields.issued_at'))
+                        ->displayFormat('d.m.Y'),
                     Select::make('cover_document_revision_id')
                         ->label(__('transmittal.fields.cover_revision'))
                         ->relationship('coverRevision', 'revision_code')

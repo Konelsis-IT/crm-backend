@@ -475,7 +475,7 @@ class PersonnelSampleDataSeeder extends Seeder
 
     private function executive(): ?Personnel
     {
-        $email = Personnel::normalizeEmail((string) config('konelsis.bootstrap_admin.email'));
+        $email = SystemAccountSeeder::ADMIN_EMAIL;
 
         if ($email === null) {
             return null;

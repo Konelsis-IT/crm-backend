@@ -192,8 +192,8 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
 
     /**
      * Aktif personel ve en az bir rolu olanlar paneli acabilir (M03, D-16;
-     * D-81 ile pozisyon rolleri): system_admin ve auditor disindaki roller
-     * yalniz Shield izinlerinin verdigi ekranlari gorur.
+     * D-81 ile pozisyon rolleri): Yonetici ve Gelistirici disindaki roller
+     * yalniz Shield izinlerinin verdigi ekranlari gorur (D-90).
      */
     public function canAccessPanel(Panel $panel): bool
     {
@@ -204,7 +204,7 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
         $roles = app(RoleResolver::class);
 
         return match ($panel->getId()) {
-            'admin' => $roles->isSystemAdmin($this) || $roles->isAuditor($this) || $roles->hasAnyRole($this),
+            'admin' => $roles->hasFullAccess($this) || $roles->isAuditor($this) || $roles->hasAnyRole($this),
             default => false,
         };
     }

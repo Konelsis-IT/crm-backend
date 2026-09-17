@@ -14,6 +14,7 @@ use App\Models\Concerns\HasAuditColumns;
 use App\Models\Document\Document;
 use App\Models\Document\FileObject;
 use App\Models\Party\Party;
+use App\Models\Party\PartyLicense;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\CbsNode;
 use App\Models\Project\CommercialClarification;
@@ -39,6 +40,8 @@ use App\Models\Reference\Currency;
 use App\Models\Reference\LegalEntity;
 use App\Models\Reference\SecurityClassification;
 use App\Policies\ProjectPolicy;
+use App\Models\Report\Report;
+use App\Models\WorkRequest\WorkRequest;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -99,6 +102,15 @@ class Project extends Model
     public function customerParty(): BelongsTo
     {
         return $this->belongsTo(Party::class, 'customer_party_id');
+    }
+
+    /**
+     * Musterinin (yatirimci / is veren) lisanslari (D-94): proje kartinda
+     * salt okunur gorunur; kayitlar taraf kartinda yonetilir.
+     */
+    public function customerLicenses(): HasMany
+    {
+        return $this->hasMany(PartyLicense::class, 'party_id', 'customer_party_id');
     }
 
     public function legalEntity(): BelongsTo
@@ -276,5 +288,17 @@ class Project extends Model
         }
 
         return implode(', ', $parts);
+    }
+
+    /** Bu kayda bagli raporlar (B10A, D-86). */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'subject_project_id');
+    }
+
+    /** Bu kayitla ilgili talepler (B11B). */
+    public function workRequests(): HasMany
+    {
+        return $this->hasMany(WorkRequest::class, 'project_id');
     }
 }

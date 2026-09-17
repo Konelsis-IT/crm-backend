@@ -24,6 +24,12 @@ enum ResolverType: string implements HasLabel
     case Executive = 'executive';
     case RbacRole = 'rbac_role';
 
+    /**
+     * Konu kaydinda belirlenen onay mercii (D-87, B11D): talep gibi konularda
+     * kullanici kaydi acarken onaylayacak kisiyi secer; adim bu kisiyi kullanir.
+     */
+    case DesignatedApprover = 'designated_approver';
+
     /** Hedef kayit (personel / pozisyon) secimi gerektirir mi? */
     public function needsTarget(): bool
     {

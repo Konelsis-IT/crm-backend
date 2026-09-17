@@ -10,6 +10,8 @@ use App\Enums\Acquisition\BusinessCriticality;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\BusinessSourceKind;
 use App\Enums\Acquisition\LifecycleSegment;
+use App\Enums\Acquisition\OfferType;
+use App\Models\Acquisition\BusinessCaseScope;
 use App\Models\Acquisition\BusinessCode;
 use App\Models\Acquisition\BusinessDevelopmentActivity;
 use App\Models\Acquisition\Contract;
@@ -26,6 +28,7 @@ use App\Models\Reference\Currency;
 use App\Models\Reference\LegalEntity;
 use App\Models\Reference\SecurityClassification;
 use App\Policies\BusinessCasePolicy;
+use App\Models\Report\Report;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -39,7 +42,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'sequence_no', 'legal_entity_id', 'primary_party_id', 'title', 'short_description', 'country_code',
     'currency_code', 'project_type_code', 'source_kind', 'criticality', 'lifecycle_segment', 'acquisition_stage',
     'outcome', 'outcome_reason_code', 'outcome_at', 'owner_employee_id', 'proposal_owner_employee_id',
-    'estimated_value', 'classification_id',
+    'estimated_value', 'classification_id', 'offer_type',
 ])]
 #[UsePolicy(BusinessCasePolicy::class)]
 class BusinessCase extends Model
@@ -55,6 +58,7 @@ class BusinessCase extends Model
             'sequence_no' => 'integer',
             'source_kind' => BusinessSourceKind::class,
             'criticality' => BusinessCriticality::class,
+            'offer_type' => OfferType::class,
             'lifecycle_segment' => LifecycleSegment::class,
             'acquisition_stage' => AcquisitionStage::class,
             'outcome' => BusinessOutcome::class,
@@ -101,6 +105,12 @@ class BusinessCase extends Model
     public function codes(): HasMany
     {
         return $this->hasMany(BusinessCode::class, 'business_case_id');
+    }
+
+    /** Secilen proje kapsam tipleri ve tutarlari (B29, D-101). */
+    public function scopes(): HasMany
+    {
+        return $this->hasMany(BusinessCaseScope::class, 'business_case_id');
     }
 
     /** TKLF-n kodu. */
@@ -170,5 +180,11 @@ class BusinessCase extends Model
     {
         return $this->proposals()->where('is_selected', true)->first()
             ?? $this->proposals()->orderByDesc('id')->first();
+    }
+
+    /** Bu kayda bagli raporlar (B10A, D-86). */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'subject_business_case_id');
     }
 }

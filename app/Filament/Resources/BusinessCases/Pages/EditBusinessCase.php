@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\Pages;
 
+use App\Enums\Acquisition\OfferType;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Acquisition\BusinessCase;
 use App\Services\Acquisition\BusinessCaseService;
+use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\Concerns\HasWizard;
@@ -76,6 +78,30 @@ class EditBusinessCase extends EditRecord
                 ->icon(Heroicon::OutlinedCheck)
                 ->action('save'),
             ViewAction::make(),
+        ];
+    }
+
+    /**
+     * B29: kayitli proje kapsamlari (secili tipler + tip basina sayisal
+     * alanlar) forma yuklenir; dosya alanlari bos kalir. Kaydetme sirasinda
+     * scope_types / scopes anahtarlarini BusinessCaseService isler.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        if (! SchemaReadiness::hasBatch('B29')) {
+            return $data;
+        }
+
+        /** @var BusinessCase $case */
+        $case = $this->getRecord();
+        $case->loadMissing('scopes.scopeDocument.revisions.files.fileObject');
+
+        // B29 oncesi acilmis kayitlarda teklif tipi bos; olusturma formundaki
+        // varsayilan uygulanir (kullanici kaydedince yazilir).
+        return [
+            ...$data,
+            'offer_type' => $data['offer_type'] ?? OfferType::Budgetary->value,
+            ...app(BusinessCaseWizard::class)->scopeFormData($case),
         ];
     }
 

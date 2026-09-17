@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\RelationManagers;
 
+use App\Enums\Acquisition\OfferStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\Proposal;
 use App\Services\Acquisition\ProposalService;
+use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -40,6 +42,9 @@ class ProposalsRelationManager extends RelationManager
 
     public function form(Schema $schema): Schema
     {
+        // B29: teklif durumu is dosyasindaki teklif tablosundan da girilir.
+        $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
+
         return $schema->columns(1)->components([
             Section::make(__('proposal.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
@@ -54,6 +59,13 @@ class ProposalsRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->native(false),
+                        Select::make('offer_status')
+                            ->label(__('proposal.fields.offer_status'))
+                            ->options(OfferStatus::class)
+                            ->default('to_be_submitted')
+                            ->native(false)
+                            ->visible($b29)
+                            ->dehydrated($b29),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
@@ -61,6 +73,8 @@ class ProposalsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
+
         return $table
             ->modelLabel(__('proposal.label'))
             ->heading(__('proposal.relation.title'))
@@ -74,6 +88,11 @@ class ProposalsRelationManager extends RelationManager
                 TextColumn::make('status')
                     ->label(__('proposal.fields.status'))
                     ->badge(),
+                TextColumn::make('offer_status')
+                    ->label(__('proposal.fields.offer_status'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->visible($b29),
                 IconColumn::make('is_selected')
                     ->label(__('proposal.fields.is_selected'))
                     ->boolean(),

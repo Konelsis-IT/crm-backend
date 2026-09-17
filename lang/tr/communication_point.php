@@ -11,7 +11,7 @@ return [
     'fields' => [
         'channel_type' => 'Kanal',
         'created_at' => 'Oluşturulma',
-        'is_primary' => 'Asıl',
+        'is_primary' => 'Varsayılan',
         'purpose' => 'Amaç',
         'reason' => 'Gerekçe',
         'status' => 'Durum',
@@ -24,6 +24,9 @@ return [
     ],
 
     'actions' => [
+        'copy' => 'Kopyala',
+        'copied' => 'Kopyalandı',
+        'group' => 'İletişim',
         'change_status' => 'Durum değiştir',
         'set_status' => 'Durumu \":status\" yap',
         'select' => 'Seçili yap',

@@ -23,17 +23,17 @@ final class PersonnelPolicy
 
     public function create(Personnel $personnel): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'create');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'create');
     }
 
     public function update(Personnel $personnel, Personnel $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'update');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function changeStatus(Personnel $personnel, Personnel $record): bool
     {
-        return ($this->isSystemAdmin($personnel) || $this->permits($personnel, 'changeStatus')) && ! $personnel->is($record);
+        return ($this->hasFullAccess($personnel) || $this->permits($personnel, 'changeStatus')) && ! $personnel->is($record);
     }
 
     public function delete(Personnel $personnel, Personnel $record): bool

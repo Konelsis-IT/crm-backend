@@ -15,15 +15,17 @@ use App\Models\Approval\ApprovalStep;
 use App\Models\Document\DocumentRevision;
 use App\Services\Approval\Subjects\WorkRequestSubject;
 use App\Services\Authorization\RoleResolver;
+use App\Services\WorkRequest\WorkRequestService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baslangic onay politikasi (B07): dokuman revizyonu icin tek adimli,
- * maker-checker acik standart onay. Onayci: system_admin rolu (ust
- * yonetim rolu tanimlanana kadar). Sirket kendi politikalarini Ayarlar >
- * Onay Politikalari ekranindan ekler; mevcut kayit uzerine yazilmaz.
+ * Baslangic onay politikalari (B07): dokuman revizyonu ve talep icin tek
+ * adimli, maker-checker acik standart onay (onayci: system_admin rolu, ust
+ * yonetim rolu tanimlanana kadar) ve onaya tabi talep icin (D-87, B11D)
+ * "kayitta belirlenen onay mercii" adimi. Sirket kendi politikalarini
+ * Ayarlar > Onay Politikalari ekranindan ekler; mevcut kayit uzerine yazilmaz.
  */
 class ApprovalPolicySeeder extends Seeder
 {
@@ -37,11 +39,30 @@ class ApprovalPolicySeeder extends Seeder
 
         // Talep onayi (D-84): talep sahibi ya da muhatap talebi onaya gonderir.
         $this->seedPolicy('WORK_REQUEST_STANDARD', 'Talep — standart onay', 'Request — standard approval', WorkRequestSubject::TYPE);
+
+        // Onaya tabi talep (D-87): talep acilirken secilen onay mercii onaylar;
+        // onay talebini sistem, muhatap isi tamamlayinca acar. Maker-checker
+        // kapali: talep eden ile onay mercii farkli olmasi servis kuralidir.
+        $this->seedPolicy(
+            WorkRequestService::DESIGNATED_APPROVAL_POLICY,
+            'Talep — belirlenen onay mercii',
+            'Request — designated approver',
+            WorkRequestSubject::TYPE,
+            ResolverType::DesignatedApprover,
+            null,
+            false,
+        );
     }
 
-    private function seedPolicy(string $code, string $nameTr, string $nameEn, string $subjectType): void
-    {
-
+    private function seedPolicy(
+        string $code,
+        string $nameTr,
+        string $nameEn,
+        string $subjectType,
+        ResolverType $resolver = ResolverType::RbacRole,
+        ?string $roleCode = RoleResolver::MANAGER,
+        bool $makerChecker = true,
+    ): void {
         /** @var ApprovalPolicy $policy */
         $policy = ApprovalPolicy::query()->firstOrCreate(
             ['code' => $code],
@@ -62,7 +83,7 @@ class ApprovalPolicySeeder extends Seeder
             ['approval_policy_id' => $policy->getKey(), 'version_no' => 1],
             [
                 'mode' => ApprovalMode::Sequential,
-                'requires_maker_checker' => true,
+                'requires_maker_checker' => $makerChecker,
                 'reapproval_on_change' => true,
                 'sla_minutes' => 2880,
                 'change_summary' => 'Başlangıç sürümü (B07).',
@@ -76,8 +97,8 @@ class ApprovalPolicySeeder extends Seeder
                 'name_tr' => 'Onay',
                 'name_en' => 'Approval',
                 'sequence_no' => 1,
-                'resolver_type' => ResolverType::RbacRole,
-                'role_code' => RoleResolver::SYSTEM_ADMIN,
+                'resolver_type' => $resolver,
+                'role_code' => $roleCode,
                 'decision_rule' => DecisionRule::AnyOne,
                 'is_optional' => false,
                 'allows_delegation' => true,
@@ -86,7 +107,7 @@ class ApprovalPolicySeeder extends Seeder
 
         $version->forceFill([
             'status' => PolicyVersionStatus::Published,
-            'definition_hash' => hash('sha256', $code.'|1|APPROVE|rbac_role|system_admin'),
+            'definition_hash' => hash('sha256', $code.'|1|APPROVE|'.$resolver->value.'|'.(string) $roleCode),
             'published_at' => Carbon::now('UTC'),
         ])->save();
 

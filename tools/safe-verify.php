@@ -105,6 +105,108 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
     }
 }
 
+// 3b. "Olustur & yeni olustur" dugmesi yasagi (16 Eylul 2026 kullanici karari) ---
+// Dugme AppServiceProvider'da sistem geneli kapalidir; hicbir kaynak, sayfa,
+// iliski yoneticisi veya eylem onu yeniden acamaz.
+$createAnotherPatterns = [
+    '/->createAnother\(\s*(true\s*)?\)/' => '->createAnother() (re-enables the button)',
+    '/\$canCreateAnother\s*=\s*true\b/' => '$canCreateAnother = true',
+    '/function\s+canCreateAnother\s*\(/' => 'a canCreateAnother() override',
+    '/function\s+getCreateAnotherFormAction\s*\(/' => 'a getCreateAnotherFormAction() override',
+    '/->createAnotherAction\(/' => '->createAnotherAction()',
+];
+
+foreach (phpFiles($root.'/app') as $file) {
+    $source = (string) file_get_contents($file);
+
+    foreach ($createAnotherPatterns as $pattern => $label) {
+        if (preg_match($pattern, $source) === 1) {
+            $failures[] = sprintf('Create-another guard: %s contains %s; the "create & create another" button is removed system-wide and must not be used.', relative($root, $file), $label);
+        }
+    }
+}
+
+$providerSource = (string) file_get_contents($root.'/app/Providers/AppServiceProvider.php');
+
+if (! str_contains($providerSource, 'CreateRecord::disableCreateAnother()') || ! str_contains($providerSource, '->createAnother(false)')) {
+    $failures[] = 'Create-another guard: app/Providers/AppServiceProvider.php must keep CreateRecord::disableCreateAnother() and CreateAction ->createAnother(false).';
+}
+
+// 3c. Tarih girdisi standardi (16 Eylul 2026 kullanici karari) -------------------
+// Tek tarih girdisi vardir: DatePicker, tarayici yerel girisi, gun.ay.yil, kisa
+// genislik (FieldGrid). DateTimePicker yasaktir; baska bicim/boyut/tip yoktur.
+// Denetim zincir bazlidir: `DatePicker::make(` ile baslayip ayni derinlikteki
+// ilk virgul/noktali virgul/parantezde biten metot zinciri incelenir.
+function dateInputChains(string $source): array
+{
+    $chains = [];
+    $offset = 0;
+
+    while (($pos = strpos($source, 'DatePicker::make(', $offset)) !== false) {
+        $i = $pos;
+        $depth = 0;
+        $length = strlen($source);
+        $quote = null;
+
+        for (; $i < $length; $i++) {
+            $char = $source[$i];
+
+            if ($quote !== null) {
+                if ($char === chr(92)) {
+                    $i++;
+                } elseif ($char === $quote) {
+                    $quote = null;
+                }
+
+                continue;
+            }
+
+            if ($char === "'" || $char === '"') {
+                $quote = $char;
+            } elseif ($char === '(' || $char === '[') {
+                $depth++;
+            } elseif ($char === ')' || $char === ']') {
+                if ($depth === 0) {
+                    break;
+                }
+
+                $depth--;
+            } elseif (($char === ',' || $char === ';') && $depth === 0) {
+                break;
+            }
+        }
+
+        $chains[] = substr($source, $pos, $i - $pos);
+        $offset = $i;
+    }
+
+    return $chains;
+}
+
+foreach (phpFiles($root.'/app/Filament') as $file) {
+    $source = (string) file_get_contents($file);
+
+    if (preg_match('/\bDateTimePicker\b/', $source) === 1) {
+        $failures[] = sprintf('Date input standard: %s uses DateTimePicker; every date input is a native DatePicker, d.m.Y, short width.', relative($root, $file));
+    }
+
+    foreach (dateInputChains($source) as $chain) {
+        $field = preg_match("/DatePicker::make\('([^']*)'\)/", $chain, $m) === 1 ? $m[1] : '?';
+
+        if (preg_match('/->native\(\s*false\s*\)/', $chain) === 1) {
+            $failures[] = sprintf('Date input standard: %s field [%s] uses ->native(false); date inputs are native.', relative($root, $file), $field);
+        }
+
+        if (preg_match("/->displayFormat\('(?!d\.m\.Y')[^']*'\)/", $chain) === 1) {
+            $failures[] = sprintf('Date input standard: %s field [%s] uses a display format other than d.m.Y.', relative($root, $file), $field);
+        }
+
+        if (preg_match('/->seconds\(/', $chain) === 1) {
+            $failures[] = sprintf('Date input standard: %s field [%s] uses ->seconds(); date inputs carry no time.', relative($root, $file), $field);
+        }
+    }
+}
+
 // 4. Runtime schema change scan ---------------------------------------------
 $schemaPatterns = [
     '/Artisan::call\(\s*[\'"](migrate|db:wipe|db:seed)/' => 'programmatic migration/seed call',

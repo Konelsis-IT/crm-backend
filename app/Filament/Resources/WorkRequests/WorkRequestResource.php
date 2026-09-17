@@ -11,6 +11,7 @@ use App\Filament\Resources\WorkRequests\Pages\CreateWorkRequest;
 use App\Filament\Resources\WorkRequests\Pages\EditWorkRequest;
 use App\Filament\Resources\WorkRequests\Pages\ListWorkRequests;
 use App\Filament\Resources\WorkRequests\Pages\ViewWorkRequest;
+use App\Filament\Resources\WorkRequests\RelationManagers\ActivitiesRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Personnel;
 use App\Models\WorkRequest\WorkRequest;
@@ -30,6 +31,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -103,59 +105,63 @@ class WorkRequestResource extends Resource
         $isPersonnel = fn (Get $get): bool => $get('target_kind') === RequestTargetKind::Personnel->value;
         $isUnit = fn (Get $get): bool => $get('target_kind') === RequestTargetKind::OrgUnit->value;
 
+        $half = ['default' => 1, 'md' => 2];
+
         return $schema->columns(1)->components([
-            Section::make(__('work_request.sections.requester'))
-                ->description(__('work_request.help.requester'))
-                ->icon(Heroicon::OutlinedUserCircle)
-                ->columns(FieldGrid::COLUMNS)
-                ->components(FieldGrid::fields([
-                    Placeholder::make('requester_name')
-                        ->label(__('work_request.fields.requester'))
-                        ->content(fn (?WorkRequest $record): string => $record?->requester?->full_name ?? ($user instanceof Personnel ? (string) $user->full_name : '-'))
-                        ->columnSpan(FieldGrid::NORMAL),
-                    Toggle::make('on_behalf_of_unit')
-                        ->label(__('work_request.fields.on_behalf_of_unit'))
-                        ->helperText(__('work_request.help.on_behalf_of_unit'))
-                        ->live()
-                        ->dehydrated()
-                        ->afterStateHydrated(fn (Toggle $component, ?WorkRequest $record) => $component->state($record?->requester_org_unit_id !== null))
-                        ->columnSpan(FieldGrid::NORMAL),
-                    Select::make('requester_org_unit_id')
-                        ->label(__('work_request.fields.requester_org_unit'))
-                        ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
-                        ->default($myUnitId)
-                        ->searchable()
-                        ->native(false)
-                        ->visible(fn (Get $get): bool => (bool) $get('on_behalf_of_unit'))
-                        ->required(fn (Get $get): bool => (bool) $get('on_behalf_of_unit')),
-                ])),
-            Section::make(__('work_request.sections.target'))
-                ->description(__('work_request.help.target'))
-                ->icon(Heroicon::OutlinedPaperAirplane)
-                ->columns(FieldGrid::COLUMNS)
-                ->components(FieldGrid::fields([
-                    Select::make('target_kind')
-                        ->label(__('work_request.fields.target_kind'))
-                        ->options(RequestTargetKind::options())
-                        ->default(RequestTargetKind::Personnel->value)
-                        ->required()
-                        ->live()
-                        ->native(false),
-                    Select::make('target_personnel_id')
-                        ->label(__('work_request.fields.target_personnel'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
-                        ->searchable()
-                        ->native(false)
-                        ->visible($isPersonnel)
-                        ->required($isPersonnel),
-                    Select::make('target_org_unit_id')
-                        ->label(__('work_request.fields.target_org_unit'))
-                        ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
-                        ->searchable()
-                        ->native(false)
-                        ->visible($isUnit)
-                        ->required($isUnit),
-                ])),
+            // "Kimden" ve "Kime" yan yana, yarim genislik (12 Eylul 2026 kullanici istegi).
+            Grid::make(['default' => 1, 'lg' => 2])->components([
+                Section::make(__('work_request.sections.requester'))
+                    ->description(__('work_request.help.requester'))
+                    ->icon(Heroicon::OutlinedUserCircle)
+                    ->columns($half)
+                    ->components([
+                        Placeholder::make('requester_name')
+                            ->label(__('work_request.fields.requester'))
+                            ->content(fn (?WorkRequest $record): string => $record?->requester?->full_name ?? ($user instanceof Personnel ? (string) $user->full_name : '-')),
+                        Toggle::make('on_behalf_of_unit')
+                            ->label(__('work_request.fields.on_behalf_of_unit'))
+                            ->helperText(__('work_request.help.on_behalf_of_unit'))
+                            ->live()
+                            ->dehydrated()
+                            ->afterStateHydrated(fn (Toggle $component, ?WorkRequest $record) => $component->state($record?->requester_org_unit_id !== null)),
+                        Select::make('requester_org_unit_id')
+                            ->label(__('work_request.fields.requester_org_unit'))
+                            ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
+                            ->default($myUnitId)
+                            ->searchable()
+                            ->native(false)
+                            ->visible(fn (Get $get): bool => (bool) $get('on_behalf_of_unit'))
+                            ->required(fn (Get $get): bool => (bool) $get('on_behalf_of_unit'))
+                            ->columnSpanFull(),
+                    ]),
+                Section::make(__('work_request.sections.target'))
+                    ->description(__('work_request.help.target'))
+                    ->icon(Heroicon::OutlinedPaperAirplane)
+                    ->columns($half)
+                    ->components([
+                        Select::make('target_kind')
+                            ->label(__('work_request.fields.target_kind'))
+                            ->options(RequestTargetKind::options())
+                            ->default(RequestTargetKind::Personnel->value)
+                            ->required()
+                            ->live()
+                            ->native(false),
+                        Select::make('target_personnel_id')
+                            ->label(__('work_request.fields.target_personnel'))
+                            ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                            ->searchable()
+                            ->native(false)
+                            ->visible($isPersonnel)
+                            ->required($isPersonnel),
+                        Select::make('target_org_unit_id')
+                            ->label(__('work_request.fields.target_org_unit'))
+                            ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
+                            ->searchable()
+                            ->native(false)
+                            ->visible($isUnit)
+                            ->required($isUnit),
+                    ]),
+            ]),
             Section::make(__('work_request.sections.request'))
                 ->icon(Heroicon::OutlinedDocumentText)
                 ->columns(FieldGrid::COLUMNS)
@@ -173,6 +179,20 @@ class WorkRequestResource extends Resource
                         ->native(false),
                     DatePicker::make('due_on')
                         ->label(__('work_request.fields.due_on')),
+                    // Onaya tabi talep (D-87, B11D): muhatap tamamlayinca secilen onay mercii onaylar.
+                    Toggle::make('requires_approval')
+                        ->label(__('work_request.fields.requires_approval'))
+                        ->helperText(__('work_request.help.requires_approval'))
+                        ->live()
+                        ->visible(fn (): bool => SchemaReadiness::hasBatch('B11D') && SchemaReadiness::hasBatch('B07'))
+                        ->columnSpan(FieldGrid::NORMAL),
+                    Select::make('approver_personnel_id')
+                        ->label(__('work_request.fields.approver'))
+                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->searchable()
+                        ->native(false)
+                        ->visible(fn (Get $get): bool => SchemaReadiness::hasBatch('B11D') && (bool) $get('requires_approval'))
+                        ->required(fn (Get $get): bool => (bool) $get('requires_approval')),
                     Textarea::make('description')
                         ->label(__('work_request.fields.description'))
                         ->rows(5)
@@ -283,6 +303,14 @@ class WorkRequestResource extends Resource
             ->toolbarActions([])
             ->modifyQueryUsing(fn ($query) => $query->with(['requester', 'requesterOrgUnit', 'targetPersonnel', 'targetOrgUnit', 'assignee']))
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        // Hareket gecmisi talep kartinin altinda tablo olarak (12 Eylul 2026).
+        return [
+            ActivitiesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

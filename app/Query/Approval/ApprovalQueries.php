@@ -108,6 +108,22 @@ final class ApprovalQueries
             && (bool) ($row->step?->allows_delegation ?? false));
     }
 
+    /** Koda gore aktif (yayimli surumu olan) politika kimligi; yoksa null. */
+    public function policyIdByCode(string $code): ?int
+    {
+        if (! SchemaReadiness::hasBatch('B07')) {
+            return null;
+        }
+
+        $id = ApprovalPolicy::query()
+            ->where('code', $code)
+            ->where('status', ApprovalPolicyStatus::Active->value)
+            ->whereNotNull('current_version_id')
+            ->value('id');
+
+        return $id === null ? null : (int) $id;
+    }
+
     /**
      * Konu turu icin yayimli politikalar (secim listesi).
      *
@@ -162,10 +178,6 @@ final class ApprovalQueries
      */
     public function roleOptions(): array
     {
-        if (! SchemaReadiness::hasBatch('B05')) {
-            return [];
-        }
-
         return Role::query()->orderBy('name')->pluck('name', 'name')->all();
     }
 

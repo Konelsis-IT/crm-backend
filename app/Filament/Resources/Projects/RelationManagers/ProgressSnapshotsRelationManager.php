@@ -13,7 +13,7 @@ use App\Models\Project\ProgressSnapshot;
 use App\Services\Project\ProgressSnapshotService;
 use BackedEnum;
 use Filament\Actions\CreateAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -44,8 +44,9 @@ class ProgressSnapshotsRelationManager extends RelationManager
             Section::make(__('progress_snapshot.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        DateTimePicker::make('snapshot_at')
-                            ->label(__('progress_snapshot.fields.snapshot_at')),
+                        DatePicker::make('snapshot_at')
+                            ->label(__('progress_snapshot.fields.snapshot_at'))
+                            ->displayFormat('d.m.Y'),
                         Select::make('source')
                             ->label(__('progress_snapshot.fields.source'))
                             ->options(ProgressSource::class)

@@ -24,6 +24,13 @@ enum ProposalDocumentRole: string implements HasColor, HasLabel
     case Photo = 'photo';
     case Other = 'other';
 
+    /* B29 (D-101): teklif sihirbazinin belgeleri. */
+    case CustomerExpectations = 'customer_expectations';
+    case ProposalLetter = 'proposal_letter';
+    case References = 'references';
+    case Catalog = 'catalog';
+    case ScopeList = 'scope_list';
+
     public function getColor(): string
     {
         return match ($this) {
@@ -38,6 +45,11 @@ enum ProposalDocumentRole: string implements HasColor, HasLabel
             self::Kmz => 'gray',
             self::Photo => 'gray',
             self::Other => 'gray',
+            self::CustomerExpectations => 'warning',
+            self::ProposalLetter => 'primary',
+            self::References => 'info',
+            self::Catalog => 'info',
+            self::ScopeList => 'success',
         };
     }
 }

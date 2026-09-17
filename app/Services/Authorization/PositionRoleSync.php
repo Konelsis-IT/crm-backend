@@ -10,8 +10,8 @@ use App\Models\Personnel\Position;
 use App\Models\Personnel\PositionAssignment;
 use App\Services\Audit\ActivityInput;
 use App\Services\Audit\ActivityRecorder;
-use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\TransactionRunner;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Pozisyon rolleri (D-81, 11 Eylul 2026): her pozisyonun kendi rolu vardir.
@@ -30,14 +30,17 @@ final class PositionRoleSync
 {
     public const GUARD = 'web';
 
+    private ?bool $ready = null;
+
     public function __construct(
         private readonly TransactionRunner $transactions,
         private readonly ActivityRecorder $activities,
     ) {}
 
+    /** Pozisyon-rol bagi kolonu var mi? Ortam degiskenine degil semaya bakar (D-89). */
     public function isReady(): bool
     {
-        return SchemaReadiness::hasBatch('B03A') && SchemaReadiness::hasBatch('B05');
+        return $this->ready ??= Schema::hasColumn('positions', 'role_id');
     }
 
     /** Pozisyonun rolunu var eder (ad = pozisyon basligi) ve baglar. */

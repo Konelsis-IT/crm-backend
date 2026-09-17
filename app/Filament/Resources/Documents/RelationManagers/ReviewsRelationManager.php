@@ -13,7 +13,7 @@ use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -76,8 +76,9 @@ class ReviewsRelationManager extends RelationManager
                         ->default(DocumentReviewDecision::Approved->value)
                         ->required()
                         ->native(false),
-                    DateTimePicker::make('decided_at')
+                    DatePicker::make('decided_at')
                         ->label(__('document_review.fields.decided_at'))
+                        ->displayFormat('d.m.Y')
                         ->default(fn (): Carbon => Carbon::now())
                         ->required(),
                     Textarea::make('comment')

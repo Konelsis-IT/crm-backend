@@ -33,7 +33,7 @@ final class DelegationPolicy
 
     public function update(Personnel $personnel, Delegation $record): bool
     {
-        return $this->isSystemAdmin($personnel) || (int) $record->grantor_personnel_id === (int) $personnel->getKey();
+        return $this->hasFullAccess($personnel) || (int) $record->grantor_personnel_id === (int) $personnel->getKey();
     }
 
     public function delete(Personnel $personnel, Delegation $record): bool

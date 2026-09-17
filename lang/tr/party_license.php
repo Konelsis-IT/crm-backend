@@ -22,7 +22,12 @@ return [
 
     'relation' => [
         'title' => 'Lisanslar',
+        'project_title' => 'Müşteri lisansları',
         'empty' => 'Henüz lisans yok.',
+    ],
+
+    'actions' => [
+        'open_party' => 'Taraf kartını aç',
     ],
 
     'actions' => [

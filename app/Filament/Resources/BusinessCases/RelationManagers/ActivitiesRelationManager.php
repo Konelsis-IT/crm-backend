@@ -14,7 +14,7 @@ use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -55,8 +55,9 @@ class ActivitiesRelationManager extends RelationManager
                             ->label(__('bd_activity.fields.subject'))
                             ->required()
                             ->maxLength(255),
-                        DateTimePicker::make('occurred_at')
+                        DatePicker::make('occurred_at')
                             ->label(__('bd_activity.fields.occurred_at'))
+                            ->displayFormat('d.m.Y')
                             ->required(),
                         TextInput::make('location')
                             ->label(__('bd_activity.fields.location'))
@@ -79,8 +80,9 @@ class ActivitiesRelationManager extends RelationManager
                         Textarea::make('next_action')
                             ->label(__('bd_activity.fields.next_action'))
                             ->columnSpanFull(),
-                        DateTimePicker::make('next_action_due_at')
-                            ->label(__('bd_activity.fields.next_action_due_at')),
+                        DatePicker::make('next_action_due_at')
+                            ->label(__('bd_activity.fields.next_action_due_at'))
+                            ->displayFormat('d.m.Y'),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

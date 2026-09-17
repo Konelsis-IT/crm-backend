@@ -28,6 +28,16 @@ class CreateWorkRequest extends CreateRecord
 
     public const QUERY_SOURCE_MESSAGE = 'kaynak_mesaj';
 
+    public const QUERY_TARGET_UNIT = 'hedef_departman';
+
+    /** Sorgu parametresi => form alani (ilgili kayit sayfalarindan on doldurma). */
+    public const QUERY_RELATED = [
+        'hedef_personel' => 'target_personnel_id',
+        'proje' => 'project_id',
+        'musteri' => 'customer_party_id',
+        'bilesen' => 'component_definition_id',
+    ];
+
     protected function fillForm(): void
     {
         $this->callHook('beforeFill');
@@ -64,6 +74,21 @@ class CreateWorkRequest extends CreateRecord
     private function prefill(): array
     {
         $data = ['target_kind' => RequestTargetKind::Personnel->value];
+
+        // Ilgili kaydin sayfasindan "Talep ac" (D-87): muhatap ya da ilgili kayit on secili gelir.
+        foreach (self::QUERY_RELATED as $param => $column) {
+            $value = request()->query($param);
+
+            if (is_numeric($value)) {
+                $data[$column] = (int) $value;
+            }
+        }
+
+        if (is_numeric($unitId = request()->query(self::QUERY_TARGET_UNIT))) {
+            $data['target_kind'] = RequestTargetKind::OrgUnit->value;
+            $data['target_org_unit_id'] = (int) $unitId;
+        }
+
         $messageId = request()->query(self::QUERY_SOURCE_MESSAGE);
 
         if (! is_numeric($messageId) || ! SchemaReadiness::hasBatch('B12A')) {

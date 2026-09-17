@@ -9,17 +9,25 @@ use App\Enums\WorkRequest\WorkRequestPriority;
 use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Exceptions\ActorRequiredException;
 use App\Exceptions\InvalidTransitionException;
+use App\Exceptions\WorkRequest\ApprovalPolicyMissingException;
+use App\Exceptions\WorkRequest\ApproverInvalidException;
+use App\Exceptions\WorkRequest\ApproverRequiredException;
 use App\Exceptions\WorkRequest\NoteRequiredException;
+use App\Exceptions\WorkRequest\RequesterCannotHandleException;
 use App\Exceptions\WorkRequest\SelfTargetException;
 use App\Exceptions\WorkRequest\TargetRequiredException;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Models\Personnel\Personnel;
 use App\Models\WorkRequest\WorkRequest;
+use App\Query\Approval\ApprovalQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Services\AbstractService;
+use App\Services\Approval\ApprovalRequestService;
+use App\Services\Approval\Subjects\WorkRequestSubject;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Notification\PanelNotifier;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Filament\Actions\Action;
@@ -30,16 +38,22 @@ use Throwable;
 
 /**
  * Talep yasam dongusu (D-84): olustur -> kabul et -> tamamla; ret ve iptal.
- * Her adim Personel Hareketleri'ne yazilir ve karsi tarafa zil bildirimi gider.
+ * Onaya tabi talepte (D-87, B11D) tamamlama "onay bekliyor"a gecer ve secilen
+ * onay mercii icin onay motoru talebi acilir; onaylaninca kapanir, reddedilirse
+ * muhataba doner. Her adim Personel Hareketleri'ne yazilir ve karsi tarafa
+ * zil bildirimi gider.
  */
 final class WorkRequestService extends AbstractService
 {
+    /** Onaya tabi talebin kullandigi politika kodu (ApprovalPolicySeeder). */
+    public const DESIGNATED_APPROVAL_POLICY = 'WORK_REQUEST_DESIGNATED';
+
     protected string $orderBy = 'created_at';
 
     protected string $orderDirection = 'desc';
 
     /** @var list<string> */
-    protected array $with = ['requester', 'requesterOrgUnit', 'targetPersonnel', 'targetOrgUnit', 'assignee'];
+    protected array $with = ['requester', 'requesterOrgUnit', 'targetPersonnel', 'targetOrgUnit', 'assignee', 'approver'];
 
     public function __construct(
         TransactionRunner $transactions,
@@ -47,6 +61,7 @@ final class WorkRequestService extends AbstractService
         ActivityRecorder $activities,
         private readonly ActorContext $actor,
         private readonly WorkRequestQueries $queries,
+        private readonly ApprovalQueries $approvals,
         private readonly PanelNotifier $notifier,
     ) {
         parent::__construct($transactions, $lock, $activities);
@@ -60,6 +75,7 @@ final class WorkRequestService extends AbstractService
         $me = $this->actorId();
         $data = $this->normalize($data);
         $this->assertTarget($data, $me);
+        $this->assertApprover($data, $me);
 
         return $this->transactions->run(function () use ($data, $me): WorkRequest {
             /** @var WorkRequest $request */
@@ -93,7 +109,9 @@ final class WorkRequestService extends AbstractService
         }
 
         $data = $this->normalize($data);
-        $this->assertTarget([...$request->only(['target_kind', 'target_personnel_id', 'target_org_unit_id']), ...$data], (int) $request->requester_personnel_id);
+        $merged = [...$request->only(['target_kind', 'target_personnel_id', 'target_org_unit_id', 'requires_approval', 'approver_personnel_id']), ...$data];
+        $this->assertTarget($merged, (int) $request->requester_personnel_id);
+        $this->assertApprover($merged, (int) $request->requester_personnel_id);
 
         unset($data['requester_personnel_id'], $data['status'], $data['request_no']);
 
@@ -103,6 +121,7 @@ final class WorkRequestService extends AbstractService
     public function accept(Model|int|string $record): WorkRequest
     {
         return $this->transitionTo($record, WorkRequestStatus::InProgress, 'accepted', function (WorkRequest $request): void {
+            $this->assertNotRequester($request);
             $request->fill([
                 'accepted_at' => Carbon::now('UTC'),
                 'assignee_personnel_id' => $request->assignee_personnel_id ?? ($request->targetsOrgUnit() ? $this->actorId() : $request->target_personnel_id),
@@ -110,18 +129,56 @@ final class WorkRequestService extends AbstractService
         }, fn (WorkRequest $request) => $this->requesterRecipients($request));
     }
 
+    /**
+     * Muhatap isi tamamlar. Onaya tabi talepte (D-87) talep kapanmaz; "onay
+     * bekliyor"a gecer ve secilen onay mercii icin onay talebi acilir.
+     */
     public function complete(Model|int|string $record, ?string $note = null): WorkRequest
     {
-        return $this->transitionTo($record, WorkRequestStatus::Done, 'completed', function (WorkRequest $request) use ($note): void {
-            $now = Carbon::now('UTC');
-            $request->fill([
-                'completed_at' => $now,
-                'closed_at' => $now,
-                'closed_by_personnel_id' => $this->actorId(),
-                'closing_note' => filled($note) ? trim((string) $note) : null,
-                'assignee_personnel_id' => $request->assignee_personnel_id ?? $this->actorId(),
-            ]);
-        }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+        /** @var WorkRequest $current */
+        $current = $this->show($record);
+        $this->assertNotRequester($current);
+
+        if (! SchemaReadiness::hasBatch('B11D') || ! $current->needsApproval()) {
+            return $this->transitionTo($record, WorkRequestStatus::Done, 'completed', function (WorkRequest $request) use ($note): void {
+                $now = Carbon::now('UTC');
+                $request->fill([
+                    'completed_at' => $now,
+                    'closed_at' => $now,
+                    'closed_by_personnel_id' => $this->actorId(),
+                    'closing_note' => filled($note) ? trim((string) $note) : null,
+                    'assignee_personnel_id' => $request->assignee_personnel_id ?? $this->actorId(),
+                ]);
+            }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+        }
+
+        $policyId = $this->approvals->policyIdByCode(self::DESIGNATED_APPROVAL_POLICY);
+
+        if ($policyId === null) {
+            throw ApprovalPolicyMissingException::make(['policy' => self::DESIGNATED_APPROVAL_POLICY]);
+        }
+
+        return $this->transactions->run(function () use ($record, $note, $policyId): WorkRequest {
+            $request = $this->transitionTo($record, WorkRequestStatus::AwaitingApproval, 'awaiting_approval', function (WorkRequest $request) use ($note): void {
+                $request->fill([
+                    'completed_at' => Carbon::now('UTC'),
+                    'closing_note' => filled($note) ? trim((string) $note) : null,
+                    'assignee_personnel_id' => $request->assignee_personnel_id ?? $this->actorId(),
+                ]);
+            }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+
+            $approval = app(ApprovalRequestService::class)->request(
+                WorkRequestSubject::TYPE,
+                (int) $request->getKey(),
+                null,
+                $policyId,
+                $request->closing_note,
+            );
+
+            $request->forceFill(['approval_request_id' => (int) $approval->getKey()])->save();
+
+            return $request->refresh()->load($this->with);
+        });
     }
 
     public function reject(Model|int|string $record, ?string $note): WorkRequest
@@ -131,6 +188,7 @@ final class WorkRequestService extends AbstractService
         }
 
         return $this->transitionTo($record, WorkRequestStatus::Rejected, 'rejected', function (WorkRequest $request) use ($note): void {
+            $this->assertNotRequester($request);
             $request->fill([
                 'closed_at' => Carbon::now('UTC'),
                 'closed_by_personnel_id' => $this->actorId(),
@@ -148,6 +206,48 @@ final class WorkRequestService extends AbstractService
                 'closing_note' => filled($note) ? trim((string) $note) : null,
             ]);
         }, fn (WorkRequest $request) => $this->targetRecipients($request));
+    }
+
+    /**
+     * Onaya tabi yapma (D-87): acik talepte onay merciini belirler. Onay
+     * talebi muhatap isi tamamladiginda acilir; onay mercii bilgilendirilir.
+     */
+    public function designateApprover(Model|int|string $record, int $approverId): WorkRequest
+    {
+        if (! SchemaReadiness::hasBatch('B11D')) {
+            throw InvalidTransitionException::make();
+        }
+
+        return $this->transactions->run(function () use ($record, $approverId): WorkRequest {
+            /** @var WorkRequest $request */
+            $request = $this->lockForUpdate($record);
+
+            if (! $request->isOpen() || $request->requires_approval) {
+                throw InvalidTransitionException::make();
+            }
+
+            $this->assertApprover([
+                'requires_approval' => true,
+                'approver_personnel_id' => $approverId,
+                'target_personnel_id' => $request->target_personnel_id,
+            ], (int) $request->requester_personnel_id);
+
+            $request->fill(['requires_approval' => true, 'approver_personnel_id' => $approverId])->save();
+            $request->load($this->with);
+
+            $this->recordActivity($request, 'approver_designated', [
+                'talep_no' => $request->request_no,
+                'onay_mercii' => $request->approver?->full_name,
+            ]);
+
+            $approver = $request->approver;
+
+            if ($approver instanceof Personnel) {
+                $this->notify($request, collect([$approver]), 'approver_designated');
+            }
+
+            return $request;
+        });
     }
 
     /** Birime gelen talepte sorumlu kisiyi belirler / degistirir. */
@@ -180,26 +280,67 @@ final class WorkRequestService extends AbstractService
     }
 
     /**
-     * Onay motoru sonucu (WorkRequestSubject): hareket kaydi ve talep edene
-     * bildirim. Talebin durumu degismez; onay, muhatabin isi yapmasi icin
-     * yetki verir.
+     * Onay motoru sonucu (WorkRequestSubject): hareket kaydi ve taraflara
+     * bildirim. Elle onaya gonderilen talepte durum degismez; onay, muhatabin
+     * isi yapmasi icin yetki verir. Onaya tabi talepte (D-87) "onay bekliyor"
+     * durumundaki talep onaylaninca kapanir, reddedilir / kapanirsa muhataba
+     * geri doner.
      */
-    public function noteApproval(?WorkRequest $request, string $event, int $approvalRequestId, ?string $comment = null): void
+    public function noteApproval(?WorkRequest $request, string $event, int $approvalRequestId, ?string $comment = null, ?int $deciderPersonnelId = null): void
     {
         if ($request === null) {
             return;
         }
 
-        $this->transactions->run(function () use ($request, $event, $approvalRequestId, $comment): void {
+        $this->transactions->run(function () use ($request, $event, $approvalRequestId, $comment, $deciderPersonnelId): void {
             $this->recordActivity($request, $event, array_filter([
                 'talep_no' => $request->request_no,
                 'onay_talebi' => $approvalRequestId,
                 'yorum' => $comment,
             ], fn ($value): bool => $value !== null && $value !== ''));
 
-            if (in_array($event, ['approval_approved', 'approval_rejected'], true)) {
+            $notifyEvent = in_array($event, ['approval_approved', 'approval_rejected'], true) ? $event : null;
+
+            if (SchemaReadiness::hasBatch('B11D')) {
+                /** @var WorkRequest $locked */
+                $locked = $this->lockForUpdate($request);
+
+                if ($locked->status === WorkRequestStatus::AwaitingApproval && (int) $locked->approval_request_id === $approvalRequestId) {
+                    if ($event === 'approval_approved') {
+                        $now = Carbon::now('UTC');
+                        $locked->fill([
+                            'status' => WorkRequestStatus::Done->value,
+                            'closed_at' => $now,
+                            'closed_by_personnel_id' => $deciderPersonnelId ?? $this->actor->personnelId(),
+                        ])->save();
+
+                        $this->recordActivity($locked, 'completed', [
+                            'durum' => ['onceki' => WorkRequestStatus::AwaitingApproval->getLabel(), 'yeni' => WorkRequestStatus::Done->getLabel()],
+                            'talep_no' => $locked->request_no,
+                        ]);
+                    } elseif (in_array($event, ['approval_rejected', 'approval_closed'], true)) {
+                        $locked->fill([
+                            'status' => WorkRequestStatus::InProgress->value,
+                            'completed_at' => null,
+                            'approval_request_id' => null,
+                        ])->save();
+
+                        $this->recordActivity($locked, 'approval_returned', array_filter([
+                            'durum' => ['onceki' => WorkRequestStatus::AwaitingApproval->getLabel(), 'yeni' => WorkRequestStatus::InProgress->getLabel()],
+                            'talep_no' => $locked->request_no,
+                            'gerekce' => $comment,
+                        ], fn ($value): bool => $value !== null && $value !== ''));
+
+                        $notifyEvent = 'approval_returned';
+                    }
+
+                    $request = $locked;
+                }
+            }
+
+            if ($notifyEvent !== null) {
                 $request->load($this->with);
-                $this->notify($request, $this->requesterRecipients($request)->merge($this->targetRecipients($request)), $event);
+                $this->notify($request, $this->requesterRecipients($request)->merge($this->targetRecipients($request)), $notifyEvent);
             }
         });
     }
@@ -296,7 +437,56 @@ final class WorkRequestService extends AbstractService
             $data['title'] = trim((string) $data['title']);
         }
 
+        // Onaya tabi talep (D-87): B11D uygulanmadan bu alanlar yazilmaz.
+        unset($data['approval_request_id']);
+
+        if (! SchemaReadiness::hasBatch('B11D')) {
+            unset($data['requires_approval'], $data['approver_personnel_id']);
+        } else {
+            if (array_key_exists('requires_approval', $data)) {
+                $data['requires_approval'] = (bool) $data['requires_approval'];
+
+                if (! $data['requires_approval']) {
+                    $data['approver_personnel_id'] = null;
+                }
+            }
+
+            if (array_key_exists('approver_personnel_id', $data)) {
+                $data['approver_personnel_id'] = filled($data['approver_personnel_id']) ? (int) $data['approver_personnel_id'] : null;
+            }
+        }
+
         return $data;
+    }
+
+    /** Talep eden kendi talebini kabul edemez / tamamlayamaz / reddedemez. */
+    private function assertNotRequester(WorkRequest $request): void
+    {
+        if ((int) $request->requester_personnel_id === $this->actorId()) {
+            throw RequesterCannotHandleException::make();
+        }
+    }
+
+    /**
+     * Onaya tabi talepte onay mercii zorunludur; talep eden ya da muhatap kisi olamaz.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertApprover(array $data, int $requesterId): void
+    {
+        if (! SchemaReadiness::hasBatch('B11D') || ! (bool) ($data['requires_approval'] ?? false)) {
+            return;
+        }
+
+        $approverId = (int) ($data['approver_personnel_id'] ?? 0);
+
+        if ($approverId <= 0) {
+            throw ApproverRequiredException::make();
+        }
+
+        if ($approverId === $requesterId || $approverId === (int) ($data['target_personnel_id'] ?? 0)) {
+            throw ApproverInvalidException::make();
+        }
     }
 
     /**
@@ -400,6 +590,8 @@ final class WorkRequestService extends AbstractService
                 'completed', 'approval_approved' => Heroicon::OutlinedCheckCircle,
                 'rejected', 'approval_rejected' => Heroicon::OutlinedXCircle,
                 'cancelled' => Heroicon::OutlinedNoSymbol,
+                'awaiting_approval', 'approver_designated' => Heroicon::OutlinedCheckBadge,
+                'approval_returned' => Heroicon::OutlinedArrowUturnLeft,
                 default => Heroicon::OutlinedInboxArrowDown,
             },
             match ($event) {

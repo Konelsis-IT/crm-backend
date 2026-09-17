@@ -15,7 +15,7 @@ use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -40,6 +40,10 @@ class RolesRelationManager extends RelationManager
 
     public function form(Schema $schema): Schema
     {
+        // Pencere tek bolumludur; bolum basligi geri getirildi (16 Eylul 2026
+        // kullanici karari: duz pencere begenilmedi). Yillik degerlendirme
+        // penceresiyle ayni sarmalayici kullanilir. Tarihler gun bazlidir ve
+        // tedarik kalemi penceresiyle ayni boyut/tiptedir.
         return $schema->columns(1)->components([
             Section::make(__('party_role.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
@@ -62,10 +66,12 @@ class RolesRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->native(false),
-                        DateTimePicker::make('valid_from')
-                            ->label(__('party_role.fields.valid_from')),
-                        DateTimePicker::make('valid_until')
-                            ->label(__('party_role.fields.valid_until')),
+                        DatePicker::make('valid_from')
+                            ->label(__('party_role.fields.valid_from'))
+                            ->displayFormat('d.m.Y'),
+                        DatePicker::make('valid_until')
+                            ->label(__('party_role.fields.valid_until'))
+                            ->displayFormat('d.m.Y'),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
@@ -86,11 +92,11 @@ class RolesRelationManager extends RelationManager
                     ->badge(),
                 TextColumn::make('valid_from')
                     ->label(__('party_role.fields.valid_from'))
-                    ->dateTime('d.m.Y H:i')
+                    ->date('d.m.Y')
                     ->sortable(),
                 TextColumn::make('valid_until')
                     ->label(__('party_role.fields.valid_until'))
-                    ->dateTime('d.m.Y H:i')
+                    ->date('d.m.Y')
                     ->placeholder('-'),
                 TextColumn::make('approver.full_name')
                     ->label(__('party_role.fields.approver'))

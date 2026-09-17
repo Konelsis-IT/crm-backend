@@ -24,7 +24,7 @@ final class StageReviewPolicy
 
     public function create(Personnel $personnel): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'create');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'create');
     }
 
     public function update(Personnel $personnel, StageReview $record): bool

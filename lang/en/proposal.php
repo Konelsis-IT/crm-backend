@@ -13,6 +13,7 @@ return [
         'created_at' => 'Created at',
         'current_version' => 'Current version',
         'is_selected' => 'Selected',
+        'offer_status' => 'Offer status',
         'owner' => 'Owner',
         'proposal_no' => 'Proposal no',
         'reason' => 'Reason',
@@ -27,7 +28,7 @@ return [
 
     'actions' => [
         'change_status' => 'Change status',
-        'set_status' => 'Set status to \":status\"',
+        'set_status' => 'Set status to ":status"',
         'select' => 'Mark as selected',
         'submit' => 'Submit for review',
         'review' => 'Record review decision',

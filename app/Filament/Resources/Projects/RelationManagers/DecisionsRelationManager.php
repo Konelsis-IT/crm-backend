@@ -12,7 +12,7 @@ use App\Models\Project\ProjectDecision;
 use App\Services\Project\ProjectDecisionService;
 use BackedEnum;
 use Filament\Actions\CreateAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -57,8 +57,9 @@ class DecisionsRelationManager extends RelationManager
                             ->default(DecisionScope::Other->value)
                             ->required()
                             ->native(false),
-                        DateTimePicker::make('decided_at')
-                            ->label(__('project_decision.fields.decided_at')),
+                        DatePicker::make('decided_at')
+                            ->label(__('project_decision.fields.decided_at'))
+                            ->displayFormat('d.m.Y'),
                         Select::make('document_revision_id')
                             ->label(__('project_decision.fields.document_revision'))
                             ->relationship('documentRevision', 'title')

@@ -6,7 +6,6 @@ namespace App\Filament\Support;
 
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -40,6 +39,20 @@ final class FieldGrid
 {
     /** Bolum / adim / sekme izgarasi. */
     public const COLUMNS = ['default' => 1, 'md' => 6, 'xl' => 12];
+
+    /**
+     * Yarim genislikte (columnSpan HALF) yan yana duran iki bolumun KENDI ic
+     * izgarasi. Tailwind kesme noktalari goruntu genisligine gore tetiklenir,
+     * bolumun kendi genisligine gore degil (container query yok): bolum
+     * yalniz xl kesme noktasinda gercekten yarim genislige duser (md'de hala
+     * tam satirdir, bkz. COLUMNS/HALF), bu yuzden md burada COLUMNS ile
+     * ayni kalir. xl ic alanlari COLUMNS'un tam 12 sutununa gore
+     * boyutlandirirsa (ornegin SHORT=2/12) alanlar ezilip metin harf harf
+     * sarar (16 Eylul 2026 tarihinde gozlemlendi ve duzeltildi); 8 sutun
+     * dort kisa alanin (SHORT=2) tek satira sigmasi icin denenip
+     * dogrulanmis degerdir.
+     */
+    public const HALF_COLUMNS = ['default' => 1, 'md' => 6, 'xl' => 6];
 
     /** Eylem modali izgarasi. */
     public const MODAL_COLUMNS = ['default' => 1, 'md' => 4];
@@ -111,7 +124,7 @@ final class FieldGrid
      * bolumlerin disina (koke) gider. Bos kalan bolum uretilmez.
      *
      * @param  array<int, mixed>  $components
-     * @param  array<string, array{label: string, fields: list<string>, icon?: mixed, description?: string|null, visible?: mixed}>  $groups
+     * @param  array<string, array{label: string, fields: list<string>, icon?: mixed, description?: string|null, visible?: mixed, columnSpan?: mixed, columns?: mixed}>  $groups
      * @return array<int, mixed>
      */
     public static function group(array $components, array $groups): array
@@ -168,7 +181,7 @@ final class FieldGrid
             }
 
             $section = Section::make($group['label'])
-                ->columns(self::COLUMNS)
+                ->columns($group['columns'] ?? self::COLUMNS)
                 ->components(self::fields($picked));
 
             if (($group['icon'] ?? null) !== null) {
@@ -181,6 +194,10 @@ final class FieldGrid
 
             if (array_key_exists('visible', $group)) {
                 $section->visible($group['visible']);
+            }
+
+            if (array_key_exists('columnSpan', $group)) {
+                $section->columnSpan($group['columnSpan']);
             }
 
             $sections[] = $section;
@@ -249,7 +266,8 @@ final class FieldGrid
             return self::SIZE_FULL;
         }
 
-        // Filament'ta DatePicker ve TimePicker, DateTimePicker'dan turer: once onlar denetlenir.
+        // Tarih girdisi tek tiptir (16 Eylul 2026 kurali): DatePicker, gun.ay.yil,
+        // kisa genislik; tarih-saat girdisi projede kullanilmaz.
         if (
             $component instanceof DatePicker
             || $component instanceof TimePicker
@@ -257,11 +275,6 @@ final class FieldGrid
             || $component instanceof Checkbox
         ) {
             return self::SIZE_SHORT;
-        }
-
-        // Tarih-saat girdisi ("gg.aa.yyyy ss:dd") 1/6'ya sigmaz; 1/4.
-        if ($component instanceof DateTimePicker) {
-            return self::SIZE_NORMAL;
         }
 
         if ($component instanceof Field || $component instanceof Entry) {

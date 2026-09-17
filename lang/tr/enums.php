@@ -316,11 +316,10 @@ return [
         'person' => 'Kişi',
     ],
     'party_status' => [
-        'prospect' => 'Aday',
         'active' => 'Aktif',
         'inactive' => 'Pasif',
-        'blocked' => 'Engelli',
-        'merged' => 'Birleştirildi',
+        'blocked' => 'Yasaklı',
+        'prospect' => 'Aday',
     ],
     'party_role_code' => [
         'customer' => 'Müşteri',
@@ -337,6 +336,18 @@ return [
         'active' => 'Aktif',
         'suspended' => 'Askıda',
         'ended' => 'Sona erdi',
+    ],
+    'visit_priority' => [
+        'urgent_visit' => 'Acil ziyaret',
+        'routine_meeting' => 'Rutin görüşme',
+        'phone' => 'Telefon',
+    ],
+    'meeting_channel' => [
+        'visit' => 'Ziyaret',
+        'phone' => 'Telefon',
+        'email' => 'E-posta',
+        'message' => 'Mesaj',
+        'other' => 'Diğer',
     ],
     'consent_status' => [
         'pending' => 'Bekliyor',
@@ -395,6 +406,18 @@ return [
     'business_criticality' => [
         'normal' => 'Normal',
         'critical' => 'Kritik',
+    ],
+    'offer_type' => [
+        'budgetary' => 'Bütçesel',
+        'firm' => "Kat'i",
+    ],
+    'project_scope_type' => [
+        'ges' => 'GES',
+        'res' => 'RES',
+        'tm' => 'TM',
+        'hes' => 'HES',
+        'bes' => 'BES',
+        'enh_eih' => 'ENH/EIH',
     ],
     'lifecycle_segment' => [
         'acquisition' => 'İş Alım',
@@ -516,6 +539,12 @@ return [
         'withdrawn' => 'Geri çekildi',
         'superseded' => 'Yerini aldı',
     ],
+    'offer_status' => [
+        'to_be_submitted' => 'Verilecek teklif',
+        'submitted' => 'Verilen teklif',
+        'approved' => 'Onaylandı',
+        'lost' => 'Kaçan fırsat',
+    ],
     'proposal_version_status' => [
         'draft' => 'Taslak',
         'review' => 'İncelemede',
@@ -542,6 +571,11 @@ return [
         'kmz' => 'KMZ',
         'photo' => 'Fotoğraf',
         'other' => 'Diğer',
+        'customer_expectations' => 'Firmanın beklentileri',
+        'proposal_letter' => 'Teklif mektubu',
+        'references' => 'Referanslar belgesi',
+        'catalog' => 'Genel katalog',
+        'scope_list' => 'Kapsam listesi',
     ],
     'compliance_state' => [
         'comply' => 'Uygun',
@@ -1025,6 +1059,7 @@ return [
         'functional_area_role' => 'Fonksiyonel alan rolü',
         'executive' => 'Üst yönetim',
         'rbac_role' => 'Sistem rolü',
+        'designated_approver' => 'Kayıtta belirlenen onay mercii',
     ],
     'decision_rule' => [
         'any_one' => 'Herhangi biri yeter',
@@ -1150,6 +1185,7 @@ return [
         'removed_by_policy' => 'Politika gereği kaldırıldı',
     ],
     'work_request_status' => [
+        'awaiting_approval' => 'Onay bekliyor',
         'open' => 'Açık',
         'in_progress' => 'Devam ediyor',
         'done' => 'Tamamlandı',
@@ -1165,5 +1201,61 @@ return [
     'request_target_kind' => [
         'personnel' => 'Personel',
         'org_unit' => 'Departman',
+    ],
+    'report_status' => [
+        'draft' => 'Taslak',
+        'submitted' => 'Gönderildi',
+        'approved' => 'Onaylandı',
+        'revision_required' => 'Revizyon istendi',
+        'rejected' => 'Reddedildi',
+    ],
+    'report_kind' => [
+        'daily' => 'Günlük',
+        'weekly' => 'Haftalık',
+        'monthly' => 'Aylık',
+        'project' => 'Proje',
+        'product' => 'Ürün / bileşen',
+        'proposal' => 'Teklif',
+        'business_case' => 'İş dosyası',
+        'personnel' => 'Personel',
+        'system' => 'Sistem verisi',
+    ],
+    'report_presentation' => [
+        'board' => 'İş panosu',
+        'narrative' => 'Yorumsal',
+        'numeric' => 'Sayısal',
+        'evaluation' => 'Değerlendirme',
+    ],
+    'report_subject_kind' => [
+        'none' => 'Yok',
+        'personnel' => 'Personel',
+        'project' => 'Proje',
+        'component' => 'Ürün / bileşen',
+        'proposal' => 'Teklif',
+        'business_case' => 'İş dosyası',
+    ],
+    'report_period_mode' => [
+        'none' => 'Dönemsiz',
+        'day' => 'Gün',
+        'week' => 'Hafta',
+        'month' => 'Ay',
+        'range' => 'Tarih aralığı',
+    ],
+    'report_review_mode' => [
+        'none' => 'İnceleme yok',
+        'line_manager' => 'Doğrudan amir',
+        'org_unit_manager' => 'Departman yöneticisi',
+    ],
+    'report_author_rule' => [
+        'anyone' => 'Herkes',
+        'subject_manager' => 'Personelin yöneticisi',
+        'hr' => 'İnsan Kaynakları',
+        'unit_manager' => 'Departman yöneticisi',
+    ],
+    'report_item_status' => [
+        'planned' => 'Planlandı',
+        'in_progress' => 'Devam ediyor',
+        'done' => 'Tamamlandı',
+        'blocked' => 'Engellendi',
     ],
 ];

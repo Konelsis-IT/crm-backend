@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Services\Party;
 
 use App\Enums\Party\PartyKind;
+use App\Exceptions\InvalidTransitionException;
 use App\Models\Party\OrganizationProfile;
 use App\Models\Party\Party;
 use App\Models\Party\PersonProfile;
 use App\Services\AbstractService;
+use App\Services\Audit\ActorContext;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -20,6 +24,11 @@ use Illuminate\Support\Str;
  * tam olarak bir alt profil (organization_profiles / person_profiles)
  * yazilir. Profil verisi formdan 'organization_profile' / 'person_profile'
  * anahtarlariyla gelir.
+ *
+ * D-95 / B28 (16 Eylul 2026): olusturmada 'party_roles' satirlari ve her iki
+ * islemde kuruma ait 'communication_points' satirlari da ayni islem icinde
+ * yazilir; boylece taraf, tipleri ve kanallari ya birlikte kaydedilir ya
+ * da hicbiri.
  */
 final class PartyService extends AbstractService
 {
@@ -36,7 +45,9 @@ final class PartyService extends AbstractService
         return $this->transactions->run(function () use ($data): Model {
             $organization = (array) ($data['organization_profile'] ?? []);
             $person = (array) ($data['person_profile'] ?? []);
-            unset($data['organization_profile'], $data['person_profile']);
+            $roles = (array) ($data['party_roles'] ?? []);
+            $channels = array_key_exists('communication_points', $data) ? (array) $data['communication_points'] : null;
+            unset($data['organization_profile'], $data['person_profile'], $data['party_roles'], $data['communication_points']);
 
             $data['party_no'] = $this->generatePartyNo();
             $data = $this->normalize($data, $organization['tax_number'] ?? null);
@@ -45,6 +56,8 @@ final class PartyService extends AbstractService
             $party = parent::create($data);
 
             $this->syncProfile($party, $organization, $person);
+            $this->syncRoles($party, $roles);
+            $this->syncOwnChannels($party, $channels);
 
             return $party;
         });
@@ -61,7 +74,8 @@ final class PartyService extends AbstractService
 
             $organization = isset($data['organization_profile']) ? (array) $data['organization_profile'] : null;
             $person = isset($data['person_profile']) ? (array) $data['person_profile'] : null;
-            unset($data['organization_profile'], $data['person_profile'], $data['party_no'], $data['party_kind']);
+            $channels = array_key_exists('communication_points', $data) ? (array) $data['communication_points'] : null;
+            unset($data['organization_profile'], $data['person_profile'], $data['communication_points'], $data['party_roles'], $data['party_no'], $data['party_kind']);
 
             $taxNumber = $organization['tax_number'] ?? $current->organizationProfile?->tax_number;
             $data = $this->normalize([
@@ -74,6 +88,7 @@ final class PartyService extends AbstractService
             $party = parent::update($current, $data);
 
             $this->syncProfile($party, $organization, $person);
+            $this->syncOwnChannels($party, $channels);
 
             return $party;
         });
@@ -124,6 +139,84 @@ final class PartyService extends AbstractService
                 ],
             );
         }
+    }
+
+    /**
+     * Tarafi arsivler (S3, D-99): kritik kayitta hard delete yoktur, kayit
+     * archived_at ile kapatilir. Arsivli taraf listede gorunmez,
+     * "Arsivlenenler" suzgeciyle bulunur ve geri alinabilir. Hareket kaydi:
+     * party.archived.
+     */
+    public function archive(Model|int|string $record, string $reason): Model
+    {
+        return $this->transactions->run(function () use ($record, $reason): Model {
+            /** @var Party $party */
+            $party = $this->lockForUpdate($record);
+
+            if ($party->archived_at !== null) {
+                throw InvalidTransitionException::make();
+            }
+
+            $party->forceFill([
+                'archived_at' => Carbon::now('UTC'),
+                'archived_by_personnel_id' => app(ActorContext::class)->personnelId(),
+                'archive_reason' => Str::of($reason)->squish()->limit(100, '')->value(),
+            ]);
+            $this->saveWithoutVersion($party);
+            $this->recordActivity($party, 'archived', ['archive_reason' => $party->archive_reason]);
+
+            return $party;
+        });
+    }
+
+    /** Arsivli tarafi geri alir (archived_at temizlenir). Hareket kaydi: party.restored. */
+    public function restore(Model|int|string $record): Model
+    {
+        return $this->transactions->run(function () use ($record): Model {
+            /** @var Party $party */
+            $party = $this->lockForUpdate($record);
+
+            if ($party->archived_at === null) {
+                throw InvalidTransitionException::make();
+            }
+
+            $reason = $party->archive_reason;
+            $party->forceFill(['archived_at' => null, 'archived_by_personnel_id' => null, 'archive_reason' => null]);
+            $this->saveWithoutVersion($party);
+            $this->recordActivity($party, 'restored', ['archive_reason' => $reason]);
+
+            return $party;
+        });
+    }
+
+    /**
+     * Taraf tipi satirlari (D-95): yeni kayitla ayni islemde acilir.
+     *
+     * @param  array<int|string, mixed>  $rows
+     */
+    private function syncRoles(Party $party, array $rows): void
+    {
+        foreach ($rows as $row) {
+            if (! is_array($row) || blank($row['role_code'] ?? null)) {
+                continue;
+            }
+
+            app(PartyRoleService::class)->create(['party_id' => $party->getKey(), ...$row]);
+        }
+    }
+
+    /**
+     * Kuruma ait iletisim kanallari (B28): anahtar hic verilmediyse dokunulmaz.
+     *
+     * @param  array<int|string, mixed>|null  $rows
+     */
+    private function syncOwnChannels(Party $party, ?array $rows): void
+    {
+        if ($rows === null || ! SchemaReadiness::hasBatch('B27')) {
+            return;
+        }
+
+        app(CommunicationPointService::class)->syncOwnChannels($party, $rows);
     }
 
     /**

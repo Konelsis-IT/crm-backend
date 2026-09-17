@@ -22,7 +22,7 @@ use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -72,7 +72,7 @@ class DelegationResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $isAdmin = fn (): bool => auth()->user() instanceof Personnel && app(RoleResolver::class)->isSystemAdmin(auth()->user());
+        $isAdmin = fn (): bool => auth()->user() instanceof Personnel && app(RoleResolver::class)->hasFullAccess(auth()->user());
 
         return $schema->columns(1)->components([
             Section::make(__('delegation.sections.parties'))
@@ -127,16 +127,16 @@ class DelegationResource extends Resource
                 ->icon(Heroicon::OutlinedCalendarDays)
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    DateTimePicker::make('valid_from')
+                    DatePicker::make('valid_from')
                         ->label(__('delegation.fields.valid_from'))
+                        ->displayFormat('d.m.Y')
                         ->default(fn (): Carbon => Carbon::now())
-                        ->required()
-                        ->seconds(false),
-                    DateTimePicker::make('valid_until')
+                        ->required(),
+                    DatePicker::make('valid_until')
                         ->label(__('delegation.fields.valid_until'))
+                        ->displayFormat('d.m.Y')
                         ->helperText(__('delegation.help.valid_until'))
                         ->required()
-                        ->seconds(false)
                         ->after('valid_from'),
                     Textarea::make('reason')
                         ->label(__('delegation.fields.reason'))

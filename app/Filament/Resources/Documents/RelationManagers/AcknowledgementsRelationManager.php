@@ -12,7 +12,7 @@ use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -68,8 +68,9 @@ class AcknowledgementsRelationManager extends RelationManager
                         ->default(AcknowledgementKind::Read->value)
                         ->required()
                         ->native(false),
-                    DateTimePicker::make('acknowledged_at')
+                    DatePicker::make('acknowledged_at')
                         ->label(__('document_acknowledgement.fields.acknowledged_at'))
+                        ->displayFormat('d.m.Y')
                         ->default(fn (): Carbon => Carbon::now())
                         ->required(),
                     Textarea::make('comment')

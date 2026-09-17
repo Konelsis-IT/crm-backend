@@ -9,6 +9,7 @@ use App\Enums\Personnel\OrgUnitType;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Reference\LegalEntity;
 use App\Policies\OrgUnitPolicy;
+use App\Models\WorkRequest\WorkRequest;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -79,5 +80,17 @@ class OrgUnit extends Model
             ->first();
 
         return $relation?->parent;
+    }
+
+    /** Bu departmana gelen talepler (B11B). */
+    public function incomingWorkRequests(): HasMany
+    {
+        return $this->hasMany(WorkRequest::class, 'target_org_unit_id');
+    }
+
+    /** Bu departman adina acilan talepler (B11B). */
+    public function requestedWorkRequests(): HasMany
+    {
+        return $this->hasMany(WorkRequest::class, 'requester_org_unit_id');
     }
 }

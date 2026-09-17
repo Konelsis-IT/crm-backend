@@ -24,12 +24,12 @@ final class DocumentTemplateVersionPolicy
 
     public function create(Personnel $personnel): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'create');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'create');
     }
 
     public function update(Personnel $personnel, DocumentTemplateVersion $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'update');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function delete(Personnel $personnel, DocumentTemplateVersion $record): bool

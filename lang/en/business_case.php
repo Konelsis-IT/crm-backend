@@ -15,6 +15,8 @@ return [
         'main' => 'Business case details',
         'header' => 'Business case card',
         'chain' => 'Workflow: Business case → Proposal → Project',
+        'summary_case' => 'Business case summary',
+        'summary_proposal' => 'Proposal summary',
     ],
 
     'wizard' => [
@@ -43,12 +45,14 @@ return [
         'estimated_value' => 'Estimated value',
         'legal_entity' => 'Legal entity',
         'offer_code' => 'TKLF code',
+        'offer_type' => 'Offer type',
         'outcome' => 'Outcome',
-        'owner' => 'Owner',
+        'owner' => 'Reviewer',
         'primary_party' => 'Primary party',
-        'project_type_code' => 'Project type',
-        'proposal_owner' => 'Proposal owner',
+        'project_type_code' => 'Project category',
+        'proposal_owner' => 'Preparer',
         'reason' => 'Reason',
+        'scope_types' => 'Project types',
         'short_description' => 'Short description',
         'source_kind' => 'Source kind',
         'title' => 'Title',
@@ -59,6 +63,16 @@ return [
         'project' => 'Project',
         'handoff_status' => 'Operations handoff status',
         'proposal_count' => 'Proposal count',
+        'customer_expectations_file' => 'Customer expectations (document)',
+        'proposal_letter_file' => 'Proposal letter',
+        'attach_references' => 'Attach the references document',
+        'attach_catalog' => 'Attach the general catalogue',
+    ],
+
+    'values' => [
+        'yes' => 'Yes',
+        'no' => 'No',
+        'none' => 'Not selected',
     ],
 
     'relation' => [
@@ -68,7 +82,7 @@ return [
 
     'actions' => [
         'change_status' => 'Change status',
-        'set_status' => 'Set status to \":status\"',
+        'set_status' => 'Set status to ":status"',
         'select' => 'Mark as selected',
         'submit' => 'Submit for review',
         'review' => 'Record review decision',
@@ -101,6 +115,12 @@ return [
         'stage_current' => 'The business case is currently at the ":stage" stage.',
         'stage_next' => 'Next stage: :stages.',
         'stage_final' => 'There is no transition after this stage.',
+        'scope_types' => 'Each selected type opens its own fields and a scope list upload.',
+        'customer_expectations_file' => 'Document describing the customer\'s expectations for the offer (attached to the proposal documents when uploaded).',
+        'proposal_letter_file' => 'Proposal letter file (attached to the proposal documents when uploaded).',
+        'attach_references' => 'The fixed references document from the Documents area is linked to this proposal.',
+        'attach_catalog' => 'The fixed general catalogue from the Documents area is linked to this proposal.',
+        'fixed_document_missing' => 'The references document and the general catalogue must be uploaded once to the Documents area with the REF / KAT types; once uploaded they are suggested automatically on every proposal.',
     ],
 
     'validation' => [

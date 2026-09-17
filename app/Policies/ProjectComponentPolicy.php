@@ -24,17 +24,17 @@ final class ProjectComponentPolicy
 
     public function create(Personnel $personnel): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'create');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'create');
     }
 
     public function update(Personnel $personnel, ProjectComponent $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'update');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function delete(Personnel $personnel, ProjectComponent $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'delete');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'delete');
     }
 
     public function deleteAny(Personnel $personnel): bool

@@ -14,7 +14,7 @@ use App\Services\Project\ProjectStageRequirementService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -57,8 +57,9 @@ class RequirementsRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->native(false),
-                        DateTimePicker::make('due_at')
-                            ->label(__('project_stage_requirement.fields.due_at')),
+                        DatePicker::make('due_at')
+                            ->label(__('project_stage_requirement.fields.due_at'))
+                            ->displayFormat('d.m.Y'),
                         Textarea::make('outcome_note')
                             ->label(__('project_stage_requirement.fields.outcome_note'))
                             ->columnSpanFull(),

@@ -21,6 +21,7 @@ use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Numbering\AllocateBusinessNumber;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,11 @@ use Illuminate\Support\Carbon;
  * changeStage bes temel islemin disinda, SM-BC gecislerini uygular;
  * handover_accepted yalniz OperationHandoffService::accept() icinde
  * yazilir.
+ *
+ * B29 (D-101): sihirbazdan gelen `scope_types` / `scopes` anahtarlari is
+ * dosyasi verisinden ayrilir ve ayni transaction'da BusinessCaseScopeService
+ * ile kapsam satirlarina islenir; grup uygulanmadiysa hic dokunulmaz.
+ * `offer_type` duz fillable kolondur.
  */
 final class BusinessCaseService extends AbstractService
 {
@@ -62,6 +68,7 @@ final class BusinessCaseService extends AbstractService
     public function create(array $data): Model
     {
         return $this->transactions->run(function () use ($data): Model {
+            [$data, $scopeTypes, $scopeRows, $syncScopes] = $this->extractScopes($data);
             $sequenceNo = $this->allocator->handle();
 
             /** @var BusinessCase $case */
@@ -93,6 +100,10 @@ final class BusinessCaseService extends AbstractService
             ]);
 
             $this->recordActivity($case, 'code_issued', ['kod' => 'TKLF-'.$sequenceNo, 'business_case_id' => $case->getKey(), 'business_code_id' => $code->getKey()]);
+
+            if ($syncScopes) {
+                app(BusinessCaseScopeService::class)->sync($case, $scopeTypes, $scopeRows);
+            }
 
             return $case;
         });
@@ -153,7 +164,18 @@ final class BusinessCaseService extends AbstractService
     {
         unset($data['sequence_no'], $data['lifecycle_segment'], $data['acquisition_stage'], $data['outcome'], $data['outcome_at']);
 
-        return parent::update($record, $data);
+        return $this->transactions->run(function () use ($record, $data): Model {
+            [$data, $scopeTypes, $scopeRows, $syncScopes] = $this->extractScopes($data);
+
+            /** @var BusinessCase $case */
+            $case = parent::update($record, $data);
+
+            if ($syncScopes) {
+                app(BusinessCaseScopeService::class)->sync($case, $scopeTypes, $scopeRows);
+            }
+
+            return $case;
+        });
     }
 
     /**
@@ -204,6 +226,31 @@ final class BusinessCaseService extends AbstractService
     public function offerCode(BusinessCase $case): ?BusinessCode
     {
         return $case->codes()->where('code_kind', BusinessCodeKind::Offer->value)->first();
+    }
+
+    /**
+     * Sihirbazin kapsam anahtarlarini (`scope_types`, `scopes`) is dosyasi
+     * verisinden ayirir. Kapsamlar yalniz B29 uygulanmis ve `scope_types`
+     * anahtari gelmisse islenir; grup yokken `offer_type` da yazilmaz ki
+     * eski sema uzerinde ekranlar calismaya devam etsin.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: array<string, mixed>, 1: list<mixed>, 2: array<string, mixed>, 3: bool}
+     */
+    private function extractScopes(array $data): array
+    {
+        $present = array_key_exists('scope_types', $data);
+        $types = is_array($data['scope_types'] ?? null) ? array_values($data['scope_types']) : [];
+        $rows = is_array($data['scopes'] ?? null) ? $data['scopes'] : [];
+        unset($data['scope_types'], $data['scopes']);
+
+        $ready = SchemaReadiness::hasBatch('B29');
+
+        if (! $ready) {
+            unset($data['offer_type']);
+        }
+
+        return [$data, $types, $rows, $present && $ready];
     }
 
     private function defaultLegalEntityId(): int

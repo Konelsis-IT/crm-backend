@@ -13,6 +13,7 @@ return [
         'created_at' => 'Oluşturulma',
         'current_version' => 'Güncel sürüm',
         'is_selected' => 'Seçili',
+        'offer_status' => 'Teklif durumu',
         'owner' => 'Sahip',
         'proposal_no' => 'Teklif no',
         'reason' => 'Gerekçe',
@@ -27,7 +28,7 @@ return [
 
     'actions' => [
         'change_status' => 'Durum değiştir',
-        'set_status' => 'Durumu \":status\" yap',
+        'set_status' => 'Durumu ":status" yap',
         'select' => 'Seçili yap',
         'submit' => 'İncelemeye gönder',
         'review' => 'İnceleme kararı ver',

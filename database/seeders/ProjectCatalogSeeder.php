@@ -176,9 +176,7 @@ class ProjectCatalogSeeder extends Seeder
             return;
         }
 
-        $admin = Personnel::query()
-            ->where('normalized_email', Personnel::normalizeEmail((string) config('konelsis.bootstrap_admin.email')))
-            ->first();
+        $admin = SystemAccountSeeder::actor();
 
         if ($admin !== null) {
             app(ActorContext::class)->actAsPersonnel((int) $admin->getKey());

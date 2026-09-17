@@ -149,10 +149,8 @@ final class ApprovalNotifier
             $chain[] = $unitManager;
         }
 
-        if (SchemaReadiness::hasBatch('B05')) {
-            foreach (Personnel::query()->role(RoleResolver::SYSTEM_ADMIN)->get() as $executive) {
-                $chain[] = $executive;
-            }
+        foreach (Personnel::query()->role(RoleResolver::MANAGER)->get() as $executive) {
+            $chain[] = $executive;
         }
 
         return array_values(array_filter($chain, fn (Personnel $personnel): bool => $personnel->isActive() && (int) $personnel->getKey() !== (int) $approver->getKey()));

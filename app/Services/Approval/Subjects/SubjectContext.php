@@ -20,5 +20,7 @@ final readonly class SubjectContext
         public ?int $projectId = null,
         public ?float $amount = null,
         public ?string $currencyCode = null,
+        /** Konu kaydinda secilmis onay mercii (ResolverType::DesignatedApprover, D-87). */
+        public ?int $designatedApproverPersonnelId = null,
     ) {}
 }

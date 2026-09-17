@@ -8,6 +8,7 @@ use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Models\Acquisition\BusinessCase;
+use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
@@ -43,6 +44,11 @@ class ViewBusinessCase extends ViewRecord
         /** @var BusinessCase $case */
         $case = $this->getRecord();
         $wizard = app(BusinessCaseWizard::class);
+
+        // B29: kart rozetleri ve ayrinti adimi kapsamlari tek yuklemeyle okur.
+        if (SchemaReadiness::hasBatch('B29')) {
+            $case->loadMissing('scopes.scopeDocument.revisions.files.fileObject');
+        }
 
         return $schema->columns(1)->components([
             $wizard->headerCard($case),

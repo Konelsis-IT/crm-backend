@@ -1,19 +1,22 @@
 <?php
 
 return [
-    'label' => 'Kişi ilişkisi',
-    'plural' => 'Kişi ilişkileri',
+    'label' => 'İletişim kişisi',
+    'plural' => 'İletişim kişileri',
 
     'sections' => [
-        'main' => 'İlişki bilgileri',
+        'main' => 'Kişi bilgileri',
+        'channels' => 'İletişim bilgileri',
     ],
 
     'fields' => [
-        'contact' => 'Kişi',
-        'contact_party' => 'Kişi (taraf)',
+        'channels' => 'İletişim',
+        'contact' => 'Ad',
+        'contact_name' => 'Ad',
         'created_at' => 'Oluşturulma',
         'department_note' => 'Departman notu',
-        'is_primary' => 'Asıl',
+        'is_primary' => 'Varsayılan',
+        'network_note' => 'Network',
         'reason' => 'Gerekçe',
         'relationship_role' => 'İlişki rolü',
         'valid_from' => 'Başlangıç',
@@ -21,11 +24,18 @@ return [
     ],
 
     'relation' => [
-        'title' => 'Kişiler',
-        'empty' => 'Henüz kişi bağlanmadı.',
+        'title' => 'İletişim ve kişiler',
+        'empty' => 'Henüz iletişim kaydı yok.',
+    ],
+
+    'help' => [
+        'channels' => 'Bu kişiye ait tüm iletişim bilgilerini ekleyin: iş telefonu, cep, e-posta, faks. İstediğiniz kadar satır açabilirsiniz.',
+        'contact_name' => 'Kişi adı ya da kanal adı (örneğin Santral, Muhasebe).',
+        'network_note' => 'Bu kişiyle nereden tanışıldığı.',
     ],
 
     'actions' => [
+        'add_channel' => 'İletişim bilgisi ekle',
         'change_status' => 'Durum değiştir',
         'set_status' => 'Durumu \":status\" yap',
         'select' => 'Seçili yap',

@@ -24,6 +24,9 @@ return [
     ],
 
     'actions' => [
+        'copy' => 'Copy',
+        'copied' => 'Copied',
+        'group' => 'Contact',
         'change_status' => 'Change status',
         'set_status' => 'Set status to \":status\"',
         'select' => 'Mark as selected',

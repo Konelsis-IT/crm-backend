@@ -9,7 +9,6 @@ use App\Models\Personnel\Personnel;
 use App\Query\Notification\AudienceQueries;
 use App\Services\Authorization\PermissionKey;
 use App\Services\Authorization\RoleResolver;
-use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -26,13 +25,13 @@ final class AudienceResolver
      */
     public function permittedKinds(Personnel $sender): array
     {
-        if (! $sender->isActive() || ! SchemaReadiness::hasBatch('B05')) {
+        if (! $sender->isActive()) {
             return [];
         }
 
         // system_admin her kitleye gonderebilir (Shield super_admin izinleri
         // acikca atanana kadar da).
-        if (app(RoleResolver::class)->isSystemAdmin($sender)) {
+        if (app(RoleResolver::class)->hasFullAccess($sender)) {
             return AnnouncementAudience::cases();
         }
 

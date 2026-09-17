@@ -15,7 +15,7 @@ return [
         'created_at' => 'Oluşturulma',
         'abroad' => 'Türkiye dışında',
         'district' => 'İlçe',
-        'is_primary' => 'Asıl',
+        'is_primary' => 'Varsayılan',
         'line1' => 'Adres satırı 1',
         'line2' => 'Adres satırı 2',
         'postal_code' => 'Posta kodu',

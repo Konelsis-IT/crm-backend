@@ -21,8 +21,18 @@ final class PermissionKey
     /** Politika sinifi + yetenek adi -> Shield anahtari. */
     public static function for(string $policyClass, string $ability): string
     {
-        $subject = Str::beforeLast(class_basename($policyClass), 'Policy');
+        return self::make($ability, self::subject($policyClass));
+    }
 
+    /** Politika sinifinin konusu (`DocumentPolicy` -> `Document`). */
+    public static function subject(string $policyClass): string
+    {
+        return Str::studly(Str::beforeLast(class_basename($policyClass), 'Policy'));
+    }
+
+    /** Yetenek + konu -> Shield anahtari (`viewAny` + `Party` -> `ViewAny:Party`). */
+    public static function make(string $ability, string $subject): string
+    {
         return Str::studly($ability).self::SEPARATOR.Str::studly($subject);
     }
 

@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'label' => 'Party role',
+    'label' => 'Party type',
     'plural' => 'Party roles',
 
     'sections' => [
@@ -13,18 +13,19 @@ return [
         'approver' => 'Approved by',
         'created_at' => 'Created at',
         'reason' => 'Reason',
-        'role_code' => 'Role',
+        'role_code' => 'Party type',
         'status' => 'Status',
         'valid_from' => 'Valid from',
         'valid_until' => 'Valid until',
     ],
 
     'relation' => [
-        'title' => 'Roles',
+        'title' => 'Party type',
         'empty' => 'No roles yet.',
     ],
 
     'actions' => [
+        'add_row' => 'Add party type',
         'change_status' => 'Change status',
         'set_status' => 'Set status to \":status\"',
         'select' => 'Mark as selected',

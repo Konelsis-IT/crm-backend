@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Table('communication_points')]
-#[Fillable(['party_id', 'channel_type', 'value', 'normalized_value', 'purpose', 'is_primary', 'status'])]
+#[Fillable(['party_id', 'contact_relationship_id', 'channel_type', 'value', 'normalized_value', 'purpose', 'is_primary', 'status'])]
 #[UsePolicy(CommunicationPointPolicy::class)]
 class CommunicationPoint extends Model
 {
@@ -37,5 +37,14 @@ class CommunicationPoint extends Model
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class, 'party_id');
+    }
+
+    /**
+     * Kanalin sahibi kisi (D-94); bos ise kanal kurumun kendisinindir
+     * (santral, genel e-posta).
+     */
+    public function contactRelationship(): BelongsTo
+    {
+        return $this->belongsTo(ContactRelationship::class, 'contact_relationship_id');
     }
 }

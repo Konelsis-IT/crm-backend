@@ -57,6 +57,9 @@ return [
     ],
 
     'entries' => [
+        'address' => 'Address',
+        'channels' => 'Contact',
+        'contact' => 'Contact person',
         'manager' => 'Project manager',
         'city' => 'City',
         'dates' => 'Plan',
@@ -78,6 +81,7 @@ return [
 
     'values' => [
         'no_focus' => 'No focus',
+        'no_channels' => 'No contact details',
         'steps_ready' => ':ready / :total steps ready',
         'no_title' => 'No job title',
         'no_cover' => 'No cover image',

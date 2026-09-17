@@ -27,7 +27,7 @@ use App\Services\Document\DocumentShareService;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\RichEditor;
@@ -441,10 +441,10 @@ final class DocumentWorkspace
                 Toggle::make('allow_download')
                     ->label(__('document_share.fields.allow_download'))
                     ->default(true),
-                DateTimePicker::make('expires_at')
+                DatePicker::make('expires_at')
                     ->label(__('document_share.fields.expires_at'))
-                    ->helperText(__('document_share.help.expires_at'))
-                    ->seconds(false),
+                    ->displayFormat('d.m.Y')
+                    ->helperText(__('document_share.help.expires_at')),
             ])))
             ->action(function (array $data, LivewireComponent $livewire) use ($document): void {
                 $data['document_id'] = $document->getKey();

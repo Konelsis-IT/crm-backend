@@ -24,7 +24,7 @@ final class StageWaiverPolicy
 
     public function create(Personnel $personnel): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'create');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'create');
     }
 
     public function update(Personnel $personnel, StageWaiver $record): bool

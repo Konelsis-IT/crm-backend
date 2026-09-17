@@ -43,7 +43,7 @@ final class ApprovalRequestPolicy
             return false;
         }
 
-        return $this->isSystemAdmin($personnel) || (int) $record->personnel_id === (int) $personnel->getKey();
+        return $this->hasFullAccess($personnel) || (int) $record->personnel_id === (int) $personnel->getKey();
     }
 
     /** Aktif adimda onayci olan personel karar verebilir (vekalet servisde cozulur). */

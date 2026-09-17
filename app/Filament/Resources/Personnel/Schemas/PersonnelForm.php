@@ -150,8 +150,6 @@ final class PersonnelForm
                         ->multiple()
                         ->searchable()
                         ->native(false)
-                        ->visible(fn (): bool => SchemaReadiness::hasBatch('B05'))
-                        ->dehydrated(fn (): bool => SchemaReadiness::hasBatch('B05'))
                         ->afterStateHydrated(function (Select $component, ?Personnel $record): void {
                             $component->state($record?->roles->pluck('id')->all() ?? []);
                         }),

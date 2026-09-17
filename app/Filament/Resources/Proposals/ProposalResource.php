@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Proposals;
 
+use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\ProposalStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\NavigationGroup;
@@ -11,6 +12,7 @@ use App\Filament\Resources\Proposals\Pages\CreateProposal;
 use App\Filament\Resources\Proposals\Pages\EditProposal;
 use App\Filament\Resources\Proposals\Pages\ListProposals;
 use App\Filament\Resources\Proposals\Pages\ViewProposal;
+use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -65,6 +67,9 @@ class ProposalResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
+        // B29: teklif durumu (verilecek / verilen / onaylandi / kacan firsat).
+        $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
+
         return $schema->columns(1)->components([
             Section::make(__('proposal.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
@@ -88,6 +93,13 @@ class ProposalResource extends Resource
                             ->searchable()
                             ->preload()
                             ->native(false),
+                        Select::make('offer_status')
+                            ->label(__('proposal.fields.offer_status'))
+                            ->options(OfferStatus::class)
+                            ->default('to_be_submitted')
+                            ->native(false)
+                            ->visible($b29)
+                            ->dehydrated($b29),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
@@ -95,6 +107,8 @@ class ProposalResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
+
         return $table
             ->columns([
                 TextColumn::make('proposal_no')
@@ -111,6 +125,11 @@ class ProposalResource extends Resource
                 TextColumn::make('status')
                     ->label(__('proposal.fields.status'))
                     ->badge(),
+                TextColumn::make('offer_status')
+                    ->label(__('proposal.fields.offer_status'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->visible($b29),
                 IconColumn::make('is_selected')
                     ->label(__('proposal.fields.is_selected'))
                     ->boolean(),
@@ -124,6 +143,10 @@ class ProposalResource extends Resource
                 SelectFilter::make('status')
                     ->label(__('proposal.fields.status'))
                     ->options(ProposalStatus::class),
+                SelectFilter::make('offer_status')
+                    ->label(__('proposal.fields.offer_status'))
+                    ->options(OfferStatus::class)
+                    ->visible($b29),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -151,6 +174,7 @@ class ProposalResource extends Resource
     {
         return [
             VersionsRelationManager::class,
+            ...(SchemaReadiness::hasBatch('B10A') ? [SubjectReportsRelationManager::class] : []),
         ];
     }
 

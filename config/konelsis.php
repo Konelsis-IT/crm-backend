@@ -35,26 +35,6 @@ return [
     ],
 
     /*
-    | Seed ile olusturulan ilk yonetici personel. Parola bos birakilirsa
-    | rastgele uretilir ve konsolda bir kez gosterilir.
-    */
-    'bootstrap_admin' => [
-        'email' => env('KONELSIS_BOOTSTRAP_ADMIN_EMAIL'),
-        'name' => env('KONELSIS_BOOTSTRAP_ADMIN_NAME', 'Sistem Yoneticisi'),
-        'password' => env('KONELSIS_BOOTSTRAP_ADMIN_PASSWORD'),
-    ],
-
-    /*
-    | M03 (D-16) gercek role gectikten sonra bu liste calisma zamaninda
-    | okunmaz; RoleResolver artik spatie/laravel-permission uzerinden
-    | hasRole() sorar. auditor_emails yalniz RoleSeeder'da bir kerelik
-    | gecis kaynagi olarak kullanilir (personel varsa auditor rolu atanir).
-    */
-    'interim_roles' => [
-        'auditor_emails' => env('KONELSIS_AUDITOR_EMAILS', ''),
-    ],
-
-    /*
     | Sema degisikligi korumasi. Uygulama semayi kendi basina degistiremez:
     | migration/seed komutlari yalniz DBA o kabukta
     | KONELSIS_SCHEMA_CHANGES_ALLOWED=true dedigi zaman calisir. Yikici
@@ -68,14 +48,12 @@ return [
     ],
 
     /*
-    | DBA'nin bu ortamda uyguladigini teyit ettigi migration gruplarinin
-    | virgullu listesi (docs/planning/16), orn. "B00,B01,B02,B08". Batch'ler
-    | her zaman alfabetik sirayla yazilip uygulanmaz (D-62 ile B25, B03'ten
-    | once kuruldu), bu yuzden bu bir "en yuksek deger" degil bir kumedir
-    | (bkz. App\Services\Platform\SchemaReadiness). Ilgili gruba bagli
-    | ekranlar teyit gelene kadar gizli kalir.
+    | Is dosyasi ve teklifte secilebilen para birimleri (16 Eylul 2026
+    | kullanici karari, D-101): is dosyasi ve teklifte yalniz bu para
+    | birimleri sunulur. Kodlar currencies tablosunda tanimli olmalidir;
+    | ReferenceOptions::offerCurrencies() listeyi tabloyla kesistirir.
     */
-    'applied_schema_batch' => env('KONELSIS_APPLIED_SCHEMA_BATCH'),
+    'offer_currencies' => ['TRY', 'USD', 'EUR', 'RON'],
 
     /*
     | Personel hareketleri kaydinda degeri gosterilmeyecek alanlar.

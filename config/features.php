@@ -6,8 +6,9 @@
 |--------------------------------------------------------------------------
 |
 | Kod dagitimi ile sema aktivasyonu ayridir: bir ekran, hem bayragi acik
-| olacak hem de bagli oldugu migration grubu DBA tarafindan teyit edilmis
-| olacaktir (config('konelsis.applied_schema_batch'), bkz. SchemaReadiness).
+| olacak hem de bagli oldugu migration grubu uygulanmis olacaktir. Grubun
+| uygulanip uygulanmadigi dogrudan veritabani semasindan okunur (D-92,
+| bkz. App\Services\Platform\SchemaReadiness); ortam degiskeni yoktur.
 |
 | Bayrak adlari noktali tek anahtardir; FeatureFlags once tum diziyi ceker.
 |
@@ -25,5 +26,6 @@ return [
         'notifications.database' => (bool) env('FEATURE_DATABASE_NOTIFICATIONS', true),
         'chat.admin_ui' => (bool) env('FEATURE_CHAT_UI', true),
         'work_requests.admin_ui' => (bool) env('FEATURE_WORK_REQUESTS_UI', true),
+        'reports.admin_ui' => (bool) env('FEATURE_REPORTS_UI', true),
     ],
 ];

@@ -14,7 +14,7 @@ use App\Services\Document\DocumentShareService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -57,10 +57,10 @@ class SharesRelationManager extends RelationManager
                     Toggle::make('allow_download')
                         ->label(__('document_share.fields.allow_download'))
                         ->default(true),
-                    DateTimePicker::make('expires_at')
+                    DatePicker::make('expires_at')
                         ->label(__('document_share.fields.expires_at'))
-                        ->helperText(__('document_share.help.expires_at'))
-                        ->seconds(false),
+                        ->displayFormat('d.m.Y')
+                        ->helperText(__('document_share.help.expires_at')),
                 ])),
         ]);
     }

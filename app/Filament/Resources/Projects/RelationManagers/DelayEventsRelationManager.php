@@ -16,7 +16,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -49,8 +49,9 @@ class DelayEventsRelationManager extends RelationManager
             Section::make(__('delay_event.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        DateTimePicker::make('detected_at')
-                            ->label(__('delay_event.fields.detected_at')),
+                        DatePicker::make('detected_at')
+                            ->label(__('delay_event.fields.detected_at'))
+                            ->displayFormat('d.m.Y'),
                         TextInput::make('delay_days')
                             ->label(__('delay_event.fields.delay_days'))
                             ->numeric()

@@ -14,7 +14,7 @@ use App\Services\Project\ProjectIssueService;
 use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -83,8 +83,9 @@ class IssuesRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->native(false),
-                        DateTimePicker::make('due_at')
-                            ->label(__('project_issue.fields.due_at')),
+                        DatePicker::make('due_at')
+                            ->label(__('project_issue.fields.due_at'))
+                            ->displayFormat('d.m.Y'),
                         Textarea::make('resolution')
                             ->label(__('project_issue.fields.resolution'))
                             ->columnSpanFull(),

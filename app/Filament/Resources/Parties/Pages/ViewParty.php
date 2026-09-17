@@ -16,6 +16,8 @@ class ViewParty extends ViewRecord
     {
         return [
             EditAction::make(),
+            PartyResource::archiveAction(),
+            PartyResource::restoreAction(),
         ];
     }
 }

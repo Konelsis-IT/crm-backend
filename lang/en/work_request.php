@@ -45,6 +45,8 @@ return [
         'business_case' => 'Related business case',
         'contract' => 'Related contract',
         'document' => 'Related document',
+        'requires_approval' => 'Approval required',
+        'approver' => 'Approver',
         'source_author' => 'Author',
         'source_sent_at' => 'Sent',
         'source_conversation' => 'Conversation',
@@ -52,12 +54,17 @@ return [
     ],
 
     'help' => [
-        'send_to_approval' => 'The request is sent for approval under the selected policy; the decision shows on the request card and in Approvals.',
+        'send_to_approval' => 'Select the approver. When the addressee completes the work the request goes to this person for approval; it closes on approval and returns to the addressee on rejection. The approver cannot be the requester or the addressee.',
+        'history' => 'Who did what and when on this request; newest first.',
+        'accept' => 'Tells the requester you have taken the request on; the status becomes "in progress".',
+        'complete' => 'Marks the work as finished; the request closes and the requester is notified.',
+        'complete_with_approval' => 'Marks the work as finished; the request stays open until the approver :approver approves it.',
         'requester' => 'Open the request in your own name or on behalf of your department; the department manager is informed for departmental requests.',
         'target' => 'The addressee is a person or a department. A department request is accepted by its members or manager, and an assignee is set.',
         'related' => 'Optional: link the request to a project, customer, product/component, proposal, business case, contract or document.',
         'on_behalf_of_unit' => 'When on, the request is opened on behalf of the department.',
         'reject_note' => 'A reason is required for rejection; it is shown to the requester.',
+        'requires_approval' => 'When enabled, the request goes to the selected approver once the addressee completes the work; it closes on approval and returns to the addressee on rejection. The approver cannot be the requester or the addressee.',
         'list' => 'Inbox: open requests addressed to you, assigned to you or sent to your department. You can also open a request from a chat message.',
     ],
 
@@ -84,9 +91,20 @@ return [
 
     'values' => [
         'unassigned' => 'Not assigned yet',
+        'approval_required' => 'Approval required',
         'no_history' => 'No activity yet.',
         'from_chat' => 'Request from chat',
         'chat_quote' => 'Chat message — :author, :date:',
+    ],
+
+    'relation' => [
+        'incoming' => 'Incoming requests',
+        'requested' => 'Opened requests',
+        'related' => 'Requests',
+        'help_incoming' => 'Requests addressed to this person or department.',
+        'help_requested' => 'Requests opened by this person or department.',
+        'help_related' => 'Requests related to this record.',
+        'empty' => 'No requests yet.',
     ],
 
     'messages' => [
@@ -97,6 +115,8 @@ return [
         'rejected' => 'The request was rejected.',
         'cancelled' => 'The request was cancelled.',
         'reassigned' => 'The assignee was set.',
+        'awaiting_approval' => 'The request was completed and sent to the approver.',
+        'approver_designated' => 'Approver set; the request will go for approval once the addressee completes it.',
     ],
 
     'notifications' => [
@@ -108,5 +128,8 @@ return [
         'rejected' => ['title' => 'Your request was rejected: :no', 'body' => ':title — the reason is on the request card.'],
         'cancelled' => ['title' => 'Request cancelled: :no', 'body' => ':title — :from'],
         'reassigned' => ['title' => 'A request was assigned to you: :no', 'body' => ':title — :from'],
+        'awaiting_approval' => ['title' => 'Request completed, awaiting approval: :no', 'body' => ':title — :to'],
+        'approval_returned' => ['title' => 'Request returned from approval: :no', 'body' => ':title — see the note on the request.'],
+        'approver_designated' => ['title' => 'You were set as approver: :no', 'body' => ':title — :from → :to'],
     ],
 ];

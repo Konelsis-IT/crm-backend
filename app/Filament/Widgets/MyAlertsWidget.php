@@ -39,7 +39,7 @@ class MyAlertsWidget extends TableWidget
         $user = auth()->user();
         $personnelId = (int) ($user?->getAuthIdentifier() ?? 0);
         $seesAll = $user instanceof Personnel
-            && (app(RoleResolver::class)->isSystemAdmin($user) || app(RoleResolver::class)->isAuditor($user));
+            && (app(RoleResolver::class)->hasFullAccess($user) || app(RoleResolver::class)->isAuditor($user));
 
         return $table
             ->heading(__('business_alert.widget.heading'))

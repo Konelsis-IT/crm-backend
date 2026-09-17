@@ -12,7 +12,6 @@ use App\Models\Chat\Message;
 use App\Models\Chat\MessageAttachment;
 use App\Models\Document\Document;
 use App\Models\Personnel\Personnel;
-use App\Services\Platform\SchemaReadiness;
 use App\Support\RoleLabels;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -193,10 +192,6 @@ final class ChatPresenter
 
     private function roleNames(Personnel $personnel): string
     {
-        if (! SchemaReadiness::hasBatch('B05')) {
-            return '';
-        }
-
         return RoleLabels::list($personnel->getRoleNames());
     }
 

@@ -1,7 +1,7 @@
 # Konelsis Kurumsal İşletme Yönetim Platformu — Ana ürün ve süreç planı
 
 **Durum:** DB-G8 onaylandı (4 Eylül 2026); 5 Eylül 2026 kullanıcı revizyonu (D-15R, D-42…D-46) bu belgeye işlendi. Uygulama kapsamı yalnız M01'dir; sonraki modüller ayrı yetkilendirme ister.  
-**Sürüm:** 0.8 / 5 Eylül 2026
+**Sürüm:** 0.9 / 11 Eylül 2026
 
 ## 1. Ürün vizyonu
 
@@ -105,6 +105,7 @@ Proje modülü başlamadan önce genel raporlama çekirdeği tamamlanacaktır. P
 
 - Sistem teslim zamanı yaklaşan, eksik veya gecikmiş raporlar için çalışana uyarı gönderir.
 - Escalation sırası şablon bazında tanımlanır: çalışan → doğrudan amir → departman yöneticisi → gerekli ise üst yönetim.
+- **Personel kontrolü (11 Eylül 2026 eki, 02 M06A):** rapora özel değil, her türlü "yapılması gereken iş" (rapor, görev, talep, onay adımı, onay kapısı gereksinimi, doküman teyidi, sertifika yenileme) ortak bir yükümlülük kaydına bağlanır. Süre dolduğunda AI, gecikme süresi, işin önemi ve aciliyete göre politika sınırları içinde kişiye kademeli uyarı gönderir; geri sayım aşamasında kişi "N saat içinde tamamlamazsanız yöneticinize rapor gidecek" uyarısını canlı sayaçla görür; süre dolunca yöneticiye AI üretimli rapor gider ve kritik iş kaydı açılır. Yaptırım kararı insana aittir; AI yalnız değerlendirir, yazar ve süre/ton seçer.
 - Yönetici rapordan bağımsız olarak personele bilgi, talep, uyarı veya kritik bildirim gönderebilir.
 - Kritik bildirim yalnız okundu bilgisiyle kapanmaz; acknowledgment ve gerektiğinde çözüm kaydı ister.
 

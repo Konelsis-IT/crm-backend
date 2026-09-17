@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\ApprovalRequests\ApprovalRequestResource;
@@ -16,23 +17,19 @@ use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Filament\Support\DomainNotifications;
-use App\Filament\Support\FieldGrid;
-use App\Models\Activity\PersonnelActivity;
-use App\Models\WorkRequest\WorkRequest;
 use App\Models\Approval\ApprovalRequest;
-use App\Query\Approval\ApprovalQueries;
+use App\Models\WorkRequest\WorkRequest;
+use App\Query\Personnel\PersonnelQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
-use App\Services\Approval\ApprovalRequestService;
-use App\Services\Approval\Subjects\WorkRequestSubject;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\WorkRequest\WorkRequestService;
-use App\Support\ActivityLabels;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -41,12 +38,17 @@ use Illuminate\Support\Facades\Gate;
 use Throwable;
 
 /**
- * Talep karti: talep, taraflar, ilgili kayitlar (baglantili), kaynak sohbet
- * mesaji ve hareket gecmisi. Eylemler taraf ve duruma gore gorunur.
+ * Talep karti: "Talep" ve "Taraflar" yan yana (yarim genislik), altinda
+ * ilgili kayitlar ve onay, gerekirse kaynak sohbet mesaji; hareket gecmisi
+ * ayri bir tablo (ActivitiesRelationManager). Eylemler tarafa ve duruma gore:
+ * muhatap kabul eder / tamamlar / reddeder, talep eden iptal eder ve onay
+ * merciini belirler (D-87); talep eden kendi talebini yonetemez.
  */
 class ViewWorkRequest extends ViewRecord
 {
     protected static string $resource = WorkRequestResource::class;
+
+    private const HALF = ['default' => 1, 'md' => 2];
 
     public function getTitle(): string
     {
@@ -58,65 +60,108 @@ class ViewWorkRequest extends ViewRecord
 
     public function infolist(Schema $schema): Schema
     {
-        /** @var WorkRequest $request */
-        $request = $this->getRecord();
-
         return $schema->columns(1)->components([
-            Section::make(__('work_request.sections.request'))
-                ->icon(Heroicon::OutlinedDocumentText)
-                ->columns(FieldGrid::COLUMNS)
-                ->components(FieldGrid::fields([
-                    TextEntry::make('request_no')->label(__('work_request.fields.request_no'))->badge()->color('gray'),
-                    TextEntry::make('status')->label(__('work_request.fields.status'))->badge(),
-                    TextEntry::make('priority')->label(__('work_request.fields.priority'))->badge(),
-                    TextEntry::make('due_on')->label(__('work_request.fields.due_on'))->date('d.m.Y')->placeholder('-'),
-                    TextEntry::make('created_at')->label(__('work_request.fields.created_at'))->dateTime('d.m.Y H:i'),
-                    TextEntry::make('description')
-                        ->label(__('work_request.fields.description'))
-                        ->placeholder('-')
-                        ->columnSpanFull(),
-                ])),
-            Section::make(__('work_request.sections.parties'))
-                ->icon(Heroicon::OutlinedUserGroup)
-                ->columns(FieldGrid::COLUMNS)
-                ->components(FieldGrid::fields([
-                    TextEntry::make('requester_label')
-                        ->label(__('work_request.fields.from'))
-                        ->state(fn (WorkRequest $record): string => $record->requesterLabel())
-                        ->icon(Heroicon::OutlinedUserCircle),
-                    TextEntry::make('target_label')
-                        ->label(__('work_request.fields.to'))
-                        ->state(fn (WorkRequest $record): string => $record->targetsOrgUnit() ? ($record->targetOrgUnit?->name ?? '-') : ($record->targetPersonnel?->full_name ?? '-'))
-                        ->icon(fn (WorkRequest $record): Heroicon => $record->target_kind->getIcon()),
-                    TextEntry::make('assignee.full_name')->label(__('work_request.fields.assignee'))->placeholder(__('work_request.values.unassigned')),
-                    TextEntry::make('accepted_at')->label(__('work_request.fields.accepted_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
-                    TextEntry::make('closed_at')->label(__('work_request.fields.closed_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
-                    TextEntry::make('closedBy.full_name')->label(__('work_request.fields.closed_by'))->placeholder('-'),
-                    TextEntry::make('closing_note')
-                        ->label(__('work_request.fields.closing_note'))
-                        ->placeholder('-')
-                        ->visible(fn (WorkRequest $record): bool => filled($record->closing_note))
-                        ->columnSpanFull(),
-                ])),
-            Section::make(__('work_request.sections.related'))
-                ->icon(Heroicon::OutlinedLink)
-                ->columns(FieldGrid::COLUMNS)
-                ->visible(fn (WorkRequest $record): bool => $record->project_id !== null || $record->customer_party_id !== null || $record->component_definition_id !== null
-                    || $record->proposal_id !== null || $record->business_case_id !== null || $record->contract_id !== null || $record->document_id !== null)
-                ->components(FieldGrid::fields([
-                    $this->relatedEntry('project.name', 'project', fn (WorkRequest $r) => $r->project, ProjectResource::class),
-                    $this->relatedEntry('customer.display_name', 'customer', fn (WorkRequest $r) => $r->customer, PartyResource::class),
-                    $this->relatedEntry('componentDefinition.name_tr', 'component', fn (WorkRequest $r) => $r->componentDefinition, ComponentDefinitionResource::class),
-                    $this->relatedEntry('proposal.title', 'proposal', fn (WorkRequest $r) => $r->proposal, ProposalResource::class),
-                    $this->relatedEntry('businessCase.title', 'business_case', fn (WorkRequest $r) => $r->businessCase, BusinessCaseResource::class),
-                    $this->relatedEntry('contract.contract_no', 'contract', fn (WorkRequest $r) => $r->contract, ContractResource::class),
-                    $this->relatedEntry('document.title', 'document', fn (WorkRequest $r) => $r->document, DocumentResource::class),
-                ])),
+            Grid::make(['default' => 1, 'lg' => 2])->components([
+                Section::make(__('work_request.sections.request'))
+                    ->icon(Heroicon::OutlinedDocumentText)
+                    ->columns(self::HALF)
+                    ->components([
+                        TextEntry::make('request_no')->label(__('work_request.fields.request_no'))->badge()->color('gray'),
+                        TextEntry::make('status')->label(__('work_request.fields.status'))->badge(),
+                        TextEntry::make('priority')->label(__('work_request.fields.priority'))->badge(),
+                        TextEntry::make('requires_approval')
+                            ->label(__('work_request.fields.requires_approval'))
+                            ->state(fn (): string => __('work_request.values.approval_required'))
+                            ->badge()
+                            ->color('primary')
+                            ->icon(Heroicon::OutlinedCheckBadge)
+                            ->visible(fn (WorkRequest $record): bool => (bool) $record->requires_approval),
+                        TextEntry::make('due_on')->label(__('work_request.fields.due_on'))->date('d.m.Y')->placeholder('-'),
+                        TextEntry::make('created_at')->label(__('work_request.fields.created_at'))->dateTime('d.m.Y H:i'),
+                        TextEntry::make('description')
+                            ->label(__('work_request.fields.description'))
+                            ->placeholder('-')
+                            ->columnSpanFull(),
+                    ]),
+                Section::make(__('work_request.sections.parties'))
+                    ->icon(Heroicon::OutlinedUserGroup)
+                    ->columns(self::HALF)
+                    ->components([
+                        TextEntry::make('requester_label')
+                            ->label(__('work_request.fields.from'))
+                            ->state(fn (WorkRequest $record): string => $record->requesterLabel())
+                            ->icon(Heroicon::OutlinedUserCircle),
+                        TextEntry::make('target_label')
+                            ->label(__('work_request.fields.to'))
+                            ->state(fn (WorkRequest $record): string => $record->targetsOrgUnit() ? ($record->targetOrgUnit?->name ?? '-') : ($record->targetPersonnel?->full_name ?? '-'))
+                            ->icon(fn (WorkRequest $record): Heroicon => $record->target_kind->getIcon()),
+                        TextEntry::make('assignee.full_name')->label(__('work_request.fields.assignee'))->placeholder(__('work_request.values.unassigned')),
+                        TextEntry::make('approver.full_name')
+                            ->label(__('work_request.fields.approver'))
+                            ->icon(Heroicon::OutlinedCheckBadge)
+                            ->placeholder('-')
+                            ->visible(fn (WorkRequest $record): bool => (bool) $record->requires_approval),
+                        TextEntry::make('accepted_at')->label(__('work_request.fields.accepted_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
+                        TextEntry::make('closed_at')->label(__('work_request.fields.closed_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
+                        TextEntry::make('closedBy.full_name')
+                            ->label(__('work_request.fields.closed_by'))
+                            ->placeholder('-')
+                            ->visible(fn (WorkRequest $record): bool => $record->closed_at !== null),
+                        TextEntry::make('closing_note')
+                            ->label(__('work_request.fields.closing_note'))
+                            ->placeholder('-')
+                            ->visible(fn (WorkRequest $record): bool => filled($record->closing_note))
+                            ->columnSpanFull(),
+                    ]),
+            ]),
+            Grid::make(['default' => 1, 'lg' => 2])->components([
+                Section::make(__('work_request.sections.related'))
+                    ->icon(Heroicon::OutlinedLink)
+                    ->columns(self::HALF)
+                    ->visible(fn (WorkRequest $record): bool => $record->project_id !== null || $record->customer_party_id !== null || $record->component_definition_id !== null
+                        || $record->proposal_id !== null || $record->business_case_id !== null || $record->contract_id !== null || $record->document_id !== null)
+                    ->components([
+                        $this->relatedEntry('project.name', 'project', fn (WorkRequest $r) => $r->project, ProjectResource::class),
+                        $this->relatedEntry('customer.display_name', 'customer', fn (WorkRequest $r) => $r->customer, PartyResource::class),
+                        $this->relatedEntry('componentDefinition.name_tr', 'component', fn (WorkRequest $r) => $r->componentDefinition, ComponentDefinitionResource::class),
+                        $this->relatedEntry('proposal.title', 'proposal', fn (WorkRequest $r) => $r->proposal, ProposalResource::class),
+                        $this->relatedEntry('businessCase.title', 'business_case', fn (WorkRequest $r) => $r->businessCase, BusinessCaseResource::class),
+                        $this->relatedEntry('contract.contract_no', 'contract', fn (WorkRequest $r) => $r->contract, ContractResource::class),
+                        $this->relatedEntry('document.title', 'document', fn (WorkRequest $r) => $r->document, DocumentResource::class),
+                    ]),
+                Section::make(__('work_request.sections.approval'))
+                    ->icon(Heroicon::OutlinedCheckBadge)
+                    ->visible(fn (WorkRequest $record): bool => SchemaReadiness::hasBatch('B07') && app(WorkRequestQueries::class)->approvalRequestsFor((int) $record->getKey())->isNotEmpty())
+                    ->components([
+                        TextEntry::make('approvals')
+                            ->label(__('work_request.sections.approval'))
+                            ->hiddenLabel()
+                            ->listWithLineBreaks()
+                            ->state(fn (WorkRequest $record): array => app(WorkRequestQueries::class)
+                                ->approvalRequestsFor((int) $record->getKey())
+                                ->map(fn (ApprovalRequest $approval): string => sprintf(
+                                    '%s · %s · %s',
+                                    $approval->requested_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
+                                    $approval->status->getLabel(),
+                                    $approval->requester?->full_name ?? __('activity.system'),
+                                ))
+                                ->all()),
+                        TextEntry::make('open_approval')
+                            ->label(__('work_request.actions.open_approval'))
+                            ->hiddenLabel()
+                            ->state(fn (): string => __('work_request.actions.open_approval'))
+                            ->url(fn (WorkRequest $record): ?string => ($latest = app(WorkRequestQueries::class)->approvalRequestsFor((int) $record->getKey())->first()) !== null
+                                ? ApprovalRequestResource::getUrl('view', ['record' => $latest])
+                                : null)
+                            ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                            ->color('primary'),
+                    ]),
+            ]),
             Section::make(__('work_request.sections.source'))
                 ->icon(Heroicon::OutlinedChatBubbleLeftRight)
                 ->visible(fn (WorkRequest $record): bool => $record->source_message_id !== null && $record->sourceMessage !== null)
-                ->columns(FieldGrid::COLUMNS)
-                ->components(FieldGrid::fields([
+                ->columns(['default' => 1, 'md' => 3])
+                ->components([
                     TextEntry::make('sourceMessage.author.full_name')->label(__('work_request.fields.source_author'))->placeholder('-'),
                     TextEntry::make('sourceMessage.sent_at')->label(__('work_request.fields.source_sent_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
                     TextEntry::make('open_chat')
@@ -129,50 +174,6 @@ class ViewWorkRequest extends ViewRecord
                         ->label(__('work_request.fields.source_body'))
                         ->placeholder('-')
                         ->columnSpanFull(),
-                ])),
-            Section::make(__('work_request.sections.approval'))
-                ->icon(Heroicon::OutlinedCheckBadge)
-                ->visible(fn (WorkRequest $record): bool => SchemaReadiness::hasBatch('B07') && app(WorkRequestQueries::class)->approvalRequestsFor((int) $record->getKey())->isNotEmpty())
-                ->components([
-                    TextEntry::make('approvals')
-                        ->hiddenLabel()
-                        ->listWithLineBreaks()
-                        ->state(fn (WorkRequest $record): array => app(WorkRequestQueries::class)
-                            ->approvalRequestsFor((int) $record->getKey())
-                            ->map(fn (ApprovalRequest $approval): string => sprintf(
-                                '%s · %s · %s',
-                                $approval->requested_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
-                                $approval->status->getLabel(),
-                                $approval->requester?->full_name ?? __('activity.system'),
-                            ))
-                            ->all()),
-                    TextEntry::make('open_approval')
-                        ->hiddenLabel()
-                        ->state(fn (): string => __('work_request.actions.open_approval'))
-                        ->url(fn (WorkRequest $record): ?string => ($latest = app(WorkRequestQueries::class)->approvalRequestsFor((int) $record->getKey())->first()) !== null
-                            ? ApprovalRequestResource::getUrl('view', ['record' => $latest])
-                            : null)
-                        ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-                        ->color('primary'),
-                ]),
-            Section::make(__('work_request.sections.history'))
-                ->icon(Heroicon::OutlinedClipboardDocumentList)
-                ->collapsible()
-                ->components([
-                    TextEntry::make('history')
-                        ->hiddenLabel()
-                        ->listWithLineBreaks()
-                        ->state(fn (WorkRequest $record): array => app(WorkRequestQueries::class)
-                            ->activitiesFor((int) $record->getKey())
-                            ->map(fn (PersonnelActivity $activity): string => sprintf(
-                                '%s · %s · %s%s',
-                                $activity->occurred_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
-                                $activity->actorName(),
-                                ActivityLabels::action($activity->action_code),
-                                ($lines = ActivityLabels::changeLines($activity->changes)) !== [] ? ' — '.implode(' | ', $lines) : '',
-                            ))
-                            ->all())
-                        ->placeholder(__('work_request.values.no_history')),
                 ]),
         ]);
     }
@@ -188,12 +189,16 @@ class ViewWorkRequest extends ViewRecord
                 ->icon(Heroicon::OutlinedPlayCircle)
                 ->color('info')
                 ->requiresConfirmation()
+                ->modalDescription(__('work_request.help.accept'))
                 ->visible(fn (): bool => Gate::allows('accept', $this->getRecord()))
                 ->action(fn () => $this->run(fn (WorkRequestService $service) => $service->accept($this->getRecord()), 'accepted')),
             Action::make('complete')
                 ->label(__('work_request.actions.complete'))
                 ->icon(Heroicon::OutlinedCheckCircle)
                 ->color('success')
+                ->modalDescription(fn (): string => $this->getRecord()->needsApproval() && SchemaReadiness::hasBatch('B11D')
+                    ? __('work_request.help.complete_with_approval', ['approver' => $this->getRecord()->approver?->full_name ?? '-'])
+                    : __('work_request.help.complete'))
                 ->visible(fn (): bool => Gate::allows('complete', $this->getRecord()))
                 ->schema([
                     Textarea::make('note')->label(__('work_request.fields.closing_note'))->rows(3)->maxLength(2000),
@@ -226,6 +231,37 @@ class ViewWorkRequest extends ViewRecord
                         ->native(false),
                 ])
                 ->action(fn (array $data) => $this->run(fn (WorkRequestService $service) => $service->reassign($this->getRecord(), (int) $data['assignee_personnel_id']), 'reassigned')),
+            // Onaya tabi yapma (D-87): onay mercii secilir; onay talebi muhatap
+            // isi tamamladiginda acilir. Olustururken isaretlenmediyse buradan.
+            Action::make('send_to_approval')
+                ->label(__('work_request.actions.send_to_approval'))
+                ->icon(Heroicon::OutlinedCheckBadge)
+                ->color('warning')
+                ->visible(fn (): bool => SchemaReadiness::hasBatch('B11D')
+                    && SchemaReadiness::hasBatch('B07')
+                    && Gate::allows('designateApprover', $this->getRecord()))
+                ->modalHeading(__('work_request.actions.send_to_approval'))
+                ->modalDescription(__('work_request.help.send_to_approval'))
+                ->schema([
+                    Select::make('approver_personnel_id')
+                        ->label(__('work_request.fields.approver'))
+                        ->options(function (): array {
+                            /** @var WorkRequest $request */
+                            $request = $this->getRecord();
+                            $options = app(PersonnelQueries::class)->personnelOptions();
+                            unset($options[(int) $request->requester_personnel_id]);
+
+                            if ($request->target_personnel_id !== null) {
+                                unset($options[(int) $request->target_personnel_id]);
+                            }
+
+                            return $options;
+                        })
+                        ->required()
+                        ->searchable()
+                        ->native(false),
+                ])
+                ->action(fn (array $data) => $this->run(fn (WorkRequestService $service) => $service->designateApprover($this->getRecord(), (int) $data['approver_personnel_id']), 'approver_designated')),
             Action::make('cancel')
                 ->label(__('work_request.actions.cancel'))
                 ->icon(Heroicon::OutlinedNoSymbol)
@@ -236,32 +272,6 @@ class ViewWorkRequest extends ViewRecord
                     Textarea::make('note')->label(__('work_request.fields.closing_note'))->rows(2)->maxLength(2000),
                 ])
                 ->action(fn (array $data) => $this->run(fn (WorkRequestService $service) => $service->cancel($this->getRecord(), $data['note'] ?? null), 'cancelled')),
-            Action::make('send_to_approval')
-                ->label(__('work_request.actions.send_to_approval'))
-                ->icon(Heroicon::OutlinedCheckBadge)
-                ->color('warning')
-                ->visible(fn (): bool => SchemaReadiness::hasBatch('B07')
-                    && $this->getRecord()->isOpen()
-                    && Gate::allows('view', $this->getRecord())
-                    && app(ApprovalQueries::class)->openRequestFor(WorkRequestSubject::TYPE, (int) $this->getRecord()->getKey()) === null)
-                ->modalDescription(__('work_request.help.send_to_approval'))
-                ->schema([
-                    Select::make('policy_id')
-                        ->label(__('work_request.fields.approval_policy'))
-                        ->options(fn (): array => app(ApprovalQueries::class)->publishedPolicyOptions(WorkRequestSubject::TYPE))
-                        ->required()
-                        ->native(false),
-                    Textarea::make('note')->label(__('work_request.fields.approval_note'))->rows(3)->maxLength(1000),
-                ])
-                ->action(function (array $data): void {
-                    try {
-                        $approval = app(ApprovalRequestService::class)->request(WorkRequestSubject::TYPE, (int) $this->getRecord()->getKey(), null, (int) $data['policy_id'], $data['note'] ?? null);
-                        DomainNotifications::success(__('work_request.messages.sent_to_approval'));
-                        $this->redirect(ApprovalRequestResource::getUrl('view', ['record' => $approval]));
-                    } catch (AbstractException $exception) {
-                        DomainNotifications::failure($exception);
-                    }
-                }),
             EditAction::make()->label(__('work_request.actions.edit')),
         ];
     }
@@ -290,7 +300,13 @@ class ViewWorkRequest extends ViewRecord
     private function run(callable $operation, string $messageKey): void
     {
         try {
-            $operation(app(WorkRequestService::class));
+            $result = $operation(app(WorkRequestService::class));
+
+            // Onaya tabi talep (D-87): tamamlama onaya sunulmus olabilir.
+            if ($messageKey === 'completed' && $result instanceof WorkRequest && $result->status === WorkRequestStatus::AwaitingApproval) {
+                $messageKey = 'awaiting_approval';
+            }
+
             DomainNotifications::success(__('work_request.messages.'.$messageKey));
         } catch (AbstractException $exception) {
             DomainNotifications::failure($exception);

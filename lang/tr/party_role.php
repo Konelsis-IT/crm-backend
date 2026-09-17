@@ -1,30 +1,31 @@
 <?php
 
 return [
-    'label' => 'Taraf rolü',
-    'plural' => 'Taraf rolleri',
+    'label' => 'Taraf tipi',
+    'plural' => 'Taraf tipleri',
 
     'sections' => [
-        'main' => 'Rol bilgileri',
+        'main' => 'Taraf tipi bilgileri',
     ],
 
     'fields' => [
-        'approved_by' => 'Approved by',
+        'approved_by' => 'Onaylayan',
         'approver' => 'Onaylayan',
         'created_at' => 'Oluşturulma',
         'reason' => 'Gerekçe',
-        'role_code' => 'Rol',
+        'role_code' => 'Taraf tipi',
         'status' => 'Durum',
         'valid_from' => 'Başlangıç',
         'valid_until' => 'Bitiş',
     ],
 
     'relation' => [
-        'title' => 'Roller',
-        'empty' => 'Henüz rol yok.',
+        'title' => 'Taraf tipi',
+        'empty' => 'Henüz taraf tipi atanmadı.',
     ],
 
     'actions' => [
+        'add_row' => 'Taraf tipi ekle',
         'change_status' => 'Durum değiştir',
         'set_status' => 'Durumu \":status\" yap',
         'select' => 'Seçili yap',

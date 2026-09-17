@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Enums\Party\CommunicationChannelType;
+use App\Enums\Party\PartyKind;
 use App\Filament\Resources\Documents\DocumentResource;
+use App\Filament\Resources\Parties\PartyResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Models\Document\Document;
+use App\Models\Party\Address;
+use App\Models\Party\CommunicationPoint;
+use App\Models\Party\Party;
+use App\Models\Party\PartyRole;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Query\Project\ProjectStepReadiness;
-use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
 use App\Support\RoleLabels;
 use Filament\Actions\Action;
@@ -152,11 +158,9 @@ final class CardGallery
      */
     public function personnelDetailCard(Personnel $personnel): Component
     {
-        $roles = SchemaReadiness::hasBatch('B05')
-            ? $personnel->roles
-                ->map(fn ($role): Text => Text::make(RoleLabels::name((string) $role->name))->badge()->color('warning')->icon(Heroicon::OutlinedShieldCheck))
-                ->all()
-            : [];
+        $roles = $personnel->roles
+            ->map(fn ($role): Text => Text::make(RoleLabels::name((string) $role->name))->badge()->color('warning')->icon(Heroicon::OutlinedShieldCheck))
+            ->all();
 
         return $this->card(
             variant: self::VARIANT_ROW,
@@ -219,6 +223,151 @@ final class CardGallery
                 ->url($chatUrl),
             $this->editAction(Gate::allows('update', $personnel) ? PersonnelResource::getUrl('edit', ['record' => $personnel]) : null, iconOnly: true),
         ];
+    }
+
+    /**
+     * Taraf ayrinti karti (16 Eylul 2026, kullanici istegi: "personel
+     * detayindaki gibi kart"). Yatay ayrinti karti: baslikta ad, alt baslikta
+     * taraf no / tur / sehir; rozetlerde acik taraf tipleri, ziyaret onceligi
+     * ve arsiv durumu; bilgi alanlarinda adres, kuruma ait BUTUN iletisim
+     * bilgileri (her kanal ayri, tiklanabilir satir), network ve varsayilan
+     * yetkili kisi. Alt eylemler: WhatsApp (ilk cep/telefon), duzenle.
+     */
+    public function partyDetailCard(Party $party): Component
+    {
+        $address = $party->addresses->sortByDesc('is_primary')->first();
+        $channels = $party->ownCommunicationPoints
+            ->sortBy(fn (CommunicationPoint $point): string => self::channelOrder($point->channel_type).((int) ! $point->is_primary).$point->getKey())
+            ->values();
+        $contact = $party->contacts->sortByDesc('is_primary')->first();
+        $phone = $channels->first(fn (CommunicationPoint $point): bool => $point->channel_type === CommunicationChannelType::Mobile)
+            ?? $channels->first(fn (CommunicationPoint $point): bool => $point->channel_type === CommunicationChannelType::Phone);
+
+        $entries = [
+            $this->entry('address', __('ui_gallery.entries.address'), $address instanceof Address ? self::addressLine($address) : '-', Heroicon::OutlinedMapPin, 'danger'),
+        ];
+
+        foreach ($channels as $point) {
+            $entries[] = $this->channelEntry($point);
+        }
+
+        if ($channels->isEmpty()) {
+            $entries[] = $this->entry('no_channels', __('ui_gallery.entries.channels'), __('ui_gallery.values.no_channels'), Heroicon::OutlinedPhone, 'gray');
+        }
+
+        $entries[] = $this->entry('network', __('party.fields.network_note'), filled($party->network_note) ? (string) $party->network_note : '-', Heroicon::OutlinedShare, 'info');
+        $entries[] = $this->entry(
+            'contact',
+            __('ui_gallery.entries.contact'),
+            $contact !== null ? $contact->displayName().' · '.($contact->relationship_role?->getLabel() ?? '-') : '-',
+            Heroicon::OutlinedUserCircle,
+            'primary',
+        );
+
+        return $this->card(
+            variant: self::VARIANT_ROW,
+            title: (string) $party->display_name,
+            subtitle: implode(' · ', array_filter([
+                (string) $party->party_no,
+                $party->party_kind?->getLabel(),
+                $address?->city ?: $party->country?->name_tr,
+            ])),
+            mediaUrl: null,
+            mediaIcon: $party->party_kind === PartyKind::Person ? Heroicon::OutlinedUserCircle : Heroicon::OutlinedBuildingOffice2,
+            mediaColor: $party->archived_at !== null ? 'gray' : 'primary',
+            status: Text::make($party->status->getLabel())->badge()->color($party->status->getColor()),
+            badges: array_values(array_filter([
+                ...$party->roles
+                    ->filter(fn (PartyRole $role): bool => $role->valid_until === null)
+                    ->map(fn (PartyRole $role): Text => Text::make($role->role_code->getLabel())->badge()->color($role->role_code->getColor())->icon(Heroicon::OutlinedTag))
+                    ->all(),
+                $party->visit_priority !== null
+                    ? Text::make($party->visit_priority->getLabel())->badge()->color($party->visit_priority->getColor())->icon(Heroicon::OutlinedFlag)
+                    : null,
+                $party->archived_at !== null
+                    ? Text::make(__('party.values.archived'))->badge()->color('danger')->icon(Heroicon::OutlinedArchiveBox)
+                    : null,
+            ])),
+            entries: $entries,
+            actions: $this->partyActions($party, $phone?->value),
+            detail: true,
+        );
+    }
+
+    /**
+     * Taraf kartinin alt eylemleri: WhatsApp (varsa) ve duzenle — yalniz simge.
+     *
+     * @return list<Action|null>
+     */
+    private function partyActions(Party $party, ?string $phone): array
+    {
+        return [
+            Action::make('whatsapp_party_'.$party->getKey())
+                ->label(__('personnel.actions.whatsapp_short'))
+                ->tooltip(__('personnel.actions.whatsapp_short'))
+                ->icon(BrandIcons::whatsapp())
+                ->color('success')
+                ->link()
+                ->iconButton()
+                ->visible(ContactLinks::whatsapp($phone) !== null)
+                ->url((string) ContactLinks::whatsapp($phone), shouldOpenInNewTab: true),
+            $this->editAction(Gate::allows('update', $party) ? PartyResource::getUrl('edit', ['record' => $party]) : null, iconOnly: true),
+        ];
+    }
+
+    /** Iletisim kanali satiri: etiket kanal turu (+ amac), deger tiklanabilir. */
+    private function channelEntry(CommunicationPoint $point): TextEntry
+    {
+        $type = $point->channel_type;
+        $label = $type?->getLabel() ?? '-';
+
+        if (filled($point->purpose)) {
+            $label .= ' · '.$point->purpose;
+        }
+
+        $color = match ($type) {
+            CommunicationChannelType::Email => 'primary',
+            CommunicationChannelType::Mobile, CommunicationChannelType::Phone => 'success',
+            CommunicationChannelType::Website, CommunicationChannelType::Linkedin => 'info',
+            default => 'gray',
+        };
+        $newTab = $type === CommunicationChannelType::Website || $type === CommunicationChannelType::Linkedin;
+
+        // Her satirin sonunda tek kucuk kopyala dugmesi (satirlar ayni hizada
+        // kalsin diye deger yaninda yalniz bir dugme durur); telefonlarda
+        // WhatsApp etiketin yanindadir (16 Eylul 2026, kullanici istegi).
+        $key = (string) $point->getKey();
+        $entry = $this->entry('channel_'.$key, $label, (string) $point->value, ChannelActions::icon($type), $color, ChannelActions::url($type, $point->value), $newTab)
+            ->suffixActions(array_values(array_filter([ChannelActions::copy($key, $point->value)])));
+
+        $whatsapp = ChannelActions::isPhone($type) ? ChannelActions::whatsapp($key, $point->value) : null;
+
+        return $whatsapp !== null ? $entry->hintAction($whatsapp) : $entry;
+    }
+
+    /** Kanal siralamasi: cep, telefon, e-posta, web, faks, LinkedIn, diger. */
+    private static function channelOrder(?CommunicationChannelType $type): string
+    {
+        $order = array_search($type?->value, ['mobile', 'phone', 'email', 'website', 'fax', 'linkedin', 'other'], true);
+
+        return (string) ($order === false ? 9 : $order);
+    }
+
+    /**
+     * Adres tek satir: satir 1, satir 2, ilce / sehir. Satirlar sehri zaten
+     * iceriyorsa (ice aktarilan adreslerde oldugu gibi) sehir tekrar yazilmaz.
+     */
+    private static function addressLine(Address $address): string
+    {
+        $lines = trim(implode(', ', array_filter([(string) $address->line1, (string) $address->line2])));
+        $place = trim((filled($address->district) ? $address->district.' / ' : '').(string) $address->city);
+        $lower = fn (string $text): string => mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $text), 'UTF-8');
+
+        if ($place === '' || ($address->city !== null && str_contains($lower($lines), $lower((string) $address->city)))) {
+            return $lines !== '' ? $lines : ($place !== '' ? $place : '-');
+        }
+
+        return implode(', ', array_filter([$lines, $place]));
     }
 
     public function documentCard(Document $document, string $variant): Component
@@ -428,8 +577,10 @@ final class CardGallery
                 ->extraAttributes(['class' => 'konelsis-card-badges']),
             // Ayrinti kartinda dar ekranda bilgi alanlari tek sutun (telefon /
             // e-posta kesilmesin); liste kartinda 2x2 sabit hiza korunur.
+            // Ayrinti kartinda bilgi alani sayisi serbesttir (taraf kartinda her
+            // iletisim kanali ayri satir); liste kartinda 2x2 ile sinirlidir.
             Grid::make($detail ? ['default' => 1, 'sm' => 2] : ['default' => 2])
-                ->components(array_slice($entries, 0, self::ENTRY_COUNT))
+                ->components($detail ? $entries : array_slice($entries, 0, self::ENTRY_COUNT))
                 ->extraAttributes(['class' => 'konelsis-card-entries']),
         ];
 
@@ -471,7 +622,7 @@ final class CardGallery
             ->extraAttributes($attributes);
     }
 
-    private function entry(string $key, string $label, string $value, Heroicon $icon, string $iconColor, ?string $url = null): TextEntry
+    private function entry(string $key, string $label, string $value, Heroicon $icon, string $iconColor, ?string $url = null, bool $newTab = false): TextEntry
     {
         $entry = TextEntry::make($key.'_'.md5($label.$value))
             ->label($label)
@@ -482,7 +633,7 @@ final class CardGallery
             ->weight(FontWeight::Medium);
 
         if ($url !== null && $value !== '-') {
-            $entry->url($url)->color('primary');
+            $entry->url($url, shouldOpenInNewTab: $newTab)->color('primary');
         }
 
         return $entry;

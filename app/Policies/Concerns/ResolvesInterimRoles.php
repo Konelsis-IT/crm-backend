@@ -6,8 +6,8 @@ namespace App\Policies\Concerns;
 
 use App\Models\Personnel\Personnel;
 use App\Services\Authorization\PermissionKey;
+use App\Services\Authorization\PermissionSubjects;
 use App\Services\Authorization\RoleResolver;
-use App\Services\Platform\SchemaReadiness;
 
 /**
  * M01 politikalarinin ortak yardimcilari. Varsayilan reddir: her yetki
@@ -20,9 +20,10 @@ use App\Services\Platform\SchemaReadiness;
  */
 trait ResolvesInterimRoles
 {
-    protected function isSystemAdmin(Personnel $personnel): bool
+    /** Yonetici / Gelistirici rolu: tum ekranlar (D-90). */
+    protected function hasFullAccess(Personnel $personnel): bool
     {
-        return $personnel->isActive() && app(RoleResolver::class)->isSystemAdmin($personnel);
+        return $personnel->isActive() && app(RoleResolver::class)->hasFullAccess($personnel);
     }
 
     protected function isAuditor(Personnel $personnel): bool
@@ -32,20 +33,30 @@ trait ResolvesInterimRoles
 
     protected function canRead(Personnel $personnel): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->isAuditor($personnel);
+        return $this->hasFullAccess($personnel) || $this->isAuditor($personnel);
     }
 
     /**
      * Shield izin anahtari (orn. `ViewAny:Document`, `ChangeStatus:Personnel`)
-     * bu personelin rollerinden birinde isaretli mi? Roller tablosu (B05)
-     * uygulanmadan her zaman reddeder.
+     * bu personelin rollerinden birinde isaretli mi? Yetki yalniz veritabanindaki
+     * rollerden gelir.
+     *
+     * Alt tablolarin (adres, taraf rolu, dokuman revizyonu, proje sorunu...)
+     * kendi izin anahtari yoktur; bunlar ana kaydin yetkisini devralir
+     * (D-93, PermissionSubjects).
      */
     protected function permits(Personnel $personnel, string $ability): bool
     {
-        if (! $personnel->isActive() || ! SchemaReadiness::hasBatch('B05')) {
+        if (! $personnel->isActive()) {
             return false;
         }
 
-        return $personnel->can(PermissionKey::for(static::class, $ability));
+        if ($personnel->can(PermissionKey::for(static::class, $ability))) {
+            return true;
+        }
+
+        $parent = PermissionSubjects::parentOf(PermissionKey::subject(static::class));
+
+        return $parent !== null && $personnel->can(PermissionKey::make($ability, $parent));
     }
 }

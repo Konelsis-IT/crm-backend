@@ -14,7 +14,7 @@ use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -61,8 +61,9 @@ class RecoveryActionsRelationManager extends RelationManager
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(3650),
-                        DateTimePicker::make('due_at')
+                        DatePicker::make('due_at')
                             ->label(__('recovery_action.fields.due_at'))
+                            ->displayFormat('d.m.Y')
                             ->required(),
                         Select::make('status')
                             ->label(__('recovery_action.fields.status'))
@@ -70,8 +71,9 @@ class RecoveryActionsRelationManager extends RelationManager
                             ->default(RecoveryActionStatus::Planned->value)
                             ->required()
                             ->native(false),
-                        DateTimePicker::make('completed_at')
-                            ->label(__('recovery_action.fields.completed_at')),
+                        DatePicker::make('completed_at')
+                            ->label(__('recovery_action.fields.completed_at'))
+                            ->displayFormat('d.m.Y'),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

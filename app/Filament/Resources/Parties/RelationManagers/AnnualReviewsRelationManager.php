@@ -15,7 +15,6 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -71,8 +70,9 @@ class AnnualReviewsRelationManager extends RelationManager
                             ->step('0.01')
                             ->minValue(0)
                             ->maxValue(100),
-                        DateTimePicker::make('reviewed_at')
-                            ->label(__('party_annual_review.fields.reviewed_at')),
+                        DatePicker::make('reviewed_at')
+                            ->label(__('party_annual_review.fields.reviewed_at'))
+                            ->displayFormat('d.m.Y'),
                         DatePicker::make('next_review_on')
                             ->label(__('party_annual_review.fields.next_review_on'))
                             ->displayFormat('d.m.Y'),

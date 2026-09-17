@@ -16,7 +16,7 @@ use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -78,15 +78,19 @@ class MilestonesRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->native(false),
-                        DateTimePicker::make('planned_at')
+                        DatePicker::make('planned_at')
                             ->label(__('milestone.fields.planned_at'))
+                            ->displayFormat('d.m.Y')
                             ->required(),
-                        DateTimePicker::make('baseline_at')
-                            ->label(__('milestone.fields.baseline_at')),
-                        DateTimePicker::make('forecast_at')
-                            ->label(__('milestone.fields.forecast_at')),
-                        DateTimePicker::make('actual_at')
-                            ->label(__('milestone.fields.actual_at')),
+                        DatePicker::make('baseline_at')
+                            ->label(__('milestone.fields.baseline_at'))
+                            ->displayFormat('d.m.Y'),
+                        DatePicker::make('forecast_at')
+                            ->label(__('milestone.fields.forecast_at'))
+                            ->displayFormat('d.m.Y'),
+                        DatePicker::make('actual_at')
+                            ->label(__('milestone.fields.actual_at'))
+                            ->displayFormat('d.m.Y'),
                         Select::make('status')
                             ->label(__('milestone.fields.status'))
                             ->options(MilestoneStatus::class)

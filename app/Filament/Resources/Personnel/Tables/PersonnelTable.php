@@ -10,7 +10,6 @@ use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Support\BrandIcons;
 use App\Filament\Support\PersonnelAvatar;
 use App\Models\Personnel\Personnel;
-use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
 use Illuminate\Support\Facades\Auth;
 use Filament\Actions\Action;
@@ -116,8 +115,7 @@ final class PersonnelTable
                 ->label(__('role.fields.roles'))
                 ->badge()
                 ->color('warning')
-                ->placeholder('-')
-                ->visible(fn (): bool => SchemaReadiness::hasBatch('B05')),
+                ->placeholder('-'),
             TextColumn::make('last_login_at')
                 ->label(__('personnel.fields.last_login_at'))
                 ->icon(Heroicon::OutlinedClock)

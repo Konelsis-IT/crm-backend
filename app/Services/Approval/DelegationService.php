@@ -59,7 +59,7 @@ final class DelegationService extends AbstractService
 
             /** @var Personnel|null $actor */
             $actor = $actorId === null ? null : Personnel::query()->find($actorId);
-            $data['approved_by_personnel_id'] = $actor !== null && $this->roles->isSystemAdmin($actor) ? $actorId : null;
+            $data['approved_by_personnel_id'] = $actor !== null && $this->roles->hasFullAccess($actor) ? $actorId : null;
         }
 
         $grantor = (int) ($data['grantor_personnel_id'] ?? $record?->getAttribute('grantor_personnel_id') ?? 0);

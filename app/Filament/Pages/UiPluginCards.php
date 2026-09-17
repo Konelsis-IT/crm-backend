@@ -65,11 +65,19 @@ class UiPluginCards extends CardsPage
         return __('ui_gallery.plugin.search');
     }
 
+    /**
+     * Calisma arayuzu (D-91): yalniz gelistirme ortaminda menude gorunur,
+     * production'da hic kaydedilmez. Ayrica tam yetkili rol ister.
+     */
     public static function canAccess(): bool
     {
+        if (app()->isProduction()) {
+            return false;
+        }
+
         $user = auth()->user();
 
-        return $user instanceof Personnel && app(RoleResolver::class)->isSystemAdmin($user);
+        return $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
     }
 
     /**

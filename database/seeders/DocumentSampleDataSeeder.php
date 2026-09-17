@@ -43,8 +43,7 @@ use Illuminate\Support\Facades\Storage;
  *
  * Kullanıcı talimatıyla eklendi: migrate:fresh --seed sonrasında sistem
  * bomboş kalmasın, DMS ekranları gerçekçi örnek verilerle gösterilebilsin.
- * Tüm kayıtlar bootstrap yönetici personeline (KONELSIS_BOOTSTRAP_ADMIN_EMAIL,
- * varsayılan omer@gmail.com) bağlıdır; bu yüzden PersonnelBootstrapSeeder'dan
+ * Tüm kayıtlar sistem hesabına (SystemAccountSeeder) bağlıdır; bu yüzden ondan
  * sonra çalışmalıdır (bkz. DatabaseSeeder). Kurgusal proje/şirket adları
  * kullanılır, gerçek bir müşteri veya sözleşmeyi temsil etmez.
  */
@@ -55,7 +54,7 @@ class DocumentSampleDataSeeder extends Seeder
     public function run(): void
     {
         $admin = Personnel::query()
-            ->where('normalized_email', Personnel::normalizeEmail((string) config('konelsis.bootstrap_admin.email')))
+            ->whereKey(SystemAccountSeeder::actor()?->getKey())
             ->first();
 
         if ($admin === null) {

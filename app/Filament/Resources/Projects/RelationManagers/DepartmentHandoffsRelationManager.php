@@ -15,7 +15,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -82,8 +82,9 @@ class DepartmentHandoffsRelationManager extends RelationManager
                             ->preload()
                             ->required()
                             ->native(false),
-                        DateTimePicker::make('sla_due_at')
-                            ->label(__('department_handoff.fields.sla_due_at')),
+                        DatePicker::make('sla_due_at')
+                            ->label(__('department_handoff.fields.sla_due_at'))
+                            ->displayFormat('d.m.Y'),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

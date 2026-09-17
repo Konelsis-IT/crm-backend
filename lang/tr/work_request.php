@@ -45,6 +45,8 @@ return [
         'business_case' => 'İlgili iş dosyası',
         'contract' => 'İlgili sözleşme',
         'document' => 'İlgili belge',
+        'requires_approval' => 'Onaya tabi talep',
+        'approver' => 'Onay mercii',
         'source_author' => 'Yazan',
         'source_sent_at' => 'Gönderildi',
         'source_conversation' => 'Sohbet',
@@ -52,12 +54,17 @@ return [
     ],
 
     'help' => [
-        'send_to_approval' => 'Talep, seçilen politikaya göre onaya gönderilir; karar talep kartında ve Onaylar ekranında görünür.',
+        'send_to_approval' => 'Onay merciini seçin. Muhatap işi tamamladığında talep bu kişiye onaya gider; onaylanınca kapanır, reddedilirse muhataba geri döner. Onay mercii talep eden ya da muhatap olamaz.',
+        'history' => 'Bu talep üzerinde kim, ne zaman, ne yaptı; en yeni kayıt üstte.',
+        'accept' => 'Talebi üstlendiğinizi talep edene bildirir; talep "devam ediyor" durumuna geçer.',
+        'complete' => 'İşi bitirdiğinizi bildirir; talep kapanır ve talep eden bilgilendirilir.',
+        'complete_with_approval' => 'İşi bitirdiğinizi bildirir; talep kapanmaz, onay mercii :approver onayladığında kapanır.',
         'requester' => 'Talebi kendi adınıza ya da departmanınız adına açarsınız; departman adına açılan talepte departman yöneticisi de bilgilendirilir.',
         'target' => 'Muhatap bir kişi ya da bir departman olabilir. Departmana gelen talebi üyeler ya da yönetici kabul eder ve sorumlu atanır.',
         'related' => 'İsteğe bağlı: talebi ilgili proje, müşteri, ürün/bileşen, teklif, iş dosyası, sözleşme ya da belgeye bağlayın.',
         'on_behalf_of_unit' => 'Açıksa talep departman adına açılır.',
         'reject_note' => 'Ret için gerekçe zorunludur; talep edene gösterilir.',
+        'requires_approval' => 'Açıksa muhatap işi tamamladığında talep seçilen onay merciine gider; onaylanınca kapanır, reddedilirse muhataba geri döner. Onay mercii talep eden ya da muhatap olamaz.',
         'list' => 'Gelen kutusu: size, sorumlusu olduğunuz ya da departmanınıza gelen açık talepler. Sohbetteki bir mesajdan da talep açabilirsiniz.',
     ],
 
@@ -84,9 +91,20 @@ return [
 
     'values' => [
         'unassigned' => 'Henüz atanmadı',
+        'approval_required' => 'Onaya tabi',
         'no_history' => 'Henüz hareket yok.',
         'from_chat' => 'Sohbetten talep',
         'chat_quote' => 'Sohbet mesajı — :author, :date:',
+    ],
+
+    'relation' => [
+        'incoming' => 'Gelen talepler',
+        'requested' => 'Açtığı talepler',
+        'related' => 'Talepler',
+        'help_incoming' => 'Bu kişiye ya da departmana gelen talepler.',
+        'help_requested' => 'Bu kişinin ya da departmanın açtığı talepler.',
+        'help_related' => 'Bu kayıtla ilgili talepler.',
+        'empty' => 'Henüz talep yok.',
     ],
 
     'messages' => [
@@ -97,6 +115,8 @@ return [
         'rejected' => 'Talep reddedildi.',
         'cancelled' => 'Talep iptal edildi.',
         'reassigned' => 'Sorumlu atandı.',
+        'awaiting_approval' => 'Talep tamamlandı ve onay merciine sunuldu.',
+        'approver_designated' => 'Onay mercii belirlendi; muhatap tamamlayınca talep onaya gidecek.',
     ],
 
     'notifications' => [
@@ -108,5 +128,8 @@ return [
         'rejected' => ['title' => 'Talebiniz reddedildi: :no', 'body' => ':title — gerekçe talep kartında.'],
         'cancelled' => ['title' => 'Talep iptal edildi: :no', 'body' => ':title — :from'],
         'reassigned' => ['title' => 'Size talep atandı: :no', 'body' => ':title — :from'],
+        'awaiting_approval' => ['title' => 'Talep tamamlandı, onay bekliyor: :no', 'body' => ':title — :to'],
+        'approval_returned' => ['title' => 'Talep onaydan döndü: :no', 'body' => ':title — gerekçe talep kartında.'],
+        'approver_designated' => ['title' => 'Onay mercii olarak belirlendiniz: :no', 'body' => ':title — :from → :to'],
     ],
 ];

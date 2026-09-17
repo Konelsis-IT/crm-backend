@@ -6,6 +6,7 @@ namespace App\Models\Party;
 
 use App\Enums\Party\PartyKind;
 use App\Enums\Party\PartyStatus;
+use App\Enums\Party\VisitPriority;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Party\Address;
@@ -15,9 +16,12 @@ use App\Models\Party\OrganizationProfile;
 use App\Models\Party\PartyAnnualReview;
 use App\Models\Party\PartyCertificate;
 use App\Models\Party\PartyLicense;
+use App\Models\Party\PartyMeetingNote;
 use App\Models\Party\PartyRole;
 use App\Models\Party\PersonProfile;
+use App\Models\Personnel\Personnel;
 use App\Models\Reference\Country;
+use App\Models\WorkRequest\WorkRequest;
 use App\Policies\PartyPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -30,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Table('parties')]
 #[Fillable([
     'party_no', 'party_kind', 'display_name', 'normalized_name', 'country_code', 'default_locale',
-    'duplicate_check_hash', 'status', 'merged_into_party_id',
+    'duplicate_check_hash', 'status', 'merged_into_party_id', 'network_note', 'visit_priority',
 ])]
 #[UsePolicy(PartyPolicy::class)]
 class Party extends Model
@@ -45,6 +49,7 @@ class Party extends Model
         return [
             'party_kind' => PartyKind::class,
             'status' => PartyStatus::class,
+            'visit_priority' => VisitPriority::class,
         ];
     }
 
@@ -56,6 +61,12 @@ class Party extends Model
     public function mergedInto(): BelongsTo
     {
         return $this->belongsTo(self::class, 'merged_into_party_id');
+    }
+
+    /** Arsivleyen personel (S3). */
+    public function archivedBy(): BelongsTo
+    {
+        return $this->belongsTo(Personnel::class, 'archived_by_personnel_id');
     }
 
     public function roles(): HasMany
@@ -83,6 +94,15 @@ class Party extends Model
         return $this->hasMany(CommunicationPoint::class, 'party_id');
     }
 
+    /**
+     * Kurumun kendi kanallari (B28): kisiye bagli olmayan noktalar
+     * (santral, genel e-posta). Kisiye ait kanallar ContactRelationship'te.
+     */
+    public function ownCommunicationPoints(): HasMany
+    {
+        return $this->communicationPoints()->whereNull('contact_relationship_id');
+    }
+
     public function contacts(): HasMany
     {
         return $this->hasMany(ContactRelationship::class, 'organization_party_id');
@@ -103,8 +123,20 @@ class Party extends Model
         return $this->hasMany(PartyAnnualReview::class, 'party_id');
     }
 
+    /** Bu tarafla yapilan gorusme notlari (B28). */
+    public function meetingNotes(): HasMany
+    {
+        return $this->hasMany(PartyMeetingNote::class, 'party_id');
+    }
+
     public function businessCases(): HasMany
     {
         return $this->hasMany(BusinessCase::class, 'primary_party_id');
+    }
+
+    /** Bu kayitla ilgili talepler (B11B). */
+    public function workRequests(): HasMany
+    {
+        return $this->hasMany(WorkRequest::class, 'customer_party_id');
     }
 }

@@ -1,9 +1,11 @@
 # Konelsis Kurumsal Platform — Veri sözlüğü 2: şablonlu raporlama, bildirim, kritik iş ve görev
 
 **Durum:** DB-G8 onaylandı (4 Eylül 2026); 5 Eylül 2026 kullanıcı revizyonu (D-15R, D-42…D-46) bu belgeye işlendi. Bildirim yüzeyi Filament'in kendi bildirim arayüzüdür (D-46).  
-**Sürüm:** 0.8 / 5 Eylül 2026  
+**Sürüm:** 1.0 / 12 Eylül 2026  
 **Ortak sözleşme:** [06 §1](06-veri-sozlugu-01-cekirdek-ve-personel.md) (tip takma adları, S1/S2/S3 setleri, tablo sınıfları, desenler)  
 **ERD:** ERD-03 (raporlama), ERD-04 (bildirim, kritik iş, görev)
+
+> **D-86 notu (12 Eylül 2026):** Raporlama §1–3'teki veritabanı tabanlı şablon modeli (`report_templates` … `report_metric_facts`) **ertelendi**. Kullanıcı kararıyla rapor taslakları kodda tanımlanır (`App\Reports\Templates`); uygulanan şema üç tablodur — `reports`, `report_items`, `report_metrics` (16 §4 **B10A**, 02 M05A). §1–3 ileride takvim/assignment ve sürümlü şablon ihtiyacı doğarsa referans olarak kalır.
 
 ## 1. Şablon tanımı (ERD-03, 03 §6.1)
 
@@ -534,6 +536,164 @@ UNIQUE `(personnel_id, channel, event_category)`.
 | `approved_at` | ts | ✓ | |
 | `is_accepted` | bool | ✗ | |
 | `accepted_guard` | fk (generated) | ✓ | `CASE WHEN is_accepted = 1 THEN business_alert_id END`; UNIQUE (tek kabul edilen çözüm) |
+
+### 5.7 `obligation_policies` — M, sınıf I, +S1 +S2 (D-85, B11C)
+
+Personel kontrolü ([02 M06A](02-modul-bazli-ilerleme-plani.md)): konu türü / birim / önceliğe göre eşleşen kademeli uyarı politikası. Eşleşme sırası: konu türü + birim + öncelik → konu türü + birim → konu türü → varsayılan (üçü de NULL).
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `code` | code32 | ✗ | UNIQUE (ör. `OBL-DEFAULT`, `OBL-REPORT`, `OBL-TASK-CRITICAL`) |
+| `name_tr`, `name_en` | name | ✗ | |
+| `subject_type` | code32 | ✓ | Registry; NULL = tüm konu türleri |
+| `org_unit_id` | fk | ✓ | → `org_units`; NULL = tüm birimler |
+| `priority` | status | ✓ | [`low`, `normal`, `high`, `critical`]; NULL = hepsi |
+| `current_version_id` | fk | ✓ | → `obligation_policy_versions` (composite ALTER) |
+| `status` | status | ✗ | [`draft`, `active`, `retired`] |
+
+### 5.8 `obligation_policy_versions` — V, sınıf I, +S1 +S2 (D-85)
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `obligation_policy_id` | fk | ✗ | → `obligation_policies`; UNIQUE `(obligation_policy_id, version_no)` |
+| `version_no` | int | ✗ | |
+| `remind_before_minutes` | int | ✓ | Seviye 0: son tarihten önce hatırlatma (ör. 1440) |
+| `grace_minutes` | int | ✗ | Son tarihten uyarıya kadar tolerans |
+| `countdown_minutes_default` | int | ✗ | Seviye 2 geri sayım varsayılanı (kullanıcı örneği: 300 = 5 saat) |
+| `countdown_minutes_min`, `countdown_minutes_max` | int | ✗ | AI'nin seçebileceği aralık; `CHECK min ≤ default ≤ max` |
+| `ai_adjustment_enabled` | bool | ✗ | Kapalıysa yalnız kural varsayılanları |
+| `tone_min`, `tone_max` | status | ✗ | [`soft`, `firm`, `harsh`]; AI bu aralığın dışına çıkamaz |
+| `manager_report_mode` | status | ✗ | [`immediate`, `daily_digest`] |
+| `extension_policy` | status | ✗ | [`none`, `manager_approval`, `self_declare`] |
+| `max_extensions` | tint | ✗ | |
+| `definition_hash` | hash | ✗ | Adımlarla birlikte |
+| `published_at` | ts | ✓ | |
+| `published_by_personnel_id` | fk | ✓ | → `personnel` |
+
+### 5.9 `obligation_policy_steps` — V (sürüm çocuğu), sınıf I, +S1 (D-85)
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `obligation_policy_version_id` | fk | ✗ | → `obligation_policy_versions`; UNIQUE `(obligation_policy_version_id, level)` |
+| `level` | tint | ✗ | 0 hatırlatma, 1 uyarı, 2 geri sayım, 3 yönetici raporu, 4 üst yönetim; atlanamaz |
+| `trigger_kind` | status | ✗ | [`before_due`, `at_due`, `after_grace`, `countdown_expired`, `after_previous`] |
+| `offset_minutes` | int | ✗ | Tetikleyiciye göre kayma |
+| `recipient_resolver` | status | ✗ | [`self`, `line_manager`, `org_unit_manager`, `executive`, `custom_personnel`] |
+| `custom_personnel_id` | fk | ✓ | → `personnel`; yalnız `custom_personnel` |
+| `tone` | status | ✗ | [`soft`, `firm`, `harsh`]; AI sürümün `tone_min..max` aralığında değiştirebilir |
+| `channels` | json | ✗ | `in_app` zorunlu (D-49); `email` isteğe bağlı |
+| `requires_ack` | bool | ✗ | |
+| `repeat_every_minutes` | int | ✓ | Teyit gelmezse tekrar; NULL = tek sefer |
+| `produces_report` | bool | ✗ | `obligation_reports` üretir (seviye 3–4) |
+
+### 5.10 `personnel_obligations` — M, sınıf I, +S1 +S2 (D-85)
+
+Bir personelin belirli tarihe kadar yapması gereken iş; kaynak modül açar, kaynak olay kapatır. Konu türünden bağımsızdır.
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `obligation_no` | code32 | ✗ | UNIQUE; görünen numara (`YKM-000001`) |
+| `subject_type` | code32 | ✗ | Registry; [`report_assignment`, `task`, `work_request`, `approval_request_step`, `project_stage_requirement`, `document_distribution`, `business_alert`, `personnel_certification`, `focus_expectation`, `manual`] |
+| `subject_id` | fk | ✓ | `subject_type <> manual` ise zorunlu |
+| `personnel_id` | fk | ✗ | → `personnel`; sorumlu |
+| `assigned_by_personnel_id` | fk | ✓ | → `personnel`; `manual` yükümlülükte |
+| `org_unit_id` | fk | ✓ | → `org_units`; kayıt anı snapshot'ı |
+| `manager_personnel_id` | fk | ✓ | → `personnel`; her uyarıda yeniden çözümlenen amir snapshot'ı (07 §6 kuralı) |
+| `policy_version_id` | fk | ✗ | → `obligation_policy_versions` |
+| `title_key` | code | ✗ | |
+| `params` | json | ✓ | Hassas veri yok |
+| `priority` | status | ✗ | [`low`, `normal`, `high`, `critical`]; kaynaktan |
+| `importance_weight` | tint | ✗ | 1–5; kaynak modül + politika |
+| `due_at` | ts | ✗ | |
+| `effective_due_at` | ts | ✗ | Uzatmalarla güncellenir; `CHECK ≥ due_at` |
+| `state` | status | ✗ | [`pending`, `reminded`, `warned`, `countdown`, `escalated`, `fulfilled`, `waived`, `cancelled`] (SM-OBL) |
+| `current_level` | tint | ✗ | Son uygulanan adım |
+| `countdown_ends_at` | ts | ✓ | Seviye 2'de dolu |
+| `fulfilled_at` | ts | ✓ | |
+| `fulfilled_source` | status | ✓ | [`source_event`, `manual_manager`, `waiver`] |
+| `last_assessment_id` | fk | ✓ | → `obligation_assessments` |
+| `dedupe_key` | key32 | ✗ | UNIQUE |
+| `active_guard` | fk (generated) | ✓ | `CASE WHEN state IN (pending, reminded, warned, countdown, escalated) THEN 1 END`; UNIQUE `(subject_type, subject_id, personnel_id, active_guard)` — aynı konuya ikinci açık yükümlülük yok |
+
+### 5.11 `obligation_assessments` — A (immutable), sınıf I, +S1 (D-85)
+
+Motorun her turdaki değerlendirmesi; AI ya da kural. AI yalnız politika sınırları içinde seçim yapar.
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `personnel_obligation_id` | fk | ✗ | → `personnel_obligations` |
+| `assessed_at` | ts | ✗ | |
+| `source` | status | ✗ | [`ai`, `rule_fallback`] |
+| `external_analysis_request_id` | fk | ✓ | → `external_analysis_requests` (12 §6.5); B14 yoksa NULL |
+| `elapsed_overdue_minutes` | int | ✗ | |
+| `urgency_score`, `importance_score`, `compliance_score` | tint | ✗ | 0–100 |
+| `recommended_level` | tint | ✗ | Politika adımlarından biri; mevcut seviyeden en çok bir ileri |
+| `recommended_tone` | status | ✗ | [`soft`, `firm`, `harsh`]; sürüm aralığında |
+| `countdown_minutes` | int | ✓ | Sürümün min–max aralığında |
+| `message_tr` | text | ✗ | Kişiye/yöneticiye gidecek üretilmiş metin; sanitize |
+| `rationale` | text | ✓ | Kısa gerekçe; hassas veri yok |
+| `applied` | bool | ✗ | Motor uyguladı mı (sınır dışı öneri `false` + kural varsayılanı) |
+
+### 5.12 `obligation_escalations` — A, sınıf I, +S1 (D-85)
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `personnel_obligation_id` | fk | ✗ | → `personnel_obligations` |
+| `level` | tint | ✗ | |
+| `occurrence_no` | tint | ✗ | Tekrarlar; UNIQUE `(personnel_obligation_id, level, recipient_personnel_id, occurrence_no)` |
+| `recipient_personnel_id` | fk | ✗ | → `personnel` |
+| `recipient_role` | status | ✗ | [`self`, `line_manager`, `org_unit_manager`, `executive`, `custom`] |
+| `tone` | status | ✗ | Uygulanan ton |
+| `assessment_id` | fk | ✓ | → `obligation_assessments` |
+| `notification_id` | uuid | ✓ | Filament zil bildirimi (`notifications`) |
+| `business_alert_id` | fk | ✓ | → `business_alerts`; seviye ≥ 3 |
+| `sent_at` | ts | ✗ | |
+| `countdown_ends_at` | ts | ✓ | Seviye 2 |
+| `acknowledged_at` | ts | ✓ | |
+
+### 5.13 `obligation_reports` — M (teslimden sonra gövde immutable), sınıf C, +S1 +S2 (D-85)
+
+Yöneticiye giden rapor; yalnız yükümlülük olgularını içerir.
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `report_no` | code32 | ✗ | UNIQUE |
+| `personnel_id` | fk | ✗ | → `personnel`; hakkında |
+| `manager_personnel_id` | fk | ✗ | → `personnel`; alıcı |
+| `report_kind` | status | ✗ | [`single`, `daily_digest`, `escalation_summary`] |
+| `severity` | status | ✗ | [`firm`, `harsh`] |
+| `period_start`, `period_end` | ts | ✓ | Özetlerde |
+| `body_html` | text | ✗ | AI/kural üretimi; sanitize |
+| `obligation_ids` | json | ✗ | Kapsanan yükümlülükler |
+| `document_revision_id` | fk | ✓ | → `document_revisions`; DMS'e arşivlenen PDF |
+| `delivered_at` | ts | ✗ | |
+| `read_at`, `acknowledged_at` | ts | ✓ | |
+| `manager_note` | text | ✓ | Yöneticinin yanıtı |
+| `manager_decision` | status | ✓ | [`noted`, `waived`, `extended`, `hr_follow_up`]; yaptırım kararı insana aittir |
+
+### 5.14 `obligation_extensions` — M, sınıf I, +S1 +S2 (D-85)
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `personnel_obligation_id` | fk | ✗ | → `personnel_obligations` |
+| `requested_by_personnel_id` | fk | ✗ | → `personnel` |
+| `reason` | text | ✗ | Gerekçe zorunlu; AI'ye girdi |
+| `requested_until` | ts | ✗ | `CHECK > effective_due_at` |
+| `status` | status | ✗ | [`requested`, `approved`, `rejected`, `withdrawn`] |
+| `approval_request_id` | fk | ✓ | → `approval_requests` (B07); `extension_policy = manager_approval` |
+| `decided_by_personnel_id` | fk | ✓ | → `personnel` |
+| `decided_at` | ts | ✓ | |
+
+### 5.15 `personnel_compliance_scores` — P (okuma modeli, B23), sınıf I (D-85)
+
+| Kolon | Tip | Null | Kural / açıklama |
+|---|---|---|---|
+| `personnel_id` | fk | ✗ | → `personnel`; UNIQUE `(personnel_id, period_start)` |
+| `period_start`, `period_end` | date | ✗ | Aylık |
+| `obligations_total`, `fulfilled_on_time`, `fulfilled_late`, `escalated_count`, `manager_reports_count` | int | ✗ | |
+| `avg_delay_minutes` | int | ✗ | |
+| `score` | tint | ✗ | 0–100; AI ton seçiminde girdi; personel kartı yan kutusunda görünür |
+| `computed_at` | ts | ✗ | |
 
 ## 6. Bu bölümün DB-G8 kontrol listesi
 

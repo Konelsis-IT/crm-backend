@@ -316,11 +316,10 @@ return [
         'person' => 'Person',
     ],
     'party_status' => [
-        'prospect' => 'Prospect',
         'active' => 'Active',
         'inactive' => 'Inactive',
         'blocked' => 'Blocked',
-        'merged' => 'Merged',
+        'prospect' => 'Prospect',
     ],
     'party_role_code' => [
         'customer' => 'Customer',
@@ -337,6 +336,18 @@ return [
         'active' => 'Active',
         'suspended' => 'Suspended',
         'ended' => 'Ended',
+    ],
+    'visit_priority' => [
+        'urgent_visit' => 'Urgent visit',
+        'routine_meeting' => 'Routine meeting',
+        'phone' => 'Phone',
+    ],
+    'meeting_channel' => [
+        'visit' => 'Visit',
+        'phone' => 'Phone',
+        'email' => 'Email',
+        'message' => 'Message',
+        'other' => 'Other',
     ],
     'consent_status' => [
         'pending' => 'Pending',
@@ -395,6 +406,18 @@ return [
     'business_criticality' => [
         'normal' => 'Normal',
         'critical' => 'Critical',
+    ],
+    'offer_type' => [
+        'budgetary' => 'Budgetary',
+        'firm' => 'Firm',
+    ],
+    'project_scope_type' => [
+        'ges' => 'GES',
+        'res' => 'RES',
+        'tm' => 'TM',
+        'hes' => 'HES',
+        'bes' => 'BES',
+        'enh_eih' => 'ENH/EIH',
     ],
     'lifecycle_segment' => [
         'acquisition' => 'Acquisition',
@@ -516,6 +539,12 @@ return [
         'withdrawn' => 'Withdrawn',
         'superseded' => 'Superseded',
     ],
+    'offer_status' => [
+        'to_be_submitted' => 'To be submitted',
+        'submitted' => 'Submitted',
+        'approved' => 'Approved',
+        'lost' => 'Lost opportunity',
+    ],
     'proposal_version_status' => [
         'draft' => 'Draft',
         'review' => 'Review',
@@ -542,6 +571,11 @@ return [
         'kmz' => 'KMZ',
         'photo' => 'Photo',
         'other' => 'Other',
+        'customer_expectations' => 'Customer expectations',
+        'proposal_letter' => 'Proposal letter',
+        'references' => 'References document',
+        'catalog' => 'General catalogue',
+        'scope_list' => 'Scope list',
     ],
     'compliance_state' => [
         'comply' => 'Comply',
@@ -1025,6 +1059,7 @@ return [
         'functional_area_role' => 'Functional area role',
         'executive' => 'Executive',
         'rbac_role' => 'System role',
+        'designated_approver' => 'Approver designated on the record',
     ],
     'decision_rule' => [
         'any_one' => 'Any one',
@@ -1150,6 +1185,7 @@ return [
         'removed_by_policy' => 'Removed by policy',
     ],
     'work_request_status' => [
+        'awaiting_approval' => 'Awaiting approval',
         'open' => 'Open',
         'in_progress' => 'In progress',
         'done' => 'Done',
@@ -1165,5 +1201,61 @@ return [
     'request_target_kind' => [
         'personnel' => 'Personnel',
         'org_unit' => 'Department',
+    ],
+    'report_status' => [
+        'draft' => 'Draft',
+        'submitted' => 'Submitted',
+        'approved' => 'Approved',
+        'revision_required' => 'Revision requested',
+        'rejected' => 'Rejected',
+    ],
+    'report_kind' => [
+        'daily' => 'Daily',
+        'weekly' => 'Weekly',
+        'monthly' => 'Monthly',
+        'project' => 'Project',
+        'product' => 'Product / component',
+        'proposal' => 'Proposal',
+        'business_case' => 'Business case',
+        'personnel' => 'Personnel',
+        'system' => 'System data',
+    ],
+    'report_presentation' => [
+        'board' => 'Work board',
+        'narrative' => 'Narrative',
+        'numeric' => 'Numeric',
+        'evaluation' => 'Evaluation',
+    ],
+    'report_subject_kind' => [
+        'none' => 'None',
+        'personnel' => 'Personnel',
+        'project' => 'Project',
+        'component' => 'Product / component',
+        'proposal' => 'Proposal',
+        'business_case' => 'Business case',
+    ],
+    'report_period_mode' => [
+        'none' => 'No period',
+        'day' => 'Day',
+        'week' => 'Week',
+        'month' => 'Month',
+        'range' => 'Date range',
+    ],
+    'report_review_mode' => [
+        'none' => 'No review',
+        'line_manager' => 'Line manager',
+        'org_unit_manager' => 'Department manager',
+    ],
+    'report_author_rule' => [
+        'anyone' => 'Anyone',
+        'subject_manager' => "Person's manager",
+        'hr' => 'Human Resources',
+        'unit_manager' => 'Department manager',
+    ],
+    'report_item_status' => [
+        'planned' => 'Planned',
+        'in_progress' => 'In progress',
+        'done' => 'Done',
+        'blocked' => 'Blocked',
     ],
 ];

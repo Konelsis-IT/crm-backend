@@ -1,7 +1,7 @@
 # Konelsis Kurumsal Platform — Modül bazlı ilerleme planı
 
 **Durum:** DB-G8 onaylandı (4 Eylül 2026); 5 Eylül 2026 kullanıcı revizyonu (D-15R, D-42…D-46) bu belgeye işlendi. M01 tamamlandı; 7 Eylül 2026'da M02 (D-60…D-62), M03 (D-63…D-65), M04 (D-66) ve M08–M12 tam zinciri (D-67) kullanıcı talimatıyla erkene alınıp teslim edildi. 10 Eylül 2026'da M03'ün ikinci yarısı (onay motoru, D-76) ve M04'ün oluşturma/detay/yazma/paylaşım turu (D-75) teslim edildi; B06A/B07 migration'ları kullanıcı tarafından uygulanacak. M05–M07 ve M13+ ayrı yetkilendirme ister.  
-**Sürüm:** 1.5 / 10 Eylül 2026
+**Sürüm:** 1.8 / 12 Eylül 2026 — M05A (kod tanımlı rapor taslakları, D-86) ve onaya tabi talep (B11D, D-87) kullanıcı talimatıyla yazıldı; B10A ve B11D migration'ları kullanıcı tarafından uygulanacak.
 
 ## 1. Teslim stratejisi
 
@@ -136,6 +136,31 @@ Kapsam:
 - Gönderilen rapor yerinde düzenlenemez; düzeltme yeni revision oluşturur.
 - Seçilen dilde zorunlu alan eksikse PDF üretimi durur ve eksikler gösterilir.
 
+### M05A — Raporlar: kod tanımlı taslaklar (erkene alındı, 12 Eylül 2026)
+
+**Bağımlılık:** M02 (personel, departman, doğrudan amir), B16 (teklif, iş dosyası), B17 (proje, ürün/bileşen), B08 Personel Hareketleri, B11A bildirim zili.
+
+**Durum:** 12 Eylül 2026'da kullanıcı talimatıyla yazıldı ([17 D-86](17-db-g8-onay-paketi-ve-karar-defteri.md)); migration [16 §4 B10A](16-migration-uretim-sirasi-ve-dba-teslim-paketi.md) (`2026_09_12_100000_b10a_create_reports.php`) **kullanıcı tarafından uygulanacak**; uygulanana kadar Raporlar menüsü ve ilgili kayıtlardaki "Raporlar" sekmesi gizlidir. M05'in veritabanı tabanlı şablon modeli (07 §1–3) bu dilimle **ertelendi**: taslaklar arayüzden değil kodda tanımlanır.
+
+Kullanıcının tarifi: "Personeller rapor yazmakla yükümlüdür. Proje, müşteri, günlük/haftalık çalışma, sistem verileri gibi farklı biçimler olabilir; tipine göre oluşturma ve görüntüleme biçimi değişmelidir. Günlük/haftalık/aylık raporlar bir iş panosu mantığında, müşteri/proje/ürün raporları yorumsal ya da sayısal, bazı raporlar personel hakkında yönetici/departman müdürü/İK yorumu olabilir. Taslaklar arayüzden değil kodda belirlenir; seçilen taslak raporu şekillendirir. Rapor şimdilik personel, proje, ürün, teklif ve iş dosyası ile bağlantılı olabilir."
+
+Kapsam:
+
+- **Taslak (şablon) kodda:** `App\Reports\ReportTemplate` soyut sınıfı; her taslak türünü (`ReportKind`), biçimini (`ReportPresentation`: pano / yorumsal / sayısal / değerlendirme), bağlı olduğu konu türünü (`ReportSubjectKind`: yok / personel / proje / ürün-bileşen / teklif / iş dosyası), dönem biçimini (`ReportPeriodMode`: yok / gün / hafta / ay / aralık), kimin yazabileceğini (`ReportAuthorRule`: herkes / konu personelin yöneticisi / İK / departman yöneticisi), kimin inceleyeceğini (`ReportReviewMode`: yok / doğrudan amir / departman yöneticisi), gizliliğini ve alan listesini (`ReportField`: metin, uzun metin, tam sayı, ondalık, yüzde, 1–5 puan, seçim, ölçüm listesi, evet/hayır, tarih) bildirir. Form bileşenleri ve görüntüleme girdileri bu tanımdan üretilir (`ReportFieldComponents`); kayıt `ReportTemplateRegistry::TEMPLATES`. İlk on taslak: günlük / haftalık / aylık çalışma (pano), proje durum, ürün/bileşen, teklif değerlendirme, iş dosyası değerlendirme, yönetici değerlendirmesi (gizli), İK görüşü (gizli), sistem verileri.
+- **Veri:** `reports` (taslak kodu, tür, başlık, yazar + departman snapshot'ı, konu FK kolonları — polimorfik bağ yok —, dönem, durum, `payload` JSON cevaplar, gönderim/inceleme alanları), `report_items` (pano iş kalemleri: durum, proje, saat, önceki dönemden taşınan kalem bağı), `report_metrics` (taslağın KPI işaretli sayısal cevapları; gönderimde yeniden üretilen projeksiyon — 07 §3.8'in sade hali).
+- **Akış:** taslak → gönderildi → onaylandı / revizyon istendi / reddedildi; revizyon istenen rapor düzenlenip yeniden gönderilir (`revision_count`); inceleme başlamadan geri çekilebilir; yalnız taslak silinir. İnceleyen gönderimde taslak kuralından atanır (amir → departman yöneticisi yedeği); inceleme gerektirmeyen taslakta "gönderildi" son durumdur. Gün/hafta/ay raporlarında aynı yazar + dönem (+ konu) için ikinci rapor açılamaz. Pano taslaklarında önceki raporun tamamlanmamış kalemleri yeni rapora taşınır.
+- **Yetki:** her aktif personel yazar; rapor yazar, inceleyen, yazarın amiri/departman yöneticisi ve `View:Report` izniyle görünür; gizli raporlar (kişi değerlendirmeleri) konu personele gösterilmez, konu personelin yöneticileri ve `ViewConfidential:Report` izni görür; İK görüşü `AuthorHrEvaluation:Report` izniyle yazılır; inceleme `Review:Report` ya da atanmış inceleyen. Bildirimler zilden (gönderim → inceleyen; karar → yazar). Tüm olaylar Personel Hareketleri'nde (`report.*`).
+- **Ekranlar:** Raporlar (Raporlarım / İnceleme kutum / Ekibim / Tümü; "Bugünün raporu" kısayolu; rozet = inceleme kutusu), rapor kartı (kimlik, taslak cevapları, durum sütunlu iş panosu, sayısal özet, inceleme, geçmiş), personel / proje / teklif / iş dosyası kartlarında "Raporlar" sekmesi ve "Rapor yaz".
+
+Çıkış kriteri:
+
+- Taslak seçilmeden içerik alanı görünmez; seçilen taslak formu ve görünümü tek başına belirler.
+- Aynı yazar/taslak/dönem için ikinci gün-hafta-ay raporu oluşmaz.
+- Gönderilmiş rapor yerinde düzenlenemez; revizyon istenirse düzenleme yeniden açılır ve gönderim sayılır.
+- Gizli rapor konu personelin hiçbir listesinde ve kartında görünmez.
+- Taslağın metrik alanları gönderimde `report_metrics`'e yazılır ve yeniden gönderimde güncellenir.
+
+Ertelenen (07 §1–3'ten): sürümlü veritabanı şablonları, takvim/assignment üretimi (`report_schedules`, `report_periods`, `report_assignments`), harici AI kontrolü, PDF çıktısı, `report_answer_documents`. Rapor yükümlülüğü ve gecikme uyarısı M06A (D-85) kapsamındadır.
 ### M06 — Bildirim, kritik iş ve harici rapor kontrolü
 
 **Bağımlılık:** M03, M05.
@@ -145,6 +170,7 @@ Kapsam:
 - Filament in-app notification, asenkron e-posta, read/acknowledge/resolve ayrımı.
 - Rapor teslim hatırlatması, overdue ve manager escalation.
 - Yönetici tarafından rapordan bağımsız personele bilgi/talep/uyarı/kritik bildirim.
+- Talepler (B11B, D-84) ve **onaya tabi talep** (B11D, D-87, 12 Eylül 2026): talep eden → talep edilen → onaylayan; "onaya tabi" işaretlenirse onay mercii seçilir, muhatap tamamlayınca onay motoru (`designated_approver` adımı) devreye girer. Talepler personel, müşteri ve proje kartlarında ilişki listesi olarak görünür.
 - Alt personelden üst yönetime kritik iş/escalation.
 - `AI ile Kontrol Et` Action'ı ve ayrı AI projesi API istemci sınırı.
 - Şablon bazlı dış sonuç aksiyonları: öneri göster, revizyona döndür, kişiyi/yöneticiyi bildir, takip görevi aç.
@@ -156,6 +182,32 @@ Kapsam:
 - Dış servis kesintisi rapor kaydetme ve manuel incelemeyi durdurmaz.
 - Tekrarlanan callback ikinci sonuç, görev veya bildirim üretmez.
 - Dış servis Policy ve application service sınırını atlayamaz.
+
+### M06A — Personel kontrolü: yükümlülük takibi, AI değerlendirmeli kademeli uyarı, geri sayım ve yöneticiye rapor
+
+**Bağımlılık:** M06 (bildirim zili ve `business_alerts`, B11A), B08 Personel Hareketleri; kaynak modüllerden hangisi varsa ona bağlanır (M05 raporlar, B11 görevler, B11B talepler, B07 onay adımları, M12 onay kapısı gereksinimleri, M04 doküman teyitleri, M07 sertifika yenileme). B14 harici analiz (AI) isteğe bağlıdır: yoksa motor yalnız kurallarla çalışır.
+
+**Durum:** 11 Eylül 2026'da kullanıcı talimatıyla planlandı ([17 D-85](17-db-g8-onay-paketi-ve-karar-defteri.md)); veri sözlüğü [07 §5.7–5.15](07-veri-sozlugu-02-raporlama-ve-bildirim.md), durum makinesi ve olaylar [14 §2.43 SM-OBL, §4, §5, §6](14-durum-makineleri-ve-olay-katalogu.md), migration [16 §4 B11C](16-migration-uretim-sirasi-ve-dba-teslim-paketi.md). **Kod yazılmadı; uygulama ayrı yetkilendirme ister.**
+
+Kullanıcının tarifi: "Personelin yapması gereken yapılmadığında, süreye, yapılan işe ve aciliyete göre AI tarafından personele uyarı gönderilecek; 'son 5 saat, tamamlamazsanız yöneticiye sert bir rapor verilecektir' gibi geri sayım; süre dolunca yöneticiye rapor. Bir alana özel değil, her yerde kullanılabilir."
+
+Kapsam:
+
+- **Yükümlülük (obligation):** bir personelin belirli bir tarihe kadar yapması gereken her şeyin ortak kaydı (`personnel_obligations`). Kaynak modül, son tarihi olan bir iş açtığında yükümlülüğü kaydeder; iş kapanınca (rapor gönderildi, görev bitti, onay verildi, doküman teyit edildi…) yükümlülük kaynak olayla otomatik "yerine getirildi" olur. Konu türü registry ile sınırlıdır; yönetici elle de yükümlülük açabilir (`manual`). Aynı konuya ikinci açık yükümlülük açılamaz.
+- **Politika:** konu türü, birim ve önceliğe göre eşleşen sürümlü politika (`obligation_policies` + sürüm + adımlar). Adımlar sabittir: 0 hatırlatma (son tarihten önce) → 1 uyarı (son tarih + tolerans) → 2 **geri sayım** (kişiye: "N saat içinde tamamlamazsanız yöneticinize rapor gidecek") → 3 **yönetici raporu** → 4 üst yönetim. Her adımın alıcı çözücüsü, tonu (yumuşak / kesin / sert), kanalı, teyit zorunluluğu ve tekrar aralığı politikada tanımlıdır. Varsayılan geri sayım 5 saattir; politika AI'nin oynayabileceği alt/üst sınırı verir.
+- **AI değerlendirmesi (`obligation_assessments`):** motor her turda açık yükümlülüğü değerlendirir: gecikme süresi, işin önemi (öncelik + ağırlık), aciliyet (son tarihe yakınlık, bağımlılık) ve personelin uyum geçmişi (`personnel_compliance_scores`). AI yalnız **politika sınırları içinde** ton ve geri sayım süresini seçer, kişiye ve yöneticiye gidecek Türkçe metni yazar ve gerekçesini kaydeder. AI seviye atlayamaz, alıcı ekleyemez/çıkaramaz, yükümlülük açamaz veya kapatamaz. Dış servis yoksa/kesikse kural tabanlı varsayılanlar uygulanır (M06 çıkış kriteri: kesinti akışı durdurmaz). Her değerlendirme değişmez kayıttır; hassas veri içermez.
+- **Uyarı ve geri sayım:** bildirimler D-49 gereği zilden gider; e-posta politika ile açılır. Seviye 2'de kişi panelde canlı geri sayımı görür ("Yapmanız gerekenler" panosu ve üst çubuk rozeti); cevap seçenekleri: işi kaynak ekranında tamamla, gerekçeli **süre uzatma iste** (`obligation_extensions`; politikaya göre yönetici onayı B07 ile), **engel bildir** (gerekçe AI'ye girdi olur). Geri sayım dolunca seviye 3 tetiklenir.
+- **Yönetici raporu (`obligation_reports`):** AI/kural üretimli, personelin adı, yükümlülükler, gecikme ve geçmişle sınırlı "sert rapor"; anında ya da günlük özet (politika); DMS'e PDF olarak arşivlenebilir (08); yönetici okur, teyit eder, not bırakır, gerekirse muafiyet ya da uzatma verir. Seviye ≥ 3 aynı zamanda `business_alerts` kaydı açar (14 §4 `obligation.countdown_expired`).
+- **Uyum puanı:** kişi başına dönemlik okuma modeli (zamanında / geç / uyarı sayısı / ortalama gecikme); personel kartının "Amir ve tarihler" kutusunda ve yönetici panosunda görünür; AI ton seçiminde girdi.
+- **Ekranlar:** Ayarlar › Yükümlülük Politikaları (sürüm, adımlar, yayım); İdari › Personel Kontrolü (açık yükümlülükler, geri sayımlar, raporlar; yönetici kendi ekibini, sistem yöneticisi herkesi görür); personel kendi panosunda "Yapmanız gerekenler"; Personel Hareketleri'nde tüm olaylar (`obligation.*`).
+
+Çıkış kriteri:
+
+- Aynı konu ve kişi için ikinci açık yükümlülük oluşmaz; kaynak iş kapanınca yükümlülük aynı transaction'da kapanır.
+- Her uyarı, tarihsel amir snapshot'ına tek kez gider; tekrar yalnız politika aralığında ve teyit gelmemişse.
+- AI çıktısı politika sınırlarını aşamaz; sınır dışı öneri kural varsayılanına düşer ve gerekçesiyle kaydedilir.
+- Dış servis kesintisi uyarı zincirini durdurmaz; kural tabanlı akış devam eder.
+- Yönetici raporu kişi hakkında yalnız yükümlülük olgularını içerir; İK kaydı değişmez, yaptırım kararı insana aittir.
 
 ### M07 — Tam personel/İK operasyonu ve kayıtlı iletişim
 

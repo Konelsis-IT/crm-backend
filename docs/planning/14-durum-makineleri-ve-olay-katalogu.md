@@ -1,7 +1,7 @@
 # Konelsis Kurumsal Platform — Durum makineleri ve olay kataloğu
 
 **Durum:** DB-G8 onaylandı (4 Eylül 2026); 5 Eylül 2026 kullanıcı revizyonu (D-15R, D-42…D-46) bu belgeye işlendi. Uygulanan durum makineleri şimdilik personel ve sistem hesabı durumlarıdır.  
-**Sürüm:** 0.8 / 5 Eylül 2026  
+**Sürüm:** 0.9 / 11 Eylül 2026  
 **Kaynak:** [00 §5–6](00-ana-urun-ve-surec-plani.md), [01 §8–9, §15](01-teknik-mimari-plani.md), [03 §5–13](03-veri-tabani-tasarim-plani.md), [04 §5–6](04-sosyal-medya-ve-kurumsal-fonksiyon-plani.md), veri sözlüğü 06–12
 
 ## 1. Ortak kurallar
@@ -331,6 +331,7 @@ Görevler ayrılığı: `requires_maker_checker = 1` ise `personnel_id` hiçbir 
 - SM-WO `work_orders.status`: `planned → dispatched → in_progress → done → verified`; terminal olmayan → `cancelled`.
 - SM-STOCKCOUNT `stock_counts.status`: `planned → counting → review → approved → posted` (fark hareketleri idempotent); terminal olmayan → `cancelled`.
 - SM-TRANSFER `stock_transfers.status`: `draft → approved → dispatched → received → posted`; terminal olmayan → `cancelled`.
+- SM-OBL `personnel_obligations.state` (D-85, 07 §5.10): `pending → reminded → warned → countdown → escalated`; seviye atlanamaz, her geçiş `obligation_policy_steps` sırasını izler ve bir `obligation_assessments` kaydına dayanır; `countdown → escalated` yalnız `countdown_ends_at` dolunca; kaynak olay her açık durumdan `fulfilled`e götürür (aynı transaction); yönetici her açık durumdan `waived`, kaynak kaydın iptali `cancelled`; onaylı uzatma `effective_due_at`'ı ileri alıp durumu `pending`e döndürür (en çok `max_extensions`).
 
 ## 3. Makineler arası değişmezler
 
@@ -360,6 +361,8 @@ Görevler ayrılığı: `requires_maker_checker = 1` ise `personnel_id` hiçbir 
 | `delivery.late` | `delivery_schedules.planned_delivery_on` geçti, `delivered` değil | high | logistics owner | ✓ |
 | `test.failed` / `ncr.critical` | `test_executions.failed`, `ncrs.severity = critical` | high/critical | software/field owner | ✓ |
 | `hse.incident` | `incidents.severity ∈ {high, critical}` | critical | project_manager + executive | ✓ + resolution |
+| `obligation.countdown_expired` | SM-OBL `countdown → escalated` (D-85) | high → critical (`importance_weight ≥ 4`) | manager snapshot → org_unit_manager | ✓ + `obligation_reports` teyidi |
+| `obligation.repeat_offender` | Aynı kişi 30 günde ≥ 3 `escalated` | critical | org_unit_manager + executive | ✓ |
 | `finance.tax_payment_due` | `tax_obligations.due_on` / `supplier_invoices.due_date` yaklaştı | high | accounting | ✓ |
 | `special_day.t_minus_4` | SM-SDRI `T_MINUS_4` triggered | warning | content_creator + function_owner | ✓ (görev) |
 | `special_day.t_minus_3` | `T_MINUS_3` predicate doğru | critical | function_owner + escalation target | ✓ |
@@ -414,6 +417,10 @@ Sütunlar: olay, sürüm, aggregate, üreten use-case, minimum payload (ek olara
 | `notification.created` | 1 | notification_instance | `DispatchNotification` | notification_id, rule_version_id, severity, recipient_count | dedupe_key | J (channel delivery) |
 | `notification.acknowledged` / `.resolved` / `.escalated` / `.recipient_unresolved` | 1 | notification_instance | ilgili use-case | notification_id, recipient_id, level | recipient+action | P (operasyon kutusu), N |
 | `business_alert.opened` / `.acknowledged` / `.resolved` / `.closed` / `.cancelled` | 1 | business_alert | `RaiseBusinessAlert` … | alert_id, trigger_code, severity, subject | dedupe_key | N, P |
+| `obligation.registered` / `.fulfilled` / `.waived` / `.cancelled` (D-85) | 1 | personnel_obligation | `RegisterObligation` (kaynak servis transaction'ı içinde), `FulfilObligation`, `WaiveObligation` | obligation_id, subject_type, subject_id, personnel_id, due_at, fulfilled_source | dedupe_key | N, P |
+| `obligation.assessed` (D-85) | 1 | personnel_obligation | `AssessObligation` (motor turu; AI ya da kural) | obligation_id, assessment_id, source, recommended_level, tone, countdown_minutes, applied | assessment_id | P |
+| `obligation.reminded` / `.warned` / `.countdown_started` / `.escalated` / `.manager_reported` (D-85) | 1 | personnel_obligation | `EscalateObligation` (seviye 0–4) | obligation_id, level, recipient_personnel_id, tone, countdown_ends_at, report_id | (obligation_id, level, recipient, occurrence_no) | N, P |
+| `obligation.extension_requested` / `.extension_decided` (D-85) | 1 | personnel_obligation | `RequestObligationExtension`, `DecideObligationExtension` (B07 onayı ile) | obligation_id, extension_id, requested_until, status | extension_id | N, P |
 | `task.created` / `.assigned` / `.completed` / `.cancelled` / `.overdue` | 1 | task | `CreateTask` … | task_id, context, assignee, due_at | task idempotency_key | N, P |
 
 ### 5.4 DMS, iletişim, e-posta
@@ -521,6 +528,12 @@ Sütunlar: olay, sürüm, aggregate, üreten use-case, minimum payload (ek olara
 | `NR-PRJ-GATE` | `gate.passed/conditionally_passed/rejected` | info/warning | project_manager, workstream owners | in_app | — | per_event |
 | `NR-PRJ-HANDOFF` | `department_handoff.submitted/accepted/rejected` | warning | target/source workstream owner | in_app, email | ✓ (submitted) | per_event |
 | `NR-HSE` | `incident.reported` (severity ≥ high) | critical | project_manager → executive | in_app, email (mandatory) | ✓ | dedupe_key |
+| `NR-OBL-REMIND` | `obligation.reminded` (seviye 0) | info | self | in_app | — | per_subject_once |
+| `NR-OBL-WARN` | `obligation.warned` (seviye 1) | warning | self | in_app, email | ✓ | per_subject_once |
+| `NR-OBL-COUNTDOWN` | `obligation.countdown_started` (seviye 2) | high | self | in_app, email (mandatory) | ✓ | per_subject_window (`repeat_every_minutes`) |
+| `NR-OBL-MANAGER-REPORT` | `obligation.manager_reported` (seviye 3) | critical | manager snapshot → org_unit_manager | in_app, email (mandatory) | ✓ | dedupe_key |
+| `NR-OBL-EXEC` | `obligation.escalated` (seviye 4) / `obligation.repeat_offender` | critical | executive | in_app, email (mandatory) | ✓ | dedupe_key |
+| `NR-OBL-EXTENSION` | `obligation.extension_requested/decided` | warning/info | manager snapshot / self | in_app | — | per_event |
 
 Alıcı çözümü olay anındaki snapshot'tır; sonradan departmanlaşma, manager değişikliği veya rol devri geçmiş alıcıyı değiştirmez. Üstten alta bildirim scope üzerinden, alttan üste bildirim etkin manager/escalation zincirinden çözülür; boş pozisyon veya pasif kullanıcı `recipient_unresolved` üretir ve operasyon kutusuna düşer.
 

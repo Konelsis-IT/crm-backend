@@ -9,7 +9,10 @@ use App\Enums\Project\ProjectStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Projects\Pages\Concerns\OpensChecklistTargets;
 use App\Filament\Resources\Projects\ProjectResource;
+use App\Filament\Resources\WorkRequests\RelationManagers\RelatedWorkRequestsRelationManager;
+use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\ChangesRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\CustomerLicensesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\DecisionsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\DepartmentHandoffsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\FocusHistoriesRelationManager;
@@ -25,6 +28,7 @@ use App\Query\Project\ProjectStepReadiness;
 use App\Services\Project\ProjectService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -110,6 +114,9 @@ class ViewProject extends ViewRecord
                 $wizard->relationManager(ChangesRelationManager::class, $project, static::class),
                 $wizard->relationManager(DecisionsRelationManager::class, $project, static::class),
                 $wizard->relationManager(FocusHistoriesRelationManager::class, $project, static::class, 'records'),
+                $wizard->relationManager(CustomerLicensesRelationManager::class, $project, static::class),
+                ...(SchemaReadiness::hasBatch('B10A') ? [$wizard->relationManager(SubjectReportsRelationManager::class, $project, static::class)] : []),
+                ...(SchemaReadiness::hasBatch('B11B') ? [$wizard->relationManager(RelatedWorkRequestsRelationManager::class, $project, static::class)] : []),
             ]);
 
         return $schema->columns(1)->components([

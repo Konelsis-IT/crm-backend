@@ -57,6 +57,9 @@ return [
     ],
 
     'entries' => [
+        'address' => 'Adres',
+        'channels' => 'İletişim',
+        'contact' => 'Yetkili kişi',
         'manager' => 'Proje yöneticisi',
         'city' => 'Şehir',
         'dates' => 'Plan',
@@ -78,6 +81,7 @@ return [
 
     'values' => [
         'no_focus' => 'Odak yok',
+        'no_channels' => 'İletişim bilgisi yok',
         'steps_ready' => ':ready / :total adım hazır',
         'no_title' => 'Görev tanımsız',
         'no_cover' => 'Kapak görseli yok',

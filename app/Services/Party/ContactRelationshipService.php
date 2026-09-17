@@ -32,7 +32,7 @@ final class ContactRelationshipService extends AbstractService
      */
     public function create(array $data): Model
     {
-        $this->assertKinds((int) ($data['organization_party_id'] ?? 0), (int) ($data['contact_party_id'] ?? 0));
+        $this->assertKinds((int) ($data['organization_party_id'] ?? 0), $data['contact_party_id'] ?? null);
         $data['valid_from'] ??= Carbon::now('UTC');
 
         return parent::create($data);
@@ -47,14 +47,24 @@ final class ContactRelationshipService extends AbstractService
         $current = $this->show($record);
         $this->assertKinds(
             (int) ($data['organization_party_id'] ?? $current->organization_party_id),
-            (int) ($data['contact_party_id'] ?? $current->contact_party_id),
+            $data['contact_party_id'] ?? $current->contact_party_id,
         );
 
         return parent::update($current, $data);
     }
 
-    private function assertKinds(int $organizationId, int $contactId): void
+    /**
+     * Kisi icin ayri taraf kaydi zorunlu degildir (D-94); bagli bir taraf
+     * verildiyse kurum-kisi esleşmesi yine dogrulanir.
+     */
+    private function assertKinds(int $organizationId, int|string|null $contactId): void
     {
+        $contactId = $contactId === null || $contactId === '' ? null : (int) $contactId;
+
+        if ($contactId === null) {
+            return;
+        }
+
         if ($organizationId === $contactId) {
             throw SelfParentNotAllowedException::make();
         }

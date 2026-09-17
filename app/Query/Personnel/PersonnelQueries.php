@@ -70,6 +70,14 @@ final class PersonnelQueries
             ->all();
     }
 
+    /** Personelin ad soyadi (sihirbaz ozet karti icin); personel yoksa null. */
+    public function name(int $id): ?string
+    {
+        $name = Personnel::query()->whereKey($id)->value('full_name');
+
+        return $name === null ? null : (string) $name;
+    }
+
     /**
      * Personelin kayitli yetkinlikleri; formda tekrarlanan alan icin.
      *

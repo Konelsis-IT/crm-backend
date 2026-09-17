@@ -7,6 +7,7 @@ namespace App\Filament\Resources\BusinessCases;
 use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\BusinessCriticality;
 use App\Enums\Acquisition\BusinessOutcome;
+use App\Enums\Acquisition\OfferType;
 use App\Exceptions\AbstractException;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\BusinessCases\Pages\CreateBusinessCase;
@@ -17,6 +18,7 @@ use App\Filament\Resources\BusinessCases\RelationManagers\ActivitiesRelationMana
 use App\Filament\Resources\BusinessCases\RelationManagers\ContractsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OperationHandoffsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OpportunityRelationManager;
+use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\TenderNoticesRelationManager;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\DomainNotifications;
@@ -82,8 +84,12 @@ class BusinessCaseResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // B29: kritiklik yerine teklif tipi ve proje kapsam rozetleri.
+        $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
+        $notB29 = fn (): bool => ! SchemaReadiness::hasBatch('B29');
+
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['codes', 'primaryParty', 'owner']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['codes', 'primaryParty', 'owner', ...($b29() ? ['scopes'] : [])]))
             ->columns([
                 TextColumn::make('offer_code')
                     ->label(__('business_case.fields.offer_code'))
@@ -104,7 +110,18 @@ class BusinessCaseResource extends Resource
                     ->badge(),
                 TextColumn::make('criticality')
                     ->label(__('business_case.fields.criticality'))
-                    ->badge(),
+                    ->badge()
+                    ->visible($notB29),
+                TextColumn::make('offer_type')
+                    ->label(__('business_case.fields.offer_type'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->visible($b29),
+                TextColumn::make('scopes.scope_type')
+                    ->label(__('business_case.fields.scope_types'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->visible($b29),
                 TextColumn::make('owner.full_name')
                     ->label(__('business_case.fields.owner'))
                     ->placeholder('-'),
@@ -122,7 +139,12 @@ class BusinessCaseResource extends Resource
                     ->options(BusinessOutcome::class),
                 SelectFilter::make('criticality')
                     ->label(__('business_case.fields.criticality'))
-                    ->options(BusinessCriticality::class),
+                    ->options(BusinessCriticality::class)
+                    ->visible($notB29),
+                SelectFilter::make('offer_type')
+                    ->label(__('business_case.fields.offer_type'))
+                    ->options(OfferType::class)
+                    ->visible($b29),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -144,6 +166,7 @@ class BusinessCaseResource extends Resource
             TenderNoticesRelationManager::class,
             ContractsRelationManager::class,
             OperationHandoffsRelationManager::class,
+            ...(SchemaReadiness::hasBatch('B10A') ? [SubjectReportsRelationManager::class] : []),
         ];
     }
 

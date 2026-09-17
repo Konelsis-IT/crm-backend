@@ -29,7 +29,7 @@ final class ProjectStageRequirementPolicy
 
     public function update(Personnel $personnel, ProjectStageRequirement $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'update');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function delete(Personnel $personnel, ProjectStageRequirement $record): bool

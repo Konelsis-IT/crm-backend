@@ -175,7 +175,7 @@ Gerçek bir sunucuda (nginx + PHP-FPM, Apache) bu sağlayıcı devreye girmez; o
 3. Mevcut personel kayıtlarının anlık görüntüsünü geri yüklemek için (isteğe bağlı) `php artisan db:seed --class=PersonnelSnapshotSeeder`.
 4. İki bayrak `false` yapılır.
 5. Personel fotoğraflarının görünmesi için bir kez `php artisan storage:link`.
-6. `.env` içinde `KONELSIS_APPLIED_SCHEMA_BATCH=B00,B01,B02,B03,B08,B13,B25` ve `KONELSIS_SYSTEM_ADMIN_EMAILS=<yönetici e-postası>` bulunur. Bu artık "en yüksek batch" değil virgüllü bir kümedir (bkz. `App\Services\Platform\SchemaReadiness`); B03, B13 ve B25 eksik olursa organizasyon/pozisyon, sertifika/eğitim ve atama geçmişi ekranları arayüzde görünmez.
+6. Migration gruplarının uygulanıp uygulanmadığı **doğrudan veritabanı şemasından** okunur (D-92, `App\Services\Platform\SchemaReadiness`); `.env` içinde batch listesi tutulmaz. Bir grup uygulanmamışsa ona bağlı ekranlar arayüzde görünmez, migration çalıştığı anda kendiliğinden açılır. Yetkili hesaplar da `.env`'de değil `SystemAccountSeeder`'dadır (D-91).
 7. Daha önce `php artisan optimize` veya config önbelleği alındıysa `php artisan config:clear`.
 
 Roll-forward ilkesi geçerlidir: geri alma yerine düzeltici şema dosyası; `down()` adımları yalnız kullanıcı kararıyla, production dışında ve `assertDestructiveAllowed()` bayrağıyla çalışır.

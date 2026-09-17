@@ -29,7 +29,7 @@ final class ProjectStageInstancePolicy
 
     public function update(Personnel $personnel, ProjectStageInstance $record): bool
     {
-        return $this->isSystemAdmin($personnel) || $this->permits($personnel, 'update');
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function delete(Personnel $personnel, ProjectStageInstance $record): bool

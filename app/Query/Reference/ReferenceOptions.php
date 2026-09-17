@@ -38,4 +38,25 @@ final class ReferenceOptions
             ->pluck('code', 'code')
             ->all();
     }
+
+    /**
+     * Is dosyasi ve teklifte kullanilan para birimleri (16 Eylul 2026
+     * kullanici karari, D-101): yalniz config `konelsis.offer_currencies`
+     * listesindekiler, veritabanindaki kod sirasiyla. Kesisim bos kalirsa
+     * (liste tanimsiz ya da kodlar yuklenmemis) tum para birimleri doner.
+     *
+     * @return array<string, string>
+     */
+    public function offerCurrencies(): array
+    {
+        $all = $this->currencies();
+        $allowed = array_map(
+            static fn (mixed $code): string => strtoupper(trim((string) $code)),
+            (array) config('konelsis.offer_currencies', []),
+        );
+
+        $filtered = array_intersect_key($all, array_flip($allowed));
+
+        return $filtered === [] ? $all : $filtered;
+    }
 }

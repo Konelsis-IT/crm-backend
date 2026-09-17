@@ -10,6 +10,8 @@ use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Contract;
 use App\Models\Acquisition\Proposal;
+use App\Models\Activity\PersonnelActivity;
+use App\Models\Approval\ApprovalRequest;
 use App\Models\Chat\Message;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Document\Document;
@@ -24,6 +26,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Talep (B11B, D-84): bir kisi ya da birimden bir kisi ya da birime.
@@ -34,7 +37,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'request_no', 'title', 'description', 'priority', 'status',
     'requester_personnel_id', 'requester_org_unit_id', 'target_kind', 'target_personnel_id', 'target_org_unit_id',
-    'assignee_personnel_id', 'project_id', 'customer_party_id', 'component_definition_id', 'proposal_id',
+    'assignee_personnel_id', 'requires_approval', 'approver_personnel_id', 'approval_request_id',
+    'project_id', 'customer_party_id', 'component_definition_id', 'proposal_id',
     'business_case_id', 'contract_id', 'document_id', 'source_message_id', 'due_on', 'accepted_at',
     'completed_at', 'closed_at', 'closed_by_personnel_id', 'closing_note',
 ])]
@@ -52,6 +56,7 @@ class WorkRequest extends Model
             'priority' => WorkRequestPriority::class,
             'status' => WorkRequestStatus::class,
             'target_kind' => RequestTargetKind::class,
+            'requires_approval' => 'boolean',
             'due_on' => 'date',
             'accepted_at' => 'datetime',
             'completed_at' => 'datetime',
@@ -87,6 +92,35 @@ class WorkRequest extends Model
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(Personnel::class, 'closed_by_personnel_id');
+    }
+
+    /**
+     * Talebin hareket gecmisi (Personel Hareketleri; subject_type = work_request).
+     * `personnel_activities.subject_id` metin oldugu icin yerel anahtar
+     * olarak metne cevrilmis kimlik (`subject_key`) kullanilir; indeks korunur.
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(PersonnelActivity::class, 'subject_id', 'subject_key')
+            ->where('subject_type', 'work_request');
+    }
+
+    /** Hareket kaydindaki metin kimlik. */
+    public function getSubjectKeyAttribute(): string
+    {
+        return (string) $this->getKey();
+    }
+
+    /** Onaya tabi talepte (D-87) talep acilirken secilen onay mercii. */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(Personnel::class, 'approver_personnel_id');
+    }
+
+    /** Muhatap tamamlayinca sistemin actigi onay talebi (B07). */
+    public function approvalRequest(): BelongsTo
+    {
+        return $this->belongsTo(ApprovalRequest::class, 'approval_request_id');
     }
 
     public function project(): BelongsTo
@@ -132,6 +166,12 @@ class WorkRequest extends Model
     public function isOpen(): bool
     {
         return $this->status->isOpen();
+    }
+
+    /** Onaya tabi ve onay mercii secili mi (D-87)? */
+    public function needsApproval(): bool
+    {
+        return (bool) $this->requires_approval && $this->approver_personnel_id !== null;
     }
 
     public function targetsOrgUnit(): bool

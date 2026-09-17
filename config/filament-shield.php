@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Filament\Resources\Reports\ReportResource;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
@@ -73,7 +74,7 @@ return [
     // varsayilan 'super_admin' yerine bu rol tum izinleri otomatik alir.
     'super_admin' => [
         'enabled' => true,
-        'name' => 'system_admin',
+        'name' => 'Yönetici',
         'define_via_gate' => false,
         'intercept_gate' => 'before',
     ],
@@ -198,6 +199,20 @@ return [
                 'create',
                 'update',
                 'delete',
+            ],
+            // Raporlar (D-86): standart yetkilere ek olarak inceleme, gizli rapor
+            // gorme ve IK gorusu yazma izinleri Roller ekraninda isaretlenir.
+            ReportResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'submit',
+                'withdraw',
+                'review',
+                'viewConfidential',
+                'authorHrEvaluation',
             ],
         ],
         'exclude' => [

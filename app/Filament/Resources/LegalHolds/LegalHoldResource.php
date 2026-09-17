@@ -19,7 +19,7 @@ use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -98,11 +98,13 @@ class LegalHoldResource extends Resource
                         ->default(LegalHoldStatus::Draft->value)
                         ->required()
                         ->native(false),
-                    DateTimePicker::make('starts_at')
+                    DatePicker::make('starts_at')
                         ->label(__('legal_hold.fields.starts_at'))
+                        ->displayFormat('d.m.Y')
                         ->required(),
-                    DateTimePicker::make('released_at')
-                        ->label(__('legal_hold.fields.released_at')),
+                    DatePicker::make('released_at')
+                        ->label(__('legal_hold.fields.released_at'))
+                        ->displayFormat('d.m.Y'),
                     Textarea::make('reason')
                         ->label(__('legal_hold.fields.reason'))
                         ->required()

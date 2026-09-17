@@ -109,7 +109,7 @@ class AcquisitionSampleDataSeeder extends Seeder
         }
 
         $admin = Personnel::query()
-            ->where('normalized_email', Personnel::normalizeEmail((string) config('konelsis.bootstrap_admin.email')))
+            ->whereKey(SystemAccountSeeder::actor()?->getKey())
             ->first();
 
         if ($admin === null || BusinessCase::query()->exists()) {

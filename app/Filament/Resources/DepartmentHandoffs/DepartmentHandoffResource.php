@@ -16,7 +16,7 @@ use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -62,8 +62,9 @@ class DepartmentHandoffResource extends Resource
             Section::make(__('department_handoff.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        DateTimePicker::make('sla_due_at')
-                            ->label(__('department_handoff.fields.sla_due_at')),
+                        DatePicker::make('sla_due_at')
+                            ->label(__('department_handoff.fields.sla_due_at'))
+                            ->displayFormat('d.m.Y'),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
