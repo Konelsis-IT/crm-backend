@@ -521,7 +521,10 @@ body:has(#konelsis-chat-root) .fi-main {
 .kc-panel {
     position: fixed; right: 1.25rem; bottom: 5.5rem; z-index: 25;
     width: 24rem; max-width: calc(100vw - 2.5rem);
-    height: 38rem; max-height: calc(100vh - 7rem);
+    /* Ust sinir (17 Eylul 2026, kullanici bildirimi): yapiskan ust cubuk
+       4rem (z-30) + 1rem bosluk; kisa pencerede panel basligi ve Kapat
+       dugmesi cubugun altina girmesin. */
+    height: 38rem; max-height: calc(100vh - 10.5rem);
     background: var(--kc-bg); color: var(--kc-text);
     border: 1px solid var(--kc-border); border-radius: 1.25rem;
     box-shadow: var(--kc-shadow);
@@ -535,8 +538,17 @@ body:has(#konelsis-chat-root) .fi-main {
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (max-width: 640px) {
-    .kc-panel { right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; }
+/*
+ * Dar ekran (telefon) ya da kisa pencere (yatay telefon, kucuk dizustu):
+ * panel tam ekran olur (17 Eylul 2026, kullanici bildirimi: "ekran
+ * kuculunce sigmiyor"). Boyut inset:0 ile gorunum alanindan alinir; 100vh /
+ * 100vw kullanilmaz (mobil tarayicida adres cubugu 100vh'yi tasirir, alt
+ * yazma alani ekran disinda kalir; masaustunde kaydirma cubugu 100vw'yi
+ * tasirir). Tam ekranda panel ust cubugun (z-30) ustune cikar ki basligi
+ * ve Kapat dugmesi gorunsun; Filament modal ortusu (z-40) yine ustte kalir.
+ */
+@media (max-width: 640px), (max-height: 480px) {
+    .kc-panel { inset: 0; width: auto; max-width: none; height: auto; max-height: none; border-radius: 0; z-index: 35; }
     .kc-launcher { right: 1rem; bottom: 1rem; }
 }
 
@@ -700,3 +712,14 @@ body:has(#konelsis-chat-root) .fi-main {
 
 .kc-overlay { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; background: var(--kc-bg); }
 .kc-overlay-head { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0.5rem 0.5rem 0.9rem; border-bottom: 1px solid var(--kc-border); }
+
+/*
+ * Dokunmatik cihazda "ustune gelme" (hover) yoktur: sohbet satirindaki
+ * sabitle/sil ve mesaj yanindaki sil/talep ac dugmeleri hep gorunur olsun
+ * (17 Eylul 2026). Bu kurallar yukaridaki display:none / opacity:0'dan
+ * sonra gelmeli ki uygulansin.
+ */
+@media (hover: none) {
+    .kc-row-actions { display: flex; }
+    .kc-msg-tools { opacity: 1; }
+}

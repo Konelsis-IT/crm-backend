@@ -84,6 +84,7 @@ final class ReleaseNotes
                     self::FIXES => [
                         'Taraf kartındaki taraf tipi, adresler, iletişim noktaları, kişiler, lisanslar, sertifikalar ve yıllık değerlendirmeler yeniden görünüyor.',
                         'Bir kaydı görebilen kişi artık o kaydın alt listelerini de görüyor; yetki ana kayıttan devralınıyor.',
+                        'Sohbet penceresi dar ve kısa ekranlara uyumlu hale getirildi: telefonda ve yatay/kısa pencerede tam ekran açılıyor, başlığı ve Kapat düğmesi üst çubuğun altında kalmıyor; dokunmatik cihazda sohbet satırı ve mesaj yanındaki düğmeler (sabitle, sil, talep aç) üzerine gelmeden görünüyor.',
                     ],
                     self::IMPROVEMENTS => [
                         'Sistem temiz veriyle başlatıldı. Geliştirme sırasında kullanılan örnek proje, müşteri, teklif, doküman ve personel kayıtları kaldırıldı.',
@@ -102,6 +103,7 @@ final class ReleaseNotes
                         '"Oluştur ve yeni oluştur" düğmesi tüm ekranlardan kaldırıldı; kayıt Kaydet ile açılır, yeni kayıt için form yeniden açılır.',
                         'Tüm tarih alanları tek düzene indirildi: gün.ay.yıl, saat girilmiyor, her ekranda aynı boyut. Kişi, taraf tipi ve yıllık değerlendirme pencereleri de bu düzene geçti.',
                         'Kişi ekleme formundan "Kayıtlı taraf" alanı kaldırıldı; Taraflar listesindeki "Roller" sütunu "Tipi" oldu.',
+                        'Çalışma alanı genişletildi: ekranlar artık geniş monitörde ortada dar bir şeritte kalmıyor, tablolar ve formlar ekranın tamamını kullanıyor.',
                     ],
                     self::NOTES => [
                         'Ünvan alanı bilerek boş bırakıldı; her personel kendi ünvanını sisteme kendisi girecek.',

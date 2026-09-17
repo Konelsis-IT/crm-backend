@@ -64,6 +64,12 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Red,
             ])
+            // Icerik alani tam genislik (17 Eylul 2026 kullanici karari): Filament
+            // varsayilani 7xl (1280px) icerigi ortalayip genis ekranda kenarlarda
+            // bos alan birakiyordu; tablolar ve formlar artik kullanilabilir
+            // alanin tamamini kullanir. Sayfa bazinda daraltmak gerekirse ilgili
+            // Page sinifinda $maxContentWidth ozelligi ile asilir.
+            ->maxContentWidth(Width::Full)
             // Her kaynak icin Policy zorunlu; tanimsiz yetki reddedilir.
             ->strictAuthorization()
             // Goruntuleme sayfalari bu urunde calisma alanidir (proje, is dosyasi,
