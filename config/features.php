@@ -27,5 +27,6 @@ return [
         'chat.admin_ui' => (bool) env('FEATURE_CHAT_UI', true),
         'work_requests.admin_ui' => (bool) env('FEATURE_WORK_REQUESTS_UI', true),
         'reports.admin_ui' => (bool) env('FEATURE_REPORTS_UI', true),
+        'social_media.admin_ui' => (bool) env('FEATURE_SOCIAL_MEDIA_UI', true),
     ],
 ];

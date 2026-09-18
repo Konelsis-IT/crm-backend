@@ -11,16 +11,26 @@ use Illuminate\Support\ServiceProvider;
 
 /**
  * Konelsis'e ozel panel varliklari. `php artisan filament:assets` ile
- * public/css/konelsis/ ve public/js/konelsis/ altina yayimlanir.
+ * public/css/konelsis/ ve public/js/konelsis/ altina yayimlanir (yayimlanan
+ * dosya adi kaynak dosyanin degil, asagidaki kimligin adidir).
  *
- * - konelsis.css (D-69): kucuk, yeniden kullanilabilir stil ekleri.
+ * - konelsis.css (D-69): kucuk, yeniden kullanilabilir stil ekleri; her panel
+ *   sayfasinda yuklenir.
  * - react / react-dom 18.3.1 (UMD, resources/js/vendor/react) ve
  *   konelsis-chat.js (D-83): kurum ici sohbet arayuzu. `loadedOnRequest()`:
  *   her sayfaya degil, yalniz sohbet baslaticisi (launcher.blade.php)
  *   yerlestirildiginde yuklenir.
+ * - konelsis-social.css ve dokuz social-*.js (D-106, B31): Sosyal Medya
+ *   sayfasinin React uygulamasi. Hepsi `loadedOnRequest()`: stil
+ *   resources/views/filament/social/app.blade.php, betikler
+ *   resources/views/filament/social/scripts.blade.php tarafindan yalniz o
+ *   sayfada cagrilir. Betik sirasi scripts.blade.php'de sabittir (core ilk,
+ *   app son). React'in ikinci kopyasi yoktur; sohbet yuklemiyorsa ayni
+ *   react / react-dom varliklari kullanilir (App\Filament\Support\ReactRuntime).
  *
  * Kural: Filament'in yerlesik bilesenleri yeterli olmadiginda, kullanici onayiyla
- * ve yalniz yeniden kullanilabilir kucuk duzeltmeler icin (AGENTS.md).
+ * (AGENTS.md). Kaynak dosya degisince `php artisan filament:assets` yeniden
+ * calistirilir; yayimlanan kopyalar depoda izlenir.
  */
 final class FilamentAssetsProvider extends ServiceProvider
 {
@@ -31,6 +41,16 @@ final class FilamentAssetsProvider extends ServiceProvider
             Js::make('react', resource_path('js/vendor/react/react.production.min.js'))->loadedOnRequest(),
             Js::make('react-dom', resource_path('js/vendor/react/react-dom.production.min.js'))->loadedOnRequest(),
             Js::make('konelsis-chat', resource_path('js/chat/konelsis-chat.js'))->loadedOnRequest(),
+            Css::make('konelsis-social', resource_path('css/filament/konelsis-social.css'))->loadedOnRequest(),
+            Js::make('social-core', resource_path('js/social/social-core.js'))->loadedOnRequest(),
+            Js::make('social-editor', resource_path('js/social/social-editor.js'))->loadedOnRequest(),
+            Js::make('social-feed', resource_path('js/social/social-feed.js'))->loadedOnRequest(),
+            Js::make('social-detail', resource_path('js/social/social-detail.js'))->loadedOnRequest(),
+            Js::make('social-composer', resource_path('js/social/social-composer.js'))->loadedOnRequest(),
+            Js::make('social-planner', resource_path('js/social/social-planner.js'))->loadedOnRequest(),
+            Js::make('social-insights', resource_path('js/social/social-insights.js'))->loadedOnRequest(),
+            Js::make('social-manage', resource_path('js/social/social-manage.js'))->loadedOnRequest(),
+            Js::make('social-app', resource_path('js/social/social-app.js'))->loadedOnRequest(),
         ], 'konelsis');
     }
 }

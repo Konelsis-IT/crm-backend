@@ -1258,4 +1258,82 @@ return [
         'done' => 'Done',
         'blocked' => 'Blocked',
     ],
+
+    // Social Media (B31, D-106)
+    'social_profile_kind' => [
+        'corporate' => 'Corporate account',
+        'executive' => 'Executive account',
+    ],
+    'social_platform' => [
+        'instagram' => 'Instagram',
+        'facebook' => 'Facebook',
+        'linkedin' => 'LinkedIn',
+        'x' => 'X',
+        'youtube' => 'YouTube',
+        'tiktok' => 'TikTok',
+        'website' => 'Website',
+    ],
+    'social_content_type' => [
+        'photo' => 'Photo',
+        'video' => 'Video',
+        'short_text' => 'Short text',
+        'long_text' => 'Long text',
+        'blog' => 'Blog',
+    ],
+    'social_content_status' => [
+        'pending' => 'Pending',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
+        'revision_requested' => 'Revision requested',
+        'archived' => 'Archive',
+    ],
+    'social_image_format' => [
+        'original' => 'Original',
+        'square' => 'Square',
+        'portrait' => 'Portrait',
+        'story' => 'Story',
+        'landscape' => 'Landscape',
+    ],
+    'social_media_kind' => [
+        'image' => 'Image',
+        'video' => 'Video',
+    ],
+    'social_media_variant' => [
+        'original' => 'Original',
+        'square' => 'Square',
+        'portrait' => 'Portrait',
+        'story' => 'Story',
+        'landscape' => 'Landscape',
+        'resized' => 'Resized',
+    ],
+    'social_media_usage' => [
+        'gallery' => 'Gallery',
+        'inline' => 'Inline image',
+    ],
+    'social_resolution_preset' => [
+        'sd' => 'SD',
+        'hd' => 'HD',
+        'full_hd' => 'Full HD',
+        'double' => '2× upscale',
+    ],
+    'social_reaction_type' => [
+        'like' => 'Liked',
+        'dislike' => 'Disliked',
+        'none' => 'No reaction',
+    ],
+    'social_watch_kind' => [
+        'competitor_company' => 'Competitor companies',
+        'competitor_executive' => 'Competitor executives',
+        'official_institution' => 'Official institutions',
+    ],
+    'social_metric_source' => [
+        'manual' => 'Manual entry',
+        'upload' => 'Report upload',
+    ],
+    'social_reminder_stage' => [
+        'approaching' => 'Approaching',
+        'tomorrow' => 'Tomorrow',
+        'today' => 'Today',
+        'missed' => 'Overdue',
+    ],
 ];

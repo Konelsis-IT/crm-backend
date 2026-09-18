@@ -91,4 +91,22 @@ return [
         'review_comment_required' => 'A note is required for revision and rejection.',
         'report_locked' => 'The report cannot be changed in this status: :status',
     ],
+    // Social Media (B31). Placeholders: urgent_not_allowed :days, urgent_cooldown :hours,
+    // image_too_large :max (megapixels), file_too_large and body_too_large :max (readable size, e.g. "25 MB").
+    'social_media' => [
+        'decision_note_required' => 'A note is required when rejecting or requesting a revision.',
+        'not_approved' => 'Only approved content can be marked as published.',
+        'urgent_not_allowed' => 'Urgent approval can be requested only for content with a planned date that is at most :days days away.',
+        'urgent_cooldown' => 'Urgent approval was requested for this content a short while ago. Wait :hours hours before asking again.',
+        'unsupported_media' => 'The file was not accepted: its type is not supported, it is empty or corrupt, or the version limit for this image has been reached.',
+        'image_too_large' => 'The image is too large to process. Images of up to :max megapixels can be used; try a smaller file.',
+        'media_not_image' => 'This action is available for images only.',
+        'upload_session_invalid' => 'The upload session is invalid or expired, or the limit of simultaneous uploads has been reached. Start the upload again.',
+        'content_archived' => 'Archived content cannot be changed. Take it out of the archive first.',
+        'empty_content' => 'The content is empty and cannot be approved: a photo content needs at least one image, a video content needs a video file or link, a text content needs its text.',
+        'file_too_large' => 'The file is too large. Maximum allowed size: :max',
+        'body_too_large' => 'The text is too long. Maximum allowed size: :max',
+        'urgent_no_recipient' => 'No approver could be notified about the urgent approval. Please inform your manager directly.',
+        'content_published' => 'Published content cannot be changed. Undo the publication first to edit it.',
+    ],
 ];

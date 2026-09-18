@@ -7,12 +7,23 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\PersonnelProfile;
 use App\Filament\Pages\Dashboard;
 use App\Filament\NavigationGroup;
+use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
+use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Files\ProjectPhotoController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Notifications\ApprovalQuickDecisionController;
 use App\Http\Controllers\Notifications\BusinessAlertAcknowledgeController;
+use App\Http\Controllers\SocialMedia\SocialCatalogController;
+use App\Http\Controllers\SocialMedia\SocialCommentController;
+use App\Http\Controllers\SocialMedia\SocialContentController;
+use App\Http\Controllers\SocialMedia\SocialMediaController;
+use App\Http\Controllers\SocialMedia\SocialMediaFileController;
+use App\Http\Controllers\SocialMedia\SocialMetricController;
+use App\Http\Controllers\SocialMedia\SocialPlanningController;
+use App\Http\Controllers\SocialMedia\SocialSettingsController;
+use App\Http\Controllers\SocialMedia\SocialUploadController;
 use App\Http\Middleware\SetLocale;
 use App\Models\Personnel\Personnel;
 use App\Services\Notification\AudienceResolver;
@@ -155,6 +166,89 @@ class AdminPanelProvider extends PanelProvider
                     Route::get('documents', [ChatController::class, 'documents'])->name('documents');
                     Route::get('attachments/{attachment}', ChatAttachmentController::class)->name('attachment');
                 });
+
+                // Sosyal Medya JSON uclari (B31, D-106): filament.admin.social.*
+                // Sayfadaki React uygulamasi kullanir; her uc denetleyicide B31 + bayrak +
+                // etkin personel kontrolunden ve Gate::authorize'dan gecer. Silme ucu yoktur.
+                // Rota parametre adlari denetleyici arguman adlariyla aynidir (model baglama).
+                // Yeni rota eklenince App\Filament\Support\SocialAppConfig::ROUTES da guncellenir.
+                Route::prefix('social')->name('social.')->where([
+                    'content' => '[0-9]+',
+                    'comment' => '[0-9]+',
+                    'media' => '[0-9]+',
+                    'account' => '[0-9]+',
+                    'category' => '[0-9]+',
+                    'day' => '[0-9]+',
+                    'profile' => '[0-9]+',
+                    'entry' => '[0-9]+',
+                    'token' => '[A-Za-z0-9]{40}',
+                ])->group(function (): void {
+                    // Icerik
+                    Route::get('bootstrap', [SocialContentController::class, 'bootstrap'])->name('bootstrap');
+                    Route::get('counts', [SocialContentController::class, 'counts'])->name('counts');
+                    Route::get('contents', [SocialContentController::class, 'index'])->name('contents');
+                    Route::post('contents', [SocialContentController::class, 'store'])->name('contents.store');
+                    Route::get('contents/{content}', [SocialContentController::class, 'show'])->name('contents.show');
+                    Route::post('contents/{content}', [SocialContentController::class, 'update'])->name('contents.update');
+                    Route::post('contents/{content}/status', [SocialContentController::class, 'status'])->name('contents.status');
+                    Route::post('contents/{content}/publish', [SocialContentController::class, 'publish'])->name('contents.publish');
+                    Route::post('contents/{content}/unpublish', [SocialContentController::class, 'unpublish'])->name('contents.unpublish');
+                    Route::post('contents/{content}/urgent', [SocialContentController::class, 'urgent'])->name('contents.urgent');
+                    Route::post('contents/{content}/reaction', [SocialContentController::class, 'reaction'])->name('contents.reaction');
+
+                    // Yorumlar ve gorsel uzeri isaretler
+                    Route::post('contents/{content}/comments', [SocialCommentController::class, 'store'])->name('comments.store');
+                    Route::post('comments/{comment}/resolve', [SocialCommentController::class, 'resolve'])->name('comments.resolve');
+
+                    // Medya (galeri, surumler, video kapagi) ve yetki kontrollu dosya sunumu
+                    Route::post('contents/{content}/media', [SocialMediaController::class, 'store'])->name('media.store');
+                    Route::post('contents/{content}/media/order', [SocialMediaController::class, 'order'])->name('media.order');
+                    Route::post('media/{media}', [SocialMediaController::class, 'update'])->name('media.update');
+                    Route::post('media/{media}/variant', [SocialMediaController::class, 'variant'])->name('media.variant');
+                    Route::post('media/{media}/select', [SocialMediaController::class, 'select'])->name('media.select');
+                    Route::post('media/{media}/remove', [SocialMediaController::class, 'remove'])->name('media.remove');
+                    Route::post('media/{media}/restore', [SocialMediaController::class, 'restore'])->name('media.restore');
+                    Route::post('media/{media}/poster', [SocialMediaController::class, 'poster'])->name('media.poster');
+                    Route::get('media/{media}/file', SocialMediaFileController::class)->name('media.file');
+                    // Seri indirme: galerinin tum secili surumleri tek zip dosyasinda.
+                    Route::get('contents/{content}/media/zip', [SocialMediaController::class, 'zip'])->name('media.zip');
+
+                    // Parcali video yukleme
+                    Route::post('uploads', [SocialUploadController::class, 'begin'])->name('uploads.begin');
+                    Route::get('uploads/{token}', [SocialUploadController::class, 'status'])->name('uploads.status');
+                    Route::post('uploads/{token}/chunks', [SocialUploadController::class, 'chunk'])->name('uploads.chunk');
+                    Route::post('uploads/{token}/complete', [SocialUploadController::class, 'complete'])->name('uploads.complete');
+                    Route::post('uploads/{token}/abort', [SocialUploadController::class, 'abort'])->name('uploads.abort');
+
+                    // Plan (takvim, ajanda), analiz ve depolama kutusu
+                    Route::get('calendar', [SocialPlanningController::class, 'calendar'])->name('calendar');
+                    Route::get('agenda', [SocialPlanningController::class, 'agenda'])->name('agenda');
+                    Route::get('analytics', [SocialPlanningController::class, 'analytics'])->name('analytics');
+                    Route::get('storage', [SocialPlanningController::class, 'storage'])->name('storage');
+
+                    // Ilham ve rakipler + ayarlar (kategori, ozel gun, hesap baglantilari, sorumlu gorevler)
+                    Route::get('watch', [SocialSettingsController::class, 'watch'])->name('watch');
+                    Route::post('watch', [SocialSettingsController::class, 'watchStore'])->name('watch.store');
+                    Route::post('watch/{account}', [SocialSettingsController::class, 'watchUpdate'])->name('watch.update');
+                    Route::post('categories', [SocialSettingsController::class, 'categoryStore'])->name('categories.store');
+                    Route::post('categories/{category}', [SocialSettingsController::class, 'categoryUpdate'])->name('categories.update');
+                    Route::get('days', [SocialSettingsController::class, 'days'])->name('days');
+                    Route::post('days', [SocialSettingsController::class, 'dayStore'])->name('days.store');
+                    Route::post('days/{day}', [SocialSettingsController::class, 'dayUpdate'])->name('days.update');
+                    Route::post('profiles/{profile}', [SocialSettingsController::class, 'profileUpdate'])->name('profiles.update');
+                    Route::get('responsibles', [SocialSettingsController::class, 'responsibles'])->name('responsibles');
+                    Route::post('responsibles', [SocialSettingsController::class, 'responsiblesSync'])->name('responsibles.sync');
+
+                    // Platform istatistikleri (elle giris ya da rapor dosyasi)
+                    Route::get('metrics', [SocialMetricController::class, 'index'])->name('metrics');
+                    Route::post('metrics', [SocialMetricController::class, 'store'])->name('metrics.store');
+                    Route::post('metrics/{entry}', [SocialMetricController::class, 'update'])->name('metrics.update');
+                    Route::get('metrics/{entry}/file', [SocialMetricController::class, 'file'])->name('metrics.file');
+
+                    // Sirket katalogu (DMS sabit belge turu KAT)
+                    Route::get('catalog', [SocialCatalogController::class, 'info'])->name('catalog');
+                    Route::get('catalog/file', [SocialCatalogController::class, 'file'])->name('catalog.file');
+                });
             })
             // Kumeler, onlara bagli kaynaklardan once kesfedilmeli; aksi halde
             // kaynaklarin rotalari kume on ekiyle degil eski adiyla kayit olur.
@@ -184,14 +278,21 @@ class AdminPanelProvider extends PanelProvider
                 fn () => view('filament.components.language-switcher'),
             )
             // Sag alttaki sohbet baslaticisi (D-83): yalniz oturum acmis personel,
-            // B12A uygulanmis ve bayrak acikken.
+            // B12A uygulanmis ve bayrak acikken. Kosul ReactRuntime'dadir; ayni
+            // kosula Sosyal Medya betikleri de bakar (React iki kez yuklenmesin).
             ->renderHook(
                 PanelsRenderHook::BODY_END,
-                fn () => auth()->check()
-                    && SchemaReadiness::hasBatch('B12A')
-                    && FeatureFlags::enabled('chat.admin_ui')
+                fn () => ReactRuntime::providedByChat()
                     ? view('filament.chat.launcher')
                     : '',
+            )
+            // Sosyal Medya React betikleri (D-106): yalniz o sayfada ve sohbet
+            // kancasindan SONRA (kapsamsiz kancalar once cizilir), boylece belge
+            // sirasi react, react-dom, konelsis-chat, social-* olur.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.social.scripts'),
+                scopes: ManageSocialMedia::class,
             )
             ->middleware([
                 EncryptCookies::class,

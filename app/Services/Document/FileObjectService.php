@@ -6,6 +6,7 @@ namespace App\Services\Document;
 
 use App\Enums\Document\FileDerivationKind;
 use App\Enums\Document\FileObjectStatus;
+use App\Exceptions\ActorRequiredException;
 use App\Exceptions\RecordNotFoundException;
 use App\Models\Document\FileObject;
 use App\Services\AbstractService;
@@ -104,6 +105,82 @@ final class FileObjectService extends AbstractService
             ]);
 
             $this->ensureThumbnail($fileObject, $bytes);
+
+            return $fileObject;
+        });
+    }
+
+    /**
+     * Buyuk dosyalar (video) icin bellek dostu kayit (B31, D-106).
+     *
+     * createFromUpload ile ayni sozlesme: `local` diskteki gecici ANAHTAR gelir;
+     * ayni icerik (sha256) daha once kayitliysa gecici dosya silinir ve mevcut
+     * nesne doner, degilse dosya `<directory>/<rastgele40>.<uzanti>` anahtarina
+     * tasinir ve metadata satiri ayni alan listesiyle olusur. Farki: dosya
+     * bellege OKUNMAZ (ozet hash_file ile, tur ve boyut diskten alinir), gorsel
+     * olcusu okunmaz ve kucuk gorsel uretilmez. Yukleyen personel zorunludur.
+     */
+    public function createFromLocalFile(string $tempPath, ?string $originalName, string $directory = 'social/videos'): FileObject
+    {
+        $uploaderId = $this->actor->personnelId();
+
+        if ($uploaderId === null) {
+            throw ActorRequiredException::make();
+        }
+
+        return $this->transactions->run(function () use ($tempPath, $originalName, $directory, $uploaderId): FileObject {
+            $disk = Storage::disk('local');
+
+            if (! $disk->exists($tempPath)) {
+                throw RecordNotFoundException::make();
+            }
+
+            $sha256 = hash_file('sha256', $disk->path($tempPath));
+
+            if (! is_string($sha256) || $sha256 === '') {
+                throw RecordNotFoundException::make();
+            }
+
+            /** @var FileObject|null $existing */
+            $existing = FileObject::query()->where('sha256', $sha256)->first();
+
+            if ($existing !== null) {
+                $disk->delete($tempPath);
+
+                return $existing;
+            }
+
+            $originalName = mb_substr(filled($originalName) ? (string) $originalName : basename($tempPath), 0, 255);
+            $extension = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+            $extension = preg_match('/^[a-z0-9]{1,16}$/', $extension) === 1 ? $extension : 'bin';
+
+            $directory = trim($directory, '/');
+            $storageKey = ($directory !== '' ? $directory : 'social/videos').'/'.Str::random(40).'.'.$extension;
+
+            // 'local' diskte throw => false: tasima basarisizsa false doner.
+            if (! $disk->move($tempPath, $storageKey)) {
+                throw RecordNotFoundException::make();
+            }
+
+            $mimeType = (string) ($disk->mimeType($storageKey) ?: 'application/octet-stream');
+
+            /** @var FileObject $fileObject */
+            $fileObject = parent::create([
+                'storage_disk' => 'local',
+                'storage_key' => $storageKey,
+                'original_name' => $originalName,
+                'extension' => $extension,
+                'mime_type' => $mimeType,
+                'declared_mime_type' => $mimeType,
+                'byte_size' => $disk->size($storageKey),
+                'sha256' => $sha256,
+                'scan_status' => 'skipped',
+                'image_width' => null,
+                'image_height' => null,
+                'uploaded_by_personnel_id' => $uploaderId,
+                'uploaded_at' => Carbon::now('UTC'),
+                'status' => 'active',
+            ]);
 
             return $fileObject;
         });

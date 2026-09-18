@@ -122,6 +122,21 @@ final class PermissionSubjects
         'PositionAssignment' => 'Position',
         'OrgUnitRelation' => 'OrgUnit',
         'TrainingAttendance' => 'Training',
+
+        // Sosyal medya (B31, D-106): modulun tek izin konusu icerik kaydidir
+        'SocialComment' => 'SocialContent',
+        'SocialReaction' => 'SocialContent',
+        'SocialContentMedia' => 'SocialContent',
+        'SocialContentPlatform' => 'SocialContent',
+        'SocialContentRevision' => 'SocialContent',
+        'SocialCategory' => 'SocialContent',
+        'SocialProfile' => 'SocialContent',
+        'SocialProfileLink' => 'SocialContent',
+        'SocialSpecialDay' => 'SocialContent',
+        'SocialWatchAccount' => 'SocialContent',
+        'SocialWatchLink' => 'SocialContent',
+        'SocialMetricEntry' => 'SocialContent',
+        'SocialResponsiblePosition' => 'SocialContent',
     ];
 
     /** Bu konunun yetkisini devraldigi ana konu; yoksa null. */

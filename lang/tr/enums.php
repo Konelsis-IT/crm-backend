@@ -1258,4 +1258,82 @@ return [
         'done' => 'Tamamlandı',
         'blocked' => 'Engellendi',
     ],
+
+    // Sosyal Medya (B31, D-106)
+    'social_profile_kind' => [
+        'corporate' => 'Kurumsal hesap',
+        'executive' => 'Yönetici hesabı',
+    ],
+    'social_platform' => [
+        'instagram' => 'Instagram',
+        'facebook' => 'Facebook',
+        'linkedin' => 'LinkedIn',
+        'x' => 'X',
+        'youtube' => 'YouTube',
+        'tiktok' => 'TikTok',
+        'website' => 'Web sitesi',
+    ],
+    'social_content_type' => [
+        'photo' => 'Fotoğraf',
+        'video' => 'Video',
+        'short_text' => 'Kısa metin',
+        'long_text' => 'Uzun metin',
+        'blog' => 'Blog',
+    ],
+    'social_content_status' => [
+        'pending' => 'Bekliyor',
+        'approved' => 'Onaylandı',
+        'rejected' => 'Reddedildi',
+        'revision_requested' => 'Revize edilsin',
+        'archived' => 'Arşiv',
+    ],
+    'social_image_format' => [
+        'original' => 'Özgün',
+        'square' => 'Kare',
+        'portrait' => 'Dikey',
+        'story' => 'Hikâye',
+        'landscape' => 'Yatay',
+    ],
+    'social_media_kind' => [
+        'image' => 'Görsel',
+        'video' => 'Video',
+    ],
+    'social_media_variant' => [
+        'original' => 'Özgün',
+        'square' => 'Kare',
+        'portrait' => 'Dikey',
+        'story' => 'Hikâye',
+        'landscape' => 'Yatay',
+        'resized' => 'Yeniden boyutlandırılmış',
+    ],
+    'social_media_usage' => [
+        'gallery' => 'Galeri',
+        'inline' => 'Metin içi görsel',
+    ],
+    'social_resolution_preset' => [
+        'sd' => 'SD',
+        'hd' => 'HD',
+        'full_hd' => 'Full HD',
+        'double' => '2× büyütme',
+    ],
+    'social_reaction_type' => [
+        'like' => 'Beğendi',
+        'dislike' => 'Beğenmedi',
+        'none' => 'Tepki yok',
+    ],
+    'social_watch_kind' => [
+        'competitor_company' => 'Rakip firmalar',
+        'competitor_executive' => 'Rakip yöneticiler',
+        'official_institution' => 'Resmî kurumlar',
+    ],
+    'social_metric_source' => [
+        'manual' => 'Elle giriş',
+        'upload' => 'Rapor yükleme',
+    ],
+    'social_reminder_stage' => [
+        'approaching' => 'Yaklaşıyor',
+        'tomorrow' => 'Yarın',
+        'today' => 'Bugün',
+        'missed' => 'Gecikti',
+    ],
 ];

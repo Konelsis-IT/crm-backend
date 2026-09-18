@@ -145,6 +145,16 @@ class ReferenceTypeRegistrySeeder extends Seeder
             ['work_request', 'work_requests', 'activity.subjects.work_request', 'notification'],
             ['report', 'reports', 'activity.subjects.report', 'reporting'],
             ['report_item', 'report_items', 'activity.subjects.report_item', 'reporting'],
+            // Sosyal medya (B31, D-106)
+            ['social_content', 'social_contents', 'activity.subjects.social_content', 'social_media'],
+            ['social_comment', 'social_comments', 'activity.subjects.social_comment', 'social_media'],
+            ['social_content_media', 'social_content_media', 'activity.subjects.social_content_media', 'social_media'],
+            ['social_category', 'social_categories', 'activity.subjects.social_category', 'social_media'],
+            ['social_special_day', 'social_special_days', 'activity.subjects.social_special_day', 'social_media'],
+            ['social_watch_account', 'social_watch_accounts', 'activity.subjects.social_watch_account', 'social_media'],
+            ['social_profile', 'social_profiles', 'activity.subjects.social_profile', 'social_media'],
+            ['social_metric_entry', 'social_metric_entries', 'activity.subjects.social_metric_entry', 'social_media'],
+            ['social_responsible_position', 'social_responsible_positions', 'activity.subjects.social_responsible_position', 'social_media'],
         ];
 
         foreach ($entries as [$targetType, $tableName, $labelKey, $domain]) {

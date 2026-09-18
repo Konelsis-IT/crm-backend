@@ -60,6 +60,7 @@ final class SchemaReadiness
         'B28' => 'party_meeting_notes',                // Taraf network / ziyaret onceligi / gorusme notlari
         'B29' => 'business_case_scopes',               // Is dosyasi kapsamlari / teklif tipi / teklif belgeleri
         'B30' => 'business_case_scopes.hes_unit_cost', // HES kapsaminin kendi tutar alani
+        'B31' => 'social_responsible_positions',       // Sosyal medya (grubun en son olusan tablosu)
     ];
 
     /** @var array<string, bool> */

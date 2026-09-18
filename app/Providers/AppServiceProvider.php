@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Infrastructure\Console\SchemaChangeGuard;
+use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Audit\ActorContext;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
@@ -24,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
     {
         // Hareketi kimin yaptigi bilgisi istek/is basina tutulur.
         $this->app->scoped(ActorContext::class);
+
+        // Sosyal medya sorumlulugu istek/is basina bir kez cozulur (B31, D-106):
+        // politika ayni istekte defalarca sorar, sonuc ornekte bellekte tutulur.
+        $this->app->scoped(SocialResponsibilityQueries::class);
     }
 
     public function boot(): void

@@ -23,6 +23,14 @@ use Illuminate\Database\Seeder;
  * PersonnelSnapshotSeeder depodan tamamen silindi. Bu dizinde yalniz
  * referans verisi, gercek organizasyon, gercek personel, rol/yetki matrisi
  * ve gercek taraflar kalir; kurgusal veri ureten seeder eklenmez.
+ *
+ * 18 Eylul 2026 (D-106, Sosyal Medya): zincirin sonuna kullanicinin
+ * adlandirdigi iki gercek sosyal medya hesabi (SocialProfileSeeder) ve tarihi
+ * sabit resmi ulusal gunler (SocialSpecialDaySeeder; herkese acik referans
+ * verisi) eklendi. Ikisi de B31 uygulanmamissa kendini atlar, var olan satiri
+ * degistirmez; baglanti, rakip hesap, kategori gibi sirket verisi uretmez.
+ * Hesap sahibi gercek personelden bulundugu icin RoleMatrixSeeder'dan sonra
+ * calisirlar.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -50,6 +58,10 @@ class DatabaseSeeder extends Seeder
 
             // Gercek taraf verisi (firma takip listesi, 16 Eylul 2026)
             RealPartySeeder::class,
+
+            // Sosyal medya (B31, D-106): gercek hesaplar ve resmi ulusal gunler
+            SocialProfileSeeder::class,
+            SocialSpecialDaySeeder::class,
         ]);
     }
 }

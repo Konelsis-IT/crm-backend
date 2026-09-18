@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Resources\SocialContents\SocialContentResource;
+use App\Filament\Widgets\UpcomingSocialContentsWidget;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
@@ -214,6 +216,20 @@ return [
                 'viewConfidential',
                 'authorHrEvaluation',
             ],
+            // Sosyal Medya (D-106): silme yoktur. Standart yetkilere ek olarak
+            // karar verme (onay / ret / revize), paylasildi isaretleme, arsive
+            // kaldirma ve modul ayarlari izinleri Roller ekraninda isaretlenir.
+            // Sorumlu personel yetkisini izinden degil gorevinden alir.
+            SocialContentResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'approve',
+                'publish',
+                'archive',
+                'manageSettings',
+            ],
         ],
         'exclude' => [
             //
@@ -256,6 +272,10 @@ return [
         'exclude' => [
             AccountWidget::class,
             FilamentInfoWidget::class,
+            // Yaklasan sosyal medya icerikleri (D-106): gorunurlugu izinle degil
+            // kuralla belirlenir (sorumlu gorev, tam yetki ya da kendi icerigi);
+            // Roller ekraninda etkisiz bir kutu olusmasin diye izin uretilmez.
+            UpcomingSocialContentsWidget::class,
         ],
     ],
 

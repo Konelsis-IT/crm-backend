@@ -91,4 +91,22 @@ return [
         'review_comment_required' => 'Revizyon ve ret için açıklama zorunludur.',
         'report_locked' => 'Rapor bu durumda değiştirilemez: :status',
     ],
+    // Sosyal Medya (B31). Yer tutucular: urgent_not_allowed :days, urgent_cooldown :hours,
+    // image_too_large :max (megapiksel), file_too_large ve body_too_large :max (okunur boyut, örn. "25 MB").
+    'social_media' => [
+        'decision_note_required' => 'Reddetme ve revize isteme kararında açıklama yazılmalıdır.',
+        'not_approved' => 'Yalnız onaylanmış içerik paylaşıldı olarak işaretlenebilir.',
+        'urgent_not_allowed' => 'Acil onay, plan tarihi belirlenmiş ve paylaşımına en fazla :days gün kalmış içerik için istenebilir.',
+        'urgent_cooldown' => 'Bu içerik için kısa süre önce acil onay istendi. Yeniden istemek için :hours saat geçmesi gerekir.',
+        'unsupported_media' => 'Dosya kabul edilmedi: türü desteklenmiyor, dosya boş ya da bozuk, ya da bu görsel için sürüm sınırına ulaşıldı.',
+        'image_too_large' => 'Görsel işlenemeyecek kadar büyük. En fazla :max megapiksel görsel kullanılabilir; daha küçük bir dosya deneyin.',
+        'media_not_image' => 'Bu işlem yalnız görsellerde yapılabilir.',
+        'upload_session_invalid' => 'Yükleme oturumu geçersiz, süresi dolmuş ya da aynı anda açık yükleme sınırına ulaşıldı. Yüklemeyi baştan başlatın.',
+        'content_archived' => 'Arşivdeki içerik değiştirilemez. Önce arşivden çıkarın.',
+        'empty_content' => 'İçerik boş olduğu için onaylanamaz: fotoğraf içeriğine en az bir görsel, video içeriğine video dosyası ya da bağlantısı, metin içeriğine metin eklenmelidir.',
+        'file_too_large' => 'Dosya çok büyük. İzin verilen en büyük boyut: :max',
+        'body_too_large' => 'Metin çok uzun. İzin verilen en büyük boyut: :max',
+        'urgent_no_recipient' => 'Acil onay bildirimi gönderilebilecek bir onaycı bulunamadı. Yöneticinize doğrudan haber verin.',
+        'content_published' => 'Paylaşılmış içerik değiştirilemez. Düzenlemek için önce paylaşımı geri alın.',
+    ],
 ];

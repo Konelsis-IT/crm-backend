@@ -27,7 +27,12 @@ use Spatie\Permission\PermissionRegistrar;
  *               talepler, personel rehberi, organizasyon semasi).
  *  - Departman: o departmanin isi (proje, satin alma, ticari, finans, IK,
  *               saha, bilgi islem).
- *  - YONETICI : departman yoneticisi eki (onaylar, rapor inceleme, bildirim).
+ *  - YONETICI : departman yoneticisi eki (onaylar, rapor inceleme, bildirim,
+ *               sosyal medya icerik karari).
+ *
+ * Sosyal medya (D-106): sorumlu personelin yetkisi burada YAZILMAZ; modul
+ * ayarlarinda secilen gorevi tutan kisi yetkisini politika uzerinden alir,
+ * sorumlu gorev degisince bu seeder'i yeniden calistirmak gerekmez.
  *
  * Onkosul: Shield izinleri uretilmis olmali (php artisan shield:generate --all).
  * Izin bulunamazsa o satir sessizce atlanir; seeder izin URETMEZ.
@@ -217,6 +222,9 @@ class RoleMatrixSeeder extends Seeder
                 'ApprovalPolicy' => self::READ,
                 'Delegation' => self::WRITE,
                 'All' => ['Notify'],
+                // Sosyal medya (D-106): icerik hazirlar ve duzenler. Karar izni
+                // yonetici ekindedir; sorumlu personel yetkisini gorevinden alir.
+                'SocialContent' => self::WRITE,
             ],
         ];
     }
@@ -237,6 +245,9 @@ class RoleMatrixSeeder extends Seeder
             'Personnel' => ['Notify'],
             'Team' => ['Notify'],
             'Department' => ['Notify'],
+            // Sosyal medya iceriklerini gorur ve karar verir: onay / ret /
+            // revize (D-106). Kendi olusturdugu icerige karar veremez.
+            'SocialContent' => [...self::READ, 'Approve'],
         ];
     }
 
@@ -254,7 +265,7 @@ class RoleMatrixSeeder extends Seeder
             'WorkPackage', 'WbsNode', 'DelayEvent', 'Party', 'BusinessCase', 'Proposal',
             'ProposalVersion', 'Contract', 'ContractVersion', 'TenderNotice', 'Document',
             'Transmittal', 'Personnel', 'OrgUnit', 'Position', 'ApprovalRequest',
-            'ApprovalPolicy', 'WorkRequest', 'Report',
+            'ApprovalPolicy', 'WorkRequest', 'Report', 'SocialContent',
         ] as $subject) {
             $read[$subject] = self::READ;
         }
