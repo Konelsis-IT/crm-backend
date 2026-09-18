@@ -172,11 +172,12 @@ Gerçek bir sunucuda (nginx + PHP-FPM, Apache) bu sağlayıcı devreye girmez; o
 
 1. `KONELSIS_SCHEMA_CHANGES_ALLOWED` ve `KONELSIS_DESTRUCTIVE_SCHEMA_ALLOWED` yalnız o kabukta `true` yapılır.
 2. Şema sıfırdan kurulur ve seed çalıştırılır: `php artisan migrate:fresh --seed`.
-3. Mevcut personel kayıtlarının anlık görüntüsünü geri yüklemek için (isteğe bağlı) `php artisan db:seed --class=PersonnelSnapshotSeeder`.
-4. İki bayrak `false` yapılır.
-5. Personel fotoğraflarının görünmesi için bir kez `php artisan storage:link`.
-6. Migration gruplarının uygulanıp uygulanmadığı **doğrudan veritabanı şemasından** okunur (D-92, `App\Services\Platform\SchemaReadiness`); `.env` içinde batch listesi tutulmaz. Bir grup uygulanmamışsa ona bağlı ekranlar arayüzde görünmez, migration çalıştığı anda kendiliğinden açılır. Yetkili hesaplar da `.env`'de değil `SystemAccountSeeder`'dadır (D-91).
-7. Daha önce `php artisan optimize` veya config önbelleği alındıysa `php artisan config:clear`.
+3. İki bayrak `false` yapılır.
+4. Personel fotoğraflarının görünmesi için bir kez `php artisan storage:link`.
+5. Migration gruplarının uygulanıp uygulanmadığı **doğrudan veritabanı şemasından** okunur (D-92, `App\Services\Platform\SchemaReadiness`); `.env` içinde batch listesi tutulmaz. Bir grup uygulanmamışsa ona bağlı ekranlar arayüzde görünmez, migration çalıştığı anda kendiliğinden açılır. Yetkili hesaplar da `.env`'de değil `SystemAccountSeeder`'dadır (D-91).
+6. Daha önce `php artisan optimize` veya config önbelleği alındıysa `php artisan config:clear`.
+
+Canlı ortam (18 Eylül 2026, D-105): `migrate:fresh` ve diğer yıkıcı komutlar `SchemaChangeGuard` tarafından canlıda bayraktan bağımsız reddedilir ve bu koruma gevşetilmez. Canlıda sıfırdan kurulum gerekiyorsa tablolar veritabanı konsolundan (DBA) silinir, ardından yalnız `KONELSIS_SCHEMA_CHANGES_ALLOWED=true php artisan migrate --seed --force` çalıştırılır. Seed zinciri yalnız gerçek veriyi yükler; kurgusal örnek seeder'lar ve `PersonnelSnapshotSeeder` depodan silinmiştir.
 
 Roll-forward ilkesi geçerlidir: geri alma yerine düzeltici şema dosyası; `down()` adımları yalnız kullanıcı kararıyla, production dışında ve `assertDestructiveAllowed()` bayrağıyla çalışır.
 

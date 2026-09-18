@@ -20,8 +20,8 @@ use Illuminate\Support\Carbon;
 /**
  * Gercek personel verisi (Konelsis_Sirket_Organizasyon_Semasi, 15 Eylul
  * 2026, kullanici talimati; telefon/e-posta listesi ve duzeltmeler de
- * 15 Eylul 2026 kullanicidan). PersonnelSampleDataSeeder'dan (kurgusal
- * test verisi) TAMAMEN BAGIMSIZDIR.
+ * 15 Eylul 2026 kullanicidan). Sistemdeki tek personel seeder'idir;
+ * kurgusal ornek personel seeder'i 18 Eylul 2026'da silindi (D-105).
  *
  * Onkosul: RealOrganizationSeeder (eksik departmanlar, gorevler, unvan
  * katalogu) once calismis olmali; onceki de OrganizationStructureSeeder.

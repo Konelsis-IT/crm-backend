@@ -24,7 +24,7 @@ use Illuminate\Support\Str;
  * Eylul 2026 surumu; 16 Eylul 2026 kullanici talimatiyla aktarildi). Kaynak
  * dizi database/seeders/data/real_parties.php dosyasindadir; bu seeder o
  * diziyi okur ve her firmayi "prospect" durumunda organizasyon tarafi
- * olarak yazar. Kurgusal ornek seeder'lardan TAMAMEN BAGIMSIZDIR.
+ * olarak yazar. Depoda kurgusal ornek seeder yoktur (D-105).
  *
  * Kullanici karari (16 Eylul 2026, B28):
  *  - Listedeki rol (isveren / otorite) taraf rolu olarak acilir.

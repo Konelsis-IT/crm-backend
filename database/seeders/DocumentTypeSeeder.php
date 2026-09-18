@@ -17,10 +17,10 @@ use Illuminate\Database\Seeder;
 /**
  * Dokuman turleri: referans verisi (16 §4 B24).
  *
- * Onceki surumde bu liste DocumentSampleDataSeeder'in icindeydi ve kurgusal
- * dokumanlarla birlikte gelirdi. 16 Eylul 2026 kullanici karariyla ornek
- * veriler kaldirildi; turler gercek referans verisi oldugu icin ayri bir
- * seeder'a alindi (D-90).
+ * Onceki surumde bu liste kurgusal dokumanlarla birlikte gelen ornek DMS
+ * seeder'inin icindeydi. 16 Eylul 2026 kullanici karariyla ornek veriler
+ * zincirden cikarildi, turler gercek referans verisi oldugu icin ayri bir
+ * seeder'a alindi (D-90); ornek seeder 18 Eylul 2026'da silindi (D-105).
  */
 class DocumentTypeSeeder extends Seeder
 {

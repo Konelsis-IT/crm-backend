@@ -17,9 +17,12 @@ use Illuminate\Database\Seeder;
  * kayitlari gercek kullanimla olusur. Firma takip listesindeki gercek
  * taraflar (RealPartySeeder, 16 Eylul 2026) zincirin sonunda yuklenir.
  *
- * Zincirden cikarilanlar (dosyalar duruyor, yerel denemede
- * `php artisan db:seed --class=...` ile tek tek calistirilabilir):
- * PersonnelSampleDataSeeder, AcquisitionSampleDataSeeder, DocumentSampleDataSeeder.
+ * 18 Eylul 2026 (D-105, kullanici karari): kurgusal ornek seeder'lar
+ * (PersonnelSampleDataSeeder, AcquisitionSampleDataSeeder,
+ * DocumentSampleDataSeeder), ornek dokuman fixture'lari ve eski
+ * PersonnelSnapshotSeeder depodan tamamen silindi. Bu dizinde yalniz
+ * referans verisi, gercek organizasyon, gercek personel, rol/yetki matrisi
+ * ve gercek taraflar kalir; kurgusal veri ureten seeder eklenmez.
  */
 class DatabaseSeeder extends Seeder
 {
