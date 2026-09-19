@@ -79,6 +79,28 @@ final class WorkRequestPolicy
             || app(WorkRequestQueries::class)->managesUnit((int) $personnel->getKey(), (int) $record->target_org_unit_id);
     }
 
+    /** Yazisma (B32): talep aciksa taraflar cevap yazar. */
+    public function reply(Personnel $personnel, WorkRequest $record): bool
+    {
+        return $record->isOpen()
+            && ($this->hasFullAccess($personnel)
+                || $this->isRequesterSide($personnel, $record)
+                || $this->isTargetSide($personnel, $record)
+                || $this->isApprover($personnel, $record));
+    }
+
+    /** Yonlendirme (B32): muhatap taraf ya da hedef birimin yoneticisi baska muhataba devreder. */
+    public function forward(Personnel $personnel, WorkRequest $record): bool
+    {
+        if (! $record->isOpen()) {
+            return false;
+        }
+
+        return $this->canHandle($personnel, $record)
+            || ($record->targetsOrgUnit()
+                && app(WorkRequestQueries::class)->managesUnit((int) $personnel->getKey(), (int) $record->target_org_unit_id));
+    }
+
     public function delete(Personnel $personnel, WorkRequest $record): bool
     {
         return false;

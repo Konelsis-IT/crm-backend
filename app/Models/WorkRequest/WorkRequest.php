@@ -105,6 +105,12 @@ class WorkRequest extends Model
             ->where('subject_type', 'work_request');
     }
 
+    /** Talep yazismasi: talep ilk mesajdir, cevaplar bu iliskidedir (B32). */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(WorkRequestMessage::class, 'work_request_id')->orderBy('id');
+    }
+
     /** Hareket kaydindaki metin kimlik. */
     public function getSubjectKeyAttribute(): string
     {

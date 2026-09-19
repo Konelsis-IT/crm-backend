@@ -12,6 +12,8 @@ use App\Exceptions\InvalidTransitionException;
 use App\Exceptions\WorkRequest\ApprovalPolicyMissingException;
 use App\Exceptions\WorkRequest\ApproverInvalidException;
 use App\Exceptions\WorkRequest\ApproverRequiredException;
+use App\Exceptions\WorkRequest\ForwardNotAllowedException;
+use App\Exceptions\WorkRequest\MessageEmptyException;
 use App\Exceptions\WorkRequest\NoteRequiredException;
 use App\Exceptions\WorkRequest\RequesterCannotHandleException;
 use App\Exceptions\WorkRequest\SelfTargetException;
@@ -19,6 +21,7 @@ use App\Exceptions\WorkRequest\TargetRequiredException;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Models\Personnel\Personnel;
 use App\Models\WorkRequest\WorkRequest;
+use App\Models\WorkRequest\WorkRequestMessage;
 use App\Query\Approval\ApprovalQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Services\AbstractService;
@@ -26,6 +29,7 @@ use App\Services\Approval\ApprovalRequestService;
 use App\Services\Approval\Subjects\WorkRequestSubject;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
+use App\Services\Document\FileObjectService;
 use App\Services\Notification\PanelNotifier;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
@@ -34,6 +38,7 @@ use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -63,6 +68,7 @@ final class WorkRequestService extends AbstractService
         private readonly WorkRequestQueries $queries,
         private readonly ApprovalQueries $approvals,
         private readonly PanelNotifier $notifier,
+        private readonly FileObjectService $fileObjects,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
@@ -73,11 +79,12 @@ final class WorkRequestService extends AbstractService
     public function create(array $data): Model
     {
         $me = $this->actorId();
+        $files = $this->pullAttachments($data);
         $data = $this->normalize($data);
         $this->assertTarget($data, $me);
         $this->assertApprover($data, $me);
 
-        return $this->transactions->run(function () use ($data, $me): WorkRequest {
+        return $this->transactions->run(function () use ($data, $me, $files): WorkRequest {
             /** @var WorkRequest $request */
             $request = parent::create([
                 ...$data,
@@ -89,6 +96,11 @@ final class WorkRequestService extends AbstractService
             ]);
 
             $request->forceFill(['request_no' => sprintf('TLP-%06d', (int) $request->getKey())])->save();
+
+            // Talep acilirken eklenen dosyalar ilk mesajin parcasidir (B32).
+            if ($files !== []) {
+                $this->storeMessage($request, WorkRequestMessage::KIND_INITIAL, '', $files);
+            }
 
             $this->notify($request, $this->targetRecipients($request), 'created');
 
@@ -277,6 +289,183 @@ final class WorkRequestService extends AbstractService
 
             return $request;
         });
+    }
+
+    /**
+     * Talebe cevap yazar (B32). Talep ilk mesajdir; cevap ikinci mesaj olarak
+     * gorunur. `$files`: `local` diskteki gecici anahtar => orijinal ad.
+     * Talep aciksa taraflar (talep eden, muhatap, sorumlu, onay mercii) yazar;
+     * hareket gecmisine ve diger taraflarin zil bildirimine dusulur.
+     *
+     * @param  array<string, string|null>  $files
+     */
+    public function reply(Model|int|string $record, ?string $body, array $files = []): WorkRequestMessage
+    {
+        $body = trim((string) $body);
+
+        if ($body === '' && $files === []) {
+            throw MessageEmptyException::make();
+        }
+
+        return $this->transactions->run(function () use ($record, $body, $files): WorkRequestMessage {
+            /** @var WorkRequest $request */
+            $request = $this->lockForUpdate($record);
+
+            if (! $request->isOpen()) {
+                throw InvalidTransitionException::make();
+            }
+
+            $message = $this->storeMessage($request, WorkRequestMessage::KIND_TEXT, $body, $files);
+
+            $this->recordActivity($request, 'message_posted', array_filter([
+                'mesaj' => $body !== '' ? Str::limit(Str::squish($body), 120) : null,
+                'dosya' => $files !== [] ? count($files) : null,
+            ], fn ($value): bool => $value !== null));
+
+            $this->notify($request, $this->participants($request), 'message_posted');
+
+            return $message;
+        });
+    }
+
+    /**
+     * Talebi baska bir kisiye ya da birime yonlendirir (B32). Eski muhatap
+     * yazismada kalir; gerekce zorunludur. Kabul edilmis talep yeniden
+     * "acik"a doner. Yonlendirme yazismaya sistem satiri olarak, hareket
+     * gecmisine "yonlendirildi" olarak dusulur.
+     */
+    public function forward(Model|int|string $record, string $targetKind, ?int $personnelId, ?int $orgUnitId, ?string $reason): WorkRequest
+    {
+        $reason = trim((string) $reason);
+
+        if ($reason === '') {
+            throw NoteRequiredException::make();
+        }
+
+        $kind = RequestTargetKind::tryFrom($targetKind) ?? throw TargetRequiredException::make();
+
+        return $this->transactions->run(function () use ($record, $kind, $personnelId, $orgUnitId, $reason): WorkRequest {
+            /** @var WorkRequest $request */
+            $request = $this->lockForUpdate($record);
+
+            if (! $request->isOpen()) {
+                throw InvalidTransitionException::make();
+            }
+
+            $personnelId = $kind === RequestTargetKind::Personnel ? (int) $personnelId : null;
+            $orgUnitId = $kind === RequestTargetKind::OrgUnit ? (int) $orgUnitId : null;
+
+            if (($personnelId ?? $orgUnitId ?? 0) <= 0) {
+                throw TargetRequiredException::make();
+            }
+
+            $sameTarget = $kind === $request->target_kind
+                && $personnelId === ($request->target_personnel_id !== null ? (int) $request->target_personnel_id : null)
+                && $orgUnitId === ($request->target_org_unit_id !== null ? (int) $request->target_org_unit_id : null);
+
+            if ($sameTarget
+                || $personnelId === (int) $request->requester_personnel_id
+                || ($personnelId !== null && $personnelId === (int) $request->approver_personnel_id)) {
+                throw ForwardNotAllowedException::make();
+            }
+
+            $previous = $request->targetLabel();
+
+            $request->fill([
+                'target_kind' => $kind->value,
+                'target_personnel_id' => $personnelId,
+                'target_org_unit_id' => $orgUnitId,
+                'assignee_personnel_id' => $personnelId,
+                'status' => WorkRequestStatus::Open->value,
+                'accepted_at' => null,
+            ])->save();
+            $request->load($this->with);
+
+            $this->storeMessage($request, WorkRequestMessage::KIND_FORWARD, sprintf('%s → %s%s%s', $previous, $request->targetLabel(), "\n", $reason), []);
+
+            $this->recordActivity($request, 'forwarded', [
+                'kime' => ['onceki' => $previous, 'yeni' => $request->targetLabel()],
+                'gerekce' => Str::limit(Str::squish($reason), 200),
+            ]);
+
+            $this->notify($request, $this->targetRecipients($request), 'forwarded');
+            $this->notify($request, $this->requesterRecipients($request), 'forwarded_info');
+
+            return $request;
+        });
+    }
+
+    /**
+     * Form verisinden ek dosyalari ayirir: gecici anahtar => orijinal ad.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, string|null>
+     */
+    private function pullAttachments(array &$data): array
+    {
+        $paths = (array) ($data['attachments'] ?? []);
+        $names = (array) ($data['attachment_names'] ?? []);
+        unset($data['attachments'], $data['attachment_names']);
+
+        if (! SchemaReadiness::hasBatch('B32')) {
+            return [];
+        }
+
+        $files = [];
+
+        foreach ($paths as $key => $path) {
+            $files[(string) $path] = $names[$key] ?? basename((string) $path);
+        }
+
+        return $files;
+    }
+
+    /**
+     * Yazisma taraflari: talep eden (ve adina konustugu birimin yoneticisi),
+     * muhatap kisi ya da sorumlu, onay mercii. Birime gelen ve sorumlusu
+     * olmayan talepte birim uyeleri de dahildir.
+     *
+     * @return \Illuminate\Support\Collection<int, Personnel>
+     */
+    private function participants(WorkRequest $request): \Illuminate\Support\Collection
+    {
+        $people = $this->requesterRecipients($request);
+
+        if ($request->assignee instanceof Personnel) {
+            $people->push($request->assignee);
+        } else {
+            $people = $people->merge($this->targetRecipients($request));
+        }
+
+        if ($request->approver instanceof Personnel) {
+            $people->push($request->approver);
+        }
+
+        return $people->unique(fn (Personnel $personnel) => $personnel->getKey())->values();
+    }
+
+    /**
+     * @param  array<string, string|null>  $files
+     */
+    private function storeMessage(WorkRequest $request, string $kind, string $body, array $files): WorkRequestMessage
+    {
+        $message = new WorkRequestMessage([
+            'work_request_id' => $request->getKey(),
+            'author_personnel_id' => $this->actorId(),
+            'message_kind' => $kind,
+            'body' => $body !== '' ? Str::limit($body, 10000, '') : null,
+        ]);
+        $message->save();
+
+        $order = 0;
+
+        foreach ($files as $tempKey => $originalName) {
+            $file = $this->fileObjects->createFromUpload((string) $tempKey, is_string($originalName) ? $originalName : null);
+
+            $message->files()->create(['file_object_id' => $file->getKey(), 'sort_order' => $order++]);
+        }
+
+        return $message;
     }
 
     /**

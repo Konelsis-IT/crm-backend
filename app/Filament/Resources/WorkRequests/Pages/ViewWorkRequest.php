@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Enums\WorkRequest\RequestTargetKind;
 use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Pages\Dashboard;
@@ -19,6 +20,8 @@ use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Approval\ApprovalRequest;
 use App\Models\WorkRequest\WorkRequest;
+use App\Livewire\WorkRequestThread;
+use App\Query\Personnel\OrganizationQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Services\Platform\SchemaReadiness;
@@ -30,7 +33,9 @@ use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
@@ -114,6 +119,15 @@ class ViewWorkRequest extends ViewRecord
                             ->columnSpanFull(),
                     ]),
             ]),
+            // Yazisma (B32): talep ilk mesaj, cevaplar altinda; sohbetten ayridir.
+            Section::make(__('work_request.sections.thread'))
+                ->description(__('work_request.help.thread'))
+                ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
+                ->visible(fn (): bool => SchemaReadiness::hasBatch('B32'))
+                ->components([
+                    Livewire::make(WorkRequestThread::class, fn (WorkRequest $record): array => ['requestId' => (int) $record->getKey()])
+                        ->key('work-request-thread'),
+                ]),
             Grid::make(['default' => 1, 'lg' => 2])->components([
                 Section::make(__('work_request.sections.related'))
                     ->icon(Heroicon::OutlinedLink)
@@ -231,6 +245,49 @@ class ViewWorkRequest extends ViewRecord
                         ->native(false),
                 ])
                 ->action(fn (array $data) => $this->run(fn (WorkRequestService $service) => $service->reassign($this->getRecord(), (int) $data['assignee_personnel_id']), 'reassigned')),
+            // Yonlendirme (B32): talep muhatabi degilse baska kisiye / birime devredilir.
+            Action::make('forward')
+                ->label(__('work_request.actions.forward'))
+                ->icon(Heroicon::OutlinedArrowUturnRight)
+                ->color('gray')
+                ->visible(fn (): bool => SchemaReadiness::hasBatch('B32') && Gate::allows('forward', $this->getRecord()))
+                ->modalHeading(__('work_request.actions.forward'))
+                ->modalDescription(__('work_request.help.forward'))
+                ->schema([
+                    Select::make('target_kind')
+                        ->label(__('work_request.fields.target_kind'))
+                        ->options(RequestTargetKind::options())
+                        ->default(RequestTargetKind::Personnel->value)
+                        ->required()
+                        ->live()
+                        ->native(false),
+                    Select::make('target_personnel_id')
+                        ->label(__('work_request.fields.target_personnel'))
+                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->searchable()
+                        ->native(false)
+                        ->visible(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::Personnel->value)
+                        ->required(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::Personnel->value),
+                    Select::make('target_org_unit_id')
+                        ->label(__('work_request.fields.target_org_unit'))
+                        ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
+                        ->searchable()
+                        ->native(false)
+                        ->visible(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::OrgUnit->value)
+                        ->required(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::OrgUnit->value),
+                    Textarea::make('reason')
+                        ->label(__('work_request.thread.forward_reason'))
+                        ->required()
+                        ->rows(3)
+                        ->maxLength(1000),
+                ])
+                ->action(fn (array $data) => $this->run(fn (WorkRequestService $service) => $service->forward(
+                    $this->getRecord(),
+                    (string) $data['target_kind'],
+                    filled($data['target_personnel_id'] ?? null) ? (int) $data['target_personnel_id'] : null,
+                    filled($data['target_org_unit_id'] ?? null) ? (int) $data['target_org_unit_id'] : null,
+                    $data['reason'] ?? null,
+                ), 'forwarded')),
             // Onaya tabi yapma (D-87): onay mercii secilir; onay talebi muhatap
             // isi tamamladiginda acilir. Olustururken isaretlenmediyse buradan.
             Action::make('send_to_approval')

@@ -61,6 +61,7 @@ final class SchemaReadiness
         'B29' => 'business_case_scopes',               // Is dosyasi kapsamlari / teklif tipi / teklif belgeleri
         'B30' => 'business_case_scopes.hes_unit_cost', // HES kapsaminin kendi tutar alani
         'B31' => 'social_responsible_positions',       // Sosyal medya (grubun en son olusan tablosu)
+    'B32' => 'work_request_messages',             // Talep yazismasi ve yonlendirme
     ];
 
     /** @var array<string, bool> */

@@ -73,6 +73,8 @@ return [
         'document_not_shareable' => 'Belge bulunamadı ya da paylaşma yetkiniz yok.',
     ],
     'work_request' => [
+        'message_empty' => 'Cevap boş; bir metin, bağlantı ya da dosya ekleyin.',
+        'forward_not_allowed' => 'Talep bu kişiye ya da birime yönlendirilemez (mevcut muhatap, talep eden veya onay mercii seçilemez).',
         'target_required' => 'Talebin muhatabı (personel ya da departman) seçilmelidir.',
         'self_target' => 'Kendinize talep açamazsınız.',
         'note_required' => 'Ret için gerekçe zorunludur.',

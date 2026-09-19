@@ -24,6 +24,7 @@ use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -195,8 +196,21 @@ class WorkRequestResource extends Resource
                         ->required(fn (Get $get): bool => (bool) $get('requires_approval')),
                     Textarea::make('description')
                         ->label(__('work_request.fields.description'))
+                        ->helperText(__('work_request.help.description_links'))
                         ->rows(5)
                         ->maxLength(8000),
+                    // Talebin ilk mesajina dosya / fotograf eki (B32); yalniz olustururken.
+                    FileUpload::make('attachments')
+                        ->label(__('work_request.fields.attachments'))
+                        ->helperText(__('work_request.thread.files_help'))
+                        ->multiple()
+                        ->maxFiles(10)
+                        ->maxSize(20480)
+                        ->disk('local')
+                        ->directory('work-request-tmp')
+                        ->visibility('private')
+                        ->storeFileNamesIn('attachment_names')
+                        ->visible(fn (string $operation): bool => $operation === 'create' && SchemaReadiness::hasBatch('B32')),
                 ])),
             Section::make(__('work_request.sections.related'))
                 ->description(__('work_request.help.related'))

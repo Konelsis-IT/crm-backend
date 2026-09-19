@@ -39,8 +39,64 @@ final class ReleaseNotes
     {
         return [
             [
+                'version' => '1.6',
+                'date' => '19.09.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Talep yazışması eklendi. Talep ilk mesaj sayılıyor; "Cevap gönder" ile verilen cevaplar 2., 3. mesaj olarak talebin içinde sırayla görünüyor. Talebin tarafları (kimden, kime, sorumlu, onay mercii) burada birbiriyle yazışabiliyor. Sohbet ekranından ayrıdır; çevrimiçi ya da yazıyor bilgisi yoktur.',
+                        'Cevaba resim, PDF ve belge eklenebiliyor; resimler küçük görselle görünüp tıklayınca büyüyor, PDF ve metin dosyaları önizlenebiliyor. Yazıya yapıştırılan bağlantılar tıklanabilir oluyor.',
+                        'Talebe "Yönlendir" seçeneği geldi. Talep sizinle ilgili değilse başka bir kişiye ya da departmana gerekçesiyle devredebiliyorsunuz; yeni muhatap ve talebi açan kişi bilgilendiriliyor.',
+                        'Cevaplar, yönlendirmeler ve tüm talep adımları talebin Geçmiş tablosuna düşüyor.',
+                    ],
+                    self::NOTES => [
+                        'Talep kapandıktan (tamamlandı, reddedildi, iptal) sonra yeni cevap yazılamaz; yazışma salt okunur kalır.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '1.5',
+                'date' => '19.09.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Sosyal Medya modülü açıldı. Şirketin sosyal medya paylaşımları planlama, hazırlık, onay ve yayın aşamalarıyla tek ekrandan yönetiliyor.',
+                        'Paylaşım akışı: içerikler durumuna göre (taslak, bekliyor, onaylandı, paylaşıldı) listeleniyor; acil işaretlenen içerik öne çıkıyor.',
+                        'Fotoğraf, fotoğraf serisi ve video içerik eklenebiliyor. Büyük videolar parça parça yükleniyor.',
+                        'Bir içerik aynı anda birden fazla platforma ayrılabiliyor; platformlar yalnız logolarıyla gösteriliyor.',
+                        'İçerik ayrıntısında ekip içerik üzerine yorum yazabiliyor, yorumu görselin ilgili noktasına işaretleyebiliyor ve çözüldü olarak kapatabiliyor.',
+                        'Fotoğraf araçları eklendi: kırpma, hazır boyut ayarları (kare, dikey, yatay vb.) ve çizim işaretleri. Her düzenleme yeni bir sürüm olarak saklanıyor, istenen sürüme geri dönülebiliyor.',
+                        'Serideki fotoğrafların sırası değiştirilebiliyor, istenmeyen fotoğraf kaldırılıp geri alınabiliyor.',
+                        'Görüntülenen sürüm tek tek, fotoğraf serisi ise tek seferde zip olarak indirilebiliyor.',
+                        'Onay akışı: içerik hazırlayan kişi kendi içeriğini onaylayamıyor; onaylanan içerikte değişiklik yapılırsa içerik yeniden onaya düşüyor. Paylaşıldı işaretli içerik kilitleniyor.',
+                        'Plan ekranı: aylık takvim ve ajanda görünümü; özel günler takvimde işaretleniyor ve yaklaşan içerikler panoda görünüyor.',
+                        'Hatırlatmalar: yaklaşan ve geciken içerikler için sorumlulara otomatik bildirim gidiyor.',
+                        'İlham ve rakip takibi: izlenen rakip hesaplar ve ilham içerikleri kaydedilebiliyor.',
+                        'Analiz ekranı: hesap bazında istatistik girişleri yapılıyor, dosya (rapor) yüklenebiliyor ve sonuçlar grafiklerle izleniyor.',
+                        'Ayarlar: şirket hesaplarının tanıtım yazısı ve platform bağlantıları, kategoriler, özel günler ve sorumlu pozisyonlar buradan yönetiliyor.',
+                    ],
+                    self::IMPROVEMENTS => [
+                        'Mobil görünümde sekmeler yana kaydırılabiliyor.',
+                        'Renkli düğmelerin yazıları beyaz ve okunur hale getirildi.',
+                        'Ajanda kartlarında rozetlerin üst üste binmesi giderildi.',
+                    ],
+                    self::NOTES => [
+                        'Şirket hesapları hazır tanımlı gelir; arayüzden yeni hesap eklenmez, yalnız tanıtım yazısı ve bağlantılar düzenlenir.',
+                        'Modülün çalışması için ilk kurulumda hesap ve özel gün verileri yüklenmiş olmalıdır.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '1.4',
+                'date' => '18.09.2026',
+                'groups' => [
+                    self::IMPROVEMENTS => [
+                        'Geliştirme sırasında kullanılan örnek personel, proje, teklif ve doküman verileri kurulumdan çıkarıldı; sistem yalnız gerçek verilerle açılıyor.',
+                        'Gerçek firma ve personel verilerinin aktarımı düzenlendi.',
+                    ],
+                ],
+            ],
+            [
                 'version' => '1.3',
-                'date' => '21.09.2026',
+                'date' => '19.09.2026',
                 'groups' => [
                     self::FEATURES => [
                         'Kurum içi sohbet açıldı. Personel artık sistemin içinden birbirine yazabiliyor; iş yazışması için ayrı bir uygulamaya gerek kalmıyor.',

@@ -12,6 +12,7 @@ use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Files\ProjectPhotoController;
+use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Notifications\ApprovalQuickDecisionController;
 use App\Http\Controllers\Notifications\BusinessAlertAcknowledgeController;
@@ -140,6 +141,7 @@ class AdminPanelProvider extends PanelProvider
                 Route::prefix('files')->name('files.')->group(function (): void {
                     Route::get('revisions/{file}', RevisionFileController::class)->name('revision');
                     Route::get('project-photos/{photo}', ProjectPhotoController::class)->name('photo');
+                    Route::get('work-request/{file}', WorkRequestFileController::class)->name('work-request');
                 });
 
                 // Bildirimden tek tiklama (D-82): imzali baglantilar.

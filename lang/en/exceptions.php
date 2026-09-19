@@ -73,6 +73,8 @@ return [
         'document_not_shareable' => 'The document was not found or you are not allowed to share it.',
     ],
     'work_request' => [
+        'message_empty' => 'The reply is empty; add text, a link or a file.',
+        'forward_not_allowed' => 'The request cannot be forwarded to this person or unit (the current addressee, the requester or the approver cannot be chosen).',
         'target_required' => 'The addressee of the request (personnel or department) must be selected.',
         'self_target' => 'You cannot open a request to yourself.',
         'note_required' => 'A reason is required for rejection.',
