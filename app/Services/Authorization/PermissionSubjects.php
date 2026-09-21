@@ -41,6 +41,9 @@ final class PermissionSubjects
         'PartyCertificate' => 'Party',
         'PartyAnnualReview' => 'Party',
         'PartyMeetingNote' => 'Party',
+        'PartyActivityArea' => 'Party',
+        'MeetingPlanParticipant' => 'MeetingPlan',
+        'MeetingPlanReminder' => 'MeetingPlan',
 
         // Dokuman yonetimi
         'DocumentRevision' => 'Document',

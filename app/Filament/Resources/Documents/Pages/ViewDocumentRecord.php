@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Documents\Pages;
 
+use App\Filament\Exports\DocumentExporter;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Support\DocumentWorkspace;
+use App\Filament\Support\ExportActions;
 use App\Filament\Support\FileLinks;
 use App\Models\Document\Document;
 use Filament\Actions\Action;
@@ -77,6 +79,7 @@ class ViewDocumentRecord extends ViewRecord
                 ->visible($downloadUrl !== null)
                 ->url($downloadUrl),
             EditAction::make()->label(__('document.actions.edit_details')),
+            ExportActions::record(DocumentExporter::class),
         ];
     }
 }

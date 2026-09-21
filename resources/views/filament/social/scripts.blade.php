@@ -23,6 +23,7 @@
         'social-feed',
         'social-detail',
         'social-composer',
+        'social-calendar',
         'social-planner',
         'social-insights',
         'social-manage',

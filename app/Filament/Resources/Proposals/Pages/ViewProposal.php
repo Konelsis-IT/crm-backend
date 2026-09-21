@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Proposals\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Exports\ProposalExporter;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ExportActions;
 use App\Filament\Support\ProjectConversionForm;
 use App\Models\Acquisition\Proposal;
 use App\Services\Project\ProjectConversionService;
@@ -49,6 +51,7 @@ class ViewProposal extends ViewRecord
                         DomainNotifications::failure($exception);
                     }
                 }),
+            ExportActions::record(ProposalExporter::class),
         ];
     }
 }

@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * B32 - Talep yazismasi (kullanici karari, 19 Eylul 2026).
+ * B32 - Talep yazismasi (D-108, kullanici karari, 19 Eylul 2026).
  *
  * Talep ilk mesajdir; cevaplar `work_request_messages` satirlaridir. Sohbet
  * (B12A) ile karistirilmaz: cevrimici durumu, yaziyor bilgisi ve okundu

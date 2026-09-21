@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Filament\Exports\Jobs\KonelsisExportCompletion;
 use App\Infrastructure\Console\SchemaChangeGuard;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Audit\ActorContext;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\Exports\Jobs\ExportCompletion;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
@@ -29,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
         // Sosyal medya sorumlulugu istek/is basina bir kez cozulur (B31, D-106):
         // politika ayni istekte defalarca sorar, sonuc ornekte bellekte tutulur.
         $this->app->scoped(SocialResponsibilityQueries::class);
+
+        // Excel disa aktarimi (D-110): dosya dogrudan iner, "dosya hazir"
+        // bildirimi yalniz aktarilamayan satir varsa cikar.
+        $this->app->bind(ExportCompletion::class, KonelsisExportCompletion::class);
     }
 
     public function boot(): void

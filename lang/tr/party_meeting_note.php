@@ -21,6 +21,10 @@ return [
         'subject' => 'Konu',
     ],
 
+    'help' => [
+        'next_action_reminder' => 'Sonraki adım tarihi verilirse bu adım Görüşme planı takvimine planlı görüşme olarak düşer; tarihten 1 gün önce ve o günün sabahı görüşen personele zil bildirimi gider.',
+    ],
+
     'relation' => [
         'title' => 'Görüşme notları',
         'empty' => 'Henüz görüşme notu yok.',

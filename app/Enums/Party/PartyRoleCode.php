@@ -21,6 +21,38 @@ enum PartyRoleCode: string implements HasColor, HasLabel
     case Consultant = 'consultant';
     case Carrier = 'carrier';
     case Authority = 'authority';
+    // Dernek / oda (B33, D-107): Dernekler menusunun (AssociationResource) kayitlari;
+    // Taraflar ekraninda secilmez, sekmesi yoktur.
+    case Association = 'association';
+
+    /**
+     * Taraflar ekraninda secilebilen tipler. Dernek / oda burada yoktur:
+     * dernekler ayri menuden (Dernekler) tip secilmeden acilir (21 Eylul 2026
+     * kullanici karari).
+     *
+     * @return list<self>
+     */
+    public static function available(): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            static fn (self $code): bool => $code !== self::Association,
+        ));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function availableOptions(): array
+    {
+        $options = [];
+
+        foreach (self::available() as $code) {
+            $options[$code->value] = $code->getLabel();
+        }
+
+        return $options;
+    }
 
     public function getColor(): string
     {
@@ -34,6 +66,7 @@ enum PartyRoleCode: string implements HasColor, HasLabel
             self::Consultant => 'gray',
             self::Carrier => 'gray',
             self::Authority => 'danger',
+            self::Association => 'success',
         };
     }
 }

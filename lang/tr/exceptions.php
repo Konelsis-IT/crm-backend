@@ -72,6 +72,9 @@ return [
         'invalid_participant' => 'Seçilen kişiyle sohbet başlatılamıyor.',
         'document_not_shareable' => 'Belge bulunamadı ya da paylaşma yetkiniz yok.',
     ],
+    'party' => [
+        'activity_area_parent_invalid' => 'Alt faaliyet alanı yalnız bir ana faaliyet alanının altına bağlanabilir; alt alanı olan bir ana alan başka bir alanın altına taşınamaz.',
+    ],
     'work_request' => [
         'message_empty' => 'Cevap boş; bir metin, bağlantı ya da dosya ekleyin.',
         'forward_not_allowed' => 'Talep bu kişiye ya da birime yönlendirilemez (mevcut muhatap, talep eden veya onay mercii seçilemez).',

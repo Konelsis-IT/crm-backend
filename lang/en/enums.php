@@ -331,6 +331,13 @@ return [
         'consultant' => 'Consultant',
         'carrier' => 'Carrier',
         'authority' => 'Authority',
+        'association' => 'Association / chamber',
+    ],
+    'party_origin' => [
+        'domestic' => 'Domestic',
+        'europe' => 'Europe',
+        'china' => 'China',
+        'foreign' => 'Other foreign',
     ],
     'party_role_status' => [
         'active' => 'Active',
@@ -341,6 +348,17 @@ return [
         'urgent_visit' => 'Urgent visit',
         'routine_meeting' => 'Routine meeting',
         'phone' => 'Phone',
+    ],
+    'meeting_plan_status' => [
+        'planned' => 'Planned',
+        'done' => 'Held',
+        'cancelled' => 'Not held',
+    ],
+    'meeting_plan_source' => [
+        'manual' => 'Planned manually',
+        'meeting_note' => 'From a meeting note',
+        'follow_up' => 'Next step',
+        'import' => 'Weekly visit plan',
     ],
     'meeting_channel' => [
         'visit' => 'Visit',

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Reports\Pages;
 
+use App\Filament\Exports\ReportExporter;
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Support\ExportActions;
 use App\Models\Personnel\Personnel;
 use App\Query\Report\ReportQueries;
 use App\Reports\Templates\DailyWorkReportTemplate;
@@ -44,6 +46,7 @@ class ListReports extends ListRecords
                 ->color('gray')
                 ->url(ReportResource::getUrl('create', [CreateReport::QUERY_TEMPLATE => $today]))
                 ->visible(fn (): bool => $me > 0 && ! app(ReportQueries::class)->hasReportForDay($today, $me, Carbon::today())),
+            ExportActions::table(ReportExporter::class),
             CreateAction::make()->label(__('report.actions.create')),
         ];
     }

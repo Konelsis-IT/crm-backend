@@ -331,6 +331,13 @@ return [
         'consultant' => 'Danışman',
         'carrier' => 'Nakliyeci',
         'authority' => 'Resmî kurum',
+        'association' => 'Dernek / oda',
+    ],
+    'party_origin' => [
+        'domestic' => 'Yerli',
+        'europe' => 'Avrupa',
+        'china' => 'Çin',
+        'foreign' => 'Diğer yabancı',
     ],
     'party_role_status' => [
         'active' => 'Aktif',
@@ -341,6 +348,17 @@ return [
         'urgent_visit' => 'Acil ziyaret',
         'routine_meeting' => 'Rutin görüşme',
         'phone' => 'Telefon',
+    ],
+    'meeting_plan_status' => [
+        'planned' => 'Planlı',
+        'done' => 'Gerçekleşti',
+        'cancelled' => 'Gerçekleşmedi',
+    ],
+    'meeting_plan_source' => [
+        'manual' => 'Elle planlandı',
+        'meeting_note' => 'Görüşme notundan',
+        'follow_up' => 'Sonraki adım',
+        'import' => 'Haftalık ziyaret planı',
     ],
     'meeting_channel' => [
         'visit' => 'Ziyaret',

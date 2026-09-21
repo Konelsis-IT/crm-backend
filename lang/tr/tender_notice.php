@@ -3,6 +3,8 @@
 return [
     'label' => 'İhale ilanı',
     'plural' => 'İhale ilanları',
+    'label_title' => 'İhale İlanı',
+    'plural_title' => 'İhale İlanları',
 
     'sections' => [
         'identity' => 'İlan kimliği',

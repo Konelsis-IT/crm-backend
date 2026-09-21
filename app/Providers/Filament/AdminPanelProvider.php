@@ -7,11 +7,13 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\PersonnelProfile;
 use App\Filament\Pages\Dashboard;
 use App\Filament\NavigationGroup;
+use App\Filament\Resources\MeetingPlans\Pages\MeetingPlanCalendar;
 use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
 use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Files\ProjectPhotoController;
+use App\Http\Controllers\Meeting\MeetingPlanCalendarController;
 use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Notifications\ApprovalQuickDecisionController;
@@ -138,6 +140,9 @@ class AdminPanelProvider extends PanelProvider
             // Yetki kontrollu dosya indirme/onizleme uclari (D-71); panelin kimlik
             // dogrulamali rota grubunda: filament.admin.files.revision / .photo
             ->authenticatedRoutes(function (Panel $panel): void {
+                // Gorusme plani takvim verisi (B34, D-109): filament.admin.meeting-calendar.data
+                Route::get('meeting-calendar/data', MeetingPlanCalendarController::class)->name('meeting-calendar.data');
+
                 Route::prefix('files')->name('files.')->group(function (): void {
                     Route::get('revisions/{file}', RevisionFileController::class)->name('revision');
                     Route::get('project-photos/{photo}', ProjectPhotoController::class)->name('photo');
@@ -295,6 +300,12 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.social.scripts'),
                 scopes: ManageSocialMedia::class,
+            )
+            // Gorusme plani takvimi (B34, D-109): ayni cekirdek + ortak takvim parcasi.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.meetings.scripts'),
+                scopes: MeetingPlanCalendar::class,
             )
             ->middleware([
                 EncryptCookies::class,

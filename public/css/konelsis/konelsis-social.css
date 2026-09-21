@@ -2971,6 +2971,10 @@ button.ks-planner-section__head:hover { background: var(--ks-surface-2); }
 .ks-planner-cal__head { flex-wrap: wrap; }
 .ks-planner-cal__month { font-size: 1.25rem; letter-spacing: -0.01em; }
 .ks-planner-cal__nav { display: flex; align-items: center; gap: 0.375rem; flex: none; margin-left: auto; }
+/* Takvim basligindaki ek arac (gorusme plani personel suzgeci, B34). */
+.ks-planner-cal__tools { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; min-width: 0; }
+.ks-planner-cal__tools + .ks-planner-cal__nav { margin-left: 0; }
+.ks-planner-cal__tools .ks-select-wrap { min-width: 12rem; max-width: 18rem; }
 .ks-planner-cal__body { min-width: 0; padding: 0.75rem; }
 .ks-planner-cal__foot { padding: 0.75rem 1rem; border-top: 1px solid var(--ks-border); }
 
@@ -3161,6 +3165,8 @@ button.ks-planner-section__head:hover { background: var(--ks-surface-2); }
     .ks-planner__layout { gap: 1rem; }
     .ks-planner-pane__head { padding: 0.75rem; gap: 0.625rem; }
     .ks-planner-cal__nav { width: 100%; margin-left: 0; justify-content: space-between; }
+    .ks-planner-cal__tools { width: 100%; margin-left: 0; }
+    .ks-planner-cal__tools .ks-select-wrap { max-width: none; flex: 1 1 auto; }
     .ks-planner-cal__nav .ks-btn { flex: 1 1 auto; }
     .ks-planner-cal__foot { padding: 0.75rem; }
     .ks-planner-item__foot > .ks-btn { flex: 1 1 auto; }

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Reports\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Exports\ReportExporter;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ExportActions;
 use App\Models\Report\Report;
 use App\Services\Report\ReportService;
 use Filament\Actions\Action;
@@ -97,6 +99,7 @@ class ViewReport extends ViewRecord
                         DomainNotifications::failure($exception);
                     }
                 }),
+            ExportActions::record(ReportExporter::class),
         ];
     }
 

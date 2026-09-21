@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Parties\Pages;
 
 use App\Enums\Party\PartyRoleCode;
+use App\Filament\Exports\PartyExporter;
 use App\Filament\Resources\Parties\PartyResource;
+use App\Filament\Support\ExportActions;
 use App\Query\Party\PartyQueries;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -30,6 +32,7 @@ class ListParties extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            ExportActions::table(PartyExporter::class),
             CreateAction::make(),
         ];
     }
@@ -46,7 +49,7 @@ class ListParties extends ListRecords
                 ->badge(app(PartyQueries::class)->total()),
         ];
 
-        foreach (PartyRoleCode::cases() as $code) {
+        foreach (PartyRoleCode::available() as $code) {
             $tabs[$code->value] = Tab::make($code->getLabel())
                 ->badge($counts[$code->value] ?? 0)
                 ->modifyQueryUsing(fn (Builder $query): Builder => app(PartyQueries::class)->withRole($query, $code));

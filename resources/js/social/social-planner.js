@@ -13,12 +13,15 @@
  * Baska gorunum dosyalarindan yalniz KS.parts.ContentCard (variant 'row') kullanilir;
  * cizim aninda aranir, yoksa ya da hata verirse bu dosyanin kendi satiri cizilir.
  * Stiller: resources/css/filament/konelsis-social.css, bolum PLANNER (on ek ks-planner-).
- * Dar kapta (< 560px) takvim izgarasi dikey ay listesine doner.
+ * Ay takvimi izgarasi ortaktir: KS.calendar (social-calendar.js, B34 / D-109; gorusme plani
+ * da kullanir). Bu dosya cip, ozel gun seridi, lejant ve gun sayfasini verir. Dar kapta
+ * (< 560px) takvim izgarasi dikey ay listesine doner.
  */
 (function () {
     'use strict';
 
-    if (!window.KonelsisSocial) { return; }
+    // Ortak takvim (social-calendar.js) bu dosyadan once yuklenir.
+    if (!window.KonelsisSocial || !window.KonelsisSocial.calendar) { return; }
 
     const KS = window.KonelsisSocial;
     const React = window.React;
@@ -43,60 +46,12 @@
 
     const AGENDA_CAP = 50;          // sunucu her listeyi en cok 50 oge ile dondurur (F6)
     const SECTION_PREVIEW = 5;      // bolumde ilk gosterilen oge sayisi
-    const GRID_MAX_CHIPS = 3;
-    const GRID_MAX_RIBBONS = 2;
-    const LIST_MAX_CHIPS = 8;
-    const COMPACT_WIDTH = 560;      // takvim kabi bundan darsa dikey ay listesi
     const REMINDER_STALE_MS = 48 * 60 * 60 * 1000;
 
     // Gorunumden cikilip donuldugunde ayni ay acilsin (oturum ici, sayfa yenilenince sifirlanir).
     let rememberedMonth = null;
 
-    function pad2(value) {
-        return (value < 10 ? '0' : '') + value;
-    }
-
-    function isYmd(value) {
-        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
-    }
-
-    function isMonth(value) {
-        return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
-    }
-
-    function monthOf(ymd) {
-        return String(ymd || '').slice(0, 7);
-    }
-
-    /** '2026-09' + 1 -> '2026-10'. Sunucu 1970 oncesini kabul etmez; o sinirda ay degismez. */
-    function shiftMonth(month, delta) {
-        const first = fmt.parse(month);
-
-        if (!first) {
-            return month;
-        }
-
-        const next = new Date(first.getFullYear(), first.getMonth() + delta, 1);
-
-        if (next.getFullYear() < 1970 || next.getFullYear() > 9999) {
-            return month;
-        }
-
-        return next.getFullYear() + '-' + pad2(next.getMonth() + 1);
-    }
-
-    function shiftDay(ymd, delta) {
-        const date = fmt.parse(ymd);
-
-        return date ? fmt.toYmd(new Date(date.getFullYear(), date.getMonth(), date.getDate() + delta)) : ymd;
-    }
-
-    /** Pazartesi = 0 ... Pazar = 6 */
-    function weekdayIndex(ymd) {
-        const date = fmt.parse(ymd);
-
-        return date ? (date.getDay() + 6) % 7 : 0;
-    }
+    const { isYmd, isMonth, monthOf, shiftDay } = KS.calendar;
 
     function typeIcon(type) {
         return TYPE_ICONS[type] || 'document';
@@ -110,55 +65,12 @@
         return item.status === 'pending' || item.status === 'revision_requested';
     }
 
-    /**
-     * Ay izgarasinin hucreleri: onceki / sonraki aydan tasan gunler `outside` olarak
-     * gelir (veri tasimaz), ayin gunleri sunucudan gelen gun kaydiyla eslenir.
-     */
+    /** Gun kaydindan takvim hucresi: ogeler = icerikler, seritler = ozel gunler. */
     function buildMonth(month, days) {
-        const first = fmt.parse(month) || fmt.parse(monthOf(fmt.todayYmd()));
-        const year = first.getFullYear();
-        const index = first.getMonth();
-        const total = new Date(year, index + 1, 0).getDate();
-        const offset = (first.getDay() + 6) % 7;
-        const byDate = {};
-        const cells = [];
-
-        (days || []).forEach((day) => {
-            if (day && day.date) {
-                byDate[day.date] = day;
-            }
+        return KS.calendar.buildMonth(month, days, {
+            items: (day) => day.contents,
+            ribbons: (day) => day.special_days,
         });
-
-        const push = (dateObject, outside) => {
-            const date = fmt.toYmd(dateObject);
-            const source = outside ? null : byDate[date];
-
-            cells.push({
-                date,
-                number: dateObject.getDate(),
-                outside,
-                weekend: cells.length % 7 >= 5,
-                contents: (source && Array.isArray(source.contents)) ? source.contents : [],
-                special_days: (source && Array.isArray(source.special_days)) ? source.special_days : [],
-            });
-        };
-
-        for (let before = offset; before > 0; before -= 1) {
-            push(new Date(year, index, 1 - before), true);
-        }
-
-        for (let day = 1; day <= total; day += 1) {
-            push(new Date(year, index, day), false);
-        }
-
-        let after = 1;
-
-        while (cells.length % 7 !== 0) {
-            push(new Date(year, index + 1, after), true);
-            after += 1;
-        }
-
-        return cells;
     }
 
     /**
@@ -178,13 +90,13 @@
     }
 
     function dayLabel(cell, today) {
-        const empty = !cell.contents.length && !cell.special_days.length;
+        const empty = !cell.items.length && !cell.ribbons.length;
         const text = empty
             ? t('planner_day_label_empty', { date: fmt.dateLong(cell.date) })
             : t('planner_day_label', {
                 date: fmt.dateLong(cell.date),
-                contents: fmt.number(cell.contents.length),
-                days: fmt.number(cell.special_days.length),
+                contents: fmt.number(cell.items.length),
+                days: fmt.number(cell.ribbons.length),
             });
 
         return cell.date === today ? t('today') + ', ' + text : text;
@@ -207,43 +119,6 @@
             // birakilir ki KS.parts.ContentCard yaniltici sifirlar yerine sayac seridini hic cizmesin.
             my_reaction: 'none',
         }, item);
-    }
-
-    /** Kabin genisligi esigin altinda mi? (kenar cubugu acik / kapali fark etmesin diye ekran degil kap olculur) */
-    function useCompact(ref, threshold, initial) {
-        const [compact, setCompact] = useState(!!initial);
-
-        useEffect(() => {
-            const node = ref.current;
-
-            if (!node) {
-                return undefined;
-            }
-
-            const measure = () => {
-                const width = node.getBoundingClientRect().width;
-
-                if (width > 0) {
-                    setCompact(width < threshold);
-                }
-            };
-
-            measure();
-
-            if (typeof window.ResizeObserver === 'function') {
-                const observer = new window.ResizeObserver(measure);
-
-                observer.observe(node);
-
-                return () => observer.disconnect();
-            }
-
-            window.addEventListener('resize', measure);
-
-            return () => window.removeEventListener('resize', measure);
-        }, [ref, threshold]);
-
-        return compact;
     }
 
     /* ================================================================== */
@@ -491,34 +366,25 @@
     /* 4. Takvim                                                           */
     /* ================================================================== */
 
-    /** Takvim cipi: durum renginde, tur simgesi + saat + baslik + paylasildi isareti. Tiklayinca ayrinti acilir. */
-    function CalendarChip(props) {
-        const item = props.item;
+    /** Takvim cipi (KS.calendar): durum renginde, tur simgesi + saat + baslik + paylasildi isareti. */
+    function chipOf(item) {
         const time = fmt.time(item.planned_time);
-        const label = [
-            item.title,
-            item.content_type_label,
-            item.status_label,
-            item.is_published ? t('planner_published') : null,
-            time || null,
-        ].filter(Boolean).join(', ');
 
-        return h('button', {
-            type: 'button',
-            className: cx('ks-planner-chip', 'ks-c-' + colorOf(item), item.is_published && 'is-published', props.large && 'ks-planner-chip--lg'),
-            tabIndex: props.tabbable ? 0 : -1,
-            title: label,
-            'aria-label': label,
-            onClick: (event) => {
-                event.stopPropagation();
-                props.onOpen(item.id);
-            },
-        },
-            h(Icon, { name: typeIcon(item.content_type), className: 'ks-planner-chip__icon' }),
-            time ? h('span', { className: 'ks-planner-chip__time' }, time) : null,
-            h('span', { className: 'ks-planner-chip__title' }, item.title),
-            item.is_published ? h(Icon, { name: 'check-circle', className: 'ks-planner-chip__check' }) : null,
-        );
+        return {
+            key: item.id,
+            color: colorOf(item),
+            icon: typeIcon(item.content_type),
+            time: time || null,
+            title: item.title,
+            check: !!item.is_published,
+            label: [
+                item.title,
+                item.content_type_label,
+                item.status_label,
+                item.is_published ? t('planner_published') : null,
+                time || null,
+            ].filter(Boolean).join(', '),
+        };
     }
 
     function SpecialRibbon(props) {
@@ -531,194 +397,6 @@
             h(Icon, { name: meta.icon }),
             h('span', { className: 'ks-planner-ribbon__name' }, props.special.name),
             h('span', { className: 'ks-sr-only' }, ' (' + t('planner_special_day') + ', ' + meta.label + ')'),
-        );
-    }
-
-    /** Bir gunun seritleri + cipleri + "+N daha". Izgara ve liste ayni bileseni kullanir. */
-    function DayEntries(props) {
-        const cell = props.cell;
-        const ribbons = cell.special_days.slice(0, props.maxRibbons);
-        const chips = cell.contents.slice(0, props.maxChips);
-        const hidden = (cell.special_days.length - ribbons.length) + (cell.contents.length - chips.length);
-
-        if (!ribbons.length && !chips.length) {
-            return null;
-        }
-
-        return h('div', { className: 'ks-planner-entries' },
-            ribbons.map((special, index) => h(SpecialRibbon, { key: 's' + (special.id || index), special, date: cell.date, today: props.today })),
-            chips.map((item) => h(CalendarChip, { key: 'c' + item.id, item, large: props.large, tabbable: props.tabbable, onOpen: props.onOpen })),
-            hidden > 0 ? h('span', { className: 'ks-planner-more' }, t('planner_more', { count: fmt.number(hidden) })) : null,
-        );
-    }
-
-    function GridCell(props) {
-        const cell = props.cell;
-
-        if (cell.outside) {
-            return h('div', { className: cx('ks-planner-cell', 'is-outside', cell.weekend && 'is-weekend'), 'aria-hidden': 'true' },
-                h('span', { className: 'ks-planner-cell__num' }, cell.number),
-            );
-        }
-
-        const isToday = cell.date === props.today;
-        const filled = cell.contents.length > 0 || cell.special_days.length > 0;
-
-        return h('div', {
-            className: cx('ks-planner-cell', isToday && 'is-today', cell.date < props.today && 'is-past', cell.weekend && 'is-weekend', filled && 'has-entries'),
-        },
-            h('button', {
-                type: 'button',
-                className: 'ks-planner-cell__day',
-                'data-date': cell.date,
-                tabIndex: props.tabbable ? 0 : -1,
-                'aria-label': dayLabel(cell, props.today),
-                'aria-current': isToday ? 'date' : undefined,
-                onFocus: () => props.onFocusDate(cell.date),
-                onClick: () => props.onSelect(cell.date),
-            },
-                h('span', { className: 'ks-planner-cell__num' }, cell.number),
-                h(Icon, { name: 'plus', className: 'ks-planner-cell__add' }),
-            ),
-            h(DayEntries, { cell, today: props.today, maxChips: GRID_MAX_CHIPS, maxRibbons: GRID_MAX_RIBBONS, tabbable: false, onOpen: props.onOpen }),
-        );
-    }
-
-    /** Ay izgarasi: gun dugmeleri arasinda ok tuslari, Home / End (hafta basi / sonu) ile gezilir. */
-    function MonthGrid(props) {
-        const gridRef = useRef(null);
-        const weekdays = useMemo(() => fmt.weekdays('short'), []);
-        const month = props.month;
-
-        const onKeyDown = (event) => {
-            const target = event.target;
-            const date = target && typeof target.getAttribute === 'function' ? target.getAttribute('data-date') : null;
-
-            if (!date) {
-                return;
-            }
-
-            let next = null;
-
-            if (event.key === 'ArrowLeft') {
-                next = shiftDay(date, -1);
-            } else if (event.key === 'ArrowRight') {
-                next = shiftDay(date, 1);
-            } else if (event.key === 'ArrowUp') {
-                next = shiftDay(date, -7);
-            } else if (event.key === 'ArrowDown') {
-                next = shiftDay(date, 7);
-            } else if (event.key === 'Home' || event.key === 'End') {
-                next = shiftDay(date, event.key === 'Home' ? -weekdayIndex(date) : 6 - weekdayIndex(date));
-
-                // Hafta baska aya tasiyorsa ayin ilk / son gununde durulur.
-                if (monthOf(next) !== month) {
-                    const inMonth = props.cells.filter((cell) => !cell.outside);
-
-                    next = inMonth.length ? inMonth[event.key === 'Home' ? 0 : inMonth.length - 1].date : null;
-                }
-            }
-
-            if (!next || monthOf(next) !== month) {
-                return;
-            }
-
-            event.preventDefault();
-            props.onFocusDate(next);
-
-            const node = gridRef.current ? gridRef.current.querySelector('[data-date="' + next + '"]') : null;
-
-            if (node && typeof node.focus === 'function') {
-                node.focus();
-            }
-        };
-
-        return h('div', { className: 'ks-planner-month' },
-            h('div', { className: 'ks-planner-weekdays', 'aria-hidden': 'true' },
-                weekdays.map((name, index) => h('span', { key: index, className: cx('ks-planner-weekday', index >= 5 && 'is-weekend') }, name)),
-            ),
-            h('div', { ref: gridRef, className: 'ks-planner-grid', role: 'group', 'aria-label': fmt.monthLabel(month), onKeyDown },
-                props.cells.map((cell) => h(GridCell, {
-                    key: cell.date,
-                    cell,
-                    today: props.today,
-                    tabbable: cell.date === props.focusDate,
-                    onFocusDate: props.onFocusDate,
-                    onSelect: props.onSelect,
-                    onOpen: props.onOpen,
-                })),
-            ),
-        );
-    }
-
-    /** Dar kap / telefon: dikey ay listesi. Gecmisteki bos gunler istege bagli gizlenir. */
-    function MonthList(props) {
-        const [showPast, setShowPast] = useState(false);
-        const days = props.cells.filter((cell) => !cell.outside);
-        const isEmptyPast = (cell) => cell.date < props.today && !cell.contents.length && !cell.special_days.length;
-        const pastEmpty = days.filter(isEmptyPast).length;
-        const visible = showPast ? days : days.filter((cell) => !isEmptyPast(cell));
-
-        return h('div', { className: 'ks-planner-monthlist' },
-            pastEmpty > 0 ? h('div', { className: 'ks-planner-monthlist__toggle' },
-                h(Button, {
-                    variant: 'link',
-                    size: 'sm',
-                    icon: showPast ? 'eye-off' : 'eye',
-                    pressed: showPast,
-                    onClick: () => setShowPast(!showPast),
-                }, showPast ? t('planner_hide_past_days') : t('planner_show_past_days', { count: fmt.number(pastEmpty) })),
-            ) : null,
-            h('ol', { className: 'ks-planner-list', 'aria-label': fmt.monthLabel(props.month) },
-                visible.map((cell) => {
-                    const isToday = cell.date === props.today;
-                    const filled = cell.contents.length > 0 || cell.special_days.length > 0;
-                    const date = fmt.parse(cell.date);
-
-                    return h('li', {
-                        key: cell.date,
-                        className: cx('ks-planner-listday', isToday && 'is-today', cell.date < props.today && 'is-past', cell.weekend && 'is-weekend', !filled && 'is-empty'),
-                    },
-                        h('button', {
-                            type: 'button',
-                            className: 'ks-planner-listday__day',
-                            'aria-label': dayLabel(cell, props.today),
-                            'aria-current': isToday ? 'date' : undefined,
-                            onClick: () => props.onSelect(cell.date),
-                        },
-                            h('span', { className: 'ks-planner-listday__num' }, cell.number),
-                            h('span', { className: 'ks-planner-listday__weekday' }, date ? date.toLocaleDateString(KS.locale, { weekday: 'short' }) : ''),
-                        ),
-                        h('div', { className: 'ks-planner-listday__body' },
-                            filled
-                                ? h(DayEntries, { cell, today: props.today, maxChips: LIST_MAX_CHIPS, maxRibbons: LIST_MAX_CHIPS, large: true, tabbable: true, onOpen: props.onOpen })
-                                : h('span', { className: 'ks-planner-listday__empty', 'aria-hidden': 'true' }, h(Icon, { name: 'plus' })),
-                        ),
-                    );
-                }),
-            ),
-        );
-    }
-
-    function CalendarSkeleton(props) {
-        if (props.compact) {
-            return h('div', { className: 'ks-planner-list ks-planner-list--skeleton', 'aria-hidden': 'true' },
-                [0, 1, 2, 3, 4, 5].map((index) => h(Skeleton, { key: index, variant: 'rect', height: index % 2 ? 56 : 84, radius: 14 })),
-            );
-        }
-
-        const cells = [];
-
-        for (let index = 0; index < 35; index += 1) {
-            cells.push(h('div', { key: index, className: 'ks-planner-cell is-skeleton' },
-                h(Skeleton, { variant: 'text', width: 22 }),
-                index % 4 === 1 ? h(Skeleton, { variant: 'text', width: '85%' }) : null,
-                index % 6 === 2 ? h(Skeleton, { variant: 'text', width: '60%' }) : null,
-            ));
-        }
-
-        return h('div', { className: 'ks-planner-month', 'aria-hidden': 'true' },
-            h('div', { className: 'ks-planner-grid' }, cells),
         );
     }
 
@@ -750,49 +428,30 @@
         );
     }
 
+    /** Ay takvimi: ortak izgara (KS.calendar.MonthCalendar) + icerik cipi, ozel gun seridi ve lejant. */
     function CalendarPane(props) {
-        const paneRef = useRef(null);
-        const compact = useCompact(paneRef, COMPACT_WIDTH, props.isMobile);
-        const month = props.month;
-        const cells = props.cells;
-        let body = null;
         let summary = null;
 
         if (props.state === 'ready') {
             let contents = 0;
             let specials = 0;
 
-            cells.forEach((cell) => {
-                contents += cell.contents.length;
-                specials += cell.special_days.length;
+            props.cells.forEach((cell) => {
+                contents += cell.items.length;
+                specials += cell.ribbons.length;
             });
 
             summary = t('planner_summary', { contents: fmt.number(contents), days: fmt.number(specials) });
-            body = compact
-                ? h(MonthList, { cells, month, today: props.today, onSelect: props.onSelect, onOpen: props.onOpen })
-                : h(MonthGrid, { cells, month, today: props.today, focusDate: props.focusDate, onFocusDate: props.onFocusDate, onSelect: props.onSelect, onOpen: props.onOpen });
-        } else if (props.state === 'error') {
-            body = h(ErrorState, { error: props.error, onRetry: props.onRetry });
-        } else {
-            body = h(CalendarSkeleton, { compact });
         }
 
-        return h('section', { ref: paneRef, className: cx('ks-planner-pane', 'ks-planner-cal', compact && 'is-compact'), 'aria-label': t('planner_calendar') },
-            h('header', { className: 'ks-planner-pane__head ks-planner-cal__head' },
-                h('span', { className: 'ks-planner-pane__icon', 'aria-hidden': 'true' }, h(Icon, { name: 'calendar' })),
-                h('div', { className: 'ks-planner-pane__titles' },
-                    h('h2', { className: 'ks-planner-pane__title ks-planner-cal__month', 'aria-live': 'polite' }, fmt.monthLabel(month)),
-                    h('p', { className: 'ks-planner-pane__hint' }, summary || t('loading')),
-                ),
-                h('div', { className: 'ks-planner-cal__nav' },
-                    h(IconButton, { icon: 'chevron-left', label: t('planner_prev_month'), onClick: () => props.onMonth(shiftMonth(month, -1)) }),
-                    h(Button, { variant: 'ghost', onClick: props.onToday }, t('today')),
-                    h(IconButton, { icon: 'chevron-right', label: t('planner_next_month'), onClick: () => props.onMonth(shiftMonth(month, 1)) }),
-                ),
-            ),
-            h('div', { className: 'ks-planner-cal__body', 'aria-busy': props.state === 'loading' ? 'true' : undefined }, body),
-            h('footer', { className: 'ks-planner-cal__foot' }, h(Legend)),
-        );
+        return h(KS.calendar.MonthCalendar, Object.assign({}, props, {
+            summary,
+            legend: h(Legend),
+            chipOf,
+            dayLabel,
+            renderRibbon: (special, cell, today) => h(SpecialRibbon, { special, date: cell.date, today }),
+            onOpen: (item) => props.onOpen(item.id),
+        }));
     }
 
     /* ================================================================== */
@@ -803,7 +462,7 @@
         const cell = props.cell;
         const today = props.today;
         const relative = cell.date === today ? t('today') : (cell.date === shiftDay(today, 1) ? t('tomorrow') : null);
-        const summary = t('planner_summary', { contents: fmt.number(cell.contents.length), days: fmt.number(cell.special_days.length) });
+        const summary = t('planner_summary', { contents: fmt.number(cell.items.length), days: fmt.number(cell.ribbons.length) });
 
         return h(Drawer, {
             title: fmt.dateLong(cell.date),
@@ -815,10 +474,10 @@
             onClose: props.onClose,
         },
             h('div', { className: 'ks-planner-sheet__body' },
-                cell.special_days.length ? h('section', { className: 'ks-planner-sheet__block' },
+                cell.ribbons.length ? h('section', { className: 'ks-planner-sheet__block' },
                     h('h3', { className: 'ks-planner-sheet__heading' }, t('planner_special_days')),
                     h('ul', { className: 'ks-planner-specials' },
-                        cell.special_days.map((special, index) => {
+                        cell.ribbons.map((special, index) => {
                             const meta = specialMeta(special, cell.date, today);
 
                             return h('li', { key: special.id || index, className: cx('ks-planner-special', 'ks-c-' + meta.color) },
@@ -834,9 +493,9 @@
                 ) : null,
                 h('section', { className: 'ks-planner-sheet__block' },
                     h('h3', { className: 'ks-planner-sheet__heading' }, t('planner_day_contents')),
-                    cell.contents.length
+                    cell.items.length
                         ? h('ul', { className: 'ks-planner-items' },
-                            cell.contents.map((item) => h(AgendaItem, {
+                            cell.items.map((item) => h(AgendaItem, {
                                 key: item.id,
                                 item,
                                 showStage: false,

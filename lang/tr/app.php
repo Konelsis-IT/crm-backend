@@ -13,6 +13,7 @@ return [
         'operations' => 'Operasyon',
         'project_group' => 'Proje Grubu',
         'procurement' => 'Satın Alma',
+        'tenders' => 'İhaleler',
         'administrative' => 'İdari',
         'documents' => 'Belgeler',
         'settings' => 'Ayarlar',

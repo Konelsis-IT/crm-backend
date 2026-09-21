@@ -29,6 +29,9 @@ use Illuminate\Support\Str;
  * islemde kuruma ait 'communication_points' satirlari da ayni islem icinde
  * yazilir; boylece taraf, tipleri ve kanallari ya birlikte kaydedilir ya
  * da hicbiri.
+ *
+ * B33 (21 Eylul 2026): faaliyet satirlari ('activity_areas' anahtari) da ayni
+ * islemde tam liste olarak yazilir; koken ve rakip firma taraf kolonudur.
  */
 final class PartyService extends AbstractService
 {
@@ -47,7 +50,8 @@ final class PartyService extends AbstractService
             $person = (array) ($data['person_profile'] ?? []);
             $roles = (array) ($data['party_roles'] ?? []);
             $channels = array_key_exists('communication_points', $data) ? (array) $data['communication_points'] : null;
-            unset($data['organization_profile'], $data['person_profile'], $data['party_roles'], $data['communication_points']);
+            $activities = array_key_exists('activity_areas', $data) ? (array) $data['activity_areas'] : null;
+            unset($data['organization_profile'], $data['person_profile'], $data['party_roles'], $data['communication_points'], $data['activity_areas']);
 
             $data['party_no'] = $this->generatePartyNo();
             $data = $this->normalize($data, $organization['tax_number'] ?? null);
@@ -58,6 +62,7 @@ final class PartyService extends AbstractService
             $this->syncProfile($party, $organization, $person);
             $this->syncRoles($party, $roles);
             $this->syncOwnChannels($party, $channels);
+            $this->syncActivityAreas($party, $activities);
 
             return $party;
         });
@@ -75,7 +80,8 @@ final class PartyService extends AbstractService
             $organization = isset($data['organization_profile']) ? (array) $data['organization_profile'] : null;
             $person = isset($data['person_profile']) ? (array) $data['person_profile'] : null;
             $channels = array_key_exists('communication_points', $data) ? (array) $data['communication_points'] : null;
-            unset($data['organization_profile'], $data['person_profile'], $data['communication_points'], $data['party_roles'], $data['party_no'], $data['party_kind']);
+            $activities = array_key_exists('activity_areas', $data) ? (array) $data['activity_areas'] : null;
+            unset($data['organization_profile'], $data['person_profile'], $data['communication_points'], $data['activity_areas'], $data['party_roles'], $data['party_no'], $data['party_kind']);
 
             $taxNumber = $organization['tax_number'] ?? $current->organizationProfile?->tax_number;
             $data = $this->normalize([
@@ -89,6 +95,7 @@ final class PartyService extends AbstractService
 
             $this->syncProfile($party, $organization, $person);
             $this->syncOwnChannels($party, $channels);
+            $this->syncActivityAreas($party, $activities);
 
             return $party;
         });
@@ -104,6 +111,13 @@ final class PartyService extends AbstractService
         $normalized = Str::of($displayName)->lower()->squish()->value();
 
         $data['display_name'] = $displayName;
+
+        // Koken ve rakip firma (B33): grup uygulanmadan kolon yoktur.
+        if (! SchemaReadiness::hasBatch('B33')) {
+            unset($data['origin'], $data['is_competitor']);
+        } elseif (array_key_exists('origin', $data) && blank($data['origin'])) {
+            $data['origin'] = null;
+        }
         $data['normalized_name'] = $normalized;
         $data['duplicate_check_hash'] = hash('sha256', implode('|', [
             $normalized,
@@ -217,6 +231,21 @@ final class PartyService extends AbstractService
         }
 
         app(CommunicationPointService::class)->syncOwnChannels($party, $rows);
+    }
+
+    /**
+     * Faaliyet satirlari (B33): anahtar hic verilmediyse dokunulmaz; verilen
+     * liste tam listedir.
+     *
+     * @param  array<int|string, mixed>|null  $rows
+     */
+    private function syncActivityAreas(Party $party, ?array $rows): void
+    {
+        if ($rows === null || ! SchemaReadiness::hasBatch('B33')) {
+            return;
+        }
+
+        app(PartyActivityAreaService::class)->sync($party, $rows);
     }
 
     /**

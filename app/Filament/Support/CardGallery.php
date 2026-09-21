@@ -6,6 +6,7 @@ namespace App\Filament\Support;
 
 use App\Enums\Party\CommunicationChannelType;
 use App\Enums\Party\PartyKind;
+use App\Enums\Party\PartyRoleCode;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Resources\Parties\PartyResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
@@ -14,10 +15,12 @@ use App\Models\Document\Document;
 use App\Models\Party\Address;
 use App\Models\Party\CommunicationPoint;
 use App\Models\Party\Party;
+use App\Models\Party\PartyActivityArea;
 use App\Models\Party\PartyRole;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Query\Project\ProjectStepReadiness;
+use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
 use App\Support\RoleLabels;
 use Filament\Actions\Action;
@@ -233,7 +236,7 @@ final class CardGallery
      * bilgileri (her kanal ayri, tiklanabilir satir), network ve varsayilan
      * yetkili kisi. Alt eylemler: WhatsApp (ilk cep/telefon), duzenle.
      */
-    public function partyDetailCard(Party $party): Component
+    public function partyDetailCard(Party $party, ?string $editUrl = null): Component
     {
         $address = $party->addresses->sortByDesc('is_primary')->first();
         $channels = $party->ownCommunicationPoints
@@ -264,6 +267,22 @@ final class CardGallery
             'primary',
         );
 
+        // Koken ve faaliyet alanlari (B33) kartta durur; yan ozet kisa kalir ve kart
+        // ozete gore uzamaz (21 Eylul 2026 kullanici istegi). Derneklerde gosterilmez.
+        if (SchemaReadiness::hasBatch('B33') && ! $this->isAssociation($party)) {
+            $entries[] = $this->entry('origin', __('party.fields.origin'), $party->origin?->getLabel() ?? '-', Heroicon::OutlinedGlobeEuropeAfrica, 'info');
+            $entries[] = TextEntry::make('activity_areas_card')
+                ->label(__('party.sections.activity_areas'))
+                ->state($party->activityAreas->map(fn (PartyActivityArea $row): string => $row->summary())->all())
+                ->listWithLineBreaks()
+                ->placeholder('-')
+                ->icon(Heroicon::OutlinedSquares2x2)
+                ->iconColor('primary')
+                ->size(TextSize::Small)
+                ->weight(FontWeight::Medium)
+                ->columnSpanFull();
+        }
+
         return $this->card(
             variant: self::VARIANT_ROW,
             title: (string) $party->display_name,
@@ -289,7 +308,7 @@ final class CardGallery
                     : null,
             ])),
             entries: $entries,
-            actions: $this->partyActions($party, $phone?->value),
+            actions: $this->partyActions($party, $phone?->value, $editUrl),
             detail: true,
         );
     }
@@ -299,7 +318,7 @@ final class CardGallery
      *
      * @return list<Action|null>
      */
-    private function partyActions(Party $party, ?string $phone): array
+    private function partyActions(Party $party, ?string $phone, ?string $editUrl = null): array
     {
         return [
             Action::make('whatsapp_party_'.$party->getKey())
@@ -311,7 +330,7 @@ final class CardGallery
                 ->iconButton()
                 ->visible(ContactLinks::whatsapp($phone) !== null)
                 ->url((string) ContactLinks::whatsapp($phone), shouldOpenInNewTab: true),
-            $this->editAction(Gate::allows('update', $party) ? PartyResource::getUrl('edit', ['record' => $party]) : null, iconOnly: true),
+            $this->editAction(Gate::allows('update', $party) ? ($editUrl ?? PartyResource::getUrl('edit', ['record' => $party])) : null, iconOnly: true),
         ];
     }
 
@@ -343,6 +362,12 @@ final class CardGallery
         $whatsapp = ChannelActions::isPhone($type) ? ChannelActions::whatsapp($key, $point->value) : null;
 
         return $whatsapp !== null ? $entry->hintAction($whatsapp) : $entry;
+    }
+
+    /** Acik "Dernek / oda" tipi olan taraf (Dernekler menusunun kaydi). */
+    private function isAssociation(Party $party): bool
+    {
+        return $party->roles->contains(fn (PartyRole $role): bool => $role->role_code === PartyRoleCode::Association && $role->valid_until === null);
     }
 
     /** Kanal siralamasi: cep, telefon, e-posta, web, faks, LinkedIn, diger. */

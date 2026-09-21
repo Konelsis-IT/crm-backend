@@ -7,6 +7,7 @@ namespace App\Filament\Resources\WorkRequests\Pages;
 use App\Enums\WorkRequest\RequestTargetKind;
 use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Exports\WorkRequestExporter;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\ApprovalRequests\ApprovalRequestResource;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
@@ -18,6 +19,7 @@ use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ExportActions;
 use App\Models\Approval\ApprovalRequest;
 use App\Models\WorkRequest\WorkRequest;
 use App\Livewire\WorkRequestThread;
@@ -330,6 +332,7 @@ class ViewWorkRequest extends ViewRecord
                 ])
                 ->action(fn (array $data) => $this->run(fn (WorkRequestService $service) => $service->cancel($this->getRecord(), $data['note'] ?? null), 'cancelled')),
             EditAction::make()->label(__('work_request.actions.edit')),
+            ExportActions::record(WorkRequestExporter::class),
         ];
     }
 

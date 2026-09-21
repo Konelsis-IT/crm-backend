@@ -30,7 +30,7 @@ class CreateParty extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
-        $data['party_roles'] = $this->pullRoleRows($data);
+        $data['party_roles'] = $this->roleRows($data);
         $data['communication_points'] = $this->pullChannelRows($data);
 
         try {
@@ -44,11 +44,12 @@ class CreateParty extends CreateRecord
 
     /**
      * Formdaki taraf tipi satirlarini ayirir ve enum degerlerini metne cevirir.
+     * Dernekler (CreateAssociation) tip secmez; kendi satirini verir.
      *
      * @param  array<string, mixed>  $data
      * @return list<array<string, mixed>>
      */
-    private function pullRoleRows(array &$data): array
+    protected function roleRows(array &$data): array
     {
         $rows = (array) ($data['party_roles'] ?? []);
         unset($data['party_roles']);
@@ -86,7 +87,7 @@ class CreateParty extends CreateRecord
      * @param  array<string, mixed>  $data
      * @return list<array<string, mixed>>
      */
-    private function pullChannelRows(array &$data): array
+    protected function pullChannelRows(array &$data): array
     {
         $rows = (array) ($data['communication_points'] ?? []);
         unset($data['communication_points']);
@@ -97,7 +98,7 @@ class CreateParty extends CreateRecord
         ));
     }
 
-    private static function scalar(mixed $value): ?string
+    protected static function scalar(mixed $value): ?string
     {
         if ($value instanceof BackedEnum) {
             return (string) $value->value;

@@ -209,7 +209,9 @@
     /* 1. Yapilandirma (config)                                            */
     /* ================================================================== */
 
-    const rootEl = document.getElementById('konelsis-social-root');
+    // Sosyal medya sayfasi #konelsis-social-root; cekirdegi kullanan diger ekranlar
+    // (gorusme plani takvimi, B34) kok ogeyi [data-ks-root] ile isaretler.
+    const rootEl = document.getElementById('konelsis-social-root') || document.querySelector('[data-ks-root]');
     let config = {};
 
     if (rootEl) {
@@ -1357,6 +1359,9 @@
         'share': 'M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4',
         'megaphone': 'M3 10v4a1 1 0 0 0 1 1h3l8 4V5L7 9H4a1 1 0 0 0-1 1zM18.5 9a4 4 0 0 1 0 6M8 15v4a1 1 0 0 0 1 1h1.5a1 1 0 0 0 1-1v-2.4',
         'bell': 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0',
+        // Gorusme plani kanallari (B34): telefon ve e-posta.
+        'phone': 'M5 4h3l1.5 4-2 1.2a11 11 0 0 0 5.3 5.3L14 12.5l4 1.5v3a2 2 0 0 1-2 2A13 13 0 0 1 3 6a2 2 0 0 1 2-2z',
+        'mail': 'M4 6h16v12H4zM4 7l8 6 8-6',
 
         // Gorsel araclari
         'zoom-in': 'M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4M11 8v6M8 11h6',

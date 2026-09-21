@@ -13,6 +13,7 @@ return [
         'operations' => 'Operations',
         'project_group' => 'Project Group',
         'procurement' => 'Procurement',
+        'tenders' => 'Tenders',
         'administrative' => 'Administrative',
         'documents' => 'Documents',
         'settings' => 'Settings',

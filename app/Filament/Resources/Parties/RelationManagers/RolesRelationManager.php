@@ -50,7 +50,7 @@ class RolesRelationManager extends RelationManager
                 ->components(FieldGrid::fields([
                         Select::make('role_code')
                             ->label(__('party_role.fields.role_code'))
-                            ->options(PartyRoleCode::class)
+                            ->options(PartyRoleCode::availableOptions())
                             ->default(PartyRoleCode::Customer->value)
                             ->required()
                             ->native(false),

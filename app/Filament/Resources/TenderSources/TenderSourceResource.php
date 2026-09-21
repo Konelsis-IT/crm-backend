@@ -8,7 +8,7 @@ use App\Enums\Acquisition\TenderAccessMode;
 use App\Enums\Acquisition\TenderSourceType;
 use App\Enums\Shared\ActiveStatus;
 use App\Exceptions\StaleRecordException;
-use App\Filament\Clusters\Settings;
+use App\Filament\Clusters\Tenders;
 use App\Filament\Resources\TenderSources\Pages\ListTenderSources;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -38,9 +38,9 @@ class TenderSourceResource extends Resource
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedGlobeAlt;
 
-    protected static ?string $cluster = Settings::class;
+    protected static ?string $cluster = Tenders::class;
 
-    protected static ?int $navigationSort = 80;
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $recordTitleAttribute = 'name_tr';
 

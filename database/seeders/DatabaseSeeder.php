@@ -31,6 +31,16 @@ use Illuminate\Database\Seeder;
  * degistirmez; baglanti, rakip hesap, kategori gibi sirket verisi uretmez.
  * Hesap sahibi gercek personelden bulundugu icin RoleMatrixSeeder'dan sonra
  * calisirlar.
+ *
+ * 21 Eylul 2026 (D-107, B33): faaliyet alanlarinin ilk listesi
+ * (ActivityAreaSeeder) ve pazar haritasindaki firmalar, kisileri, ihale
+ * kaynaklari (MarketMapSeeder; Firma_Harita_Takip.xlsx Genel_Harita)
+ * RealPartySeeder'dan sonra yuklenir; ayni firmalar o listedeki kayitla
+ * eslestirilir. Ikisi de B33 uygulanmamissa kendini atlar.
+ *
+ * 21 Eylul 2026 (D-109, B34): haftalik ziyaret plani (WeeklyVisitPlanSeeder)
+ * pazar haritasindan sonra yuklenir; sonunda var olan gorusme notlari
+ * gorusme planina yansitilir (MeetingPlanBackfillSeeder).
  */
 class DatabaseSeeder extends Seeder
 {
@@ -58,6 +68,16 @@ class DatabaseSeeder extends Seeder
 
             // Gercek taraf verisi (firma takip listesi, 16 Eylul 2026)
             RealPartySeeder::class,
+
+            // Faaliyet alanlari ve pazar haritasi (B33, D-107, 21 Eylul 2026)
+            ActivityAreaSeeder::class,
+            MarketMapSeeder::class,
+
+            // Gorusen personeli bos notlara Ersin Ozdemir (21 Eylul 2026 kullanici talimati)
+            MeetingNotePersonnelSeeder::class,
+
+            // Gorusme plani (B34, D-109): haftalik ziyaret plani + var olan notlarin yansimasi
+            WeeklyVisitPlanSeeder::class,
 
             // Sosyal medya (B31, D-106): gercek hesaplar ve resmi ulusal gunler
             SocialProfileSeeder::class,

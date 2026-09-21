@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Projects\Pages;
 use App\Enums\Project\FocusDirection;
 use App\Enums\Project\ProjectStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Exports\ProjectExporter;
 use App\Filament\Resources\Projects\Pages\Concerns\OpensChecklistTargets;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\WorkRequests\RelationManagers\RelatedWorkRequestsRelationManager;
@@ -21,6 +22,7 @@ use App\Filament\Resources\Projects\RelationManagers\RisksRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\StageInstancesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\WorkstreamsRelationManager;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ExportActions;
 use App\Filament\Support\ProjectWizard;
 use App\Filament\Support\ProjectWorkspace;
 use App\Models\Project\Project;
@@ -145,6 +147,7 @@ class ViewProject extends ViewRecord
             ActionGroup::make($this->statusActions())
                 ->label(__('project.actions.change_status'))
                 ->icon(Heroicon::OutlinedArrowPath),
+            ExportActions::record(ProjectExporter::class),
         ];
     }
 

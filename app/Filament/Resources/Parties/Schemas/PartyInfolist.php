@@ -25,7 +25,13 @@ use Filament\Support\Icons\Heroicon;
  */
 final class PartyInfolist
 {
-    public static function configure(Schema $schema): Schema
+    /**
+     * $resource: karttaki "Duzenle" hangi kaynagin sayfasini acar (Dernekler
+     * ayni karti kullanir).
+     *
+     * @param  class-string<\Filament\Resources\Resource>|null  $resource
+     */
+    public static function configure(Schema $schema, ?string $resource = null): Schema
     {
         $record = $schema->getRecord();
 
@@ -39,13 +45,19 @@ final class PartyInfolist
             $record->loadMissing('meetingNotes');
         }
 
+        if (SchemaReadiness::hasBatch('B33')) {
+            $record->loadMissing(['activityAreas.activityArea', 'activityAreas.subActivityArea']);
+        }
+
         $archived = fn (Party $party): bool => $party->archived_at !== null;
         $meetings = fn (): bool => SchemaReadiness::hasBatch('B28');
+        $activities = fn (): bool => SchemaReadiness::hasBatch('B33');
 
         return $schema->columns(1)->components([
-            Grid::make(['default' => 1, 'lg' => 4])->components([
+            // Kart ve ozet kendi boylarini korur (esnetme yok).
+            Grid::make(['default' => 1, 'lg' => 4])->extraAttributes(['class' => 'kc-grid-top'])->components([
                 app(CardGallery::class)
-                    ->partyDetailCard($record)
+                    ->partyDetailCard($record, $resource !== null ? $resource::getUrl('edit', ['record' => $record]) : null)
                     ->columnSpan(['default' => 1, 'lg' => 3]),
                 Section::make(__('party.sections.side'))
                     ->icon(Heroicon::OutlinedCalendarDays)
@@ -56,6 +68,13 @@ final class PartyInfolist
                             ->badge()
                             ->placeholder('-')
                             ->visible($meetings),
+                        // Rakip firma (B33); koken ve faaliyet alanlari soldaki kartta.
+                        TextEntry::make('is_competitor')
+                            ->label(__('party.fields.is_competitor'))
+                            ->state(fn (Party $party): string => $party->is_competitor ? __('party.values.competitor') : __('party.values.not_competitor'))
+                            ->badge()
+                            ->color(fn (Party $party): string => $party->is_competitor ? 'warning' : 'gray')
+                            ->visible($activities),
                         TextEntry::make('meeting_count')
                             ->label(__('party.fields.meeting_count'))
                             ->icon(Heroicon::OutlinedChatBubbleLeftRight)

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Query\Party;
 
 use App\Enums\Party\PartyRoleCode;
+use App\Models\Party\ContactRelationship;
 use App\Models\Party\Party;
 use App\Models\Party\PartyRole;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -31,6 +33,24 @@ final class PartyQueries
         );
     }
 
+    /**
+     * Dernekler (Dernek / oda tipi, B33) Taraflar listesinde yer almaz; ayri
+     * menuden (Dernekler) yonetilir (21 Eylul 2026 kullanici karari).
+     */
+    public function withoutAssociations(Builder $query): Builder
+    {
+        if (! SchemaReadiness::hasBatch('B33')) {
+            return $query;
+        }
+
+        return $query->whereDoesntHave(
+            'roles',
+            fn (Builder $roles): Builder => $roles
+                ->where('role_code', PartyRoleCode::Association->value)
+                ->whereNull('valid_until'),
+        );
+    }
+
     /** Arsiv suzgeci: active (varsayilan) / archived / all. */
     public function archiveScope(Builder $query, string $mode): Builder
     {
@@ -50,17 +70,53 @@ final class PartyQueries
     {
         return PartyRole::query()
             ->whereNull('valid_until')
-            ->whereHas('party', fn (Builder $party): Builder => $party->whereNull('archived_at'))
+            ->whereHas('party', fn (Builder $party): Builder => $this->withoutAssociations($party->whereNull('archived_at')))
             ->get(['role_code', 'party_id'])
             ->groupBy(static fn (PartyRole $role): string => (string) $role->role_code?->value)
             ->map(static fn ($rows): int => $rows->pluck('party_id')->unique()->count())
             ->all();
     }
 
-    /** Listede gosterilecek toplam taraf sayisi (arsivliler haric). */
+    /** Listede gosterilecek toplam taraf sayisi (arsivliler ve dernekler haric). */
     public function total(): int
     {
-        return Party::query()->whereNull('archived_at')->count();
+        return $this->withoutAssociations(Party::query()->whereNull('archived_at'))->count();
+    }
+
+    /**
+     * Aranabilir taraf secimi (arsivliler haric): id => ad.
+     *
+     * @return array<int, string>
+     */
+    public function searchOptions(string $term, int $limit = 50): array
+    {
+        return Party::query()
+            ->whereNull('archived_at')
+            ->when(trim($term) !== '', fn (Builder $query): Builder => $query->where('display_name', 'like', '%'.trim($term).'%'))
+            ->orderBy('display_name')
+            ->limit($limit)
+            ->pluck('display_name', 'id')
+            ->all();
+    }
+
+    /**
+     * Tarafin yetkili kisileri: id => ad.
+     *
+     * @return array<int, string>
+     */
+    public function contactOptions(?int $partyId): array
+    {
+        if ($partyId === null || $partyId <= 0) {
+            return [];
+        }
+
+        return ContactRelationship::query()
+            ->where('organization_party_id', $partyId)
+            ->with('contact')
+            ->get()
+            ->mapWithKeys(fn (ContactRelationship $contact): array => [(int) $contact->getKey() => $contact->displayName()])
+            ->sort()
+            ->all();
     }
 
     /** Tarafin gorunen adi (sihirbaz ozet karti icin); taraf yoksa null. */

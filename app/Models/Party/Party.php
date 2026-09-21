@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Party;
 
 use App\Enums\Party\PartyKind;
+use App\Enums\Party\PartyOrigin;
 use App\Enums\Party\PartyStatus;
 use App\Enums\Party\VisitPriority;
 use App\Models\Acquisition\BusinessCase;
@@ -35,6 +36,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable([
     'party_no', 'party_kind', 'display_name', 'normalized_name', 'country_code', 'default_locale',
     'duplicate_check_hash', 'status', 'merged_into_party_id', 'network_note', 'visit_priority',
+    'origin', 'is_competitor',
 ])]
 #[UsePolicy(PartyPolicy::class)]
 class Party extends Model
@@ -50,6 +52,8 @@ class Party extends Model
             'party_kind' => PartyKind::class,
             'status' => PartyStatus::class,
             'visit_priority' => VisitPriority::class,
+            'origin' => PartyOrigin::class,
+            'is_competitor' => 'boolean',
         ];
     }
 
@@ -127,6 +131,12 @@ class Party extends Model
     public function meetingNotes(): HasMany
     {
         return $this->hasMany(PartyMeetingNote::class, 'party_id');
+    }
+
+    /** Faaliyet satirlari: proje tipi + faaliyet alani + alt faaliyet alani (B33). */
+    public function activityAreas(): HasMany
+    {
+        return $this->hasMany(PartyActivityArea::class, 'party_id')->orderBy('id');
     }
 
     public function businessCases(): HasMany

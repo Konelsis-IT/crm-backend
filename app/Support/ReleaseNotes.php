@@ -39,6 +39,68 @@ final class ReleaseNotes
     {
         return [
             [
+                'version' => '1.9',
+                'date' => '21.09.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Listelere Excel indirme düğmesi (indirme simgesi) geldi: basınca tablo ekranda görüldüğü gibi hemen iniyor; yalnız görünen sütunlar, seçili süzgeçler, arama ve açık sekme dosyaya yazılıyor.',
+                        'Kayıt ayrıntı sayfalarına "Dışa aktar" düğmesi geldi: kaydı Excel ya da PDF olarak hemen indirir. PDF\'te logo, kaydı hazırlayan ve tarih yer alıyor.',
+                        'Dışa aktarma ilk olarak Taraflar, Dernekler, Görüşme planı, İş dosyaları, Teklifler, Sözleşmeler, Projeler, Talepler, Personel, Raporlar ve Dokümanlar\'da açıldı.',
+                    ],
+                    self::IMPROVEMENTS => [
+                        'Dernekler kendi menüsüne ayrıldı: "Dernek oluştur" ile açılıyor, taraf tipi sorulmuyor ve dernekler artık Taraflar listesinde görünmüyor.',
+                        'Taraf ayrıntısındaki kart kendi boyunu koruyor; Köken ve Faaliyet alanları sol karta taşındı.',
+                        'Taraflar listesinde uzun adlar 25 karakterde kısaltılıyor (tam ad üzerine gelince görünüyor, Excel\'e tam yazılıyor); Faaliyet alanları sütunu listeden kaldırıldı, süzgeçte ve ayrıntı kartında duruyor.',
+                    ],
+                    self::FIXES => [
+                        'Taraf oluştururken "Taraf tipi" seçimi yeniden geldi.',
+                        'Haftalık ziyaret planında benzer adlı firmalar ayrıldı: REİS ENERJİ ile REİS RS ENERJİ, FERNAS İNŞAAT ile FERNAS ŞİRKETLER GRUBU, LİMAK YENİLENEBİLİR ENERJİ ile LİMAK İNŞAAT, CENGİZ İNŞAAT ile CENGİZ HOLDİNG artık ayrı taraflar; görüşme notları ve planları doğru firmaya taşındı.',
+                        'Canlıda talep yazışmasının biçimsiz görünmesi giderildi: stil ve betik dosyaları değiştikçe tarayıcı yeni sürümü kendiliğinden alıyor.',
+                    ],
+                    self::NOTES => [
+                        'Kalan tablolar ve kayıtların alt tabloları (kişiler, adresler, görüşme notları vb.) sonraki adımda dışa aktarmaya açılacak.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '1.8',
+                'date' => '21.09.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'İş Alım altına "Görüşme Planı" geldi. Hangi personelin ne zaman hangi firmayla görüşeceği ve görüştüğü aylık takvimde görünüyor; takvim sosyal medya takvimiyle aynı bileşeni kullanıyor. Güne tıklayınca o günün görüşmeleri açılıyor, oradan o güne görüşme planlanabiliyor. Personele göre süzülebiliyor.',
+                        'Liste görünümünde Yaklaşan, Bugün, Geciken, Gerçekleşen ve Gerçekleşmeyen sekmeleri; personel, kanal ve tarih aralığı süzgeçleri var.',
+                        'Planlı görüşmeye sorumlu personel ve katılacak personel (örneğin "Mustafa Güneş ile gidilecek") seçilebiliyor. Görüşmeden 1 gün önce ve günün sabahı ikisine de zil bildirimi gidiyor.',
+                        'Görüşmenin sonucu "Sonucu gir" ile yazılıyor ve firmanın Görüşme notlarına düşüyor; görüşme olmadıysa "Gerçekleşmedi", tarih kaydıysa "Tarihi değiştir".',
+                        'Firmaların Görüşme notlarına yazılan her not (yeni ya da geçmiş) Görüşme planı takvimine "gerçekleşti" olarak kendiliğinden düşüyor.',
+                        'Görüşme notundaki "Sonraki adım" artık bildirim gönderiyor: tarih verilirse adım takvime planlı görüşme olarak düşüyor, 1 gün önce ve o günün sabahı görüşen personele hatırlatılıyor. Alanın yanındaki bilgi simgesi bunu açıklıyor.',
+                        'Haftalık Ziyaret Planı (17 Ağustos – 18 Eylül 2026) sisteme aktarıldı: ziyaret ve telefon görüşmeleri Görüşme notlarına, gerçekleşmeyen ve bekleyen ziyaretler Görüşme planına yazıldı; listede olmayan firmalar açıldı.',
+                    ],
+                    self::NOTES => [
+                        'Görüşen personeli boş olan tüm görüşme notlarına (daha önce aktarılanlar dahil) Ersin Özdemir yazıldı; personel sonradan kendi notunu güncelleyebilir.',
+                        'Gerçekleşmiş görüşme Görüşme planından düzenlenmiyor; düzeltme firmanın Görüşme notlarından yapılıyor ve takvime yansıyor.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '1.7',
+                'date' => '21.09.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Taraflara "Faaliyet alanları" eklendi. Firmanın ne iş yaptığı satır satır yazılıyor: proje tipi (GES, RES, HES, BES, TM, ENH/EİH ya da tümü), faaliyet alanı ve alt faaliyet alanı. Bir firma birden fazla satır alabiliyor; örneğin hem GES inverter hem BES batarya.',
+                        'Taraflar listesine faaliyet süzgeci geldi: proje tipi, faaliyet alanı ve alt faaliyet alanı birlikte seçilerek aranıyor (örnek: HES + Türbin + Avrupa). Köken ve Rakip firma süzgeçleri de eklendi.',
+                        'Taraf kartına "Köken" (Yerli / Avrupa / Çin / Diğer yabancı) ve "Rakip firma" onay kutusu eklendi. Rakip firmaları ilgili personel işaretliyor.',
+                        'Yeni taraf tipi "Dernek / oda" ve menüde İhaleler\'in altında "Dernekler" geldi.',
+                        'Faaliyet alanları Ayarlar\'dan yönetiliyor: yeni ana alan ya da alt alan eklenebiliyor, kullanılmayan alan pasife alınabiliyor.',
+                        'Sektör haritası (Firma_Harita_Takip) sisteme aktarıldı: türbin, inverter, panel, depolama, trafo ve otomasyon üreticileri, HES / GES / RES proje firmaları, ÇED firmaları, kamu kurumları, dernekler ve büyük firmalar, yetkili kişileri ve telefonlarıyla. Sistemde zaten olan firmalar yeniden açılmadı, var olan kayda eklendi.',
+                        'İhale ilanları ve İhale kaynakları tek "İhaleler" menüsünde iki sekme oldu. Haritadaki ihale takip kaynakları (EBRD, İslam Kalkınma Bankası, Proje Haber, Yatırımlar Dergisi, ANBA Haber, e-ÇED, YEM DER) İhale kaynaklarına eklendi.',
+                    ],
+                    self::NOTES => [
+                        'Haritada "aranmayacak" yazan kişiler firmanın görüşme notlarına, "samimi" ve referans notları kişinin Network alanına yazıldı.',
+                        'Rakip firma işareti aktarımda verilmedi; ilgili personel tarafından girilecek.',
+                    ],
+                ],
+            ],
+            [
                 'version' => '1.6',
                 'date' => '19.09.2026',
                 'groups' => [

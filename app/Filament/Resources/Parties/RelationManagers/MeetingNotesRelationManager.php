@@ -86,9 +86,13 @@ class MeetingNotesRelationManager extends RelationManager
                             ->required()
                             ->rows(4)
                             ->columnSpanFull(),
+                        // Sonraki adim hatirlatmasi (B34, D-109): tarih verilirse adim Gorusme
+                        // planina duser, 1 gun once ve gunun sabahi zil bildirimi gider.
                         DatePicker::make('next_action_on')
                             ->label(__('party_meeting_note.fields.next_action_on'))
-                            ->displayFormat('d.m.Y'),
+                            ->displayFormat('d.m.Y')
+                            ->hintIcon(Heroicon::OutlinedInformationCircle, tooltip: __('party_meeting_note.help.next_action_reminder'))
+                            ->hintColor('primary'),
                         TextInput::make('next_action')
                             ->label(__('party_meeting_note.fields.next_action'))
                             ->maxLength(255)

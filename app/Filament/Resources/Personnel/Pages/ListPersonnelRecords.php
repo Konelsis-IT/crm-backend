@@ -6,14 +6,17 @@ namespace App\Filament\Resources\Personnel\Pages;
 
 use App\Filament\Concerns\InteractsWithCardView;
 use App\Filament\Contracts\HasCardView;
+use App\Filament\Exports\PersonnelExporter;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Support\CardGallery;
+use App\Filament\Support\ExportActions;
 use App\Models\Personnel\Personnel;
 use App\Query\Ui\RecordCardQueries;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Component;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -31,6 +34,7 @@ class ListPersonnelRecords extends ListRecords implements HasCardView
     {
         return [
             $this->cardViewToggleAction(),
+            ExportActions::table(PersonnelExporter::class),
             CreateAction::make(),
         ];
     }
@@ -42,6 +46,11 @@ class ListPersonnelRecords extends ListRecords implements HasCardView
             $this->cardPerPageValue(),
             $this->cardPageValue(),
         );
+    }
+
+    protected function cardSearchScope(Builder $query, ?string $search): Builder
+    {
+        return app(RecordCardQueries::class)->searchPersonnel($query, $search);
     }
 
     protected function cardFor(Model $record): Component

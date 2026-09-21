@@ -4,6 +4,10 @@ return [
     'label' => 'Party',
     'plural' => 'Parties',
 
+    'nav' => [
+        'associations' => 'Associations',
+    ],
+
     'tabs' => [
         'all' => 'All',
     ],
@@ -13,6 +17,8 @@ return [
     ],
 
     'help' => [
+        'is_competitor' => 'Competitors are marked by the responsible staff; find them with the "Competitor" filter.',
+        'activity_areas' => 'What the company does: each row is a project type, an activity area and a sub-activity area. A company can have several rows. An empty project type means all project types.',
         'archive' => 'The record is not deleted but archived: it leaves the list, can be found with the "Archived" filter and restored at any time.',
         'restore' => 'The record leaves the archive and returns to the list.',
         'channels' => 'Company-level contact details independent of a person: email, phone, website. Person details are entered in the contacts list.',
@@ -28,6 +34,7 @@ return [
     ],
 
     'sections' => [
+        'activity_areas' => 'Activity areas',
         'side' => 'Summary',
         'archive' => 'Archive details',
         'channels' => 'Contact details',
@@ -37,6 +44,11 @@ return [
     ],
 
     'fields' => [
+        'origin' => 'Origin',
+        'is_competitor' => 'Competitor',
+        'project_type' => 'Project type',
+        'activity_area' => 'Activity area',
+        'sub_activity_area' => 'Sub-activity area',
         'last_meeting' => 'Last meeting',
         'meeting_count' => 'Meeting notes',
         'archive_reason' => 'Archive reason',
@@ -70,6 +82,9 @@ return [
     ],
 
     'values' => [
+        'all_project_types' => 'All project types',
+        'competitor' => 'Competitor',
+        'not_competitor' => 'Not a competitor',
         'archived' => 'Archived',
     ],
 
@@ -79,6 +94,7 @@ return [
     ],
 
     'actions' => [
+        'add_activity_area' => 'Add activity area',
         'archive' => 'Archive',
         'restore' => 'Restore',
         'add_channel' => 'Add contact detail',

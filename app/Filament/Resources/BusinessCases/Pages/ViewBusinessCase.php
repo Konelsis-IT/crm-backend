@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\Pages;
 
+use App\Filament\Exports\BusinessCaseExporter;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\BusinessCaseWizard;
+use App\Filament\Support\ExportActions;
 use App\Models\Acquisition\BusinessCase;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
@@ -89,6 +91,7 @@ class ViewBusinessCase extends ViewRecord
                 ->visible(fn (): bool => $this->getRecord()->project !== null)
                 ->url(fn (): string => ProjectResource::getUrl('view', ['record' => $this->getRecord()->project])),
             $wizard->convertAction($case),
+            ExportActions::record(BusinessCaseExporter::class),
         ];
     }
 }

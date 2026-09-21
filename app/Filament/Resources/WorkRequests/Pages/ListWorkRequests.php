@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Filament\Exports\WorkRequestExporter;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
+use App\Filament\Support\ExportActions;
 use App\Query\WorkRequest\WorkRequestQueries;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -27,6 +29,7 @@ class ListWorkRequests extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            ExportActions::table(WorkRequestExporter::class),
             CreateAction::make()->label(__('work_request.actions.create')),
         ];
     }

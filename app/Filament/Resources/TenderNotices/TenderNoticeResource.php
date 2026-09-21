@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TenderNotices;
 
 use App\Enums\Acquisition\TenderNoticeStatus;
-use App\Filament\NavigationGroup;
+use App\Filament\Clusters\Tenders;
 use App\Filament\Resources\TenderNotices\Pages\CreateTenderNotice;
 use App\Filament\Resources\TenderNotices\Pages\EditTenderNotice;
 use App\Filament\Resources\TenderNotices\Pages\ListTenderNotices;
@@ -31,7 +31,6 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use UnitEnum;
 
 class TenderNoticeResource extends Resource
 {
@@ -39,9 +38,9 @@ class TenderNoticeResource extends Resource
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedMegaphone;
 
-    protected static string | UnitEnum | null $navigationGroup = NavigationGroup::Acquisition;
+    protected static ?string $cluster = Tenders::class;
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $recordTitleAttribute = 'title';
 
@@ -53,6 +52,21 @@ class TenderNoticeResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('tender_notice.plural');
+    }
+
+    /**
+     * Baslik bicimi dil dosyasindan: Str::ucwords Turkce "i"yi "I" yapar
+     * ("Ihale Ilanlari"); menu sekmesi ve sayfa basligi "Ihale Ilanlari" degil
+     * dogru "İhale İlanları" olsun.
+     */
+    public static function getTitleCasePluralModelLabel(): string
+    {
+        return __('tender_notice.plural_title');
+    }
+
+    public static function getTitleCaseModelLabel(): string
+    {
+        return __('tender_notice.label_title');
     }
 
     public static function canAccess(): bool

@@ -4,6 +4,10 @@ return [
     'label' => 'Taraf (Firma/Kişi)',
     'plural' => 'Taraflar',
 
+    'nav' => [
+        'associations' => 'Dernekler',
+    ],
+
     'tabs' => [
         'all' => 'Tümü',
     ],
@@ -13,6 +17,8 @@ return [
     ],
 
     'help' => [
+        'is_competitor' => 'Rakip firmaları ilgili personel işaretler; listede "Rakip firma" süzgeciyle bulunur.',
+        'activity_areas' => 'Firmanın ne iş yaptığı: her satırda proje tipi, faaliyet alanı ve alt faaliyet alanı. Bir firma birden fazla satır alabilir. Proje tipi boş bırakılırsa tüm proje tipleri için geçerlidir.',
         'archive' => 'Kayıt silinmez, arşive alınır: listede görünmez, "Arşivlenenler" süzgeciyle bulunur ve istendiğinde geri alınır.',
         'restore' => 'Kayıt arşivden çıkar ve listeye geri döner.',
         'channels' => 'Kuruma ait, kişiden bağımsız iletişim bilgileri: e-posta, telefon, web sitesi. Kişilere ait bilgiler "İletişim ve kişiler" listesinden girilir.',
@@ -28,6 +34,7 @@ return [
     ],
 
     'sections' => [
+        'activity_areas' => 'Faaliyet alanları',
         'side' => 'Özet',
         'archive' => 'Arşiv bilgisi',
         'channels' => 'İletişim bilgileri',
@@ -37,6 +44,11 @@ return [
     ],
 
     'fields' => [
+        'origin' => 'Köken',
+        'is_competitor' => 'Rakip firma',
+        'project_type' => 'Proje tipi',
+        'activity_area' => 'Faaliyet alanı',
+        'sub_activity_area' => 'Alt faaliyet alanı',
         'last_meeting' => 'Son görüşme',
         'meeting_count' => 'Görüşme notu',
         'archive_reason' => 'Arşiv gerekçesi',
@@ -70,6 +82,9 @@ return [
     ],
 
     'values' => [
+        'all_project_types' => 'Tüm proje tipleri',
+        'competitor' => 'Rakip',
+        'not_competitor' => 'Rakip değil',
         'archived' => 'Arşivde',
     ],
 
@@ -79,6 +94,7 @@ return [
     ],
 
     'actions' => [
+        'add_activity_area' => 'Faaliyet alanı ekle',
         'archive' => 'Arşivle',
         'restore' => 'Arşivden çıkar',
         'add_channel' => 'İletişim bilgisi ekle',

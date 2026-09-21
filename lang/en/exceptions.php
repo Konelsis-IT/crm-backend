@@ -72,6 +72,9 @@ return [
         'invalid_participant' => 'A conversation cannot be started with the selected person.',
         'document_not_shareable' => 'The document was not found or you are not allowed to share it.',
     ],
+    'party' => [
+        'activity_area_parent_invalid' => 'A sub-activity area can only belong to a main activity area; a main area with sub-areas cannot be moved under another area.',
+    ],
     'work_request' => [
         'message_empty' => 'The reply is empty; add text, a link or a file.',
         'forward_not_allowed' => 'The request cannot be forwarded to this person or unit (the current addressee, the requester or the approver cannot be chosen).',

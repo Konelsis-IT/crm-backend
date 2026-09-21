@@ -123,6 +123,12 @@ class RoleMatrixSeeder extends Seeder
             'TenderNotice' => self::MANAGE,
             'TenderNoticeVersion' => self::WRITE,
             'TenderSource' => self::WRITE,
+            // Ihaleler kumesi ve faaliyet alani katalogu (B33, D-107).
+            'Tenders' => ['View'],
+            'ActivityArea' => self::WRITE,
+            // Gorusme plani (B34, D-109)
+            'MeetingPlan' => self::MANAGE,
+            'Settings' => ['View'],
             'Contract' => self::WRITE,
             'ContractVersion' => self::WRITE,
             'OperationHandoff' => self::WRITE,
@@ -203,6 +209,8 @@ class RoleMatrixSeeder extends Seeder
             'YONETIM' => [
                 'ProjectGroup' => ['View'],
                 'Procurement' => ['View'],
+                'Tenders' => ['View'],
+                'MeetingPlan' => self::WRITE,
                 'Documents' => ['View'],
                 'Settings' => ['View'],
                 'Project' => self::WRITE,
@@ -265,12 +273,12 @@ class RoleMatrixSeeder extends Seeder
             'WorkPackage', 'WbsNode', 'DelayEvent', 'Party', 'BusinessCase', 'Proposal',
             'ProposalVersion', 'Contract', 'ContractVersion', 'TenderNotice', 'Document',
             'Transmittal', 'Personnel', 'OrgUnit', 'Position', 'ApprovalRequest',
-            'ApprovalPolicy', 'WorkRequest', 'Report', 'SocialContent',
+            'ApprovalPolicy', 'WorkRequest', 'Report', 'SocialContent', 'ActivityArea', 'MeetingPlan',
         ] as $subject) {
             $read[$subject] = self::READ;
         }
 
-        return [...$read, 'Dashboard' => ['View'], 'Documents' => ['View'], 'ProjectGroup' => ['View'], 'Procurement' => ['View']];
+        return [...$read, 'Dashboard' => ['View'], 'Documents' => ['View'], 'ProjectGroup' => ['View'], 'Procurement' => ['View'], 'Tenders' => ['View']];
     }
 
     public function run(): void

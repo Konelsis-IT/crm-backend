@@ -763,3 +763,7 @@ body:has(#konelsis-chat-root) .fi-main {
 .dark .wr-forward { border-color: var(--gray-600); color: var(--gray-300); }
 .dark .wr-file { background: var(--gray-900); border-color: var(--gray-700); }
 .dark .wr-msg__body a, .dark .wr-file a { color: var(--gray-200); }
+
+/* Yan yana kart + ozet izgarasi (taraf ayrintisi): sutunlar birbirine gore
+   esnemez, her biri kendi boyunu korur (21 Eylul 2026 kullanici istegi). */
+.kc-grid-top, .kc-grid-top > .fi-grid { align-items: start; }

@@ -10,6 +10,7 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Attributes\Session;
 use Livewire\Attributes\Url;
@@ -120,6 +121,21 @@ trait InteractsWithCardView
             fn (Model $record): Component => $this->cardFor($record),
             $searchPlaceholder,
         );
+    }
+
+    /**
+     * Excel disa aktarimi (D-110) ekrandakini yazar: kart gorunumunde kart
+     * aramasi da tablo sorgusuna eklenir.
+     */
+    public function scopeExportQuery(Builder $query): Builder
+    {
+        return $this->cardView ? $this->cardSearchScope($query, $this->cardSearchTerm()) : $query;
+    }
+
+    /** Kart aramasinin sorgu kosulu; sayfa kendi aramasini baglar. */
+    protected function cardSearchScope(Builder $query, ?string $search): Builder
+    {
+        return $query;
     }
 
     /** Baslik eylemi: yalniz simge; Liste <-> Kart. */

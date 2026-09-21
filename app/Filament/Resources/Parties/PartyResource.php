@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Parties;
 
+use App\Enums\Acquisition\ProjectScopeType;
 use App\Enums\Party\CommunicationChannelType;
 use App\Enums\Party\ConsentStatus;
 use App\Enums\Party\PartyKind;
+use App\Enums\Party\PartyOrigin;
 use App\Enums\Party\PartyRoleCode;
 use App\Enums\Party\PartyRoleStatus;
 use App\Enums\Party\PartyStatus;
@@ -30,6 +32,8 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Party\CommunicationPoint;
 use App\Models\Party\Party;
+use App\Models\Party\PartyActivityArea;
+use App\Query\Party\ActivityAreaQueries;
 use App\Query\Party\PartyQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Query\Reference\ReferenceOptions;
@@ -40,6 +44,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -54,10 +59,14 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
@@ -100,6 +109,16 @@ class PartyResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
+        return self::partyForm($schema);
+    }
+
+    /**
+     * Taraf formu. Dernekler (AssociationResource) ayni formu kullanir
+     * ($association = true): tur, taraf tipi, koken, rakip firma ve faaliyet
+     * alanlari gizlidir; kayit Dernek / oda tipiyle acilir (CreateAssociation).
+     */
+    public static function partyForm(Schema $schema, bool $association = false): Schema
+    {
         return $schema->columns(1)->components([
             Section::make(__('party.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
@@ -112,6 +131,7 @@ class PartyResource extends Resource
                             ->native(false)
                             ->disabledOn('edit')
                             ->dehydratedWhenHidden(false)
+                            ->visible(! $association)
                             ->live(),
                         TextInput::make('display_name')
                             ->label(__('party.fields.display_name'))
@@ -145,7 +165,132 @@ class PartyResource extends Resource
                             ->placeholder('-')
                             ->visible(fn (): bool => SchemaReadiness::hasBatch('B28'))
                             ->dehydrated(fn (): bool => SchemaReadiness::hasBatch('B28')),
+                        // Koken ve rakip firma (B33, D-107): firma duzeyinde; rakip
+                        // isaretini ilgili personel verir.
+                        Select::make('origin')
+                            ->label(__('party.fields.origin'))
+                            ->options(PartyOrigin::class)
+                            ->native(false)
+                            ->placeholder('-')
+                            ->visible(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33'))
+                            ->dehydrated(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33')),
+                        Checkbox::make('is_competitor')
+                            ->label(__('party.fields.is_competitor'))
+                            ->helperText(__('party.help.is_competitor'))
+                            ->inline(false)
+                            ->visible(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33'))
+                            ->dehydrated(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33')),
                 ])),
+            // Taraf tipi (D-95, 16 Eylul 2026 kullanici karari): yeni taraf en az bir
+            // tiple acilir; satirlar "Taraf tipi" penceresiyle ayni alanlari tasir ve
+            // kayit acildiktan sonra Taraf tipi listesinden yonetilir (duzenlemede
+            // gorunmez). 21 Eylul 2026: form duzenlemelerinden birinde kaybolmustu,
+            // geri getirildi. Dernek / oda secenegi burada yoktur (Dernekler menusu).
+            Section::make(__('party_role.sections.main'))
+                ->description(__('party.help.role_codes'))
+                ->icon(Heroicon::OutlinedTag)
+                ->visibleOn('create')
+                ->visible(! $association)
+                ->components([
+                    Repeater::make('party_roles')
+                        ->label(__('party_role.plural'))
+                        ->hiddenLabel()
+                        ->addActionLabel(__('party_role.actions.add_row'))
+                        ->minItems(1)
+                        ->defaultItems(1)
+                        ->required()
+                        ->dehydratedWhenHidden(false)
+                        ->table([
+                            TableColumn::make(__('party_role.fields.role_code')),
+                            TableColumn::make(__('party_role.fields.status')),
+                            TableColumn::make(__('party_role.fields.approved_by')),
+                            TableColumn::make(__('party_role.fields.valid_from')),
+                            TableColumn::make(__('party_role.fields.valid_until')),
+                        ])
+                        ->schema([
+                            Select::make('role_code')
+                                ->label(__('party_role.fields.role_code'))
+                                ->options(PartyRoleCode::availableOptions())
+                                ->default(PartyRoleCode::Customer->value)
+                                ->required()
+                                ->distinct()
+                                ->native(false),
+                            Select::make('status')
+                                ->label(__('party_role.fields.status'))
+                                ->options(PartyRoleStatus::class)
+                                ->default(PartyRoleStatus::Active->value)
+                                ->required()
+                                ->native(false),
+                            Select::make('approved_by_personnel_id')
+                                ->label(__('party_role.fields.approved_by'))
+                                ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                                ->searchable()
+                                ->native(false),
+                            DatePicker::make('valid_from')
+                                ->label(__('party_role.fields.valid_from'))
+                                ->displayFormat('d.m.Y'),
+                            DatePicker::make('valid_until')
+                                ->label(__('party_role.fields.valid_until'))
+                                ->displayFormat('d.m.Y'),
+                        ])
+                        ->columnSpanFull(),
+                ]),
+            // Faaliyet alanlari (B33, D-107): her satir Proje tipi + Faaliyet
+            // alani + Alt faaliyet alani. Liste tam listedir; kaldirilan satir
+            // kayitta silinir. Ana faaliyet alani bos satir atlanir.
+            Section::make(__('party.sections.activity_areas'))
+                ->description(__('party.help.activity_areas'))
+                ->icon(Heroicon::OutlinedSquares2x2)
+                ->visible(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33'))
+                ->components([
+                    Repeater::make('activity_areas')
+                        ->label(__('party.sections.activity_areas'))
+                        ->hiddenLabel()
+                        ->addActionLabel(__('party.actions.add_activity_area'))
+                        ->dehydrated(fn (): bool => SchemaReadiness::hasBatch('B33'))
+                        ->afterStateHydrated(function (Repeater $component, ?Party $record): void {
+                            if ($record === null || ! SchemaReadiness::hasBatch('B33')) {
+                                return;
+                            }
+
+                            $component->state($record->activityAreas
+                                ->map(fn (PartyActivityArea $row): array => [
+                                    'project_type' => $row->project_type?->value,
+                                    'activity_area_id' => $row->activity_area_id,
+                                    'sub_activity_area_id' => $row->sub_activity_area_id,
+                                ])->all());
+                            $component->hydrateItems();
+                        })
+                        ->table([
+                            TableColumn::make(__('party.fields.project_type')),
+                            TableColumn::make(__('party.fields.activity_area')),
+                            TableColumn::make(__('party.fields.sub_activity_area')),
+                        ])
+                        ->schema([
+                            Select::make('project_type')
+                                ->label(__('party.fields.project_type'))
+                                ->options(ProjectScopeType::class)
+                                ->placeholder(__('party.values.all_project_types'))
+                                ->native(false),
+                            Select::make('activity_area_id')
+                                ->label(__('party.fields.activity_area'))
+                                ->options(fn (Get $get): array => app(ActivityAreaQueries::class)->rootOptions(keep: self::intOrNull($get('activity_area_id'))))
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(fn (Set $set) => $set('sub_activity_area_id', null))
+                                ->native(false),
+                            Select::make('sub_activity_area_id')
+                                ->label(__('party.fields.sub_activity_area'))
+                                ->options(fn (Get $get): array => app(ActivityAreaQueries::class)->childOptions(
+                                    self::intOrNull($get('activity_area_id')),
+                                    keep: self::intOrNull($get('sub_activity_area_id')),
+                                ))
+                                ->placeholder('-')
+                                ->native(false),
+                        ])
+                        ->defaultItems(0)
+                        ->columnSpanFull(),
+                ]),
             // Kuruma ait iletisim bilgileri (B28, 16 Eylul 2026 kullanici karari):
             // kisiden bagimsiz e-posta, telefon, web sitesi satirlari. Kisilere ait
             // kanallar "Iletisim ve kisiler" listesinden girilir. Degeri bos
@@ -258,6 +403,21 @@ class PartyResource extends Resource
         return $kind instanceof PartyKind ? $kind : PartyKind::tryFrom((string) $kind);
     }
 
+    private static function intOrNull(mixed $value): ?int
+    {
+        return filled($value) && is_numeric($value) ? (int) $value : null;
+    }
+
+    /** Filament secim degeri enum nesnesi ya da metin olarak gelebilir. */
+    private static function enumValue(mixed $value): ?string
+    {
+        if ($value instanceof BackedEnum) {
+            return (string) $value->value;
+        }
+
+        return is_scalar($value) && $value !== '' ? (string) $value : null;
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -266,8 +426,12 @@ class PartyResource extends Resource
                     ->label(__('party.fields.party_no'))
                     ->searchable()
                     ->sortable(),
+                // Uzun adlar diger sutunlari itmesin (21 Eylul 2026 kullanici karari):
+                // 25 karakter, tam ad ustune gelince gorunur; Excel'e tam ad yazilir.
                 TextColumn::make('display_name')
                     ->label(__('party.fields.display_name'))
+                    ->limit(25)
+                    ->tooltip(fn (Party $record): ?string => mb_strlen((string) $record->display_name) > 25 ? $record->display_name : null)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('party_kind')
@@ -299,7 +463,27 @@ class PartyResource extends Resource
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->visible(fn (): bool => SchemaReadiness::hasBatch('B28')),
+                // Koken, rakip (B33, D-107). Faaliyet alanlari listede gosterilmez
+                // (21 Eylul 2026 kullanici karari); suzgecte ve ayrinti kartinda durur.
+                TextColumn::make('origin')
+                    ->label(__('party.fields.origin'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->toggleable()
+                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B33')),
+                IconColumn::make('is_competitor')
+                    ->label(__('party.fields.is_competitor'))
+                    ->boolean()
+                    ->trueIcon(Heroicon::OutlinedExclamationTriangle)
+                    ->trueColor('warning')
+                    ->falseIcon(false)
+                    ->toggleable()
+                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B33')),
             ])
+            // Dernekler ayri menudedir (AssociationResource); Taraflar listesinde yer almaz.
+            ->modifyQueryUsing(fn (Builder $query): Builder => SchemaReadiness::hasBatch('B33')
+                ? app(PartyQueries::class)->withoutAssociations($query)
+                : $query)
             ->filters([
                 // Arsiv (S3): varsayilan yalniz aktif kayitlar.
                 SelectFilter::make('archive')
@@ -323,7 +507,55 @@ class PartyResource extends Resource
                     ->label(__('party.fields.visit_priority'))
                     ->options(VisitPriority::class)
                     ->visible(fn (): bool => SchemaReadiness::hasBatch('B28')),
+                // Faaliyet suzgeci (B33): uc kosul ayni faaliyet satirinda aranir.
+                Filter::make('activity')
+                    ->label(__('party.sections.activity_areas'))
+                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B33'))
+                    ->schema([
+                        Select::make('project_type')
+                            ->label(__('party.fields.project_type'))
+                            ->options(ProjectScopeType::class)
+                            ->placeholder('-')
+                            ->native(false),
+                        Select::make('activity_area_id')
+                            ->label(__('party.fields.activity_area'))
+                            ->options(fn (): array => app(ActivityAreaQueries::class)->rootOptions(includeInactive: true))
+                            ->placeholder('-')
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('sub_activity_area_id', null))
+                            ->searchable()
+                            ->native(false),
+                        Select::make('sub_activity_area_id')
+                            ->label(__('party.fields.sub_activity_area'))
+                            ->options(fn (Get $get): array => self::intOrNull($get('activity_area_id')) !== null
+                                ? app(ActivityAreaQueries::class)->childOptions(self::intOrNull($get('activity_area_id')), includeInactive: true)
+                                : app(ActivityAreaQueries::class)->allChildOptions())
+                            ->placeholder('-')
+                            ->searchable()
+                            ->native(false),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => app(ActivityAreaQueries::class)->applyFilter(
+                        $query,
+                        ProjectScopeType::tryFrom((string) self::enumValue($data['project_type'] ?? null))?->value,
+                        self::intOrNull($data['activity_area_id'] ?? null),
+                        self::intOrNull($data['sub_activity_area_id'] ?? null),
+                    ))
+                    ->indicateUsing(fn (array $data): array => app(ActivityAreaQueries::class)->indicators(
+                        ProjectScopeType::tryFrom((string) self::enumValue($data['project_type'] ?? null)),
+                        self::intOrNull($data['activity_area_id'] ?? null),
+                        self::intOrNull($data['sub_activity_area_id'] ?? null),
+                    ))
+                    ->columns(3)
+                    ->columnSpanFull(),
+                SelectFilter::make('origin')
+                    ->label(__('party.fields.origin'))
+                    ->options(PartyOrigin::class)
+                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B33')),
+                TernaryFilter::make('is_competitor')
+                    ->label(__('party.fields.is_competitor'))
+                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B33')),
             ])
+            ->filtersFormColumns(3)
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
@@ -392,8 +624,9 @@ class PartyResource extends Resource
     /** Sayfa ustunden yapilan islemden sonra kart yeniden yuklenir; listede yerinde kalinir. */
     private static function redirectToView(Component $livewire, Party $record): void
     {
+        // Sayfanin kendi kaynagi (Taraflar ya da Dernekler) kullanilir.
         if ($livewire instanceof ViewRecord || $livewire instanceof EditRecord) {
-            $livewire->redirect(self::getUrl('view', ['record' => $record]), navigate: true);
+            $livewire->redirect($livewire::getResource()::getUrl('view', ['record' => $record]), navigate: true);
         }
     }
 

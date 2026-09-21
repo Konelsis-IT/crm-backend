@@ -3,6 +3,8 @@
 return [
     'label' => 'Tender notice',
     'plural' => 'Tender notices',
+    'label_title' => 'Tender Notice',
+    'plural_title' => 'Tender Notices',
 
     'sections' => [
         'identity' => 'Notice identity',

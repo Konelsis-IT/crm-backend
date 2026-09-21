@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use Filament\Support\Assets\Css;
-use Filament\Support\Assets\Js;
+use App\Filament\Support\Assets\KonelsisCss as Css;
+use App\Filament\Support\Assets\KonelsisJs as Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,6 +27,13 @@ use Illuminate\Support\ServiceProvider;
  *   sayfada cagrilir. Betik sirasi scripts.blade.php'de sabittir (core ilk,
  *   app son). React'in ikinci kopyasi yoktur; sohbet yuklemiyorsa ayni
  *   react / react-dom varliklari kullanilir (App\Filament\Support\ReactRuntime).
+ * - social-calendar.js (B34, D-109): ay takvimi izgarasi sosyal medya plani ile
+ *   gorusme plani arasinda ortaktir; meeting-calendar.js gorusme plani
+ *   takvimini ayni cekirdek (social-core) ve ayni stil ile cizer
+ *   (resources/views/filament/meetings/scripts.blade.php).
+ *
+ * Surum: adres eki (?v=) yayimlanan dosyanin icerik ozetidir (KonelsisCss /
+ * KonelsisJs, 21 Eylul 2026); dosya degisince tarayici yenisini indirir.
  *
  * Kural: Filament'in yerlesik bilesenleri yeterli olmadiginda, kullanici onayiyla
  * (AGENTS.md). Kaynak dosya degisince `php artisan filament:assets` yeniden
@@ -47,10 +54,12 @@ final class FilamentAssetsProvider extends ServiceProvider
             Js::make('social-feed', resource_path('js/social/social-feed.js'))->loadedOnRequest(),
             Js::make('social-detail', resource_path('js/social/social-detail.js'))->loadedOnRequest(),
             Js::make('social-composer', resource_path('js/social/social-composer.js'))->loadedOnRequest(),
+            Js::make('social-calendar', resource_path('js/social/social-calendar.js'))->loadedOnRequest(),
             Js::make('social-planner', resource_path('js/social/social-planner.js'))->loadedOnRequest(),
             Js::make('social-insights', resource_path('js/social/social-insights.js'))->loadedOnRequest(),
             Js::make('social-manage', resource_path('js/social/social-manage.js'))->loadedOnRequest(),
             Js::make('social-app', resource_path('js/social/social-app.js'))->loadedOnRequest(),
+            Js::make('meeting-calendar', resource_path('js/meetings/meeting-calendar.js'))->loadedOnRequest(),
         ], 'konelsis');
     }
 }
