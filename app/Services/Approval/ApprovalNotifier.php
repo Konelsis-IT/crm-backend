@@ -11,6 +11,7 @@ use App\Models\Personnel\Personnel;
 use App\Services\Authorization\RoleResolver;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
@@ -43,7 +44,7 @@ final class ApprovalNotifier
             __('approval_request.notifications.step_activated.body', [
                 'subject' => (string) $request->subject_label,
                 'step' => $row->step?->localizedName() ?? '-',
-                'due' => $row->due_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
+                'due' => $row->due_at?->timezone(DisplayTime::zone())->format('d.m.Y H:i') ?? '-',
             ]),
             $request,
             Heroicon::OutlinedClipboardDocumentCheck,

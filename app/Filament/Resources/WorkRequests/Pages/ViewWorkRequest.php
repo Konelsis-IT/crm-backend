@@ -28,6 +28,7 @@ use App\Query\Personnel\PersonnelQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\WorkRequest\WorkRequestService;
+use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -157,7 +158,7 @@ class ViewWorkRequest extends ViewRecord
                                 ->approvalRequestsFor((int) $record->getKey())
                                 ->map(fn (ApprovalRequest $approval): string => sprintf(
                                     '%s · %s · %s',
-                                    $approval->requested_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
+                                    $approval->requested_at?->timezone(DisplayTime::zone())->format('d.m.Y H:i') ?? '-',
                                     $approval->status->getLabel(),
                                     $approval->requester?->full_name ?? __('activity.system'),
                                 ))

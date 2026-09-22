@@ -15,6 +15,7 @@ return [
         'main' => 'Business case details',
         'header' => 'Business case card',
         'chain' => 'Workflow: Business case → Proposal → Project',
+        'details' => 'Business case details',
         'summary_case' => 'Business case summary',
         'summary_proposal' => 'Proposal summary',
     ],

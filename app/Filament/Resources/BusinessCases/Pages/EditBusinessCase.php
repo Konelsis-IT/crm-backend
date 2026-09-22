@@ -6,6 +6,7 @@ namespace App\Filament\Resources\BusinessCases\Pages;
 
 use App\Enums\Acquisition\OfferType;
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\DomainNotifications;
@@ -14,7 +15,6 @@ use App\Services\Acquisition\BusinessCaseService;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Resources\Pages\Concerns\HasWizard;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
@@ -29,7 +29,7 @@ use Livewire\Attributes\Url;
  */
 class EditBusinessCase extends EditRecord
 {
-    use HasWizard;
+    use HasSaveableWizard;
 
     protected static string $resource = BusinessCaseResource::class;
 
@@ -68,6 +68,12 @@ class EditBusinessCase extends EditRecord
     protected function hasSkippableSteps(): bool
     {
         return true;
+    }
+
+    /** 1. adim (form) alt satirda "Kaydet" tasir; 2. ve 3. adim tablolar aninda kaydeder. */
+    protected function getStepSaveMethods(): array
+    {
+        return [BusinessCaseWizard::STEP_CASE => 'save'];
     }
 
     protected function getHeaderActions(): array

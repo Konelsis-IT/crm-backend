@@ -18,6 +18,7 @@ use App\Models\Report\ReportMetric;
 use App\Query\Report\ReportQueries;
 use App\Reports\ReportFieldComponents;
 use App\Support\ActivityLabels;
+use App\Support\DisplayTime;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -120,7 +121,7 @@ final class ReportInfolist
                         ->activitiesFor((int) $record->getKey())
                         ->map(fn (PersonnelActivity $activity): string => sprintf(
                             '%s · %s · %s%s',
-                            $activity->occurred_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
+                            $activity->occurred_at?->timezone(DisplayTime::zone())->format('d.m.Y H:i') ?? '-',
                             $activity->actorName(),
                             ActivityLabels::action($activity->action_code),
                             ($lines = ActivityLabels::changeLines($activity->changes)) !== [] ? ' — '.implode(' | ', $lines) : '',

@@ -36,6 +36,12 @@ class DocumentsRelationManager extends RelationManager
         return __('proposal_document.relation.title');
     }
 
+    /** Yeni belgenin baglanacagi surum: burada sayfadaki surumun kendisi. */
+    protected function targetVersionId(): ?int
+    {
+        return (int) $this->getOwnerRecord()->getKey();
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema->columns(1)->components([
@@ -85,8 +91,10 @@ class DocumentsRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
+                    // Teklif sayfasinda guncel surum yoksa belge eklenemez.
+                    ->visible(fn (): bool => $this->targetVersionId() !== null)
                     ->using(function (array $data): Model {
-                        $data['proposal_version_id'] = $this->getOwnerRecord()->getKey();
+                        $data['proposal_version_id'] = $this->targetVersionId();
 
                         try {
                             return app(ProposalDocumentService::class)->create($data);

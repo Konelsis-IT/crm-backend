@@ -39,6 +39,22 @@ final class ReleaseNotes
     {
         return [
             [
+                'version' => '1.10',
+                'date' => '22.09.2026',
+                'groups' => [
+                    self::FIXES => [
+                        'Ekrandaki saatler İstanbul saatine göre gösteriliyor (önceki 3 saat geri görünüyordu). Kayıtlar, Excel ve PDF\'teki saatler ve "bugün" hesapları da İstanbul gününe göre.',
+                    ],
+                    self::IMPROVEMENTS => [
+                        'Sihirbazlarda her adımda "İleri"nin hemen yanında yeşil "Kaydet" var; sona kadar ilerlemek zorunlu değil. İş dosyası oluştururken 1. adımda kaydedince yalnız iş dosyası, 2. adımda kaydedince iş dosyası ve teklif açılıyor. Proje oluşturma ve düzenlemede de her adımda kaydedilebiliyor; proje yöneticisi seçilmediyse oluşturan kişi yazılıyor.',
+                        'İş dosyası sayfasındaki teklifler tablosunda "Teklif oluştur" artık Teklif oluştur ekranını o iş dosyası seçili olarak açıyor.',
+                        'İş dosyası detay sayfasında kart yarım genişlikte, yanında oluştururken girilen bütün ayrıntılar (açıklama, kaynak, teklif tipi, ülke, para birimi, tüzel kişilik, gizlilik sınıfı, proje kapsamları) duruyor. İş dosyası adımı boş; Teklif adımında seçili teklifin özeti (fiyat, marj, geçerlilik, teklif durumu, belgeler) ve teklifler, Proje adımında proje, yönetici, tarihler ve saha adresi görünüyor.',
+                        'Teklif detay sayfası iş dosyası sayfasıyla aynı düzende: üstte teklif kartı ve yanında güncel sürüm; İş dosyası adımında iş dosyasının özeti, Proje adımında proje ya da bu teklifi projeye dönüştürme. Sürümler, dokümanlar ve raporlar sayfanın altındaki sekmelerde.',
+                        'Teklif oluştur ekranı iş dosyası sihirbazının Teklif adımı biçimine geldi: önce iş dosyası seçiliyor (zorunlu), seçilince iş dosyasının özeti (müşteri, başlık, teklif tipi, proje tipleri, tahmini değer, sorumlular) kartta görünüyor; teklif fiyat, marj, geçerlilik, teklif durumu ve belgeleriyle bu bağlamda oluşturuluyor. İş dosyasının projesi yoksa aynı ekrandan hemen projeye dönüştürülebiliyor.',
+                    ],
+                ],
+            ],
+            [
                 'version' => '1.9',
                 'date' => '21.09.2026',
                 'groups' => [
@@ -50,6 +66,7 @@ final class ReleaseNotes
                     self::IMPROVEMENTS => [
                         'Dernekler kendi menüsüne ayrıldı: "Dernek oluştur" ile açılıyor, taraf tipi sorulmuyor ve dernekler artık Taraflar listesinde görünmüyor.',
                         'Taraf ayrıntısındaki kart kendi boyunu koruyor; Köken ve Faaliyet alanları sol karta taşındı.',
+                        'Firma takip listesi 21.09.2026 sürümüyle güncellendi: 6 yeni firma açıldı (Berit Enerji, HVK Otomotiv, Met Yeşil Enerji, MFA Grup Enerji, Polateliges Enerji, Timur Yenilenebilir Enerji); 9 firmaya yeni notlar eklendi; AZRAX\'ın adresi eklendi, Ahlat Enerji\'nin adresi yeni merkeziyle (Egesa\'nın adresi) güncellendi; Cengiz Enerji\'deki yanlış web sitesi kaldırıldı; Egesa rakip firma olarak işaretlendi.',
                         'Taraflar listesinde uzun adlar 25 karakterde kısaltılıyor (tam ad üzerine gelince görünüyor, Excel\'e tam yazılıyor); Faaliyet alanları sütunu listeden kaldırıldı, süzgeçte ve ayrıntı kartında duruyor.',
                     ],
                     self::FIXES => [

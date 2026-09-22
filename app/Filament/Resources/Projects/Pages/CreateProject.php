@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Projects\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ProjectWizard;
 use App\Services\Project\ProjectPhotoService;
 use App\Services\Project\ProjectService;
-use Filament\Resources\Pages\Concerns\HasWizard;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class CreateProject extends CreateRecord
 {
-    use HasWizard;
+    use HasSaveableWizard;
 
     protected static string $resource = ProjectResource::class;
 
@@ -44,6 +44,12 @@ class CreateProject extends CreateRecord
     public function getSteps(): array
     {
         return app(ProjectWizard::class)->baseSteps();
+    }
+
+    /** Kimlik ve Santiye adimlarinda "Kaydet"; Plan adimi "Olustur" ile biter. */
+    protected function getStepSaveMethods(): array
+    {
+        return [ProjectWizard::STEP_IDENTITY => 'create', ProjectWizard::STEP_SITE => 'create'];
     }
 
     protected function handleRecordCreation(array $data): Model

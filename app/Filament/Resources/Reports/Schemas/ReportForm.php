@@ -16,6 +16,7 @@ use App\Query\Report\ReportQueries;
 use App\Reports\ReportTemplate;
 use App\Reports\ReportTemplateRegistry;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\DisplayTime;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -68,7 +69,7 @@ final class ReportForm
 
                             $set('payload', []);
                             $set('items', []);
-                            $set('period_start', $current !== null && $current->periodMode()->isCalendarUnit() ? Carbon::today()->format('Y-m-d') : null);
+                            $set('period_start', $current !== null && $current->periodMode()->isCalendarUnit() ? Carbon::today(DisplayTime::zone())->format('Y-m-d') : null);
                             $set('period_end', null);
                         })
                         ->columnSpan(FieldGrid::NORMAL),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Projects\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\Projects\Pages\Concerns\OpensChecklistTargets;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\DomainNotifications;
@@ -14,7 +15,6 @@ use App\Services\Project\ProjectPhotoService;
 use App\Services\Project\ProjectService;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Resources\Pages\Concerns\HasWizard;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
@@ -31,7 +31,7 @@ use Livewire\Attributes\Url;
  */
 class EditProject extends EditRecord
 {
-    use HasWizard;
+    use HasSaveableWizard;
     use OpensChecklistTargets;
 
     protected static string $resource = ProjectResource::class;
@@ -70,6 +70,17 @@ class EditProject extends EditRecord
     protected function hasSkippableSteps(): bool
     {
         return true;
+    }
+
+    /** Temel adimlar alt satirda "Kaydet" tasir; departman adimlarinin tablolari aninda kaydeder. */
+    protected function getStepSaveMethods(): array
+    {
+        return [
+            ProjectWizard::STEP_IDENTITY => 'save',
+            ProjectWizard::STEP_SITE => 'save',
+            ProjectWizard::STEP_PLAN => 'save',
+            ProjectWizard::STEP_PHOTO => 'save',
+        ];
     }
 
     protected function getHeaderActions(): array

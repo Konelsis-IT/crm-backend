@@ -767,3 +767,7 @@ body:has(#konelsis-chat-root) .fi-main {
 /* Yan yana kart + ozet izgarasi (taraf ayrintisi): sutunlar birbirine gore
    esnemez, her biri kendi boyunu korur (21 Eylul 2026 kullanici istegi). */
 .kc-grid-top, .kc-grid-top > .fi-grid { align-items: start; }
+
+/* Sihirbaz alt satirindaki adim "Kaydet"i (SaveableWizard): "Ileri"nin hemen
+   solunda, sag grupta durur (22 Eylul 2026 kullanici karari ve onayi, D-112). */
+.fi-sc-wizard-footer > .kc-wizard-save { margin-inline-start: auto; }

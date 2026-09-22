@@ -10,6 +10,7 @@ use App\Filament\Support\ExportActions;
 use App\Models\Personnel\Personnel;
 use App\Query\Report\ReportQueries;
 use App\Reports\Templates\DailyWorkReportTemplate;
+use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -45,7 +46,7 @@ class ListReports extends ListRecords
                 ->icon(Heroicon::OutlinedSun)
                 ->color('gray')
                 ->url(ReportResource::getUrl('create', [CreateReport::QUERY_TEMPLATE => $today]))
-                ->visible(fn (): bool => $me > 0 && ! app(ReportQueries::class)->hasReportForDay($today, $me, Carbon::today())),
+                ->visible(fn (): bool => $me > 0 && ! app(ReportQueries::class)->hasReportForDay($today, $me, Carbon::today(DisplayTime::zone()))),
             ExportActions::table(ReportExporter::class),
             CreateAction::make()->label(__('report.actions.create')),
         ];

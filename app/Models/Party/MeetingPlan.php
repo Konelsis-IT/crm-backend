@@ -10,6 +10,7 @@ use App\Enums\Party\MeetingPlanStatus;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Personnel\Personnel;
 use App\Policies\MeetingPlanPolicy;
+use App\Support\DisplayTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -102,7 +103,7 @@ class MeetingPlan extends Model
     {
         return $this->isPlanned()
             && $this->planned_on !== null
-            && $this->planned_on->lt(($today ?? Carbon::today())->startOfDay());
+            && $this->planned_on->lt(($today ?? Carbon::today(DisplayTime::zone()))->startOfDay());
     }
 
     public function isFollowUp(): bool

@@ -6,6 +6,7 @@ return [
 
     'actions' => [
         'open' => 'Open',
+        'save' => 'Save',
     ],
 
     'nav' => [

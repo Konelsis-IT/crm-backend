@@ -15,6 +15,7 @@ use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
+use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -173,7 +174,7 @@ final class BusinessAlertService extends AbstractService
                 __('business_alert.notifications.title.'.$alert->severity->value),
                 __('business_alert.notifications.body', [
                     'subject' => $alert->title(),
-                    'date' => $alert->due_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y') ?? '-',
+                    'date' => $alert->due_at?->timezone(DisplayTime::zone())->format('d.m.Y') ?? '-',
                 ]),
                 $alert->severity->getIcon(),
                 $alert->severity->getColor(),

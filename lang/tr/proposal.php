@@ -6,6 +6,9 @@ return [
 
     'sections' => [
         'main' => 'Teklif bilgileri',
+        'business_case' => 'İş dosyası',
+        'header' => 'Teklif kartı',
+        'current_version' => 'Güncel sürüm',
     ],
 
     'fields' => [
@@ -19,6 +22,10 @@ return [
         'reason' => 'Gerekçe',
         'status' => 'Durum',
         'title' => 'Başlık',
+    ],
+
+    'help' => [
+        'business_case' => 'Teklif bu iş dosyası için açılır. Seçince iş dosyasının özeti aşağıda görünür.',
     ],
 
     'relation' => [
@@ -38,11 +45,18 @@ return [
         'waive' => 'Muafiyet ver',
         'add_evidence' => 'Kanıt ekle',
         'accept' => 'Kabul et',
+        'open_business_case' => 'İş dosyasını aç',
+    ],
+
+    'steps' => [
+        'version' => 'Sürüm :no · :status',
+        'no_version' => 'Henüz sürüm yok',
     ],
 
     'messages' => [
         'status_changed' => 'Durum güncellendi.',
         'done' => 'İşlem tamamlandı.',
+        'created' => 'Teklif oluşturuldu: :no',
     ],
 
     'validation' => [

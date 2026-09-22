@@ -13,6 +13,7 @@ use App\Filament\Resources\Proposals\Pages\EditProposal;
 use App\Filament\Resources\Proposals\Pages\ListProposals;
 use App\Filament\Resources\Proposals\Pages\ViewProposal;
 use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
+use App\Filament\Resources\Proposals\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -172,8 +173,10 @@ class ProposalResource extends Resource
 
     public static function getRelations(): array
     {
+        // Surumler, dokumanlar ve raporlar teklif sayfasinin alt listelerindedir (22 Eylul 2026).
         return [
             VersionsRelationManager::class,
+            DocumentsRelationManager::class,
             ...(SchemaReadiness::hasBatch('B10A') ? [SubjectReportsRelationManager::class] : []),
         ];
     }

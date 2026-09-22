@@ -9,6 +9,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Party\MeetingPlan;
 use App\Services\Party\MeetingPlanService;
+use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
@@ -40,7 +41,7 @@ final class MeetingPlanActions
                 DatePicker::make('noted_on')
                     ->label(__('party_meeting_note.fields.noted_on'))
                     ->displayFormat('d.m.Y')
-                    ->default(fn (MeetingPlan $record): string => Carbon::today()->min($record->planned_on ?? Carbon::today())->toDateString())
+                    ->default(fn (MeetingPlan $record): string => Carbon::today(DisplayTime::zone())->min($record->planned_on ?? Carbon::today())->toDateString())
                     ->required(),
                 Textarea::make('note')
                     ->label(__('party_meeting_note.fields.note'))

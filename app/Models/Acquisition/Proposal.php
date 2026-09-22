@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 #[Table('proposals')]
 #[Fillable([
@@ -59,6 +60,12 @@ class Proposal extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(ProposalVersion::class, 'proposal_id');
+    }
+
+    /** Tum surumlerin teklif belgeleri (teklif sayfasinin Dokumanlar tablosu, D-113). */
+    public function versionDocuments(): HasManyThrough
+    {
+        return $this->hasManyThrough(ProposalDocument::class, ProposalVersion::class, 'proposal_id', 'proposal_version_id');
     }
 
     /** Bu kayda bagli raporlar (B10A, D-86). */

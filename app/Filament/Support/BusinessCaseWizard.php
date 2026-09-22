@@ -10,6 +10,7 @@ use App\Enums\Acquisition\BusinessSourceKind;
 use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\OfferType;
 use App\Enums\Acquisition\ProjectScopeType;
+use App\Enums\Acquisition\ProposalDocumentRole;
 use App\Enums\Document\DocumentRevisionFileRole;
 use App\Enums\Reference\ClassificationCode;
 use App\Exceptions\AbstractException;
@@ -21,8 +22,11 @@ use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\BusinessCaseScope;
+use App\Models\Acquisition\Proposal;
+use App\Models\Acquisition\ProposalDocument;
 use App\Models\Document\DocumentRevision;
 use App\Models\Document\DocumentRevisionFile;
+use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Document\FixedDocumentQueries;
 use App\Query\Party\PartyQueries;
 use App\Query\Personnel\PersonnelQueries;
@@ -30,6 +34,7 @@ use App\Query\Project\ProjectCatalogQueries;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectConversionService;
+use App\Support\DisplayTime;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -52,6 +57,7 @@ use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
@@ -129,6 +135,9 @@ final class BusinessCaseWizard
 
     /** @var array<string, string>|null Proje kategorisi kodu => ad (ozet karti). */
     private ?array $projectTypeNames = null;
+
+    /** @var array<int, array<string, mixed>> Is dosyasi kimligi => ozet karti degerleri. */
+    private array $caseSummaries = [];
 
     /**
      * Is dosyasi form alanlari (kaynak formu, olusturma ve duzenleme adimi).
@@ -267,6 +276,7 @@ final class BusinessCaseWizard
     public function createSteps(): array
     {
         return [
+            // "Kaydet" alt satirdadir (SaveableWizard, CreateBusinessCase::getStepSaveMethods).
             $this->caseStep(),
             Step::make(__('business_case.wizard.proposal'))
                 ->id(self::STEP_PROPOSAL)
@@ -337,9 +347,9 @@ final class BusinessCaseWizard
     /**
      * @return list<Component>
      */
-    private function proposalSections(): array
+    private function proposalSections(bool $standalone = false): array
     {
-        return FieldGrid::group($this->proposalFields(), [
+        return FieldGrid::group($this->proposalFields($standalone), [
             'proposal' => ['label' => __('business_case.sections.proposal'), 'icon' => Heroicon::OutlinedClipboardDocumentList, 'fields' => [
                 'create_proposal', 'proposal_title', 'total_price', 'margin_pct', 'validity_until', 'is_critical_route', 'summary',
                 'offer_status', 'customer_expectations_file', 'proposal_letter_file', 'attach_references', 'attach_catalog',
@@ -348,16 +358,65 @@ final class BusinessCaseWizard
     }
 
     /**
+     * $available: donusum bolumu gorunur mu (Teklif olustur ekraninda is
+     * dosyasinin henuz projesi yoksa).
+     *
+     * @param  (Closure(Get): bool)|null  $available
      * @return list<Component>
      */
-    private function projectSections(): array
+    private function projectSections(?Closure $available = null): array
     {
-        $whenConvert = fn (Get $get): bool => (bool) $get('create_proposal') && (bool) $get('convert_now');
+        $available ??= static fn (): bool => true;
+        $whenConvert = fn (Get $get): bool => (bool) $get('create_proposal') && (bool) $get('convert_now') && $available($get);
 
         return FieldGrid::group($this->projectFields(), [
-            'conversion' => ['label' => __('business_case.sections.conversion'), 'icon' => Heroicon::OutlinedRocketLaunch, 'fields' => ['convert_now', 'project_name', 'project_manager_employee_id', 'planned_start_on', 'planned_finish_on']],
+            'conversion' => ['label' => __('business_case.sections.conversion'), 'icon' => Heroicon::OutlinedRocketLaunch, 'fields' => ['convert_now', 'project_name', 'project_manager_employee_id', 'planned_start_on', 'planned_finish_on'], 'visible' => $available],
             'site' => ['label' => __('business_case.sections.site'), 'icon' => Heroicon::OutlinedMapPin, 'fields' => ['site_address_line1', 'site_city', 'site_district'], 'visible' => $whenConvert],
         ]);
+    }
+
+    /**
+     * Teklif olustur ekrani (22 Eylul 2026 kullanici karari): olusturma
+     * sihirbazinin 2. adimi tek sayfada. Ustte zorunlu is dosyasi secimi,
+     * altinda secilen is dosyasinin ozet karti (sihirbazdaki kartin aynisi,
+     * kayitli degerlerle), teklif bolumu ve istenirse hemen projeye donusum.
+     * Alanlar sihirbazla ayni adlari tasir; AcquisitionIntakeService::addProposal
+     * ayni yazma yolunu kullanir.
+     *
+     * @return list<Component>
+     */
+    public function proposalCreateComponents(): array
+    {
+        $reader = fn (Get $get): Closure => fn (string $path): mixed => data_get($this->caseSummaryData($get('business_case_id')), $path);
+        $syncCountry = fn (Set $set, mixed $state): mixed => $set('country_code', data_get($this->caseSummaryData($state), 'country_code'));
+
+        return [
+            Section::make(__('proposal.sections.business_case'))
+                ->icon(Heroicon::OutlinedBriefcase)
+                ->columns(FieldGrid::COLUMNS)
+                ->components([
+                    Select::make('business_case_id')
+                        ->label(__('proposal.fields.business_case'))
+                        ->helperText(__('proposal.help.business_case'))
+                        ->relationship('businessCase', 'title')
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->native(false)
+                        // ?business_case_id= ile acilirsa is dosyasi secili gelir.
+                        ->default(fn (): ?int => request()->integer('business_case_id') ?: null)
+                        ->live()
+                        ->afterStateHydrated($syncCountry)
+                        ->afterStateUpdated($syncCountry)
+                        ->columnSpan(FieldGrid::HALF),
+                    // Santiye il / ilce secimi is dosyasinin ulkesine gore (TurkiyeAddressFields).
+                    Hidden::make('country_code')->dehydrated(false),
+                ]),
+            $this->caseSummarySection('standalone', $reader)
+                ->visible(fn (Get $get): bool => filled($get('business_case_id'))),
+            ...$this->proposalSections(standalone: true),
+            ...$this->projectSections(fn (Get $get): bool => filled($get('business_case_id')) && ! $reader($get)('has_project')),
+        ];
     }
 
     /** Adim 1 (form): is dosyasi alanlari. */
@@ -375,8 +434,28 @@ final class BusinessCaseWizard
             ->schema($this->caseSections());
     }
 
-    /** Adim 1 (goruntuleme): kartta olmayan ayrintilar + duzenleme baglantisi. */
-    public function detailsStep(BusinessCase $case): Step
+    /**
+     * Goruntuleme sayfasinin 1. adimi (22 Eylul 2026 kullanici karari): bos.
+     * Is dosyasinin kendisi sayfanin ustundeki kart ve ayrinti kartindadir.
+     */
+    public function caseViewStep(): Step
+    {
+        return Step::make(__('business_case.wizard.case'))
+            ->id(self::STEP_CASE)
+            ->description(__('business_case.wizard.case_description'))
+            ->icon(Heroicon::OutlinedBriefcase)
+            ->completedIcon(Heroicon::OutlinedBriefcase)
+            ->formWrapper(false)
+            ->schema([]);
+    }
+
+    /**
+     * Is dosyasi ayrintilari: kartta olmayan ve olusturmada girilen her sey
+     * (aciklama, kaynak, teklif tipi, proje kategorisi, ulke, para birimi,
+     * tuzel kisilik, gizlilik sinifi, olusturulma, proje kapsamlari). Sayfanin
+     * ustunde kartin yaninda yarim genislikte durur (22 Eylul 2026).
+     */
+    public function detailsCard(BusinessCase $case): Component
     {
         $offerType = self::enumCase($case->getAttribute('offer_type'), OfferType::class);
 
@@ -392,13 +471,10 @@ final class BusinessCaseWizard
                 ->badge()
                 ->color($case->criticality?->getColor() ?? 'gray');
 
-        return Step::make(__('business_case.wizard.case'))
-            ->id(self::STEP_CASE)
-            ->description(__('business_case.wizard.case_description'))
-            ->icon(Heroicon::OutlinedBriefcase)
-            ->completedIcon(Heroicon::OutlinedBriefcase)
-            ->formWrapper(false)
-            ->schema([
+        return Section::make(__('business_case.sections.details'))
+            ->icon(Heroicon::OutlinedDocumentText)
+            ->compact()
+            ->components([
                 Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])->components([
                     TextEntry::make('short_description')
                         ->label(__('business_case.fields.short_description'))
@@ -422,6 +498,11 @@ final class BusinessCaseWizard
                         ->state($case->country?->localizedName() ?? $case->country_code ?? '-')
                         ->icon(Heroicon::OutlinedGlobeAlt)
                         ->iconColor('gray'),
+                    TextEntry::make('currency')
+                        ->label(__('business_case.fields.currency'))
+                        ->state($case->currency_code ?? '-')
+                        ->icon(Heroicon::OutlinedCurrencyDollar)
+                        ->iconColor('gray'),
                     TextEntry::make('legal_entity')
                         ->label(__('business_case.fields.legal_entity'))
                         ->state($case->legalEntity?->legal_name ?? '-')
@@ -434,18 +515,10 @@ final class BusinessCaseWizard
                         ->iconColor('gray'),
                     TextEntry::make('created_at')
                         ->label(__('business_case.fields.created_at'))
-                        ->state($case->created_at?->format('d.m.Y H:i') ?? '-')
+                        ->state(DisplayTime::format($case->created_at))
                         ->icon(Heroicon::OutlinedClock)
                         ->iconColor('gray'),
                     ...$this->scopeDetailEntries($case),
-                ]),
-                Actions::make([
-                    Action::make('edit_case')
-                        ->label(__('filament-actions::edit.single.label'))
-                        ->icon(Heroicon::OutlinedPencilSquare)
-                        ->link()
-                        ->visible(fn (): bool => Gate::allows('update', $case))
-                        ->url(BusinessCaseResource::getUrl('edit', ['record' => $case, 'step' => self::STEP_CASE])),
                 ]),
             ]);
     }
@@ -468,6 +541,8 @@ final class BusinessCaseWizard
                 Callout::make(__('business_case.help.proposal_table'))
                     ->icon(Heroicon::OutlinedInformationCircle)
                     ->info(),
+                // Olusturmada 2. adimda girilenler (22 Eylul 2026): secili teklifin ozeti.
+                ...($selected !== null ? [$this->recordProposalSummary($selected)] : []),
                 Livewire::make(ProposalsRelationManager::class, [
                     'ownerRecord' => $case,
                     'pageClass' => $pageClass,
@@ -476,12 +551,15 @@ final class BusinessCaseWizard
             ]);
     }
 
-    /** Adim 3 (duzenleme/goruntuleme): proje varsa baglanti, yoksa donusum. */
-    public function projectStep(BusinessCase $case): Step
+    /**
+     * Adim 3 (duzenleme/goruntuleme): proje varsa baglanti, yoksa donusum.
+     * Teklif sayfasinda $proposal verilir; donusum o teklifle yapilir.
+     */
+    public function projectStep(BusinessCase $case, ?Proposal $proposal = null): Step
     {
         $project = $case->project;
         $handoff = $case->operationHandoff;
-        $hasProposal = $case->proposals()->exists();
+        $hasProposal = $proposal !== null || $case->proposals()->exists();
 
         $components = [];
 
@@ -505,6 +583,31 @@ final class BusinessCaseWizard
                     ->state($project->primaryFocusWorkstream?->group?->localizedName() ?? '-')
                     ->badge()
                     ->color('primary'),
+                // Donusumde girilenler (22 Eylul 2026): yonetici, tarihler, santiye.
+                TextEntry::make('project_manager')
+                    ->label(__('project.fields.project_manager'))
+                    ->state($project->projectManager?->full_name ?? '-')
+                    ->icon(Heroicon::OutlinedUserCircle)
+                    ->iconColor('primary'),
+                TextEntry::make('project_planned_start_on')
+                    ->label(__('project.fields.planned_start_on'))
+                    ->state($project->planned_start_on?->format('d.m.Y') ?? '-')
+                    ->icon(Heroicon::OutlinedCalendarDays)
+                    ->iconColor('gray'),
+                TextEntry::make('project_planned_finish_on')
+                    ->label(__('project.fields.planned_finish_on'))
+                    ->state($project->planned_finish_on?->format('d.m.Y') ?? '-')
+                    ->icon(Heroicon::OutlinedCalendarDays)
+                    ->iconColor('gray'),
+                TextEntry::make('project_site')
+                    ->label(__('business_case.sections.site'))
+                    ->state(implode(' · ', array_filter([
+                        $project->site_address_line1,
+                        trim(implode(' / ', array_filter([$project->site_district, $project->site_city]))),
+                    ])) ?: '-')
+                    ->icon(Heroicon::OutlinedMapPin)
+                    ->iconColor('gray')
+                    ->columnSpanFull(),
             ]);
             $components[] = Actions::make([
                 Action::make('open_project')
@@ -530,7 +633,7 @@ final class BusinessCaseWizard
                     ->url(OperationHandoffResource::getUrl('view', ['record' => $handoff]));
             }
 
-            $components[] = Actions::make([$this->convertAction($case)]);
+            $components[] = Actions::make([$this->convertAction($case, proposal: $proposal)]);
         }
 
         return Step::make(__('business_case.wizard.project'))
@@ -548,8 +651,11 @@ final class BusinessCaseWizard
      * "Projeye donustur" islemi; Teklif/Is Dosyasi sayfalarindaki ile ayni
      * girdi (ProjectConversionForm) ve servis. Basarida projeye yonlendirir.
      */
-    public function convertAction(BusinessCase $case, string $name = 'convert_to_project'): Action
+    public function convertAction(BusinessCase $case, string $name = 'convert_to_project', ?Proposal $proposal = null): Action
     {
+        // Teklif sayfasinda o teklif, is dosyasinda secili (yoksa en son) teklif donusur.
+        $target = static fn () => $proposal ?? $case->selectedOrLatestProposal();
+
         return Action::make($name)
             ->label(__('project.actions.convert'))
             ->icon(Heroicon::OutlinedRocketLaunch)
@@ -559,14 +665,14 @@ final class BusinessCaseWizard
             ->modalSubmitActionLabel(__('project.actions.convert'))
             ->visible(fn (): bool => Gate::allows('update', $case)
                 && $case->project()->doesntExist()
-                && $case->selectedOrLatestProposal() !== null)
-            ->schema(function () use ($case): array {
-                $proposal = $case->selectedOrLatestProposal();
+                && $target() !== null)
+            ->schema(function () use ($target): array {
+                $proposal = $target();
 
                 return $proposal === null ? [] : ProjectConversionForm::components($proposal);
             })
-            ->action(function (array $data, LivewireComponent $livewire) use ($case): void {
-                $proposal = $case->selectedOrLatestProposal();
+            ->action(function (array $data, LivewireComponent $livewire) use ($target): void {
+                $proposal = $target();
 
                 if ($proposal === null) {
                     return;
@@ -774,19 +880,22 @@ final class BusinessCaseWizard
      *
      * @return list<Component>
      */
-    private function proposalFields(): array
+    private function proposalFields(bool $standalone = false): array
     {
         $whenProposal = fn (Get $get): bool => (bool) $get('create_proposal');
         $whenProposalB29 = fn (Get $get): bool => (bool) $get('create_proposal') && self::b29();
         $b29 = fn (): bool => self::b29();
 
         return [
-            Toggle::make('create_proposal')
-                ->label(__('business_case.fields.create_proposal'))
-                ->helperText(__('business_case.help.proposal_step'))
-                ->default(true)
-                ->live()
-                ->columnSpanFull(),
+            // Teklif olustur ekraninda teklif her zaman olusur; anahtar gizli ve acik.
+            $standalone
+                ? Hidden::make('create_proposal')->default(true)
+                : Toggle::make('create_proposal')
+                    ->label(__('business_case.fields.create_proposal'))
+                    ->helperText(__('business_case.help.proposal_step'))
+                    ->default(true)
+                    ->live()
+                    ->columnSpanFull(),
             TextInput::make('proposal_title')
                 ->label(__('business_case.fields.proposal_title'))
                 ->helperText(__('business_case.help.proposal_title'))
@@ -1067,7 +1176,7 @@ final class BusinessCaseWizard
     }
 
     /** GES toplam satis: kurulu guc x MW basi satis; ikisi de yoksa satis tutari. */
-    private function gesTotalSales(Get $get): string
+    private function gesTotalSales(callable $get): string
     {
         $capacity = self::number($get('scopes.ges.capacity_mw'));
         $perMw = self::number($get('scopes.ges.sales_per_mw'));
@@ -1079,7 +1188,7 @@ final class BusinessCaseWizard
     }
 
     /** RES toplam: malzeme + insaat + montaj (dolu olanlar). */
-    private function resTotal(Get $get): string
+    private function resTotal(callable $get): string
     {
         $total = null;
 
@@ -1216,26 +1325,33 @@ final class BusinessCaseWizard
      * Is dosyasi ozeti: 1. adimdaki alanlarin canli degerleri. Ayni kart 2. ve
      * 3. adimda tekrarlandigi icin bolum anahtari ve alan adlari adimla
      * ayrisir (ayni formda ayni Livewire anahtari iki kez bulunmaz).
+     *
+     * $reader verilirse degerler formdan degil, onun dondurdugu okuyucudan
+     * gelir: Teklif olustur ekrani secilen is dosyasinin kayitli degerlerini
+     * ayni kartla gosterir (22 Eylul 2026 kullanici karari).
+     *
+     * @param  (Closure(Get): callable)|null  $reader
      */
-    private function caseSummarySection(string $stage): Section
+    private function caseSummarySection(string $stage, ?Closure $reader = null): Section
     {
         $name = static fn (string $field): string => 'case_summary_'.$stage.'_'.$field;
+        $read = $reader ?? static fn (Get $get): Get => $get;
 
         $entries = [
             $this->summaryEntry($name('customer'), __('business_case.fields.primary_party'), Heroicon::OutlinedBuildingOffice2, 'primary',
-                fn (Get $get): string => $this->partyName($get('primary_party_id'))),
+                fn (Get $get): string => $this->partyName($read($get)('primary_party_id'))),
             $this->summaryEntry($name('title'), __('business_case.fields.title'), Heroicon::OutlinedBriefcase, 'gray',
-                fn (Get $get): string => self::text($get('title'))),
+                fn (Get $get): string => self::text($read($get)('title'))),
             $this->summaryEntry($name('offer_type'), __('business_case.fields.offer_type'), Heroicon::OutlinedTag, 'gray',
-                fn (Get $get): string => self::enumLabel($get('offer_type'), OfferType::class))
+                fn (Get $get): string => self::enumLabel($read($get)('offer_type'), OfferType::class))
                 ->visible(fn (): bool => self::b29()),
             $this->summaryEntry($name('project_type'), __('business_case.fields.project_type_code'), Heroicon::OutlinedCube, 'gray',
-                fn (Get $get): string => $this->projectTypeName($get('project_type_code'))),
+                fn (Get $get): string => $this->projectTypeName($read($get)('project_type_code'))),
             TextEntry::make($name('scope_types'))
                 ->label(__('business_case.fields.scope_types'))
                 ->state(fn (Get $get): array => array_values(array_filter(array_map(
                     static fn (string $value): ?ProjectScopeType => ProjectScopeType::tryFrom($value),
-                    self::selectedScopeTypes($get),
+                    self::selectedScopeTypes($read($get)),
                 ))))
                 ->formatStateUsing(static fn (mixed $state): string => $state instanceof HasLabel ? (string) $state->getLabel() : (string) $state)
                 ->color(static fn (mixed $state): string => $state instanceof HasColor ? (string) $state->getColor() : 'gray')
@@ -1244,18 +1360,18 @@ final class BusinessCaseWizard
                 ->dehydrated(false)
                 ->visible(fn (): bool => self::b29()),
             $this->summaryEntry($name('estimated_value'), __('business_case.fields.estimated_value'), Heroicon::OutlinedBanknotes, 'success',
-                fn (Get $get): string => self::money(self::number($get('estimated_value')), $get('currency_code'))),
+                fn (Get $get): string => self::money(self::number($read($get)('estimated_value')), $read($get)('currency_code'))),
             $this->summaryEntry($name('owner'), __('business_case.fields.owner'), Heroicon::OutlinedUserCircle, 'primary',
-                fn (Get $get): string => $this->personnelName($get('owner_employee_id'))),
+                fn (Get $get): string => $this->personnelName($read($get)('owner_employee_id'))),
             $this->summaryEntry($name('proposal_owner'), __('business_case.fields.proposal_owner'), Heroicon::OutlinedUser, 'gray',
-                fn (Get $get): string => $this->personnelName($get('proposal_owner_employee_id'))),
+                fn (Get $get): string => $this->personnelName($read($get)('proposal_owner_employee_id'))),
         ];
 
         if (self::b29()) {
             foreach (ProjectScopeType::cases() as $type) {
                 $entries[] = $this->summaryEntry($name('scope_'.$type->value), $type->getLabel(), Heroicon::OutlinedCube, $type->getColor(),
-                    fn (Get $get): string => $this->scopeSummaryLine($type, $get))
-                    ->visible(fn (Get $get): bool => in_array($type->value, self::selectedScopeTypes($get), true))
+                    fn (Get $get): string => $this->scopeSummaryLine($type, $read($get)))
+                    ->visible(fn (Get $get): bool => in_array($type->value, self::selectedScopeTypes($read($get)), true))
                     ->columnSpanFull();
             }
         }
@@ -1267,36 +1383,134 @@ final class BusinessCaseWizard
         ]);
     }
 
-    /** Teklif ozeti (3. adim): 2. adimdaki alanlarin canli degerleri. */
-    private function proposalSummarySection(): Section
+    /**
+     * Kayitli teklifin ozeti (is dosyasi sayfasinin teklif adimi, 22 Eylul
+     * 2026): sihirbazdaki "Teklif ozeti" kartinin aynisi; guncel surumun
+     * tutarlari ve olusturmada eklenen belgeler.
+     */
+    public function recordProposalSummary(Proposal $proposal): Component
     {
-        $whenProposal = fn (Get $get): bool => (bool) $get('create_proposal');
+        $version = $proposal->currentVersion;
+        $documents = $version?->documents()->with('documentRevision.document')->get() ?? collect();
+        $documentTitle = static function (ProposalDocumentRole $role) use ($documents): ?string {
+            $row = $documents->first(static fn (ProposalDocument $document): bool => $document->document_role === $role);
+
+            return $row?->documentRevision?->document?->title ?? $row?->documentRevision?->title;
+        };
+
+        $data = [
+            'create_proposal' => true,
+            'proposal_title' => $proposal->title,
+            'title' => $proposal->businessCase?->title,
+            'currency_code' => $version?->currency_code ?? $proposal->businessCase?->currency_code,
+            'total_price' => $version?->total_price,
+            'margin_pct' => $version?->margin_pct,
+            'validity_until' => $version?->validity_until?->toDateString(),
+            'offer_status' => $proposal->offer_status?->value,
+            'is_critical_route' => (bool) $version?->is_critical_route,
+            'customer_expectations_file_name' => $documentTitle(ProposalDocumentRole::CustomerExpectations),
+            'proposal_letter_file_name' => $documentTitle(ProposalDocumentRole::ProposalLetter),
+            'attach_references' => $documentTitle(ProposalDocumentRole::References) !== null,
+            'attach_catalog' => $documentTitle(ProposalDocumentRole::Catalog) !== null,
+        ];
+
+        return $this->proposalSummarySection(static fn (): Closure => static fn (string $path): mixed => data_get($data, $path));
+    }
+
+    /**
+     * Kayitli bir is dosyasinin ozet karti (teklif sayfasi, 22 Eylul 2026):
+     * sihirbazdaki kartin aynisi, kaydin degerleriyle.
+     */
+    public function recordCaseSummary(string $stage, int $caseId): Component
+    {
+        return $this->caseSummarySection($stage, fn (): Closure => fn (string $path): mixed => data_get($this->caseSummaryData($caseId), $path));
+    }
+
+    /**
+     * Kayitli is dosyasinin ozet karti degerleri, sihirbaz formuyla ayni
+     * anahtarlarla (kapsam dosyasi yerine kapsam listesi dokumaninin guncel
+     * dosyasi). Istek boyunca is dosyasi basina bir kez okunur.
+     *
+     * @return array<string, mixed>
+     */
+    private function caseSummaryData(mixed $caseId): array
+    {
+        $id = is_numeric($caseId) ? (int) $caseId : 0;
+
+        if ($id <= 0) {
+            return [];
+        }
+
+        if (array_key_exists($id, $this->caseSummaries)) {
+            return $this->caseSummaries[$id];
+        }
+
+        $case = app(BusinessCaseQueries::class)->forSummary($id);
+
+        if ($case === null) {
+            return $this->caseSummaries[$id] = [];
+        }
+
+        $scopes = self::b29() ? $this->scopeFormData($case) : ['scope_types' => [], 'scopes' => []];
+
+        if (self::b29()) {
+            foreach ($case->scopes as $scope) {
+                $info = $this->scopeDocumentInfo($scope);
+                $scopes['scopes'][self::scopeTypeValue($scope)]['scope_file_name'] = $info === null ? null : self::documentLine($info);
+            }
+        }
+
+        return $this->caseSummaries[$id] = [
+            'primary_party_id' => $case->primary_party_id,
+            'title' => $case->title,
+            'offer_type' => $case->getAttribute('offer_type'),
+            'project_type_code' => $case->project_type_code,
+            'estimated_value' => $case->estimated_value,
+            'currency_code' => $case->currency_code,
+            'country_code' => $case->country_code,
+            'owner_employee_id' => $case->owner_employee_id,
+            'proposal_owner_employee_id' => $case->proposal_owner_employee_id,
+            'has_project' => $case->project !== null,
+            ...$scopes,
+        ];
+    }
+
+    /**
+     * Teklif ozeti (3. adim): 2. adimdaki alanlarin canli degerleri. $reader
+     * verilirse degerler kayitli tekliften gelir (is dosyasi sayfasi).
+     *
+     * @param  (Closure(Get): callable)|null  $reader
+     */
+    private function proposalSummarySection(?Closure $reader = null): Section
+    {
+        $read = $reader ?? static fn (Get $get): Get => $get;
+        $whenProposal = fn (Get $get): bool => (bool) $read($get)('create_proposal');
 
         $entries = [
             $this->summaryEntry('proposal_summary_title', __('business_case.fields.proposal_title'), Heroicon::OutlinedClipboardDocumentList, 'primary',
-                fn (Get $get): string => self::text(filled($get('proposal_title')) ? $get('proposal_title') : $get('title'))),
+                fn (Get $get): string => self::text(filled($read($get)('proposal_title')) ? $read($get)('proposal_title') : $read($get)('title'))),
             $this->summaryEntry('proposal_summary_total_price', __('proposal_version.fields.total_price'), Heroicon::OutlinedBanknotes, 'success',
-                fn (Get $get): string => self::money(self::number($get('total_price')), $get('currency_code'))),
+                fn (Get $get): string => self::money(self::number($read($get)('total_price')), $read($get)('currency_code'))),
             $this->summaryEntry('proposal_summary_margin_pct', __('proposal_version.fields.margin_pct'), Heroicon::OutlinedReceiptPercent, 'gray',
-                fn (Get $get): string => self::percent(self::number($get('margin_pct')))),
+                fn (Get $get): string => self::percent(self::number($read($get)('margin_pct')))),
             $this->summaryEntry('proposal_summary_validity_until', __('proposal_version.fields.validity_until'), Heroicon::OutlinedCalendarDays, 'gray',
-                fn (Get $get): string => self::date($get('validity_until'))),
+                fn (Get $get): string => self::date($read($get)('validity_until'))),
             $this->summaryEntry('proposal_summary_offer_status', __('proposal.fields.offer_status'), Heroicon::OutlinedFlag, 'gray',
-                fn (Get $get): string => self::enumLabel($get('offer_status'), OfferStatus::class))
+                fn (Get $get): string => self::enumLabel($read($get)('offer_status'), OfferStatus::class))
                 ->visible(fn (): bool => self::b29()),
             $this->summaryEntry('proposal_summary_is_critical_route', __('proposal_version.fields.is_critical_route'), Heroicon::OutlinedExclamationTriangle, 'warning',
-                fn (Get $get): string => self::yesNo($get('is_critical_route'))),
+                fn (Get $get): string => self::yesNo($read($get)('is_critical_route'))),
             $this->summaryEntry('proposal_summary_customer_expectations_file', __('business_case.fields.customer_expectations_file'), Heroicon::OutlinedDocumentText, 'gray',
-                fn (Get $get): string => self::fileName($get('customer_expectations_file'), $get('customer_expectations_file_name')))
+                fn (Get $get): string => self::fileName($read($get)('customer_expectations_file'), $read($get)('customer_expectations_file_name')))
                 ->visible(fn (): bool => self::b29()),
             $this->summaryEntry('proposal_summary_proposal_letter_file', __('business_case.fields.proposal_letter_file'), Heroicon::OutlinedDocumentText, 'gray',
-                fn (Get $get): string => self::fileName($get('proposal_letter_file'), $get('proposal_letter_file_name')))
+                fn (Get $get): string => self::fileName($read($get)('proposal_letter_file'), $read($get)('proposal_letter_file_name')))
                 ->visible(fn (): bool => self::b29()),
             $this->summaryEntry('proposal_summary_attach_references', __('business_case.fields.attach_references'), Heroicon::OutlinedPaperClip, 'gray',
-                fn (Get $get): string => self::yesNo($get('attach_references')))
+                fn (Get $get): string => self::yesNo($read($get)('attach_references')))
                 ->visible(fn (): bool => self::b29() && $this->hasReferenceDocument()),
             $this->summaryEntry('proposal_summary_attach_catalog', __('business_case.fields.attach_catalog'), Heroicon::OutlinedPaperClip, 'gray',
-                fn (Get $get): string => self::yesNo($get('attach_catalog')))
+                fn (Get $get): string => self::yesNo($read($get)('attach_catalog')))
                 ->visible(fn (): bool => self::b29() && $this->hasCatalogDocument()),
         ];
 
@@ -1343,7 +1557,7 @@ final class BusinessCaseWizard
     }
 
     /** Secili bir tipin ozet satiri: temel tutarlar ve secilen kapsam dosyasi. */
-    private function scopeSummaryLine(ProjectScopeType $type, Get $get): string
+    private function scopeSummaryLine(ProjectScopeType $type, callable $get): string
     {
         $path = 'scopes.'.$type->value.'.';
         $currency = $get('currency_code');
@@ -1400,7 +1614,7 @@ final class BusinessCaseWizard
      *
      * @return list<string>
      */
-    private static function selectedScopeTypes(Get $get): array
+    private static function selectedScopeTypes(callable $get): array
     {
         return array_values(array_map(
             static fn (mixed $value): string => $value instanceof BackedEnum ? (string) $value->value : (string) $value,

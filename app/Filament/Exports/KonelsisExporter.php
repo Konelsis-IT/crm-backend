@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Exports;
 
+use App\Support\DisplayTime;
 use Carbon\CarbonInterface;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\ExportColumn;
@@ -48,7 +49,7 @@ abstract class KonelsisExporter extends Exporter
 
     public function getFileName(Export $export): string
     {
-        return str(static::fileLabel())->slug()->append('-'.now()->format('Y-m-d').'-'.$export->getKey())->value();
+        return str(static::fileLabel())->slug()->append('-'.now(DisplayTime::zone())->format('Y-m-d').'-'.$export->getKey())->value();
     }
 
     public function getXlsxHeaderCellStyle(): ?Style
@@ -93,7 +94,7 @@ abstract class KonelsisExporter extends Exporter
         return ExportColumn::make($name)
             ->label($label)
             ->formatStateUsing(fn (mixed $state): ?string => $state instanceof CarbonInterface
-                ? $state->timezone(config('app.timezone'))->format('d.m.Y H:i')
+                ? $state->timezone(DisplayTime::zone())->format('d.m.Y H:i')
                 : self::display($state));
     }
 

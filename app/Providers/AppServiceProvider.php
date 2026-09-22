@@ -8,6 +8,7 @@ use App\Filament\Exports\Jobs\KonelsisExportCompletion;
 use App\Infrastructure\Console\SchemaChangeGuard;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Audit\ActorContext;
+use App\Support\DisplayTime;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\Exports\Jobs\ExportCompletion;
@@ -16,6 +17,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
+use Filament\Support\Facades\FilamentTimezone;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -58,6 +60,8 @@ class AppServiceProvider extends ServiceProvider
      */
     private function configureFilamentDefaults(): void
     {
+        // Kayitlar UTC; ekranda kurum saati (22 Eylul 2026 kullanici talimati, DisplayTime).
+        FilamentTimezone::set(DisplayTime::zone());
         DatePicker::configureUsing(fn (DatePicker $picker) => $picker->native()->displayFormat('d.m.Y'));
         TimePicker::configureUsing(fn (TimePicker $picker) => $picker->native());
         CreateRecord::disableCreateAnother();

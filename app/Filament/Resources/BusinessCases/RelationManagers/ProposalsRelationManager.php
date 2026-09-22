@@ -101,18 +101,10 @@ class ProposalsRelationManager extends RelationManager
                     ->placeholder('-'),
             ])
             ->headerActions([
+                // Teklif olustur ekranina, bu is dosyasi secili olarak (22 Eylul 2026
+                // kullanici karari): surum, belgeler ve donusum oradan girilir.
                 CreateAction::make()
-                    ->using(function (array $data): Model {
-                        $data['business_case_id'] = $this->getOwnerRecord()->getKey();
-
-                        try {
-                            return app(ProposalService::class)->create($data);
-                        } catch (AbstractException $exception) {
-                            DomainNotifications::failure($exception);
-
-                            throw new Halt;
-                        }
-                    }),
+                    ->url(fn (): string => ProposalResource::getUrl('create', ['business_case_id' => $this->getOwnerRecord()->getKey()])),
             ])
             ->recordActions([
                 Action::make('open')

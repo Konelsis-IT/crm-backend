@@ -13,6 +13,7 @@ use App\Models\Chat\Message;
 use App\Query\Chat\ChatQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\WorkRequest\WorkRequestService;
+use App\Support\DisplayTime;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -110,7 +111,7 @@ class CreateWorkRequest extends CreateRecord
         $data['title'] = Str::limit(Str::squish($summary) !== '' ? Str::squish($summary) : __('work_request.values.from_chat'), 120, '');
         $data['description'] = __('work_request.values.chat_quote', [
             'author' => $author?->full_name ?? '-',
-            'date' => $message->sent_at?->timezone(config('app.timezone', 'UTC'))->format('d.m.Y H:i') ?? '-',
+            'date' => $message->sent_at?->timezone(DisplayTime::zone())->format('d.m.Y H:i') ?? '-',
         ])."\n".$summary;
         $data['source_message_id'] = (int) $message->getKey();
 

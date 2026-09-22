@@ -9,7 +9,7 @@
     <article class="wr-msg wr-msg--first">
         <header class="wr-msg__head">
             <strong>{{ $request->requesterLabel() }}</strong>
-            <span>{{ $request->created_at?->timezone(config('app.timezone'))->format('d.m.Y H:i') }}</span>
+            <span>{{ $request->created_at?->timezone(\App\Support\DisplayTime::zone())->format('d.m.Y H:i') }}</span>
             <em>{{ __('work_request.thread.first') }}</em>
         </header>
         <div class="wr-msg__body">
@@ -32,14 +32,14 @@
         @if ($message->isForward())
             <div class="wr-forward" wire:key="wr-msg-{{ $message->id }}">
                 <strong>{{ __('work_request.thread.forwarded_by', ['name' => $message->author?->full_name ?? '-']) }}</strong>
-                <span>{{ $message->created_at?->timezone(config('app.timezone'))->format('d.m.Y H:i') }}</span>
+                <span>{{ $message->created_at?->timezone(\App\Support\DisplayTime::zone())->format('d.m.Y H:i') }}</span>
                 <p>{{ WorkRequestThread::format((string) $message->body) }}</p>
             </div>
         @else
             <article class="wr-msg {{ (int) $message->author_personnel_id === (int) auth()->id() ? 'wr-msg--mine' : '' }}" wire:key="wr-msg-{{ $message->id }}">
                 <header class="wr-msg__head">
                     <strong>{{ $message->author?->full_name ?? '-' }}</strong>
-                    <span>{{ $message->created_at?->timezone(config('app.timezone'))->format('d.m.Y H:i') }}</span>
+                    <span>{{ $message->created_at?->timezone(\App\Support\DisplayTime::zone())->format('d.m.Y H:i') }}</span>
                     <em>{{ __('work_request.thread.reply_no', ['no' => ++$replyNo]) }}</em>
                 </header>
                 <div class="wr-msg__body">

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Exports;
 
+use App\Support\DisplayTime;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Models\Export;
@@ -27,7 +28,7 @@ final class RecordPdf
             'title' => $title,
             'rows' => $this->rows($exporter, $record),
             'exportedBy' => (string) (auth()->user()?->full_name ?? ''),
-            'exportedAt' => now()->timezone(config('app.timezone'))->format('d.m.Y H:i'),
+            'exportedAt' => now()->timezone(DisplayTime::zone())->format('d.m.Y H:i'),
         ])->setPaper('a4')->setOption('isFontSubsettingEnabled', true);
 
         $fileName = str($exporter::fileLabel().' '.$title)->slug()->limit(80, '')->append('.pdf')->value();

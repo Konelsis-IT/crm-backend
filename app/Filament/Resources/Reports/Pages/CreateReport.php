@@ -12,6 +12,7 @@ use App\Models\Personnel\Personnel;
 use App\Query\Report\ReportQueries;
 use App\Reports\ReportTemplateRegistry;
 use App\Services\Report\ReportService;
+use App\Support\DisplayTime;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -100,7 +101,7 @@ class CreateReport extends CreateRecord
         }
 
         if ($template->periodMode()->isCalendarUnit()) {
-            $data['period_start'] = Carbon::today()->format('Y-m-d');
+            $data['period_start'] = Carbon::today(DisplayTime::zone())->format('Y-m-d');
         }
 
         if ($template->hasItems()) {

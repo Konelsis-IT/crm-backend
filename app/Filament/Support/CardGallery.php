@@ -22,6 +22,7 @@ use App\Models\Project\Project;
 use App\Query\Project\ProjectStepReadiness;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
+use App\Support\DisplayTime;
 use App\Support\RoleLabels;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -143,7 +144,7 @@ final class CardGallery
                 $this->entry('phone', __('ui_gallery.entries.phone'), $personnel->phone ?: '-', Heroicon::OutlinedPhone, 'success', ContactLinks::tel($personnel->phone)),
                 $this->entry('email', __('ui_gallery.entries.email'), $personnel->email ?: '-', Heroicon::OutlinedEnvelope, 'primary', ContactLinks::mailto($personnel->email)),
                 $this->entry('hired', __('ui_gallery.entries.hired_on'), $personnel->hired_on?->format('d.m.Y') ?? '-', Heroicon::OutlinedCalendarDays, 'warning'),
-                $this->entry('login', __('ui_gallery.entries.last_login'), $personnel->last_login_at?->format('d.m.Y H:i') ?? '-', Heroicon::OutlinedClock, 'gray'),
+                $this->entry('login', __('ui_gallery.entries.last_login'), DisplayTime::format($personnel->last_login_at), Heroicon::OutlinedClock, 'gray'),
             ],
             actions: $this->personnelActions($personnel, PersonnelResource::getUrl('index', ['sohbet_kisi' => $personnel->getKey()])),
             mediaRounded: true,
@@ -418,7 +419,7 @@ final class CardGallery
                 $this->entry('owner', __('ui_gallery.entries.owner'), $document->owner?->full_name ?? '-', Heroicon::OutlinedUserCircle, 'primary'),
                 $this->entry('project', __('ui_gallery.entries.project'), $document->project?->name ?? '-', Heroicon::OutlinedRocketLaunch, $document->project !== null ? 'primary' : 'gray'),
                 $this->entry('file', __('ui_gallery.entries.file'), $file !== null ? $file->original_name.' · '.$file->humanSize() : (($revision?->isAuthored() ?? false) ? __('document_revision.values.authored') : '-'), Heroicon::OutlinedPaperClip, 'gray'),
-                $this->entry('updated', __('ui_gallery.entries.updated'), $document->updated_at?->format('d.m.Y H:i') ?? '-', Heroicon::OutlinedClock, 'gray'),
+                $this->entry('updated', __('ui_gallery.entries.updated'), DisplayTime::format($document->updated_at), Heroicon::OutlinedClock, 'gray'),
             ],
             actions: [
                 Action::make('download_'.$document->getKey())

@@ -14,6 +14,7 @@ use App\Models\Party\PartyMeetingNote;
 use App\Services\AbstractService;
 use App\Services\Audit\ActorContext;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\DisplayTime;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -115,7 +116,7 @@ final class MeetingPlanService extends AbstractService
                 'contact_relationship_id' => $plan->contact_relationship_id,
                 'personnel_id' => $plan->personnel_id ?? app(ActorContext::class)->personnelId(),
                 // Gorusme tarihi: verilmediyse plan tarihi (bugun ya da gecmisse), degilse bugun.
-                'noted_on' => filled($notedOn) ? $notedOn : Carbon::today()->min($plan->planned_on ?? Carbon::today())->toDateString(),
+                'noted_on' => filled($notedOn) ? $notedOn : Carbon::today(DisplayTime::zone())->min($plan->planned_on ?? Carbon::today(DisplayTime::zone()))->toDateString(),
                 'channel' => $plan->channel?->value ?? MeetingChannel::Visit->value,
                 'subject' => $plan->subject,
                 'note' => trim($note),

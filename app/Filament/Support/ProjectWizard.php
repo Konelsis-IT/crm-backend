@@ -298,6 +298,9 @@ final class ProjectWizard
                 ->searchable()
                 ->preload()
                 ->required()
+                // Olusturmada varsayilan olusturan kisi: onceki adimlarda "Kaydet"
+                // ile kesilen proje de yoneticisiyle acilir (22 Eylul 2026).
+                ->default(fn (): ?int => $isEdit ? null : (auth()->id() !== null ? (int) auth()->id() : null))
                 ->native(false),
             Select::make('status')
                 ->label(__('project.fields.initial_status'))

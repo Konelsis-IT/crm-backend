@@ -98,40 +98,71 @@ final class AcquisitionIntakeService
                 return $case->refresh();
             }
 
-            /** @var Proposal $proposal */
-            $proposal = $this->proposals->create([
-                'business_case_id' => $case->getKey(),
-                'title' => filled($data['proposal_title'] ?? null) ? (string) $data['proposal_title'] : null,
-                ...$this->proposalExtras($data),
-            ]);
-
-            /** @var ProposalVersion $version */
-            $version = $this->proposalVersions->create([
-                ...array_intersect_key($data, array_flip(self::VERSION_KEYS)),
-                'proposal_id' => $proposal->getKey(),
-                'is_critical_route' => (bool) ($data['is_critical_route'] ?? false),
-            ]);
-
-            $this->attachProposalDocuments($case, $version, $data);
-
-            $case->refresh();
-
-            if ($case->acquisition_stage->canTransitionTo(AcquisitionStage::OfferPreparation)) {
-                $this->businessCases->changeStage($case, AcquisitionStage::OfferPreparation);
-            }
-
-            if ($convertNow) {
-                $this->conversion->convertProposal($proposal, [
-                    ...array_intersect_key($data, array_flip(self::PROJECT_KEYS)),
-                    'proposal_version_id' => $version->getKey(),
-                    'approve_draft' => true,
-                    'name' => filled($data['project_name'] ?? null) ? (string) $data['project_name'] : (string) $case->title,
-                    'description' => $data['short_description'] ?? null,
-                ]);
-            }
+            $this->openProposal($case, $data, $convertNow);
 
             return $case->refresh();
         });
+    }
+
+    /**
+     * Var olan is dosyasina teklif (Teklif olustur ekrani, 22 Eylul 2026
+     * kullanici karari): sihirbazin 2. ve 3. adimiyla ayni yazma yolu. Ilk
+     * surum, teklif belgeleri, "Teklif hazirlaniyor" asamasi ve istenirse
+     * hemen projeye donusum.
+     *
+     * @param  array<string, mixed>  $data  proposal_title, surum alanlari, teklif belgeleri + convert_now, project_name, proje alanlari
+     */
+    public function addProposal(int $businessCaseId, array $data): Proposal
+    {
+        return $this->transactions->run(function () use ($businessCaseId, $data): Proposal {
+            /** @var BusinessCase $case */
+            $case = $this->businessCases->show($businessCaseId);
+
+            return $this->openProposal($case, $data, (bool) ($data['convert_now'] ?? false));
+        });
+    }
+
+    /**
+     * Teklif + ilk surum + belgeler; is dosyasi "Teklif hazirlaniyor"a gecer,
+     * $convertNow ise teklif projeye donusturulur.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function openProposal(BusinessCase $case, array $data, bool $convertNow): Proposal
+    {
+        /** @var Proposal $proposal */
+        $proposal = $this->proposals->create([
+            'business_case_id' => $case->getKey(),
+            'title' => filled($data['proposal_title'] ?? null) ? (string) $data['proposal_title'] : null,
+            ...$this->proposalExtras($data),
+        ]);
+
+        /** @var ProposalVersion $version */
+        $version = $this->proposalVersions->create([
+            ...array_intersect_key($data, array_flip(self::VERSION_KEYS)),
+            'proposal_id' => $proposal->getKey(),
+            'is_critical_route' => (bool) ($data['is_critical_route'] ?? false),
+        ]);
+
+        $this->attachProposalDocuments($case, $version, $data);
+
+        $case->refresh();
+
+        if ($case->acquisition_stage->canTransitionTo(AcquisitionStage::OfferPreparation)) {
+            $this->businessCases->changeStage($case, AcquisitionStage::OfferPreparation);
+        }
+
+        if ($convertNow) {
+            $this->conversion->convertProposal($proposal, [
+                ...array_intersect_key($data, array_flip(self::PROJECT_KEYS)),
+                'proposal_version_id' => $version->getKey(),
+                'approve_draft' => true,
+                'name' => filled($data['project_name'] ?? null) ? (string) $data['project_name'] : (string) $case->title,
+                'description' => $data['short_description'] ?? $case->short_description,
+            ]);
+        }
+
+        return $proposal->refresh();
     }
 
     /**

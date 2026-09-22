@@ -15,6 +15,7 @@ use App\Models\Project\ProjectTeamMember;
 use App\Services\Approval\Subjects\SubjectContext;
 use App\Services\Authorization\RoleResolver;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\DisplayTime;
 use Illuminate\Support\Carbon;
 
 /**
@@ -72,7 +73,7 @@ final class ApproverResolver
             return ResolvedApprovers::none(UnresolvedReason::VacantPosition);
         }
 
-        $today = Carbon::today();
+        $today = Carbon::today(DisplayTime::zone());
 
         $ids = PositionAssignment::query()
             ->where('position_id', $positionId)

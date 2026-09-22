@@ -14,6 +14,7 @@ use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Schema;
@@ -21,10 +22,10 @@ use Filament\Support\Icons\Heroicon;
 use Livewire\Attributes\Url;
 
 /**
- * Is dosyasi goruntuleme (D-72): kart + asama uyarisi + "Is dosyasi -> Teklif
- * -> Proje" adimlari (olusturma/duzenleme sihirbaziyla ayni gorunum) ve
- * altta diger alt listeler (firsat, aktiviteler, ihale ilanlari, sozlesmeler,
- * Operasyona devirler).
+ * Is dosyasi goruntuleme (D-72, D-113): kart ve ayrinti karti yan yana, asama
+ * uyarisi, "Is dosyasi -> Teklif -> Proje" adimlari (1. adim bos; teklif ve
+ * proje adimlari ayrintili) ve altta diger alt listeler (firsat, aktiviteler,
+ * ihale ilanlari, sozlesmeler, Operasyona devirler).
  */
 class ViewBusinessCase extends ViewRecord
 {
@@ -52,24 +53,42 @@ class ViewBusinessCase extends ViewRecord
             $case->loadMissing('scopes.scopeDocument.revisions.files.fileObject');
         }
 
+        // Kart yarim genislik, yaninda olusturmada girilen ayrintilar (22 Eylul
+        // 2026 kullanici karari); her kart kendi boyunu korur (kc-grid-top).
         return $schema->columns(1)->components([
-            $wizard->headerCard($case),
+            Grid::make(['default' => 1, 'xl' => 2])
+                ->extraAttributes(['class' => 'kc-grid-top'])
+                ->components([
+                    $wizard->headerCard($case),
+                    $wizard->detailsCard($case),
+                ]),
             $wizard->stageCallout($case),
+            // 1. adim bos (is dosyasi zaten ustte); teklif ve proje adimlari ayrintilidir.
             Section::make(__('business_case.sections.chain'))
                 ->icon(Heroicon::OutlinedArrowLongRight)
                 ->description(__('business_case.help.chain_intro'))
                 ->components([
                     Wizard::make([
-                        $wizard->detailsStep($case),
+                        $wizard->caseViewStep(),
                         $wizard->proposalTableStep($case, static::class),
                         $wizard->projectStep($case),
                     ])
                         ->skippable()
-                        ->startOnStep($wizard->startStep($case, $this->step))
+                        ->startOnStep($this->startStep($case))
                         ->contained(false),
                 ]),
             $this->getRelationManagersContentComponent(),
         ]);
+    }
+
+    /** Acilacak adim: istenen, yoksa proje varsa 3, degilse teklif adimi (1. adim bostur). */
+    private function startStep(BusinessCase $case): int
+    {
+        if ($this->step !== null && in_array($this->step, BusinessCaseWizard::STEP_IDS, true)) {
+            return (int) array_search($this->step, BusinessCaseWizard::STEP_IDS, true) + 1;
+        }
+
+        return $case->project !== null ? 3 : 2;
     }
 
     protected function getHeaderActions(): array

@@ -15,6 +15,7 @@ return [
         'main' => 'İş bilgileri',
         'header' => 'İş dosyası kartı',
         'chain' => 'İş akışı: İş dosyası → Teklif → Proje',
+        'details' => 'İş dosyası ayrıntıları',
         'summary_case' => 'İş dosyası özeti',
         'summary_proposal' => 'Teklif özeti',
     ],

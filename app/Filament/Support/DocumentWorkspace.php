@@ -26,6 +26,7 @@ use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentShareService;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -133,7 +134,7 @@ final class DocumentWorkspace
                 ->iconColor('gray'),
             TextEntry::make('created')
                 ->label(__('document.fields.created_at'))
-                ->state(($document->created_at?->format('d.m.Y H:i') ?? '-').' · '.($document->createdBy?->full_name ?? __('activity.system')))
+                ->state(DisplayTime::format($document->created_at).' · '.($document->createdBy?->full_name ?? __('activity.system')))
                 ->icon(Heroicon::OutlinedCalendarDays)
                 ->iconColor('gray'),
         ];
@@ -199,7 +200,7 @@ final class DocumentWorkspace
         $components[] = Grid::make(['default' => 1, 'md' => 2, 'xl' => 4])->components([
             TextEntry::make('preparer')
                 ->label(__('document_revision.fields.preparer'))
-                ->state(($revision->preparer?->full_name ?? '-').' · '.($revision->prepared_at?->format('d.m.Y H:i') ?? '-'))
+                ->state(($revision->preparer?->full_name ?? '-').' · '.DisplayTime::format($revision->prepared_at))
                 ->icon(Heroicon::OutlinedPencilSquare)
                 ->iconColor('gray'),
             TextEntry::make('checker')
@@ -209,12 +210,12 @@ final class DocumentWorkspace
                 ->iconColor('gray'),
             TextEntry::make('approver')
                 ->label(__('document_revision.fields.approver'))
-                ->state(($revision->approver?->full_name ?? '-').($revision->approved_at !== null ? ' · '.$revision->approved_at->format('d.m.Y H:i') : ''))
+                ->state(($revision->approver?->full_name ?? '-').($revision->approved_at !== null ? ' · '.DisplayTime::format($revision->approved_at) : ''))
                 ->icon(Heroicon::OutlinedCheckBadge)
                 ->iconColor($revision->approved_at !== null ? 'success' : 'gray'),
             TextEntry::make('issued_at')
                 ->label(__('document_revision.fields.issued_at'))
-                ->state($revision->issued_at?->format('d.m.Y H:i') ?? '-')
+                ->state(DisplayTime::format($revision->issued_at))
                 ->icon(Heroicon::OutlinedPaperAirplane)
                 ->iconColor($revision->issued_at !== null ? 'success' : 'gray'),
         ]);

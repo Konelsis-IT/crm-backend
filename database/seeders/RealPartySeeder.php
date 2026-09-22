@@ -21,7 +21,8 @@ use Illuminate\Support\Str;
 
 /**
  * Gercek taraf verisi: firma takip listesi (Firma_Takip_Listesi.xlsx, 14
- * Eylul 2026 surumu; 16 Eylul 2026 kullanici talimatiyla aktarildi). Kaynak
+ * Eylul 2026 surumu 16 Eylul'de; 21 Eylul 2026 surumu ayni gun kullanici
+ * onayiyla aktarildi). Kaynak
  * dizi database/seeders/data/real_parties.php dosyasindadir; bu seeder o
  * diziyi okur ve her firmayi "prospect" durumunda organizasyon tarafi
  * olarak yazar. Depoda kurgusal ornek seeder yoktur (D-105).
@@ -42,8 +43,9 @@ use Illuminate\Support\Str;
  *
  * Idempotent: firma normalized_name ile bulunur; var olan firmanin rolu,
  * adresi, kanali, kisisi ve notu tekrar yazilmaz, yalniz eksikler eklenir.
- * Hicbir kayit silinmez, truncate edilmez. Bu seeder kalici uretim
- * verisidir ve uretimde de calisir.
+ * Hicbir kayit silinmez, truncate edilmez. Var olan kayitlarda degisen ya da
+ * silinen bilgiler (21 Eylul listesi) sonda FirmaTakipUpdateSeeder ile
+ * uygulanir. Bu seeder kalici uretim verisidir ve uretimde de calisir.
  *
  * Yazmalar servisler uzerinden gider (S-2); party_no, normalized_name,
  * normalized_value ve Personel Hareketleri kaydi uygulama kurallariyla
@@ -117,6 +119,9 @@ class RealPartySeeder extends Seeder
             $this->totals['contact_channels'],
             $this->totals['notes'],
         ));
+
+        // 21 Eylul listesinin var olan kayitlardaki duzeltmeleri (adres, yanlis kanal, rakip).
+        $this->call(FirmaTakipUpdateSeeder::class);
     }
 
     /**

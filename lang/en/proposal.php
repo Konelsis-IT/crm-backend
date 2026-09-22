@@ -6,6 +6,9 @@ return [
 
     'sections' => [
         'main' => 'Proposal details',
+        'business_case' => 'Business case',
+        'header' => 'Proposal card',
+        'current_version' => 'Current version',
     ],
 
     'fields' => [
@@ -19,6 +22,10 @@ return [
         'reason' => 'Reason',
         'status' => 'Status',
         'title' => 'Title',
+    ],
+
+    'help' => [
+        'business_case' => 'The proposal is opened for this business case. Its summary appears below once selected.',
     ],
 
     'relation' => [
@@ -38,11 +45,18 @@ return [
         'waive' => 'Grant waiver',
         'add_evidence' => 'Add evidence',
         'accept' => 'Accept',
+        'open_business_case' => 'Open business case',
+    ],
+
+    'steps' => [
+        'version' => 'Version :no · :status',
+        'no_version' => 'No version yet',
     ],
 
     'messages' => [
         'status_changed' => 'Status updated.',
         'done' => 'Done.',
+        'created' => 'Proposal created: :no',
     ],
 
     'validation' => [
