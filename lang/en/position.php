@@ -35,5 +35,7 @@ return [
     'relation' => [
         'title' => 'Positions',
         'empty' => 'No position assigned.',
+        'personnel' => 'Assigned personnel',
+        'personnel_empty' => 'Nobody is assigned to this position.',
     ],
 ];

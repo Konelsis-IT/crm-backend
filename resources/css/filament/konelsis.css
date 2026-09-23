@@ -771,3 +771,36 @@ body:has(#konelsis-chat-root) .fi-main {
 /* Sihirbaz alt satirindaki adim "Kaydet"i (SaveableWizard): "Ileri"nin hemen
    solunda, sag grupta durur (22 Eylul 2026 kullanici karari ve onayi, D-112). */
 .fi-sc-wizard-footer > .kc-wizard-save { margin-inline-start: auto; }
+
+/* Kart secici (App\Filament\Forms\Components\CardPicker): rapor taslagi gibi
+   secimlerde ikon + baslik + aciklama kartlari (23 Eylul 2026 kullanici
+   istegi ve ornek gorseli). Filament'in Select / Radio / ToggleButtons
+   bilesenleri bu gorunumu vermedigi icin eklendi. */
+.kc-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.75rem; }
+.kc-picker-card {
+    display: grid; justify-items: center; align-content: start; gap: 0.5rem;
+    padding: 1.15rem 1rem; text-align: center; cursor: pointer;
+    background: var(--kc-bg, #fff); border: 1px solid var(--kc-border, #e7e5e4); border-radius: 0.9rem;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.kc-picker-card:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 22px -14px rgba(28, 25, 23, .55); border-color: var(--kc-text-muted, #78716c); }
+.kc-picker-card:focus-visible { outline: 2px solid var(--kc-red, #dc2626); outline-offset: 2px; }
+.kc-picker-card.is-selected { border-color: var(--kc-red, #dc2626); box-shadow: 0 0 0 1px var(--kc-red, #dc2626); }
+.kc-picker-card:disabled { opacity: .6; cursor: not-allowed; }
+.kc-picker-icon {
+    display: grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 1rem;
+    background: var(--kc-red-soft, #fee2e2); color: var(--kc-red, #dc2626);
+}
+.kc-picker-icon svg { width: 1.5rem; height: 1.5rem; }
+.kc-picker-card.is-selected .kc-picker-icon { background: var(--kc-red, #dc2626); color: #fff; }
+.kc-picker-title { font-size: 0.875rem; font-weight: 600; color: var(--kc-text, #1c1917); }
+.kc-picker-text { font-size: 0.75rem; line-height: 1.45; color: var(--kc-text-muted, #78716c); }
+
+/* Alan basliklari kalin (23 Eylul 2026 kullanici istegi): Filament'in form ve
+   goruntuleme etiketleri 500 agirliktaydi ve duz yazi gibi okunuyordu; baslik
+   olduklari anlasilsin diye 600'e cikarildi. Kendi kartlarimiz da ayni
+   agirligi kullanir. */
+.fi-fo-field-label-content,
+.fi-in-entry .fi-in-entry-label,
+.fi-fo-fieldset-label,
+.fi-sc-field-label { font-weight: 600; }

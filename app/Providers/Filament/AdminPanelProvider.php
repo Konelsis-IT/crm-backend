@@ -7,13 +7,21 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\PersonnelProfile;
 use App\Filament\Pages\Dashboard;
 use App\Filament\NavigationGroup;
+use Filament\Navigation\NavigationGroup as FilamentNavigationGroup;
+use App\Filament\Pages\Work\ControlMatrix;
+use App\Filament\Pages\Work\WorkAnalysis;
+use App\Filament\Pages\Work\WorkBoard;
 use App\Filament\Resources\MeetingPlans\Pages\MeetingPlanCalendar;
+use App\Filament\Resources\Personnel\Pages\ViewPersonnelRecord;
 use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
 use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Files\ProjectPhotoController;
 use App\Http\Controllers\Meeting\MeetingPlanCalendarController;
+use App\Http\Controllers\Work\ControlMatrixController;
+use App\Http\Controllers\Work\WorkBoardController;
+use App\Http\Controllers\Work\WorkInsightController;
 use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Notifications\ApprovalQuickDecisionController;
@@ -27,8 +35,11 @@ use App\Http\Controllers\SocialMedia\SocialMetricController;
 use App\Http\Controllers\SocialMedia\SocialPlanningController;
 use App\Http\Controllers\SocialMedia\SocialSettingsController;
 use App\Http\Controllers\SocialMedia\SocialUploadController;
+use App\Http\Middleware\ImpersonatePersonnel;
 use App\Http\Middleware\SetLocale;
 use App\Models\Personnel\Personnel;
+use App\Query\Personnel\PersonnelQueries;
+use App\Services\Authorization\ImpersonationService;
 use App\Services\Notification\AudienceResolver;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
@@ -37,6 +48,8 @@ use App\Support\ReleaseNotes;
 use App\Support\RoleLabels;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Filament\Forms\Components\Select;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -77,6 +90,8 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('images/konelsis-favicon.png'))
             ->colors([
                 'primary' => Color::Red,
+                // Is panosu "Bekleniyor" durumu (B36, D-115).
+                'violet' => Color::Violet,
             ])
             // Icerik alani tam genislik (17 Eylul 2026 kullanici karari): Filament
             // varsayilani 7xl (1280px) icerigi ortalayip genis ekranda kenarlarda
@@ -90,10 +105,60 @@ class AdminPanelProvider extends PanelProvider
             // dokuman): alt tablolar salt okunur degil, Policy'nin izin verdigi
             // olcude kayit ekler/duzenler (D-73). Filament varsayilani kapatildi.
             ->readOnlyRelationManagersOnResourceViewPagesByDefault(false)
-            ->navigationGroups(NavigationGroup::class)
+            // Sol menu gruplari kapali baslar, tiklaninca acilir (kullanici
+            // istegi, 23 Eylul 2026): uzun menu tek bakista okunabilsin.
+            ->navigationGroups(array_map(
+                fn (NavigationGroup $group): FilamentNavigationGroup => FilamentNavigationGroup::fromEnum($group)
+                    ->collapsible()
+                    ->collapsed(),
+                NavigationGroup::cases(),
+            ))
             // Sag ustteki kullanici menusunde giris yapan kisinin rolu ve
             // departmani; salt bilgi amacli, tiklanamaz.
             ->userMenuItems([
+                // Personel degistir (D-120): yalniz gizli sistem hesabinda
+                // gorunur, Roller ekranindan verilmez ve alinamaz.
+                'impersonate' => Action::make('impersonate')
+                    ->label(fn (): string => __('impersonation.actions.switch'))
+                    ->icon(Heroicon::OutlinedArrowsRightLeft)
+                    ->visible(fn (): bool => app(ImpersonationService::class)->canOperate())
+                    ->modalHeading(fn (): string => __('impersonation.modal.heading'))
+                    ->modalDescription(fn (): string => __('impersonation.modal.description'))
+                    ->modalSubmitActionLabel(fn (): string => __('impersonation.actions.submit'))
+                    ->schema(fn (Schema $schema): Schema => $schema->columns(1)->components([
+                        Select::make('personnel_id')
+                            ->label(__('impersonation.fields.personnel'))
+                            ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                            ->searchable()
+                            ->required()
+                            ->native(false),
+                    ]))
+                    ->action(function (array $data): void {
+                        $service = app(ImpersonationService::class);
+                        $operator = $service->operator();
+                        $target = $operator === null ? null : $service->start($operator, (int) $data['personnel_id']);
+
+                        if ($target === null) {
+                            Notification::make()
+                                ->title(__('impersonation.messages.failed'))
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        redirect(Dashboard::getUrl());
+                    }),
+                'stop_impersonating' => Action::make('stop_impersonating')
+                    ->label(fn (): string => __('impersonation.actions.stop'))
+                    ->icon(Heroicon::OutlinedArrowUturnLeft)
+                    ->color('danger')
+                    ->visible(fn (): bool => app(ImpersonationService::class)->isSwapped())
+                    ->action(function (): void {
+                        app(ImpersonationService::class)->stop();
+
+                        redirect(Dashboard::getUrl());
+                    }),
                 // Surum notlari (D-91): her surum ayri acilir bolum, en yenisi acik.
                 'release_notes' => Action::make('release_notes')
                     ->label(fn (): string => __('release.actions.open'))
@@ -142,6 +207,34 @@ class AdminPanelProvider extends PanelProvider
             ->authenticatedRoutes(function (Panel $panel): void {
                 // Gorusme plani takvim verisi (B34, D-109): filament.admin.meeting-calendar.data
                 Route::get('meeting-calendar/data', MeetingPlanCalendarController::class)->name('meeting-calendar.data');
+
+                // Is panosu, kontrol matrisi, is raporlari JSON uclari (B36, D-115): filament.admin.work.*
+                // Her uc B36 + etkin personel + politika kontrolunden gecer; kart silme yalniz
+                // elle girilen karti, sahibi ya da tam yetki siler.
+                Route::prefix('work')->name('work.')->whereNumber(['item', 'activity', 'personnel'])->group(function (): void {
+                    Route::get('board', [WorkBoardController::class, 'board'])->name('board');
+                    Route::get('dismissed', [WorkBoardController::class, 'dismissed'])->name('dismissed');
+                    Route::post('items', [WorkBoardController::class, 'store'])->name('items.store');
+                    Route::post('items/{item}', [WorkBoardController::class, 'update'])->name('items.update');
+                    Route::post('items/{item}/status', [WorkBoardController::class, 'status'])->name('items.status');
+                    Route::post('items/{item}/critical', [WorkBoardController::class, 'critical'])->name('items.critical');
+                    Route::post('items/{item}/delete', [WorkBoardController::class, 'destroy'])->name('items.delete');
+                    Route::post('reorder', [WorkBoardController::class, 'reorder'])->name('reorder');
+                    Route::post('suggestions/{activity}/card', [WorkBoardController::class, 'fromSuggestion'])->name('suggestions.card');
+                    Route::post('suggestions/{activity}/dismiss', [WorkBoardController::class, 'dismiss'])->name('suggestions.dismiss');
+                    Route::post('suggestions/{activity}/restore', [WorkBoardController::class, 'restore'])->name('suggestions.restore');
+                    Route::get('lookup/links', [WorkBoardController::class, 'links'])->name('lookup.links');
+                    Route::get('lookup/parties', [WorkBoardController::class, 'parties'])->name('lookup.parties');
+                    Route::get('day', [WorkBoardController::class, 'day'])->name('day');
+                    Route::post('day', [WorkBoardController::class, 'closeDay'])->name('day.close');
+                    Route::get('week', [WorkBoardController::class, 'week'])->name('week');
+                    Route::post('week', [WorkBoardController::class, 'closeWeek'])->name('week.close');
+                    Route::post('freeze', [WorkBoardController::class, 'freeze'])->name('freeze');
+                    Route::get('matrix', [ControlMatrixController::class, 'show'])->name('matrix');
+                    Route::post('matrix', [ControlMatrixController::class, 'save'])->name('matrix.save');
+                    Route::get('analysis', [WorkInsightController::class, 'analysis'])->name('analysis');
+                    Route::get('attention/{personnel}', [WorkInsightController::class, 'attention'])->name('attention');
+                });
 
                 Route::prefix('files')->name('files.')->group(function (): void {
                     Route::get('revisions/{file}', RevisionFileController::class)->name('revision');
@@ -307,6 +400,29 @@ class AdminPanelProvider extends PanelProvider
                 fn () => view('filament.meetings.scripts'),
                 scopes: MeetingPlanCalendar::class,
             )
+            // Is panosu React ekranlari (B36, D-115): ayni cekirdek (social-core) +
+            // work-core + ekranin betigi; yalniz ilgili sayfada.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.work.scripts', ['screens' => ['work-board']]),
+                scopes: WorkBoard::class,
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.work.scripts', ['screens' => ['work-matrix']]),
+                scopes: ControlMatrix::class,
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.work.scripts', ['screens' => ['work-analysis']]),
+                scopes: WorkAnalysis::class,
+            )
+            // Personel kartindaki Dikkat karti (ozel yetki; kisi kendi kartini gormez).
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.work.scripts', ['screens' => ['work-attention']]),
+                scopes: ViewPersonnelRecord::class,
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -321,6 +437,9 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                // Personel degistirme (D-120): oturum sistem hesabinda kalir,
+                // arayuz secilen personelin gozuyle calisir.
+                ImpersonatePersonnel::class,
             ]);
     }
 }

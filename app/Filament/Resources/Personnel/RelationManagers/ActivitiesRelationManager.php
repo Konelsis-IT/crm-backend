@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Personnel\RelationManagers;
 use App\Enums\Activity\ActivityChannel;
 use App\Filament\Support\FieldGrid;
 use App\Models\Activity\PersonnelActivity;
+use App\Models\Personnel\Personnel;
 use App\Query\Activity\ActivityFilterOptions;
 use App\Support\ActivityLabels;
 use BackedEnum;
@@ -20,12 +21,13 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Personel Hareketleri: bu personelin ne zaman ne yaptigi.
  *
  * Ayri bir menu degildir; personelin kendi kartinin altinda gorunur.
- * Kayitlar salt okunurdur.
+ * Kayitlar salt okunurdur ve (D-116) yalniz ust yonetim gorur.
  */
 class ActivitiesRelationManager extends RelationManager
 {
@@ -36,6 +38,19 @@ class ActivitiesRelationManager extends RelationManager
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
         return __('activity.plural');
+    }
+
+    /**
+     * D-116 (23 Eylul 2026, kullanici karari): Personel Hareketleri yalniz
+     * ust yonetim tarafindan gorulur.
+     */
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof Personnel
+            && $ownerRecord instanceof Personnel
+            && Gate::forUser($user)->allows('viewActivities', $ownerRecord);
     }
 
     public function isReadOnly(): bool

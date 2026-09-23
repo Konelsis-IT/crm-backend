@@ -16,6 +16,7 @@ return [
         'manager' => 'Yönetici',
         'cost_center_code' => 'Masraf merkezi kodu',
         'personnel_count' => 'Personel sayısı',
+        'position_count' => 'Görev sayısı',
         'status' => 'Durum',
         'valid_from' => 'Geçerlilik başlangıcı',
         'valid_until' => 'Geçerlilik bitişi',
@@ -23,6 +24,11 @@ return [
 
     'help' => [
         'parent' => 'Değiştirdiğinizde eski üst birim tarihe kaydedilir, yenisi bugünden geçerli olur.',
+    ],
+
+    'relation' => [
+        'personnel' => 'Personel',
+        'personnel_empty' => 'Bu birime bağlı personel yok.',
     ],
 
     'validation' => [

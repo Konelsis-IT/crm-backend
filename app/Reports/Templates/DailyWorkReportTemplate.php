@@ -11,9 +11,11 @@ use App\Reports\ReportField;
 /** Gunluk calisma raporu: gunun is panosu + ozet, engeller, yarin plani. Inceleme yok. */
 final class DailyWorkReportTemplate extends BoardReportTemplate
 {
+    public const CODE = 'daily_work';
+
     public function code(): string
     {
-        return 'daily_work';
+        return self::CODE;
     }
 
     public function kind(): ReportKind
@@ -34,7 +36,7 @@ final class DailyWorkReportTemplate extends BoardReportTemplate
         return [
             ReportField::longText('summary', 3)->required()->summary(),
             ReportField::longText('blockers', 2),
-            ReportField::longText('tomorrow_plan', 2),
+            ReportField::lines('tomorrow_plan', 2),
         ];
     }
 }

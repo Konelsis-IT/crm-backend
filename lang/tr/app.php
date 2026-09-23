@@ -9,7 +9,13 @@ return [
         'save' => 'Kaydet',
     ],
 
+    'dashboard' => [
+        'title' => 'Genel bakış',
+    ],
+
     'nav' => [
+        'reports' => 'Raporlar',
+        'analytics' => 'Analizler',
         'acquisition' => 'İş Alım',
         'operations' => 'Operasyon',
         'project_group' => 'Proje Grubu',

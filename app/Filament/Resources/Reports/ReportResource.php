@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Reports;
 
+use App\Filament\NavigationGroup;
 use App\Filament\Resources\Reports\Pages\CreateReport;
 use App\Filament\Resources\Reports\Pages\EditReport;
 use App\Filament\Resources\Reports\Pages\ListReports;
@@ -20,6 +21,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 /**
  * Raporlar (D-86): personel taslak secer, taslak formu ve gorunumu belirler
@@ -50,6 +52,15 @@ class ReportResource extends Resource
     public static function getNavigationLabel(): string
     {
         return __('report.plural');
+    }
+
+    /**
+     * Is panosu (B36, D-115) uygulaninca Raporlar grubunun ilk ogesi; oncesinde
+     * menunun ust seviyesinde kalir.
+     */
+    public static function getNavigationGroup(): string | UnitEnum | null
+    {
+        return SchemaReadiness::hasBatch('B36') ? NavigationGroup::Reports : null;
     }
 
     public static function canAccess(): bool

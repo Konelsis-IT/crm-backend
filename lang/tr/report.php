@@ -5,6 +5,7 @@ return [
     'plural' => 'Raporlar',
 
     'sections' => [
+        'side' => 'Durum ve inceleme',
         'report' => 'Rapor',
         'answers' => 'Rapor içeriği',
         'board' => 'İş panosu',
@@ -38,6 +39,8 @@ return [
         'submitted_at' => 'Gönderim',
         'reviewer' => 'İnceleyen',
         'reviewed_at' => 'İnceleme tarihi',
+        'forward_to' => 'İletilecek yönetici',
+        'forward_note' => 'İletme notu',
         'review_comment' => 'İnceleme notu',
         'revision_count' => 'Revizyon sayısı',
         'confidential' => 'Gizlilik',
@@ -48,6 +51,7 @@ return [
     ],
 
     'items' => [
+        'tag' => 'Etiket',
         'title' => 'İş',
         'status' => 'Durum',
         'project' => 'Proje',
@@ -56,6 +60,7 @@ return [
     ],
 
     'help' => [
+        'forward' => 'Rapor seçtiğiniz yöneticiye iletilir; yeniden karar bekler ve ona bildirim gider. Önceki karar geçmişte kalır.',
         'list' => 'Raporlarım: yazdığım raporlar. İnceleme kutum: bana gönderilen raporlar. Ekibim: astlarımın ve departmanımın raporları.',
         'report' => 'Önce rapor taslağını seçin; taslak, doldurulacak alanları ve raporun görünümünü belirler.',
         'title' => 'Boş bırakılırsa taslak adı, ilgili kayıt ve dönemden otomatik oluşturulur.',
@@ -77,6 +82,9 @@ return [
     ],
 
     'actions' => [
+        'forward' => 'İlet',
+        'forward_submit' => 'Raporu ilet',
+
         'create' => 'Rapor yaz',
         'today' => 'Bugünün raporu',
         'open' => 'Aç',
@@ -98,17 +106,22 @@ return [
         'item_count' => ':count iş',
         'hours' => 'saat',
         'carried_over' => 'Önceki dönemden',
+        'added_late' => 'Sonradan eklendi',
         'confidential' => 'Gizli rapor',
         'template_missing' => 'Bu raporun taslağı artık tanımlı değil; içerik gösterilemiyor.',
         'week_of' => ':date haftası',
     ],
 
     'relation' => [
+        'authored' => 'Yazdığı raporlar',
+        'authored_help' => 'Bu kişinin yazdığı raporlar; yalnız görme yetkiniz olanlar listelenir.',
+        'authored_empty' => 'Bu kişi henüz rapor yazmamış.',
         'help' => 'Bu kayıtla ilgili raporlar; yalnız görme yetkiniz olanlar listelenir.',
         'empty' => 'Henüz rapor yok.',
     ],
 
     'messages' => [
+        'forwarded' => 'Rapor iletildi.',
         'created' => 'Rapor taslak olarak kaydedildi.',
         'updated' => 'Rapor güncellendi.',
         'submitted' => 'Rapor gönderildi.',
@@ -120,6 +133,10 @@ return [
     ],
 
     'notifications' => [
+        'forwarded' => [
+            'title' => 'Rapor size iletildi: :no',
+            'body' => ':title',
+        ],
         'submitted' => ['title' => 'İncelemenizi bekleyen rapor: :no', 'body' => ':title — :author'],
         'approved' => ['title' => 'Raporunuz onaylandı: :no', 'body' => ':title — :reviewer'],
         'revision_required' => ['title' => 'Raporunuz için revizyon istendi: :no', 'body' => ':title — açıklama rapor kartında.'],
@@ -299,6 +316,27 @@ return [
                     'warning' => 'Uyarı',
                     'promotion_review' => 'Terfi değerlendirmesi',
                 ],
+            ],
+        ],
+        'daily_control' => [
+            'name' => 'Günlük kontrol raporu',
+            'description' => 'İnsan Kaynakları her gün personeli bölümünün kriterlerine göre işaretler (Kontrol matrisi). Haftalık görünüm bu günlük kayıtların toplamıdır. Gizlidir; yalnız üst yönetim görür.',
+            'fields' => [
+                'section_label' => 'Bölüm',
+                'results' => 'Kriterler',
+                'note' => 'Açıklama',
+            ],
+            'metrics' => [
+                'control_ok_count' => 'Uygun kriter',
+                'control_checked_count' => 'İşaretlenen kriter',
+                'control_compliance_pct' => 'Uygunluk (%)',
+            ],
+        ],
+        'coordination_board' => [
+            'name' => 'Koordinasyon panosu',
+            'description' => 'Yönetim panosunun o günkü hali: tüm aktif projelerin kartları, dondurulmuş.',
+            'fields' => [
+                'summary' => 'Özet',
             ],
         ],
         'system_data' => [

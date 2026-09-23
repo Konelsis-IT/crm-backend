@@ -35,5 +35,7 @@ return [
     'relation' => [
         'title' => 'Pozisyonlar',
         'empty' => 'Atanmış pozisyon yok.',
+        'personnel' => 'Atanan personel',
+        'personnel_empty' => 'Bu göreve atanmış personel yok.',
     ],
 ];

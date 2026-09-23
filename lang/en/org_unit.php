@@ -16,6 +16,7 @@ return [
         'manager' => 'Manager',
         'cost_center_code' => 'Cost center code',
         'personnel_count' => 'Personnel count',
+        'position_count' => 'Position count',
         'status' => 'Status',
         'valid_from' => 'Valid from',
         'valid_until' => 'Valid until',
@@ -23,6 +24,11 @@ return [
 
     'help' => [
         'parent' => 'Changing this closes the old parent as history and opens the new one from today.',
+    ],
+
+    'relation' => [
+        'personnel' => 'Personnel',
+        'personnel_empty' => 'No personnel in this unit.',
     ],
 
     'validation' => [

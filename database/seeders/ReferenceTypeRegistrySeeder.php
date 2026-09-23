@@ -148,6 +148,9 @@ class ReferenceTypeRegistrySeeder extends Seeder
             ['work_request', 'work_requests', 'activity.subjects.work_request', 'notification'],
             ['report', 'reports', 'activity.subjects.report', 'reporting'],
             ['report_item', 'report_items', 'activity.subjects.report_item', 'reporting'],
+            // Is panosu (B36, D-115)
+            ['work_item', 'work_items', 'activity.subjects.work_item', 'reporting'],
+            ['work_suggestion_dismissal', 'work_suggestion_dismissals', 'activity.subjects.work_suggestion_dismissal', 'reporting'],
             // Sosyal medya (B31, D-106)
             ['social_content', 'social_contents', 'activity.subjects.social_content', 'social_media'],
             ['social_comment', 'social_comments', 'activity.subjects.social_comment', 'social_media'],

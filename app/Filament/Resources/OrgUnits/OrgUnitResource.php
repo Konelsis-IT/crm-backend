@@ -10,6 +10,9 @@ use App\Exceptions\Personnel\SelfParentNotAllowedException;
 use App\Exceptions\StaleRecordException;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\OrgUnits\Pages\ListOrgUnits;
+use App\Filament\Resources\OrgUnits\Pages\ViewOrgUnit;
+use App\Filament\Resources\OrgUnits\RelationManagers\UnitPersonnelRelationManager;
+use App\Filament\Resources\OrgUnits\Schemas\OrgUnitInfolist;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\OrgUnit;
@@ -19,6 +22,7 @@ use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -59,6 +63,11 @@ class OrgUnitResource extends Resource
         return FeatureFlags::enabled('personnel.admin_ui')
             && SchemaReadiness::hasBatch('B03')
             && parent::canAccess();
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return OrgUnitInfolist::make($schema);
     }
 
     public static function form(Schema $schema): Schema
@@ -128,7 +137,9 @@ class OrgUnitResource extends Resource
                     ->label(__('org_unit.fields.status'))
                     ->badge(),
             ])
+            ->recordUrl(fn (OrgUnit $record): string => ViewOrgUnit::getUrl(['record' => $record]))
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make()
                     ->using(function (OrgUnit $record, array $data): Model {
                         try {
@@ -144,10 +155,19 @@ class OrgUnitResource extends Resource
             ->defaultSort('name');
     }
 
+    /** Birime bagli personel (D-116). */
+    public static function getRelations(): array
+    {
+        return [
+            UnitPersonnelRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => ListOrgUnits::route('/'),
+            'view' => ViewOrgUnit::route('/{record}'),
         ];
     }
 }

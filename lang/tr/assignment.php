@@ -15,13 +15,13 @@ return [
 
     'relation' => [
         'title' => 'Atama Geçmişi',
-        'help' => 'Organizasyon birimi ve görev değişiklikleri; en yeni kayıt üstte.',
+        'help' => 'Organizasyon birimi ve görev değişiklikleri',
         'empty' => 'Henüz bir değişiklik kaydedilmedi.',
     ],
 
     'reporting' => [
         'title' => 'Raporlama Geçmişi',
-        'help' => 'Doğrudan amir değişiklikleri; en yeni kayıt üstte.',
+        'help' => 'Doğrudan amir değişiklikleri',
         'empty' => 'Henüz bir değişiklik kaydedilmedi.',
         'manager' => 'Doğrudan Amir',
     ],

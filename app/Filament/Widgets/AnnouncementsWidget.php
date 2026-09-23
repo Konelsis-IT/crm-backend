@@ -25,7 +25,8 @@ class AnnouncementsWidget extends TableWidget
 {
     protected static ?int $sort = 20;
 
-    protected int | string | array $columnSpan = 'full';
+    // Uyarilarla yan yana yarim genislik (kullanici istegi, 23 Eylul 2026).
+    protected int | string | array $columnSpan = ['default' => 'full', 'lg' => 1];
 
     public static function canView(): bool
     {

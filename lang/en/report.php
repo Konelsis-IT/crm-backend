@@ -5,6 +5,7 @@ return [
     'plural' => 'Reports',
 
     'sections' => [
+        'side' => 'Status and review',
         'report' => 'Report',
         'answers' => 'Report content',
         'board' => 'Work board',
@@ -38,6 +39,8 @@ return [
         'submitted_at' => 'Submitted',
         'reviewer' => 'Reviewer',
         'reviewed_at' => 'Reviewed at',
+        'forward_to' => 'Forward to',
+        'forward_note' => 'Forwarding note',
         'review_comment' => 'Review note',
         'revision_count' => 'Revisions',
         'confidential' => 'Confidentiality',
@@ -48,6 +51,7 @@ return [
     ],
 
     'items' => [
+        'tag' => 'Tag',
         'title' => 'Work item',
         'status' => 'Status',
         'project' => 'Project',
@@ -56,6 +60,7 @@ return [
     ],
 
     'help' => [
+        'forward' => 'The report goes to the manager you pick, waits for their decision and they get a notification. The previous decision stays in the history.',
         'list' => 'My reports: reports I wrote. Review inbox: reports sent to me. My team: reports of my subordinates and department.',
         'report' => 'Choose the report template first; it determines the fields and the layout.',
         'title' => 'Leave empty to generate it from the template name, related record and period.',
@@ -77,6 +82,9 @@ return [
     ],
 
     'actions' => [
+        'forward' => 'Forward',
+        'forward_submit' => 'Forward the report',
+
         'create' => 'Write report',
         'today' => "Today's report",
         'open' => 'Open',
@@ -98,17 +106,22 @@ return [
         'item_count' => ':count items',
         'hours' => 'h',
         'carried_over' => 'Carried over',
+        'added_late' => 'Added later',
         'confidential' => 'Confidential report',
         'template_missing' => 'The template of this report is no longer defined; content cannot be shown.',
         'week_of' => 'week of :date',
     ],
 
     'relation' => [
+        'authored' => 'Reports written',
+        'authored_help' => 'Reports written by this person; only the ones you may see are listed.',
+        'authored_empty' => 'This person has not written a report yet.',
         'help' => 'Reports related to this record; only the ones you may view are listed.',
         'empty' => 'No reports yet.',
     ],
 
     'messages' => [
+        'forwarded' => 'Report forwarded.',
         'created' => 'Report saved as draft.',
         'updated' => 'Report updated.',
         'submitted' => 'Report submitted.',
@@ -120,6 +133,10 @@ return [
     ],
 
     'notifications' => [
+        'forwarded' => [
+            'title' => 'A report was forwarded to you: :no',
+            'body' => ':title',
+        ],
         'submitted' => ['title' => 'Report awaiting your review: :no', 'body' => ':title — :author'],
         'approved' => ['title' => 'Your report was approved: :no', 'body' => ':title — :reviewer'],
         'revision_required' => ['title' => 'Revision requested on your report: :no', 'body' => ':title — see the note on the report.'],
@@ -294,6 +311,27 @@ return [
                     'warning' => 'Warning',
                     'promotion_review' => 'Promotion review',
                 ],
+            ],
+        ],
+        'daily_control' => [
+            'name' => 'Daily control report',
+            'description' => 'HR marks each person daily against their section criteria (Control matrix). The weekly view is the sum of those daily records. Confidential; only executives see it.',
+            'fields' => [
+                'section_label' => 'Section',
+                'results' => 'Criteria',
+                'note' => 'Note',
+            ],
+            'metrics' => [
+                'control_ok_count' => 'Compliant criteria',
+                'control_checked_count' => 'Marked criteria',
+                'control_compliance_pct' => 'Compliance (%)',
+            ],
+        ],
+        'coordination_board' => [
+            'name' => 'Coordination board',
+            'description' => 'The management board as of that day: cards of all active projects, frozen.',
+            'fields' => [
+                'summary' => 'Summary',
             ],
         ],
         'system_data' => [

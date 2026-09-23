@@ -10,6 +10,9 @@ use App\Filament\Resources\Personnel\Pages\EditPersonnelRecord;
 use App\Filament\Resources\Personnel\Pages\ListPersonnelRecords;
 use App\Filament\Resources\Personnel\Pages\ViewPersonnelRecord;
 use App\Filament\Resources\Personnel\RelationManagers\ActivitiesRelationManager;
+use App\Filament\Resources\Personnel\RelationManagers\AuthoredReportsRelationManager;
+use App\Filament\Resources\Personnel\RelationManagers\ControlReportsRelationManager;
+use App\Filament\Resources\Personnel\RelationManagers\WorkItemsRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\AssignmentHistoryRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\PersonnelCertificationsRelationManager;
 use App\Filament\Resources\Personnel\RelationManagers\PositionAssignmentsRelationManager;
@@ -102,11 +105,19 @@ class PersonnelResource extends Resource
 
         if (SchemaReadiness::hasBatch('B10A')) {
             $relations[] = SubjectReportsRelationManager::class;
+            // Kisinin kendi yazdigi raporlar (23 Eylul 2026 kullanici bildirimi).
+            $relations[] = AuthoredReportsRelationManager::class;
         }
 
         if (SchemaReadiness::hasBatch('B11B')) {
             $relations[] = IncomingWorkRequestsRelationManager::class;
             $relations[] = RequestedWorkRequestsRelationManager::class;
+        }
+
+        // Is panosu (B36, D-115): Isler ve Kontrol sekmeleri.
+        if (SchemaReadiness::hasBatch('B36')) {
+            $relations[] = WorkItemsRelationManager::class;
+            $relations[] = ControlReportsRelationManager::class;
         }
 
         return $relations;

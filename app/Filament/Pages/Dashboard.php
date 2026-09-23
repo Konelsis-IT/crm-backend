@@ -27,7 +27,7 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Pano (D-82): ustte "Bildirim gonder" eylemi — gonderenin izinli oldugu
+ * Genel bakis (D-82; ad D-119): ustte "Bildirim gonder" eylemi — gonderenin izinli oldugu
  * kitleye (ekibi, departman, rol, secili kisiler, herkes) Filament zili
  * bildirimi. Sag ust kullanici menusundeki "Bildirim gonder" de buraya
  * `?bildirim=gonder` ile gelir ve pencereyi dogrudan acar.
@@ -35,6 +35,21 @@ use Filament\Support\Icons\Heroicon;
 class Dashboard extends BaseDashboard
 {
     public const SEND_ACTION = 'send_notification';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('app.dashboard.title');
+    }
+
+    public function getTitle(): string
+    {
+        return __('app.dashboard.title');
+    }
+
+    public function getHeading(): string
+    {
+        return __('app.dashboard.title');
+    }
 
     public function mount(): void
     {

@@ -10,6 +10,7 @@ use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Support\CardGallery;
 use App\Filament\Support\FieldGrid;
 use App\Models\Activity\PersonnelActivity;
 use App\Models\Report\Report;
@@ -20,9 +21,12 @@ use App\Reports\ReportFieldComponents;
 use App\Support\ActivityLabels;
 use App\Support\DisplayTime;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +34,8 @@ use Throwable;
 
 /**
  * Rapor karti (D-86): kimlik/konu/donem, taslagin cevaplari, pano tipli
- * raporda durum sutunlu is panosu, sayisal ozet (KPI), inceleme ve gecmis.
+ * raporda durum sekmeleri (her sekmede isler tablo halinde), sayisal ozet
+ * (KPI), inceleme ve gecmis.
  */
 final class ReportInfolist
 {
@@ -40,73 +45,74 @@ final class ReportInfolist
         $report = $schema->getRecord();
         $template = $report->template();
 
+        // Ust bolum: personel ayrintisindaki gibi genis kart + dar yan kutu.
         $components = [
-            Section::make(__('report.sections.report'))
-                ->icon(Heroicon::OutlinedDocumentChartBar)
-                ->columns(FieldGrid::COLUMNS)
-                ->components(FieldGrid::fields([
-                    TextEntry::make('report_no')->label(__('report.fields.report_no'))->badge()->color('gray'),
-                    TextEntry::make('status')->label(__('report.fields.status'))->badge(),
-                    TextEntry::make('kind')->label(__('report.fields.kind'))->badge(),
-                    TextEntry::make('template_name')
-                        ->label(__('report.fields.template'))
-                        ->state(fn (Report $record): string => $record->templateName()),
-                    TextEntry::make('author.full_name')->label(__('report.fields.author'))->icon(Heroicon::OutlinedUserCircle),
-                    TextEntry::make('authorOrgUnit.name')->label(__('report.fields.author_org_unit'))->placeholder('-'),
-                    self::subjectEntry(),
-                    TextEntry::make('period')
-                        ->label(__('report.fields.period'))
-                        ->state(fn (Report $record): ?string => $record->periodLabel())
-                        ->placeholder('-')
-                        ->icon(Heroicon::OutlinedCalendarDays),
-                    TextEntry::make('submitted_at')->label(__('report.fields.submitted_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
-                    TextEntry::make('reviewer.full_name')->label(__('report.fields.reviewer'))->placeholder(__('report.values.no_reviewer')),
-                    TextEntry::make('revision_count')
-                        ->label(__('report.fields.revision_count'))
-                        ->visible(fn (Report $record): bool => (int) $record->revision_count > 0),
-                    TextEntry::make('is_confidential')
-                        ->label(__('report.fields.confidential'))
-                        ->state(fn (): string => __('report.values.confidential'))
-                        ->badge()
-                        ->color('danger')
-                        ->icon(Heroicon::OutlinedLockClosed)
-                        ->visible(fn (Report $record): bool => $record->is_confidential),
-                ])),
+            Grid::make(['default' => 1, 'lg' => 4])->components([
+                app(CardGallery::class)
+                    ->reportDetailCard($report, self::subjectUrl($report))
+                    ->columnSpan(['default' => 1, 'lg' => 3]),
+                Section::make(__('report.sections.side'))
+                    ->icon(Heroicon::OutlinedClock)
+                    ->columnSpan(['default' => 1, 'lg' => 1])
+                    ->components([
+                        TextEntry::make('submitted_at')
+                            ->label(__('report.fields.submitted_at'))
+                            ->icon(Heroicon::OutlinedPaperAirplane)
+                            ->dateTime('d.m.Y H:i')
+                            ->placeholder('-'),
+                        TextEntry::make('reviewer.full_name')
+                            ->label(__('report.fields.reviewer'))
+                            ->icon(Heroicon::OutlinedUser)
+                            ->placeholder(__('report.values.no_reviewer')),
+                        TextEntry::make('reviewed_at')
+                            ->label(__('report.fields.reviewed_at'))
+                            ->icon(Heroicon::OutlinedCheckCircle)
+                            ->dateTime('d.m.Y H:i')
+                            ->placeholder('-')
+                            ->visible(fn (Report $record): bool => $record->reviewed_at !== null),
+                        TextEntry::make('revision_count')
+                            ->label(__('report.fields.revision_count'))
+                            ->icon(Heroicon::OutlinedArrowPath)
+                            ->visible(fn (Report $record): bool => (int) $record->revision_count > 0),
+                    ]),
+            ]),
         ];
 
-        $components[] = Section::make($template?->name() ?? __('report.sections.answers'))
+        // Cevaplar genis (3/4), sayisal ozet dar (1/4) - ust karttaki duzenle ayni.
+        $hasMetrics = $report->metrics->isNotEmpty() && $template !== null;
+
+        $answers = Section::make($template?->name() ?? __('report.sections.answers'))
             ->icon(Heroicon::OutlinedPencilSquare)
             ->columns(FieldGrid::COLUMNS)
+            ->columnSpan($hasMetrics ? ['default' => 1, 'lg' => 3] : ['default' => 1, 'lg' => 4])
             ->components($template !== null
                 ? FieldGrid::fields($template->infolistEntries())
                 : [TextEntry::make('missing_template')->label(__('report.fields.template'))->hiddenLabel()->state(__('report.values.template_missing'))->color('danger')]);
 
-        if ($template?->hasItems()) {
-            $components[] = self::boardSection();
-        }
-
-        if ($report->metrics->isNotEmpty() && $template !== null) {
-            $components[] = Section::make(__('report.sections.metrics'))
-                ->description(__('report.help.metrics'))
+        $metrics = $hasMetrics
+            ? Section::make(__('report.sections.metrics'))
                 ->icon(Heroicon::OutlinedChartBar)
-                ->columns(FieldGrid::COLUMNS)
+                ->columnSpan(['default' => 1, 'lg' => 1])
                 ->components($report->metrics->map(fn (ReportMetric $metric): TextEntry => TextEntry::make('metric_'.$metric->metric_code)
                     ->label($template->metricLabel((string) $metric->metric_code))
                     ->state(ReportFieldComponents::formatNumber($metric->metric_value, $metric->unit))
                     ->badge()
-                    ->color('info')
-                    ->columnSpan(FieldGrid::SHORT))->all());
+                    ->color('info'))->all())
+            : null;
+
+        $components[] = Grid::make(['default' => 1, 'lg' => 4])
+            ->components(array_values(array_filter([$answers, $metrics])));
+
+        if ($template?->hasItems()) {
+            $components[] = self::itemsSection($report);
         }
 
         $components[] = Section::make(__('report.sections.review'))
             ->icon(Heroicon::OutlinedClipboardDocumentCheck)
-            ->columns(FieldGrid::COLUMNS)
-            ->visible(fn (Report $record): bool => $record->reviewed_at !== null)
-            ->components(FieldGrid::fields([
-                TextEntry::make('reviewer.full_name')->label(__('report.fields.reviewer'))->placeholder('-'),
-                TextEntry::make('reviewed_at')->label(__('report.fields.reviewed_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
-                TextEntry::make('review_comment')->label(__('report.fields.review_comment'))->placeholder('-')->columnSpanFull(),
-            ]));
+            ->visible(fn (Report $record): bool => filled($record->review_comment))
+            ->components([
+                TextEntry::make('review_comment')->label(__('report.fields.review_comment'))->hiddenLabel()->placeholder('-')->columnSpanFull(),
+            ]);
 
         $components[] = Section::make(__('report.sections.history'))
             ->icon(Heroicon::OutlinedClipboardDocumentList)
@@ -133,20 +139,6 @@ final class ReportInfolist
         return $schema->columns(1)->components($components);
     }
 
-    /** Bagli kayit; kaydin goruntuleme sayfasina baglanti. */
-    private static function subjectEntry(): TextEntry
-    {
-        return TextEntry::make('subject')
-            ->label(fn (Report $record): string => $record->subject_kind === ReportSubjectKind::None
-                ? __('report.fields.subject')
-                : __('report.fields.subject_'.$record->subject_kind->value))
-            ->state(fn (Report $record): ?string => $record->subjectLabel())
-            ->placeholder('-')
-            ->icon(fn (Report $record): Heroicon => $record->subject_kind->getIcon())
-            ->color('primary')
-            ->url(fn (Report $record): ?string => self::subjectUrl($record))
-            ->visible(fn (Report $record): bool => $record->subject_kind !== ReportSubjectKind::None);
-    }
 
     private static function subjectUrl(Report $record): ?string
     {
@@ -175,62 +167,67 @@ final class ReportInfolist
         }
     }
 
-    /** Is panosu: her durum bir sutun. */
-    private static function boardSection(): Section
+    /**
+     * Isler: her durum bir sekme, sekmede o durumun isleri tablo halinde
+     * (kullanici istegi, 23 Eylul 2026; onceki sutunlu pano kaldirildi).
+     */
+    private static function itemsSection(Report $report): Section
     {
-        $columns = [];
+        $tabs = [];
 
-        foreach (ReportItemStatus::cases() as $status) {
-            $columns[] = Section::make($status->getLabel())
+        foreach (ReportItemStatus::available() as $status) {
+            $rows = $report->items->where('status', $status);
+
+            $tabs[] = Tab::make($status->getLabel())
                 ->icon($status->getIcon())
-                ->compact()
-                ->components([
-                    TextEntry::make('count_'.$status->value)
-                        ->label($status->getLabel())
-                        ->hiddenLabel()
-                        ->state(fn (Report $record): string => __('report.values.item_count', ['count' => $record->items->where('status', $status)->count()]))
-                        ->badge()
-                        ->color($status->getColor()),
+                ->badge($rows->count() ?: null)
+                ->badgeColor($status->getColor())
+                ->schema([
                     RepeatableEntry::make('items_'.$status->value)
-                        ->label($status->getLabel())
                         ->hiddenLabel()
-                        ->state(fn (Report $record): array => $record->items->where('status', $status)->values()->all())
-                        ->placeholder(__('report.values.no_items'))
+                        ->state(fn (Report $record): array => $record->items
+                            ->where('status', $status)
+                            ->map(fn (ReportItem $item): array => [
+                                'title' => (string) $item->title,
+                                'project' => $item->project?->name,
+                                'hours' => ReportFieldComponents::formatNumber($item->work_hours, __('report.values.hours')),
+                                'description' => $item->description,
+                                'tag' => self::itemTag($item),
+                            ])
+                            ->values()
+                            ->all())
+                        ->table([
+                            TableColumn::make(__('report.items.title')),
+                            TableColumn::make(__('report.items.project')),
+                            TableColumn::make(__('report.items.work_hours')),
+                            TableColumn::make(__('report.items.description')),
+                            TableColumn::make(__('report.items.tag')),
+                        ])
                         ->schema([
-                            TextEntry::make('title')->label(__('report.items.title'))->hiddenLabel()->weight('semibold'),
-                            TextEntry::make('project.name')
-                                ->label(__('report.items.project'))
-                                ->hiddenLabel()
-                                ->icon(Heroicon::OutlinedBriefcase)
-                                ->color('gray')
-                                ->visible(fn (ReportItem $record): bool => $record->project_id !== null),
-                            TextEntry::make('work_hours')
-                                ->label(__('report.items.work_hours'))
-                                ->hiddenLabel()
-                                ->icon(Heroicon::OutlinedClock)
-                                ->color('gray')
-                                ->formatStateUsing(fn ($state): ?string => ReportFieldComponents::formatNumber($state, __('report.values.hours')))
-                                ->visible(fn (ReportItem $record): bool => $record->work_hours !== null),
-                            TextEntry::make('description')
-                                ->label(__('report.items.description'))
-                                ->hiddenLabel()
-                                ->color('gray')
-                                ->visible(fn (ReportItem $record): bool => filled($record->description)),
-                            TextEntry::make('carried')
-                                ->label(__('report.values.carried_over'))
-                                ->hiddenLabel()
-                                ->state(fn (): string => __('report.values.carried_over'))
-                                ->badge()
-                                ->color('warning')
-                                ->visible(fn (ReportItem $record): bool => $record->carried_from_item_id !== null),
-                        ]),
+                            TextEntry::make('title')->weight('medium'),
+                            TextEntry::make('project')->color('gray')->placeholder('–'),
+                            TextEntry::make('hours')->color('gray')->placeholder('–'),
+                            TextEntry::make('description')->color('gray')->placeholder('–'),
+                            TextEntry::make('tag')->badge()->color('warning')->placeholder('–'),
+                        ])
+                        ->placeholder(__('report.values.no_items')),
                 ]);
         }
 
         return Section::make(__('report.sections.board'))
-            ->icon(Heroicon::OutlinedViewColumns)
+            ->icon(Heroicon::OutlinedListBullet)
             ->components([
-                Grid::make(['default' => 1, 'md' => 2, 'xl' => 4])->components($columns),
+                Tabs::make('report-items')->id('report-items')->persistTab()->contained(false)->tabs($tabs),
             ]);
+    }
+
+    /** Devreden / sonradan eklenen kalem isareti. */
+    private static function itemTag(ReportItem $item): ?string
+    {
+        if ((bool) $item->getAttribute('is_late')) {
+            return __('report.values.added_late');
+        }
+
+        return $item->carried_from_item_id !== null ? __('report.values.carried_over') : null;
     }
 }

@@ -19,6 +19,7 @@ use App\Query\Personnel\PersonnelQueries;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Reports\ReportTemplate;
+use App\Reports\Templates\DailyControlReportTemplate;
 use App\Services\Authorization\PermissionKey;
 use App\Services\Authorization\RoleResolver;
 use App\Services\Platform\SchemaReadiness;
@@ -138,7 +139,7 @@ final class ReportQueries
      */
     public function canAuthorTemplate(ReportTemplate $template, Personnel $personnel): bool
     {
-        if (! $personnel->isActive()) {
+        if (! $personnel->isActive() || ! $template->isManualEntry()) {
             return false;
         }
 
@@ -255,6 +256,53 @@ final class ReportQueries
         }
 
         return $query->orderByDesc('id')->first();
+    }
+
+    /**
+     * Kontrol matrisinin bir hucresi (B36, D-115; gunluk: D-116): kisi +
+     * bolum + gun icin yazilmis kontrol raporu.
+     */
+    public function controlReport(string $section, int $subjectPersonnelId, string $day): ?Report
+    {
+        return Report::query()
+            ->where('template_code', DailyControlReportTemplate::CODE)
+            ->where('subject_personnel_id', $subjectPersonnelId)
+            ->whereDate('period_start', $day)
+            ->where('payload->section', $section)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * Rapor iletilebilecek kisiler (23 Eylul 2026 kullanici istegi): yazarin
+     * amirleri, departman yoneticileri ve ust yonetim. Yazarin kendisi ve su
+     * anki inceleyen listede yer almaz.
+     *
+     * @return array<int, string>
+     */
+    public function forwardOptions(Report $report): array
+    {
+        $exclude = array_filter([
+            $report->author_personnel_id !== null ? (int) $report->author_personnel_id : null,
+            $report->reviewer_personnel_id !== null ? (int) $report->reviewer_personnel_id : null,
+        ]);
+
+        $managerIds = ReportingRelationship::query()
+            ->whereNull('valid_until')
+            ->pluck('manager_personnel_id');
+        $unitManagerIds = OrgUnit::query()->whereNotNull('manager_personnel_id')->pluck('manager_personnel_id');
+
+        return Personnel::query()
+            ->where('status', 'active')
+            ->whereKeyNot($exclude)
+            ->where(function (Builder $query) use ($managerIds, $unitManagerIds): void {
+                $query->whereIn('id', $managerIds)
+                    ->orWhereIn('id', $unitManagerIds);
+            })
+            ->orderBy('full_name')
+            ->pluck('full_name', 'id')
+            ->map(fn ($name): string => (string) $name)
+            ->all();
     }
 
     /** Yazarin bu taslakla yazdigi son rapor (en yeni donem). */

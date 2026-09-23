@@ -65,6 +65,8 @@ final class SchemaReadiness
         'B33' => 'party_activity_areas',               // Faaliyet alanlari, koken, rakip, Dernek tipi
         'B34' => 'meeting_plan_reminders',             // Gorusme plani (grubun en son olusan tablosu)
         'B35' => 'exports',                            // Tablo disa aktarimi (Filament Excel)
+        'B36' => 'report_items.is_late',               // Is panosu (grubun son degisikligi)
+        'B37' => 'work_items.requester_kind',          // Is kartinda talep eden
     ];
 
     /** @var array<string, bool> */

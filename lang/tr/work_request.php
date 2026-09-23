@@ -71,7 +71,7 @@ return [
     'help' => [
         'description_links' => 'Bağlantıları (örneğin bir sayfa ya da dosya adresi) doğrudan buraya yapıştırabilirsiniz; talepte tıklanabilir olur.',
         'send_to_approval' => 'Onay merciini seçin. Muhatap işi tamamladığında talep bu kişiye onaya gider; onaylanınca kapanır, reddedilirse muhataba geri döner. Onay mercii talep eden ya da muhatap olamaz.',
-        'history' => 'Bu talep üzerinde kim, ne zaman, ne yaptı; en yeni kayıt üstte.',
+        'history' => 'Bu talep üzerinde kim, ne zaman, ne yaptı',
         'thread' => 'Talep ilk mesajdır; verdiğiniz cevaplar sırayla altında görünür. Talebin tarafları (kimden, kime, sorumlu, onay mercii) yazışabilir.',
         'forward' => 'Talep sizinle ilgili değilse başka bir kişiye ya da departmana devredin. Gerekçe zorunludur; yönlendirme yazışmada ve geçmişte görünür.',
         'accept' => 'Talebi üstlendiğinizi talep edene bildirir; talep "devam ediyor" durumuna geçer.',

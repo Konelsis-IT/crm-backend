@@ -10,7 +10,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Component;
@@ -28,13 +31,15 @@ final class ReportFieldComponents
     {
         $component = match ($field->type) {
             ReportField::TEXT => TextInput::make($field->name)->maxLength(200),
-            ReportField::LONG_TEXT => Textarea::make($field->name)->rows($field->rows)->maxLength(8000),
+            ReportField::LONG_TEXT, ReportField::LINES => Textarea::make($field->name)->rows($field->rows)->maxLength(8000),
             ReportField::INTEGER => self::numeric($field, integer: true),
             ReportField::DECIMAL, ReportField::PERCENT => self::numeric($field, integer: false),
-            ReportField::RATING => Select::make($field->name)->options(self::ratingOptions())->native(false),
-            ReportField::CHOICE => Select::make($field->name)
+            // Secim ve puan: acilir kutu yerine dugme grubu (tek tiklamayla
+            // secilir, durumu her zaman sunucuya yazilir).
+            ReportField::RATING => ToggleButtons::make($field->name)->options(self::ratingOptions())->inline(),
+            ReportField::CHOICE => ToggleButtons::make($field->name)
                 ->options(self::choiceOptions($template, $field))
-                ->native(false),
+                ->inline(),
             ReportField::KEY_VALUE => KeyValue::make($field->name)
                 ->keyLabel(__('report.fields.metric_key'))
                 ->valueLabel(__('report.fields.metric_value'))
@@ -68,6 +73,13 @@ final class ReportFieldComponents
 
         $entry = match ($field->type) {
             ReportField::LONG_TEXT => TextEntry::make($name)->placeholder('-')->columnSpanFull(),
+            // Plan alani: her satir bir is, tablo halinde (kullanici istegi).
+            ReportField::LINES => RepeatableEntry::make($name)
+                ->state(fn ($record): array => self::lineRows(data_get($record, $name)))
+                ->table([TableColumn::make($template->label($field->name))])
+                ->schema([TextEntry::make('line')->hiddenLabel()])
+                ->placeholder('-')
+                ->columnSpanFull(),
             ReportField::INTEGER, ReportField::DECIMAL, ReportField::PERCENT => TextEntry::make($name)
                 ->placeholder('-')
                 ->formatStateUsing(fn ($state): ?string => self::formatNumber($state, $field->suffix)),
@@ -154,6 +166,21 @@ final class ReportFieldComponents
     /**
      * @return array<string, string>
      */
+    /**
+     * Cok satirli metni tablo satirlarina cevirir.
+     *
+     * @return list<array{line: string}>
+     */
+    private static function lineRows(mixed $value): array
+    {
+        $lines = preg_split('/\r?\n/', trim((string) $value)) ?: [];
+
+        return array_values(array_map(
+            static fn (string $line): array => ['line' => trim($line, " \t-•")],
+            array_filter($lines, static fn (string $line): bool => trim($line) !== ''),
+        ));
+    }
+
     private static function choiceOptions(ReportTemplate $template, ReportField $field): array
     {
         $options = [];

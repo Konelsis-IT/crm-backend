@@ -95,6 +95,16 @@ return [
         'duplicate_period_report' => 'Bu dönem için zaten bir raporunuz var: :no',
         'review_comment_required' => 'Revizyon ve ret için açıklama zorunludur.',
         'report_locked' => 'Rapor bu durumda değiştirilemez: :status',
+        // Is panosu (B36, D-115)
+        'control_section_not_found' => 'Kontrol bölümü bulunamadı.',
+        'day_already_closed' => 'Bu gün kapatıldı: :no. Sonradan eklenen kartlar rapora kendiliğinden eklenir.',
+        'week_already_closed' => 'Bu hafta kapatıldı: :no.',
+        'waiting_source_required' => 'Bekleniyor durumundaki kartta işin bekleme sebebi seçilmelidir.',
+        'invalid_parent' => 'Ana iş olarak kartın kendisi, bir alt kart ya da alt kartı olan kartın altı seçilemez.',
+        'suggestion_unavailable' => 'Bu öneri artık kullanılamıyor; karta dönmüş ya da yoksayılmış olabilir.',
+        'linked_record_not_found' => 'Bağlı kayıt bulunamadı.',
+        'assignee_not_allowed' => 'Başkasına kart yazmak için o kişinin amiri ya da yetkili olmalısınız.',
+        'week_summary_required' => 'Haftayı kapatmak için haftanın özetini yazın.',
     ],
     // Sosyal Medya (B31). Yer tutucular: urgent_not_allowed :days, urgent_cooldown :hours,
     // image_too_large :max (megapiksel), file_too_large ve body_too_large :max (okunur boyut, örn. "25 MB").

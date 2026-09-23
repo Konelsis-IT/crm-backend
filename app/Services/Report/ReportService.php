@@ -12,6 +12,7 @@ use App\Enums\Report\ReportStatus;
 use App\Exceptions\ActorRequiredException;
 use App\Exceptions\InvalidTransitionException;
 use App\Exceptions\Report\AuthorNotAllowedException;
+use App\Exceptions\Report\ControlSectionNotFoundException;
 use App\Exceptions\Report\DuplicatePeriodReportException;
 use App\Exceptions\Report\InvalidPeriodException;
 use App\Exceptions\Report\PeriodRequiredException;
@@ -27,10 +28,13 @@ use App\Query\Report\ReportQueries;
 use App\Reports\ReportField;
 use App\Reports\ReportTemplate;
 use App\Reports\ReportTemplateRegistry;
+use App\Reports\Templates\DailyControlReportTemplate;
+use App\Reports\Work\ControlSectionCatalog;
 use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Notification\PanelNotifier;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Filament\Actions\Action;
@@ -219,6 +223,165 @@ final class ReportService extends AbstractService
     public function reject(Model|int|string $record, ?string $comment): Report
     {
         return $this->decide($record, ReportStatus::Rejected, 'rejected', $comment, commentRequired: true);
+    }
+
+    /**
+     * Kontrol matrisi (B36, D-115; gunluk doldurma D-116): bir bolumun bir
+     * gununu kaydeder. Kisi basina (bolum + gun) tek kontrol raporu vardir;
+     * yoksa gonderilmis olarak acilir, varsa isaretleri ve aciklamasi
+     * guncellenir. Isaretsiz ve aciklamasiz satir rapor acmaz. Rapor
+     * formundan duzenlenmez; matris sahibidir. Haftalik gorunum bu gunluk
+     * raporlarin toplamidir.
+     *
+     * @param  list<array{personnel_id: int, marks: array<string, string>, note: string|null}>  $rows
+     * @return array{created: int, updated: int}
+     */
+    public function saveControlSheet(string $section, string $day, array $rows): array
+    {
+        $me = $this->actorPersonnel();
+        $template = $this->templates->get(DailyControlReportTemplate::CODE);
+        $catalog = app(ControlSectionCatalog::class);
+
+        if (! $catalog->has($section)) {
+            throw ControlSectionNotFoundException::make();
+        }
+
+        $start = Carbon::parse($day)->startOfDay();
+        $end = $start->copy();
+        $criteria = $catalog->manualCriteria($section);
+        $sectionLabel = $catalog->sectionLabel($section);
+
+        return $this->transactions->run(function () use ($rows, $me, $template, $catalog, $section, $sectionLabel, $start, $end, $criteria): array {
+            $created = 0;
+            $updated = 0;
+
+            foreach ($rows as $row) {
+                $subjectId = (int) ($row['personnel_id'] ?? 0);
+                $subject = $subjectId > 0 ? Personnel::query()->find($subjectId) : null;
+
+                if (! $subject instanceof Personnel) {
+                    continue;
+                }
+
+                $marks = [];
+
+                foreach ($criteria as $criterion) {
+                    $mark = $row['marks'][$criterion] ?? null;
+
+                    if (in_array($mark, ['ok', 'bad'], true)) {
+                        $marks[$criterion] = $mark;
+                    }
+                }
+
+                $note = trim((string) ($row['note'] ?? ''));
+                $note = $note === '' ? null : mb_substr($note, 0, 1000);
+                $existing = $this->queries->controlReport($section, $subjectId, $start->format('Y-m-d'));
+
+                if ($marks === [] && $note === null && $existing === null) {
+                    continue;
+                }
+
+                $results = [];
+
+                foreach ($marks as $criterion => $mark) {
+                    $results[$catalog->criterionLabel($criterion)] = (string) __('work_item.control.marks.'.$mark);
+                }
+
+                $payload = [
+                    'section' => $section,
+                    'section_label' => $sectionLabel,
+                    'marks' => $marks,
+                    'results' => $results,
+                    'note' => $note,
+                ];
+
+                if ($existing instanceof Report) {
+                    /** @var Report $report */
+                    $report = $this->lockForUpdate($existing);
+                    $before = $report->payload ?? [];
+                    $report->fill(['payload' => $payload, 'summary' => $note])->save();
+                    $this->writeMetrics($report, $template);
+
+                    if (($before['marks'] ?? []) !== $marks || ($before['note'] ?? null) !== $note) {
+                        $this->recordActivity($report, 'control_updated', array_filter([
+                            'rapor_no' => $report->report_no,
+                            'bolum' => $sectionLabel,
+                            'uygun' => count(array_filter($marks, static fn (string $mark): bool => $mark === 'ok')).' / '.count($marks),
+                            'aciklama' => $note,
+                        ], static fn ($value): bool => $value !== null));
+                    }
+
+                    $updated++;
+
+                    continue;
+                }
+
+                /** @var Report $report */
+                $report = parent::create([
+                    'report_no' => 'RPR-TMP-'.bin2hex(random_bytes(6)),
+                    'template_code' => $template->code(),
+                    'kind' => $template->kind()->value,
+                    'subject_kind' => $template->subjectKind()->value,
+                    'subject_personnel_id' => $subjectId,
+                    'is_confidential' => true,
+                    'status' => ReportStatus::Submitted->value,
+                    'submitted_at' => Carbon::now('UTC'),
+                    'author_personnel_id' => (int) $me->getKey(),
+                    'author_org_unit_id' => $me->org_unit_id !== null ? (int) $me->org_unit_id : null,
+                    'period_start' => $start->format('Y-m-d'),
+                    'period_end' => $end->format('Y-m-d'),
+                    'title' => mb_substr(implode(' · ', [$template->name(), $sectionLabel, (string) $subject->full_name, $start->format('d.m.Y')]), 0, 200),
+                    'summary' => $note,
+                    'payload' => $payload,
+                ]);
+
+                $report->forceFill(['report_no' => sprintf('RPR-%06d', (int) $report->getKey())])->save();
+                $this->writeMetrics($report, $template);
+                $created++;
+            }
+
+            return ['created' => $created, 'updated' => $updated];
+        });
+    }
+
+    /**
+     * Raporu baska bir yoneticiye iletir (23 Eylul 2026 kullanici istegi):
+     * yeni inceleyen atanir, rapor yeniden "gonderildi" durumuna gecer ve
+     * hedefe bildirim gider. Onceki karar ve yorum gecmiste kalir.
+     */
+    public function forward(Model|int|string $record, int $reviewerId, ?string $comment = null): Report
+    {
+        return $this->transactions->run(function () use ($record, $reviewerId, $comment): Report {
+            /** @var Report $report */
+            $report = $this->lockForUpdate($record);
+            $reviewer = Personnel::query()->find($reviewerId);
+
+            if (! $reviewer instanceof Personnel || (int) $reviewer->getKey() === (int) $report->author_personnel_id) {
+                throw AuthorNotAllowedException::make();
+            }
+
+            $previous = $report->reviewer?->full_name;
+
+            $report->fill([
+                'status' => ReportStatus::Submitted->value,
+                'reviewer_personnel_id' => (int) $reviewer->getKey(),
+                'reviewed_at' => null,
+                'review_comment' => filled($comment) ? trim((string) $comment) : null,
+            ])->save();
+
+            $report->load($this->with);
+
+            $this->recordActivity($report, 'forwarded', array_filter([
+                'rapor_no' => $report->report_no,
+                'onceki_inceleyen' => $previous,
+                'yeni_inceleyen' => $reviewer->full_name,
+                'aciklama' => filled($comment) ? trim((string) $comment) : null,
+            ], static fn ($value): bool => $value !== null));
+
+            $this->notify($report, collect([$reviewer]), 'forwarded');
+
+            return $report;
+        });
     }
 
     /** Yalniz taslak silinir; kalemler ve metrikler birlikte gider. */
@@ -499,7 +662,7 @@ final class ReportService extends AbstractService
                 : (ReportItemStatus::tryFrom((string) ($rawStatus ?? '')) ?? ReportItemStatus::Planned);
             $hours = $row['work_hours'] ?? null;
 
-            $items[] = [
+            $item = [
                 'id' => filled($row['id'] ?? null) ? (int) $row['id'] : null,
                 'sort_order' => $order++,
                 'title' => mb_substr($title, 0, 200),
@@ -510,6 +673,14 @@ final class ReportService extends AbstractService
                 'due_on' => filled($row['due_on'] ?? null) ? Carbon::parse((string) $row['due_on'])->format('Y-m-d') : null,
                 'carried_from_item_id' => filled($row['carried_from_item_id'] ?? null) ? (int) $row['carried_from_item_id'] : null,
             ];
+
+            // Is panosundan dondurulan kalem kaynak kartini tasir (B36, D-115).
+            if (SchemaReadiness::hasBatch('B36') && (array_key_exists('work_item_id', $row) || array_key_exists('is_late', $row))) {
+                $item['work_item_id'] = filled($row['work_item_id'] ?? null) ? (int) $row['work_item_id'] : null;
+                $item['is_late'] = (bool) ($row['is_late'] ?? false);
+            }
+
+            $items[] = $item;
         }
 
         return $items;

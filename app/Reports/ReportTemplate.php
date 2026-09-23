@@ -76,6 +76,16 @@ abstract class ReportTemplate
         return false;
     }
 
+    /**
+     * Personel bu taslagi Raporlar > Yeni rapor formundan secebilir mi? Is
+     * panosunun urettigi taslaklar (kontrol matrisi, pano dondurmasi) yalniz
+     * kendi sayfalarindan yazilir (B36, D-115).
+     */
+    public function isManualEntry(): bool
+    {
+        return true;
+    }
+
     /** Pano is kalemleri (report_items) bu taslakta var mi? */
     public function hasItems(): bool
     {

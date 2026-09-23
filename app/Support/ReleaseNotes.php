@@ -42,6 +42,20 @@ final class ReleaseNotes
                 'version' => '1.10',
                 'date' => '22.09.2026',
                 'groups' => [
+                    self::FEATURES => [
+                        'Raporlar > İş panosu: kendi kartların (Panom), ekibin, bir projenin ya da tüm projelerin (Yönetim) kartları beş durum sütununda. Kartlar sürükle-bırak ile taşınıyor (Bekleniyor\'a bırakınca kimden beklendiği, Tamamlandı\'ya bırakınca saat soruluyor, Geri al var); süzgeçler sayı gösteriyor ve pano tipiyle birlikte hatırlanıyor. Sistemde yaptığınız işler (teklif, ihale ilanı, belge, tedarik, talep, görüşme...) "Sistemden gelen öneriler" olarak geliyor; tek tıkla kart oluyor ya da yoksayılıyor.',
+                        'Günü kapat ve Haftayı kapat: günün / haftanın kartları raporlara donmuş olarak yazılıyor; engeller ve plan kartlardan önceden doluyor, plana eklenen satır ertesi günün panosuna kart olarak düşüyor. Haftalık raporu amir inceliyor.',
+                        'Raporlar > İşler: bütün kartların tablosu (süzgeç, gruplama, toplu durum / proje / kritik, Excel); kart detayında süreler ve geçmiş. Personel kartında İşler sekmesi; Haftalık kontrol ve Personel Hareketleri sekmelerini yalnız üst yönetim (yönetim kurulu başkanı ve idari müdür) görüyor.',
+                        'Raporlar > Kontrol matrisi: bölüm sekmeleriyle personel × kriter çizelgesi günlük dolduruluyor; doldurma yalnız İnsan Kaynakları\'nda. Üst yönetim aynı ekranı salt okunur görüyor ve Haftalık görünümde haftanın toplamını okuyor: yalnız uygun olmayanlar sayısıyla (örneğin "Soft kayıtlar ✗4") yazılıyor, açıklama sütunu o haftanın bütün günlük açıklamalarını gösteriyor. Haftalık rapor sütunu sistemden geliyor.',
+                        'Analizler > İş raporları (yalnız üst yönetim): Analiz panosu (harcanan saat, iş süresi, bekleme payı, termin uyumu, günü kapatma, açık kritik iş; önceki ayla karşılaştırmalı) ve Süre raporu (ana iş satırı açılıp kapanıyor, alt kartların sürelerini topluyor).',
+                        'Organizasyon Birimleri ve Pozisyonlar listelerinde satıra tıklanınca detay sayfası açılıyor; birimin altında bağlı personel, pozisyonun altında o göreve atanan personel sekmede listeleniyor.',
+                        'İş panosu tek ekrana indi: Panom / Ekip / Proje / Yönetim sekmeleri yerine "Kapsam" süzgeci (Kendi kartlarım, Ekibim, Tüm şirket) var; departman ve proje süzgeçleri her kapsamda çalışıyor, yönettiğiniz projeyi seçince o projedeki bütün kartlar geliyor. "Günü kapat" ve "Haftayı kapat" düğmeleri artık "Günlük rapora dönüştür" ve "Haftalık rapora dönüştür".',
+                        'Yazdığınız rapor iş panosuna öneri olarak düşüyor; rapor oluştururken taslak ikonlu kartlardan seçiliyor ve seçim alanları tek tıklamayla işaretlenen düğmelere dönüştü.',
+                        'Rapor detayı personel detayı gibi kompakt: üstte rapor kartı, yanında gönderim ve inceleme kutusu; günlük ve haftalık raporda işler durum sekmelerinde tablo halinde, yarın / hafta planı da tablo.',
+                        'Sistem yönetimi hesabı artık personel listelerinde ve arama kutularında görünmüyor; bu hesapla girildiğinde kullanıcı menüsünden istenen personelin ekranına geçilebiliyor ve "Kendi hesabıma dön" ile çıkılıyor.',
+                        'Panel artık "Genel bakış": yaklaşan tarihler ve duyurular yan yana, altında bugün ve yarın yapılacak işleriniz tablo halinde. Sol menüdeki gruplar kapalı başlıyor, tıklayınca açılıyor.',
+                        'Günlük, haftalık ve aylık çalışma raporu artık Raporlar > Rapor oluştur ekranından seçilmiyor; bu raporları İş panosundaki Günü kapat ve Haftayı kapat üretiyor.',
+                    ],
                     self::FIXES => [
                         'Ekrandaki saatler İstanbul saatine göre gösteriliyor (önceki 3 saat geri görünüyordu). Kayıtlar, Excel ve PDF\'teki saatler ve "bugün" hesapları da İstanbul gününe göre.',
                     ],

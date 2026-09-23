@@ -95,6 +95,16 @@ return [
         'duplicate_period_report' => 'You already have a report for this period: :no',
         'review_comment_required' => 'A note is required for revision and rejection.',
         'report_locked' => 'The report cannot be changed in this status: :status',
+        // Work board (B36, D-115)
+        'control_section_not_found' => 'Control section not found.',
+        'day_already_closed' => 'This day is closed: :no. Cards added later join the report automatically.',
+        'week_already_closed' => 'This week is closed: :no.',
+        'waiting_source_required' => 'Choose who a waiting card is waiting on.',
+        'invalid_parent' => 'A card cannot be its own parent job, nor be placed under a child card or under a card that has children.',
+        'suggestion_unavailable' => 'This suggestion is no longer available; it may have become a card or been dismissed.',
+        'linked_record_not_found' => 'The linked record was not found.',
+        'assignee_not_allowed' => 'You must be the person\'s manager or authorised to write a card for someone else.',
+        'week_summary_required' => 'Write the summary of the week to close it.',
     ],
     // Social Media (B31). Placeholders: urgent_not_allowed :days, urgent_cooldown :hours,
     // image_too_large :max (megapixels), file_too_large and body_too_large :max (readable size, e.g. "25 MB").

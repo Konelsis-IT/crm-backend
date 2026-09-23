@@ -8,6 +8,9 @@ use App\Enums\Personnel\PositionStatus;
 use App\Exceptions\StaleRecordException;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\Positions\Pages\ListPositions;
+use App\Filament\Resources\Positions\Pages\ViewPosition;
+use App\Filament\Resources\Positions\RelationManagers\PositionPersonnelRelationManager;
+use App\Filament\Resources\Positions\Schemas\PositionInfolist;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Position;
@@ -16,6 +19,7 @@ use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -57,6 +61,11 @@ class PositionResource extends Resource
         return FeatureFlags::enabled('personnel.admin_ui')
             && SchemaReadiness::hasBatch('B03')
             && parent::canAccess();
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return PositionInfolist::make($schema);
     }
 
     public static function form(Schema $schema): Schema
@@ -143,7 +152,9 @@ class PositionResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
+            ->recordUrl(fn (Position $record): string => ViewPosition::getUrl(['record' => $record]))
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make()
                     ->using(function (Position $record, array $data): Model {
                         try {
@@ -159,10 +170,19 @@ class PositionResource extends Resource
             ->defaultSort('title');
     }
 
+    /** Bu kadroya atanan personel (D-116). */
+    public static function getRelations(): array
+    {
+        return [
+            PositionPersonnelRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => ListPositions::route('/'),
+            'view' => ViewPosition::route('/{record}'),
         ];
     }
 }

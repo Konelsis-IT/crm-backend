@@ -8,6 +8,7 @@ use App\Enums\Report\ReportAuthorRule;
 use App\Enums\Report\ReportItemStatus;
 use App\Enums\Report\ReportPeriodMode;
 use App\Enums\Report\ReportSubjectKind;
+use App\Filament\Forms\Components\CardPicker;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
@@ -20,7 +21,6 @@ use App\Support\DisplayTime;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
@@ -54,14 +54,27 @@ final class ReportForm
                 ->icon(Heroicon::OutlinedDocumentChartBar)
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    Select::make('template_code')
+                    // Taslak secimi: ikonlu kucuk kartlar (kullanici istegi,
+                    // 23 Eylul 2026). Secilen taslagin alanlari asagida acilir.
+                    // Var olan rapor duzenlenirken kendi taslagi listede kalir;
+                    // yeni raporda yalniz elle yazilabilen taslaklar secilir (D-117).
+                    CardPicker::make('template_code')
                         ->label(__('report.fields.template'))
-                        ->options(fn (): array => $viewer !== null
-                            ? $registry->options(fn (ReportTemplate $candidate): bool => $queries->canAuthorTemplate($candidate, $viewer))
-                            : [])
+                        ->cards(fn (?Report $record): array => $viewer === null ? [] : array_map(
+                            fn (ReportTemplate $candidate): array => [
+                                'value' => $candidate->code(),
+                                'label' => $candidate->name(),
+                                'description' => $candidate->description(),
+                                'icon' => $candidate->icon(),
+                            ],
+                            array_values(array_filter(
+                                $registry->all(),
+                                fn (ReportTemplate $candidate): bool => ($record !== null && $candidate->code() === $record->template_code)
+                                    || $queries->canAuthorTemplate($candidate, $viewer),
+                            )),
+                        ))
                         ->required()
                         ->live()
-                        ->native(false)
                         ->disabled(fn (?Report $record): bool => $record !== null)
                         ->dehydrated()
                         ->afterStateUpdated(function (Set $set, Get $get) use ($template): void {
@@ -72,12 +85,7 @@ final class ReportForm
                             $set('period_start', $current !== null && $current->periodMode()->isCalendarUnit() ? Carbon::today(DisplayTime::zone())->format('Y-m-d') : null);
                             $set('period_end', null);
                         })
-                        ->columnSpan(FieldGrid::NORMAL),
-                    Placeholder::make('template_help')
-                        ->label(__('report.fields.template_help'))
-                        ->content(fn (Get $get): string => (string) ($template($get)?->description() ?? ''))
-                        ->visible(fn (Get $get): bool => filled($template($get)?->description()))
-                        ->columnSpan(FieldGrid::HALF),
+                        ->columnSpanFull(),
                     TextInput::make('title')
                         ->label(__('report.fields.title'))
                         ->maxLength(200)
@@ -172,7 +180,7 @@ final class ReportForm
                     ->maxLength(200),
                 Select::make('status')
                     ->label(__('report.items.status'))
-                    ->options(ReportItemStatus::class)
+                    ->options(ReportItemStatus::availableOptions())
                     ->default(ReportItemStatus::Planned->value)
                     ->required()
                     ->native(false),

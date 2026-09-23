@@ -19,6 +19,7 @@ use App\Models\Party\PartyActivityArea;
 use App\Models\Party\PartyRole;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
+use App\Models\Report\Report;
 use App\Query\Project\ProjectStepReadiness;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
@@ -566,6 +567,41 @@ final class CardGallery
      * @param  list<TextEntry>  $entries
      * @param  list<Action|null>  $actions
      */
+    /**
+     * Rapor ayrinti karti (kullanici istegi, 23 Eylul 2026): personel
+     * ayrintisiyla ayni satir kart bicimi - rapor no ve basligi, durum
+     * rozeti, taslak / tur / gizlilik rozetleri, yazan, konu, donem ve
+     * gonderim bilgileri.
+     */
+    public function reportDetailCard(Report $report, ?string $subjectUrl = null): Component
+    {
+        $template = $report->template();
+
+        return $this->card(
+            variant: self::VARIANT_ROW,
+            title: (string) ($report->title ?: $report->templateName()),
+            subtitle: (string) $report->report_no,
+            mediaUrl: null,
+            mediaIcon: $template?->icon() ?? Heroicon::OutlinedDocumentChartBar,
+            mediaColor: 'primary',
+            status: Text::make($report->status->getLabel())->badge()->color($report->status->getColor()),
+            badges: array_values(array_filter([
+                Text::make($report->templateName())->badge()->color('gray')->icon(Heroicon::OutlinedDocumentText),
+                Text::make($report->kind->getLabel())->badge()->color('gray'),
+                $report->is_confidential
+                    ? Text::make(__('report.values.confidential'))->badge()->color('danger')->icon(Heroicon::OutlinedLockClosed)
+                    : null,
+            ])),
+            entries: [
+                $this->entry('author', __('report.fields.author'), (string) ($report->author?->full_name ?: '-'), Heroicon::OutlinedUserCircle, 'primary'),
+                $this->entry('subject', __('report.fields.subject'), (string) ($report->subjectLabel() ?: '-'), $report->subject_kind->getIcon(), 'warning', $subjectUrl),
+                $this->entry('period', __('report.fields.period'), (string) ($report->periodLabel() ?: '-'), Heroicon::OutlinedCalendarDays, 'success'),
+                $this->entry('unit', __('report.fields.author_org_unit'), (string) ($report->authorOrgUnit?->name ?: '-'), Heroicon::OutlinedBuildingOffice2, 'gray'),
+            ],
+            actions: [],
+            detail: true,
+        );
+    }
     private function card(
         string $variant,
         string $title,

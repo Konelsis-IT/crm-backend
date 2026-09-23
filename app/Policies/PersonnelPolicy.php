@@ -31,6 +31,16 @@ final class PersonnelPolicy
         return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
+    /**
+     * Personel kartindaki Personel Hareketleri sekmesi (D-116, kullanici
+     * karari): yalniz ust yonetim gorur (kendi karti dahil); baska hic kimse
+     * gormez.
+     */
+    public function viewActivities(Personnel $personnel, Personnel $record): bool
+    {
+        return $this->view($personnel, $record) && $this->seesCompanyWide($personnel);
+    }
+
     public function changeStatus(Personnel $personnel, Personnel $record): bool
     {
         return ($this->hasFullAccess($personnel) || $this->permits($personnel, 'changeStatus')) && ! $personnel->is($record);

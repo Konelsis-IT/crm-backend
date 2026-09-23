@@ -13,6 +13,8 @@ use App\Models\Report\Report;
 use App\Services\Report\ReportService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use App\Query\Report\ReportQueries;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Icons\Heroicon;
@@ -55,6 +57,33 @@ class ViewReport extends ViewRecord
                 ->requiresConfirmation()
                 ->visible(fn (): bool => Gate::allows('withdraw', $this->getRecord()))
                 ->action(fn () => $this->run(fn (ReportService $service) => $service->withdraw($this->getRecord()), 'withdrawn')),
+            // Raporu ust amire ya da secilen yoneticiye ilet (23 Eylul 2026
+            // kullanici istegi): yeni inceleyen atanir, rapor yeniden karar
+            // bekler ve hedefe bildirim gider.
+            Action::make('forward')
+                ->label(__('report.actions.forward'))
+                ->icon(Heroicon::OutlinedArrowRightCircle)
+                ->color('info')
+                ->visible(fn (): bool => Gate::allows('forward', $this->getRecord()))
+                ->modalHeading(__('report.actions.forward'))
+                ->modalDescription(__('report.help.forward'))
+                ->modalSubmitActionLabel(__('report.actions.forward_submit'))
+                ->schema([
+                    Select::make('reviewer_personnel_id')
+                        ->label(__('report.fields.forward_to'))
+                        ->options(fn (): array => app(ReportQueries::class)->forwardOptions($this->getRecord()))
+                        ->searchable()
+                        ->required()
+                        ->native(false),
+                    Textarea::make('comment')
+                        ->label(__('report.fields.forward_note'))
+                        ->rows(3)
+                        ->maxLength(2000),
+                ])
+                ->action(fn (array $data) => $this->run(
+                    fn (ReportService $service) => $service->forward($this->getRecord(), (int) $data['reviewer_personnel_id'], $data['comment'] ?? null),
+                    'forwarded',
+                )),
             Action::make('approve')
                 ->label(__('report.actions.approve'))
                 ->icon(Heroicon::OutlinedCheckCircle)

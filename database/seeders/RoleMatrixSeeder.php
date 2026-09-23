@@ -61,6 +61,8 @@ class RoleMatrixSeeder extends Seeder
             'MyAlertsWidget' => ['View'],
             // Kendi raporlarini yazar, gonderir, geri ceker.
             'Report' => ['ViewAny', 'View', 'Create', 'Update', 'Delete', 'Submit', 'Withdraw'],
+            // Is panosu (B36, D-115): kendi kartlarini girer, tasir, elle girdigini siler.
+            'WorkItem' => ['ViewAny', 'View', 'Create', 'Update', 'Delete'],
             // Talep acar, kendine geleni yonetir.
             'WorkRequest' => self::WRITE,
             // Rehber: kimin hangi departmanda oldugunu gorur.
@@ -183,6 +185,8 @@ class RoleMatrixSeeder extends Seeder
                 'Competency' => self::MANAGE,
                 // Kisi degerlendirmesi yazar ve gizli raporlari gorur (D-86).
                 'Report' => ['Review', 'ViewConfidential', 'AuthorHrEvaluation'],
+                // Haftalik kontrol matrisini doldurur, Dikkat kartini gorur (B36, D-115).
+                'WorkItem' => ['ControlMatrix', 'ViewAttentionCard'],
                 'Settings' => ['View'],
                 'Documents' => ['View'],
                 'Document' => self::WRITE,
@@ -233,6 +237,8 @@ class RoleMatrixSeeder extends Seeder
                 // Sosyal medya (D-106): icerik hazirlar ve duzenler. Karar izni
                 // yonetici ekindedir; sorumlu personel yetkisini gorevinden alir.
                 'SocialContent' => self::WRITE,
+                // Is panosu (B36, D-115): Yonetim panosu, butun kartlar, Dikkat karti.
+                'WorkItem' => ['ViewAll', 'ViewAttentionCard'],
             ],
         ];
     }

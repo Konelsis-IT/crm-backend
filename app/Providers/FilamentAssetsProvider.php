@@ -32,6 +32,11 @@ use Illuminate\Support\ServiceProvider;
  *   takvimini ayni cekirdek (social-core) ve ayni stil ile cizer
  *   (resources/views/filament/meetings/scripts.blade.php).
  *
+ * - konelsis-work.css ve work-*.js (B36, D-115): Is panosu, kontrol matrisi,
+ *   analiz panosu ve personel kartindaki Dikkat karti (React). Hepsi
+ *   `loadedOnRequest()`: resources/views/filament/work/app.blade.php ve
+ *   attention-card.blade.php stili, filament.work.scripts betikleri yukler.
+ *
  * Surum: adres eki (?v=) yayimlanan dosyanin icerik ozetidir (KonelsisCss /
  * KonelsisJs, 21 Eylul 2026); dosya degisince tarayici yenisini indirir.
  *
@@ -60,6 +65,13 @@ final class FilamentAssetsProvider extends ServiceProvider
             Js::make('social-manage', resource_path('js/social/social-manage.js'))->loadedOnRequest(),
             Js::make('social-app', resource_path('js/social/social-app.js'))->loadedOnRequest(),
             Js::make('meeting-calendar', resource_path('js/meetings/meeting-calendar.js'))->loadedOnRequest(),
+            // Is panosu (B36, D-115): cekirdek + dort ekran; yalniz ilgili sayfada.
+            Css::make('konelsis-work', resource_path('css/filament/konelsis-work.css'))->loadedOnRequest(),
+            Js::make('work-core', resource_path('js/work/work-core.js'))->loadedOnRequest(),
+            Js::make('work-board', resource_path('js/work/work-board.js'))->loadedOnRequest(),
+            Js::make('work-matrix', resource_path('js/work/work-matrix.js'))->loadedOnRequest(),
+            Js::make('work-analysis', resource_path('js/work/work-analysis.js'))->loadedOnRequest(),
+            Js::make('work-attention', resource_path('js/work/work-attention.js'))->loadedOnRequest(),
         ], 'konelsis');
     }
 }

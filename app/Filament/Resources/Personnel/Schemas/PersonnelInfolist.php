@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Personnel\Schemas;
 
 use App\Filament\Support\CardGallery;
+use App\Filament\Support\WorkAppConfig;
 use App\Models\Personnel\Personnel;
+use App\Models\Report\WorkItem;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Personel ayrinti sayfasi (11 Eylul 2026, kullanici istegi). Ustte yatay
@@ -59,6 +63,13 @@ final class PersonnelInfolist
                             ->placeholder(__('personnel.messages.never_logged_in')),
                     ]),
             ]),
+            // Dikkat karti (B36, D-115; React bileseni): ozel yetki `ViewAttentionCard:WorkItem`;
+            // kisi kendi kartini gormez. Betik ViewPersonnelRecord kapsamli BODY_END kancasindan gelir.
+            View::make('filament.work.attention-card')
+                ->viewData(['config' => SchemaReadiness::hasBatch('B36') ? WorkAppConfig::attention($record) : []])
+                ->visible(fn (): bool => SchemaReadiness::hasBatch('B36')
+                    && auth()->user() instanceof Personnel
+                    && Gate::forUser(auth()->user())->allows('viewAttentionCard', [WorkItem::class, $record])),
         ]);
     }
 }

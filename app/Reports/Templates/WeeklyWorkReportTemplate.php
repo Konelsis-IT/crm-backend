@@ -12,9 +12,11 @@ use App\Reports\ReportField;
 /** Haftalik calisma raporu: haftanin panosu + ozet; dogrudan amir inceler. */
 final class WeeklyWorkReportTemplate extends BoardReportTemplate
 {
+    public const CODE = 'weekly_work';
+
     public function code(): string
     {
-        return 'weekly_work';
+        return self::CODE;
     }
 
     public function kind(): ReportKind
@@ -41,7 +43,7 @@ final class WeeklyWorkReportTemplate extends BoardReportTemplate
             ReportField::longText('summary', 4)->required()->summary(),
             ReportField::longText('achievements', 3),
             ReportField::longText('blockers', 2),
-            ReportField::longText('next_week_plan', 3),
+            ReportField::lines('next_week_plan', 3),
         ];
     }
 }

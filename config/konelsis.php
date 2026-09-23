@@ -13,6 +13,16 @@
 return [
 
     /*
+    | Gizli sistem hesabi (D-120): organizasyon semasinda yer almayan teknik
+    | yonetim hesabi. Arayuzde hicbir yerde gorunmez; yalniz bu hesap "personel
+    | degistir" (impersonate) yapabilir. Canli ortamda farkli bir hesap
+    | kullanilacaksa yalniz bu deger degistirilir.
+    */
+    'system_account' => [
+        'email' => env('KONELSIS_SYSTEM_ACCOUNT_EMAIL', 'admin@gmail.com'),
+    ],
+
+    /*
     | Tek Konelsis organizasyonu ve ana tuzel kisiligi icin seed varsayilanlari.
     | Resmi unvan hukuk/finans dogrulamasina kadar yer tutucudur (karar D-01).
     */

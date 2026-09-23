@@ -9,7 +9,13 @@ return [
         'save' => 'Save',
     ],
 
+    'dashboard' => [
+        'title' => 'Overview',
+    ],
+
     'nav' => [
+        'reports' => 'Reports',
+        'analytics' => 'Analytics',
         'acquisition' => 'Business Acquisition',
         'operations' => 'Operations',
         'project_group' => 'Project Group',

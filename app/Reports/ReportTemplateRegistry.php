@@ -8,6 +8,8 @@ use App\Enums\Report\ReportSubjectKind;
 use App\Exceptions\Report\TemplateNotFoundException;
 use App\Reports\Templates\BusinessCaseReviewReportTemplate;
 use App\Reports\Templates\ComponentPerformanceReportTemplate;
+use App\Reports\Templates\CoordinationBoardReportTemplate;
+use App\Reports\Templates\DailyControlReportTemplate;
 use App\Reports\Templates\DailyWorkReportTemplate;
 use App\Reports\Templates\MonthlyWorkReportTemplate;
 use App\Reports\Templates\PersonnelHrEvaluationTemplate;
@@ -35,6 +37,9 @@ final class ReportTemplateRegistry
         PersonnelManagerEvaluationTemplate::class,
         PersonnelHrEvaluationTemplate::class,
         SystemDataReportTemplate::class,
+        // Is panosu (B36, D-115): yalniz kendi sayfalarindan yazilir.
+        DailyControlReportTemplate::class,
+        CoordinationBoardReportTemplate::class,
     ];
 
     /** @var array<string, ReportTemplate>|null */

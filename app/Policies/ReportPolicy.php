@@ -74,6 +74,22 @@ final class ReportPolicy
     }
 
     /**
+     * Raporu baska bir yoneticiye iletme (23 Eylul 2026 kullanici istegi):
+     * inceleyen kisi, ust amir ya da yetkili; gonderilmis ya da karara
+     * baglanmis raporda kullanilir, taslakta kullanilmaz.
+     */
+    public function forward(Personnel $personnel, Report $record): bool
+    {
+        if ($record->status === ReportStatus::Draft || $this->isAuthor($personnel, $record)) {
+            return false;
+        }
+
+        return $this->isReviewer($personnel, $record)
+            || $this->hasFullAccess($personnel)
+            || $this->permits($personnel, 'review');
+    }
+
+    /**
      * Inceleme: atanmis inceleyen ya da yetkili; yazar kendi raporunu
      * inceleyemez, inceleme gerektirmeyen taslakta karar verilmez.
      */

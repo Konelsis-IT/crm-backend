@@ -1273,10 +1273,38 @@ return [
     'report_item_status' => [
         'planned' => 'Planned',
         'in_progress' => 'In progress',
+        'waiting' => 'Waiting',
         'done' => 'Done',
         'blocked' => 'Blocked',
     ],
 
+    // Work board (B36, D-115)
+    'work_item_status' => [
+        'planned' => 'Planned',
+        'in_progress' => 'In progress',
+        'waiting' => 'Waiting',
+        'done' => 'Done',
+        'blocked' => 'Blocked',
+    ],
+    'work_item_source' => [
+        'manual' => 'Manual',
+        'automatic' => 'Automatic',
+    ],
+    'work_waiting_kind' => [
+        'personnel' => 'Personnel',
+        'party' => 'Party',
+        'text' => 'Free text',
+    ],
+    'work_item_link_kind' => [
+        'none' => 'None',
+        'business_case' => 'Business case',
+        'proposal' => 'Proposal',
+        'tender_notice' => 'Tender notice',
+        'document' => 'Document',
+        'supply_item' => 'Supply item',
+        'work_request' => 'Request',
+        'meeting_plan' => 'Meeting',
+    ],
     // Social Media (B31, D-106)
     'social_profile_kind' => [
         'corporate' => 'Corporate account',

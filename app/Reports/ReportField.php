@@ -27,6 +27,9 @@ final class ReportField
 
     public const CHOICE = 'choice';
 
+    /** Satir satir is listesi: formda cok satirli metin, raporda tablo. */
+    public const LINES = 'lines';
+
     public const KEY_VALUE = 'key_value';
 
     public const BOOLEAN = 'boolean';
@@ -70,6 +73,15 @@ final class ReportField
     public static function longText(string $name, int $rows = 4): self
     {
         $field = new self($name, self::LONG_TEXT);
+        $field->rows = $rows;
+
+        return $field;
+    }
+
+    /** Her satiri bir is olan plan alani (yarin plani, hafta plani). */
+    public static function lines(string $name, int $rows = 3): self
+    {
+        $field = new self($name, self::LINES);
         $field->rows = $rows;
 
         return $field;

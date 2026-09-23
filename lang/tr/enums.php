@@ -1273,10 +1273,38 @@ return [
     'report_item_status' => [
         'planned' => 'Planlandı',
         'in_progress' => 'Devam ediyor',
+        'waiting' => 'Bekleniyor',
         'done' => 'Tamamlandı',
         'blocked' => 'Engellendi',
     ],
 
+    // Is panosu (B36, D-115)
+    'work_item_status' => [
+        'planned' => 'Planlandı',
+        'in_progress' => 'Devam ediyor',
+        'waiting' => 'Bekleniyor',
+        'done' => 'Tamamlandı',
+        'blocked' => 'Engellendi',
+    ],
+    'work_item_source' => [
+        'manual' => 'Elle',
+        'automatic' => 'Otomatik',
+    ],
+    'work_waiting_kind' => [
+        'personnel' => 'Personel',
+        'party' => 'Taraf',
+        'text' => 'Serbest metin',
+    ],
+    'work_item_link_kind' => [
+        'none' => 'Yok',
+        'business_case' => 'İş dosyası',
+        'proposal' => 'Teklif',
+        'tender_notice' => 'İhale ilanı',
+        'document' => 'Belge',
+        'supply_item' => 'Tedarik kalemi',
+        'work_request' => 'Talep',
+        'meeting_plan' => 'Görüşme',
+    ],
     // Sosyal Medya (B31, D-106)
     'social_profile_kind' => [
         'corporate' => 'Kurumsal hesap',

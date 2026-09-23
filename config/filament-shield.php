@@ -1,7 +1,13 @@
 <?php
 
 declare(strict_types=1);
+use App\Filament\Clusters\WorkReports;
+use App\Filament\Pages\Work\ControlMatrix;
+use App\Filament\Pages\Work\WorkAnalysis;
+use App\Filament\Pages\Work\WorkBoard;
+use App\Filament\Pages\Work\WorkDurationReport;
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Resources\SocialContents\SocialContentResource;
 use App\Filament\Widgets\UpcomingSocialContentsWidget;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
@@ -216,6 +222,19 @@ return [
                 'viewConfidential',
                 'authorHrEvaluation',
             ],
+            // Is panosu (B36, D-115): kartin standart yetkileri kayit duzeyinde
+            // sahiplikle birlesir; ek olarak butun kartlar / Yonetim panosu,
+            // haftalik kontrol matrisi ve personel kartindaki Dikkat karti.
+            WorkItemResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'viewAll',
+                'controlMatrix',
+                'viewAttentionCard',
+            ],
             // Sosyal Medya (D-106): silme yoktur. Standart yetkilere ek olarak
             // karar verme (onay / ret / revize), paylasildi isaretleme, arsive
             // kaldirma ve modul ayarlari izinleri Roller ekraninda isaretlenir.
@@ -252,6 +271,13 @@ return [
         'prefix' => 'view',
         'exclude' => [
             Dashboard::class,
+            // Is panosu sayfalari (B36, D-115) erisimi WorkItem politikasindan
+            // alir (canAccess); Roller ekraninda etkisiz sayfa kutusu olusmasin.
+            WorkBoard::class,
+            ControlMatrix::class,
+            WorkAnalysis::class,
+            WorkDurationReport::class,
+            WorkReports::class,
         ],
     ],
 

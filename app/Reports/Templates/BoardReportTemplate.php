@@ -23,6 +23,16 @@ abstract class BoardReportTemplate extends ReportTemplate
     }
 
     /**
+     * 23 Eylul 2026 (kullanici karari, D-117): gunluk / haftalik / aylik
+     * calisma raporu artik Raporlar > Rapor olustur ekranindan secilmez;
+     * bu raporlari Is panosu uretir (Gunu kapat / Haftayi kapat).
+     */
+    public function isManualEntry(): bool
+    {
+        return false;
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @param  Collection<int, ReportItem>|null  $items
      * @return array<string, float>

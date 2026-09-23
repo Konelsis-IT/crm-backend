@@ -8,6 +8,9 @@ use App\Enums\Personnel\PersonnelStatus;
 use App\Models\Activity\PersonnelActivity;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Report\Report;
+use App\Models\Report\WorkItem;
+use App\Models\Scopes\HideSystemAccountScope;
+use App\Reports\Templates\DailyControlReportTemplate;
 use App\Models\WorkRequest\WorkRequest;
 use App\Policies\PersonnelPolicy;
 use App\Services\Authorization\RoleResolver;
@@ -64,6 +67,10 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
 
     protected static function booted(): void
     {
+        // Gizli sistem hesabi (D-120) listelerde, secim kutularinda ve
+        // iliskilerde gorunmez; yalniz kendisi oturum acmisken gelir.
+        static::addGlobalScope(new HideSystemAccountScope);
+
         static::saving(function (Personnel $personnel): void {
             $personnel->setAttribute('normalized_email', self::normalizeEmail($personnel->getAttribute('email')));
         });
@@ -213,6 +220,24 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class, 'subject_personnel_id');
+    }
+
+    /** Bu kisinin YAZDIGI raporlar (B10A, D-86). */
+    public function authoredReports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'author_personnel_id');
+    }
+
+    /** Bu kisinin is panosu kartlari (B36, D-115). */
+    public function workItems(): HasMany
+    {
+        return $this->hasMany(WorkItem::class, 'personnel_id');
+    }
+
+    /** Bu kisi hakkindaki gunluk kontrol raporlari (B36, D-115; gunluk: D-116). */
+    public function controlReports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'subject_personnel_id')->where('template_code', DailyControlReportTemplate::CODE);
     }
 
     /** Bu kisiye gelen talepler (B11B). */
