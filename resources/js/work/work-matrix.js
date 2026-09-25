@@ -31,7 +31,26 @@
     const { h, Fragment, cx, fmt, useApp, Btn, Tabs, Seg, State } = KW;
     const { useState, useEffect, useMemo, useCallback } = KW.hooks;
 
-    const NEXT = { none: 'ok', ok: 'bad', bad: 'none' };
+    // Varsayilan ✓ (25 Eylul 2026 kullanici istegi): tiklama sirasi ✓ -> ✗ -> – -> ✓.
+    const NEXT = { ok: 'bad', bad: 'none', none: 'ok' };
+
+    /**
+     * O gun icin kaydi olmayan satirda elle isaretlenen kriterler ✓ baslar.
+     * Kayitli satirda "–" bilerek secilmistir (yalniz ✓ ve ✗ saklanir);
+     * dokunulmaz. Otomatik kriter (haftalik rapor) sistemden gelir.
+     */
+    function withDefaultMarks(row, criteria) {
+        if (row.report) { return row; }
+
+        const marks = { ...row.marks };
+        criteria.forEach((criterion) => {
+            if (!criterion.auto && (!marks[criterion.code] || marks[criterion.code] === 'none')) {
+                marks[criterion.code] = 'ok';
+            }
+        });
+
+        return { ...row, marks };
+    }
     const SYMBOL = { ok: '✓', bad: '✗', none: '–' };
 
     function Mark(props) {
@@ -145,13 +164,20 @@
         const weekly = sheet && sheet.mode === 'week';
         const editable = canFill && !weekly;
 
-        const rows = useMemo(() => (sheet ? sheet.rows.map((row) => {
+        // Varsayilan ✓ yalniz dolduran kiside (IK, gunluk gorunum) ve bugun ya
+        // da gecmis bir gunde; salt okunur gorunumde ve ileri tarihli gunde
+        // doldurulmamis satir isaretsiz gorunur (yanlislikla toplu ✓ yazilmasin).
+        const defaultsOn = editable && !!(data && data.today && day) && day <= data.today;
+        const rows = useMemo(() => (sheet ? sheet.rows.map((source) => {
+            const row = defaultsOn ? withDefaultMarks(source, criteria) : source;
             const edit = edits[row.personnel.id];
             return edit ? { ...row, marks: { ...row.marks, ...edit.marks }, note: edit.note !== undefined ? edit.note : row.note } : row;
-        }) : []), [sheet, edits]);
+        }) : []), [sheet, edits, defaultsOn, criteria]);
+        const unsaved = defaultsOn && rows.some((row) => !row.report);
 
         const setMark = (row, code) => {
-            const currentMark = (edits[row.personnel.id] && edits[row.personnel.id].marks && edits[row.personnel.id].marks[code]) || row.marks[code] || 'none';
+            // row, varsayilanlar ve duzenlemeler islenmis satirdir.
+            const currentMark = row.marks[code] || 'none';
             setEdits((previous) => {
                 const existing = previous[row.personnel.id] || { marks: {} };
                 return { ...previous, [row.personnel.id]: { ...existing, marks: { ...existing.marks, [code]: NEXT[currentMark] } } };
@@ -165,7 +191,8 @@
         });
 
         const save = () => {
-            if (!dirty) {
+            // Kaydi olmayan satirlarin varsayilan ✓'leri de kaydedilir.
+            if (!dirty && !unsaved) {
                 app.toast({ text: t('nothing_to_save') });
                 return;
             }
@@ -231,6 +258,7 @@
             state.error ? h(State, { error: state.error, onRetry: () => load({ mode, day, week, section }) }) : null,
             state.loading && !data ? h(State, { loading: true }) : null,
             data && !sections.length ? h(State, { text: t('no_sections') }) : null,
+            sheet && unsaved ? h('p', { className: 'kw-info' }, t('default_ok_info')) : null,
             sheet ? h('div', { className: 'kw-matrix-layout' },
                 h('div', { className: 'kw-matrix-wrap' },
                     rows.length ? h('table', { className: 'kw-matrix' },

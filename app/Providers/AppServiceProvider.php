@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Filament\Exports\Jobs\KonelsisExportCompletion;
+use App\Filament\Support\TableConventions;
 use App\Infrastructure\Console\SchemaChangeGuard;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Audit\ActorContext;
@@ -68,5 +69,10 @@ class AppServiceProvider extends ServiceProvider
         CreateAction::configureUsing(fn (CreateAction $action) => $action->modalWidth(Width::SixExtraLarge)->createAnother(false));
         EditAction::configureUsing(fn (EditAction $action) => $action->modalWidth(Width::SixExtraLarge));
         ViewAction::configureUsing(fn (ViewAction $action) => $action->modalWidth(Width::SixExtraLarge));
+
+        // Tablo kurallari (D-125): satir tiklamasi detaya gider, Goruntule / Ac
+        // dugmesi yok, satir eylemleri simge + ipucu, bagli kayit tiklanabilir
+        // ve simgeli, personel adinda kisi simgesi.
+        TableConventions::register();
     }
 }

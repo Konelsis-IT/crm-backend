@@ -1275,7 +1275,7 @@ return [
         'in_progress' => 'In progress',
         'waiting' => 'Waiting',
         'done' => 'Done',
-        'blocked' => 'Blocked',
+        'blocked' => 'Cancelled',
     ],
 
     // Work board (B36, D-115)
@@ -1284,7 +1284,7 @@ return [
         'in_progress' => 'In progress',
         'waiting' => 'Waiting',
         'done' => 'Done',
-        'blocked' => 'Blocked',
+        'blocked' => 'Cancelled',
     ],
     'work_item_source' => [
         'manual' => 'Manual',

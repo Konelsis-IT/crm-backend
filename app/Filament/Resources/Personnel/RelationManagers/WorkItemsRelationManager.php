@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\RelationManagers;
 
+use BackedEnum;
 use App\Filament\Pages\Work\WorkBoard;
 use App\Filament\Resources\WorkItems\Tables\WorkItemTable;
 use App\Filament\Resources\WorkItems\WorkItemResource;
@@ -27,6 +28,8 @@ use Illuminate\Support\Facades\Gate;
 class WorkItemsRelationManager extends RelationManager
 {
     protected static string $relationship = 'workItems';
+
+    protected static string | BackedEnum | null $icon = Heroicon::OutlinedRectangleStack;
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {

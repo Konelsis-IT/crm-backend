@@ -210,7 +210,7 @@ return [
 
     'duration' => [
         'title' => 'Süre raporu',
-        'subheading' => 'Süreler durum geçmişinden hesaplanır. Toplam: açılıştan kapanışa takvim günü; çalışma: Devam ediyor; bekleme: Bekleniyor; engel: Engellendi. Ana iş satırı alt kartları toplar.',
+        'subheading' => 'Süreler durum geçmişinden hesaplanır. Toplam: açılıştan kapanışa takvim günü; çalışma: Devam ediyor; bekleme: Bekleniyor. İptal edilen işte süre işlemez. Ana iş satırı alt kartları toplar.',
         'root_badge' => 'ana iş · :count alt kart',
         'summary_cards' => ':count kart',
         'no_root' => 'Ana işe bağlı olmayan işler',
@@ -484,7 +484,7 @@ return [
 
         // Pano
         'board_title' => 'İş panosu',
-        'quick_item' => '+ Hızlı kalem',
+        'quick_item' => '+ İş ekle',
         'close_day' => 'Günlük rapora dönüştür',
         'close_week' => 'Haftalık rapora dönüştür',
         'freeze' => 'Panoyu dondur',
@@ -548,7 +548,7 @@ return [
 
         // Oneriler
         'tray_title' => 'Sistemden gelen öneriler',
-        'make_card' => 'Kart yap',
+        'make_card' => 'İşe dönüştür',
         'dismiss' => 'Yoksay',
         'dismissed_tag' => 'Yoksayıldı',
         'dismissed_toast' => 'Öneri yoksayıldı',
@@ -556,9 +556,23 @@ return [
         'dismissed_help' => 'Yoksaymak sistemdeki hareketi silmez; geri alınca öneri panoya döner.',
         'dismissed_empty' => 'Yoksayılan öneri yok.',
         'restored' => 'Öneri geri alındı.',
+        'tray_show' => 'Göster',
+        'tray_hide' => 'Gizle',
+        'suggestion_hint' => 'Ayrıntı için öneriye tıklayın',
+        'detail_title' => 'Öneri ayrıntısı',
+        'detail_help' => 'Bu öneri sistemde yaptığınız bir işlemden geldi. İşe dönüştürürseniz panonuza kart olarak eklenir; yoksayarsanız listeden kalkar.',
+        'detail_action' => 'İşlem',
+        'detail_when' => 'Tarih',
+        'detail_module' => 'Modül',
+        'detail_record' => 'Kayıt',
+        'detail_status' => 'Kaydın durumu',
+        'detail_project' => 'Proje',
+        'detail_changes' => 'Yapılan işlem',
+        'detail_no_changes' => 'Bu işlem için ayrıntı kaydı yok.',
+        'open_record' => 'Kaydı aç',
 
         // Hizli satir ve is tarihi
-        'quick_label' => 'Hızlı kalem',
+        'quick_label' => 'İş ekle',
         'quick_title' => 'İşin adı… (örn. AG pano siparişi geçilecek)',
         'quick_project' => 'Proje',
         'quick_category' => 'Kategori',
@@ -595,8 +609,8 @@ return [
         'children_n' => ':n alt kart',
 
         // Kalem penceresi
-        'new_item' => 'Yeni kalem',
-        'edit_item' => 'Kalemi düzenle',
+        'new_item' => 'Yeni iş',
+        'edit_item' => 'İşi düzenle',
         'modal_sub' => ':type · :date',
         'field_title' => 'İşin adı',
         'field_date' => 'Tarih',
@@ -635,7 +649,7 @@ return [
         'summary' => 'Özet',
         'summary_help' => 'İsteğe bağlı; boş kalırsa kart başlıklarından üretilir',
         'blockers' => 'Engeller',
-        'blockers_help' => 'Engellendi ve uzun bekleyen kartlardan önceden dolduruldu; düzenlenebilir',
+        'blockers_help' => 'Uzun bekleyen kartlardan önceden dolduruldu; düzenlenebilir',
         'tomorrow_plan' => 'Yarın planı',
         'add_row' => '+ Satır ekle',
         'plan_help' => 'Planlandı kartlarından geldi; eklediğin satır yarının panosuna kart olarak düşer',
@@ -649,7 +663,7 @@ return [
         'kpi_done' => 'Tamamlandı',
         'kpi_progress' => 'Devam ediyor',
         'kpi_waiting' => 'Bekleniyor',
-        'kpi_blocked' => 'Engellendi',
+        'kpi_blocked' => 'İptal',
         'kpi_hours' => 'saat',
         'row_auto' => 'otomatik',
 
@@ -674,12 +688,12 @@ return [
         'summary_required' => 'Haftanın özetini yazın.',
 
         // Kart yap
-        'make_card_title' => 'Kart yap',
+        'make_card_title' => 'İşe dönüştür',
         'make_card_sub' => 'Öneri: :label · :subject · :time',
         'project_none_link' => 'Yok; kayıt henüz projeye bağlı değil',
         'locked' => 'kilitli',
         'field_source' => 'Kaynak',
-        'create_card' => 'Kartı oluştur',
+        'create_card' => 'İşe dönüştür',
 
         // Surukle-birak
         'waiting_prompt' => 'İşin bekleme sebebi nedir?',
@@ -722,6 +736,7 @@ return [
         'week_unchecked' => 'Bu hafta işaretlenmedi',
         'matrix_saved' => ':c kontrol raporu yazıldı, :u güncellendi.',
         'nothing_to_save' => 'Kaydedilecek değişiklik yok.',
+        'default_ok_info' => 'Bu gün henüz kaydedilmemiş satırlarda bütün işaretler ✓ (uygun) başlar. Uygun olmayanı tıklayarak ✗, işaretsiz bırakmak için bir kez daha tıklayarak – yapın; Kaydet ile yazılır.',
         'unsaved_confirm' => 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin mi?',
         'aside_title' => 'Personel kartı › Kontrol sekmesi',
         'aside_kpi' => 'uygun, bu gün',

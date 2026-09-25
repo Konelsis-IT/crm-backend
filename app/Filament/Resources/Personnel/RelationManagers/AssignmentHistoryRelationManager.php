@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use BackedEnum;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Support\Icons\Heroicon;
@@ -57,7 +58,10 @@ class AssignmentHistoryRelationManager extends RelationManager
                     ->placeholder(__('assignment.messages.ongoing')),
             ])
             ->headerActions([])
-            ->recordActions([])
+            ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
+            ])
             ->toolbarActions([])
             ->defaultSort('effective_from', 'desc')
             ->emptyStateHeading(__('assignment.relation.empty'))

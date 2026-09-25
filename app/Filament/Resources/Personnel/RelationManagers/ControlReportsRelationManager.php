@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\RelationManagers;
 
+use BackedEnum;
 use App\Filament\Pages\Work\ControlMatrix;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Models\Personnel\Personnel;
@@ -28,6 +29,8 @@ use Illuminate\Support\Facades\Gate;
 class ControlReportsRelationManager extends RelationManager
 {
     protected static string $relationship = 'controlReports';
+
+    protected static string | BackedEnum | null $icon = Heroicon::OutlinedTableCells;
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {

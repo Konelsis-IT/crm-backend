@@ -67,6 +67,7 @@ final class SchemaReadiness
         'B35' => 'exports',                            // Tablo disa aktarimi (Filament Excel)
         'B36' => 'report_items.is_late',               // Is panosu (grubun son degisikligi)
         'B37' => 'work_items.requester_kind',          // Is kartinda talep eden
+        'B38' => 'personnel_quick_actions',            // Kisisel hizli islemler
     ];
 
     /** @var array<string, bool> */

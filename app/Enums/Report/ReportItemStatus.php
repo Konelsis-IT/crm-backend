@@ -78,7 +78,7 @@ enum ReportItemStatus: string implements HasColor, HasIcon, HasLabel
             self::InProgress => Heroicon::OutlinedPlayCircle,
             self::Waiting => Heroicon::OutlinedClock,
             self::Done => Heroicon::OutlinedCheckCircle,
-            self::Blocked => Heroicon::OutlinedHandRaised,
+            self::Blocked => Heroicon::OutlinedXCircle,
         };
     }
 }

@@ -9,6 +9,7 @@ use App\Services\Audit\ActorContext;
 use App\Services\Authorization\ImpersonationService;
 use Closure;
 use Illuminate\Http\Request;
+use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -41,14 +42,34 @@ final class ImpersonatePersonnel
             return $next($request);
         }
 
+        $guard = auth()->guard();
+        $resolver = $request->getUserResolver();
+
         // Arayuz secilen personelin gozuyle calisir...
-        auth()->guard()->setUser($target);
+        $guard->setUser($target);
         $request->setUserResolver(fn (): Personnel => $target);
 
         // ...ama kayitlar gercek hesabin adina yazilir.
         $this->actor->actAsPersonnel((int) $operator->getKey());
         $this->impersonation->markSwapped();
 
-        return $next($request);
+        // Livewire guncelleme isteginde kalici ara katmanlar bilesen
+        // calismadan ONCE biter (bos yanitla); degisim istek boyunca kalmali.
+        // Bu istekte AuthenticateSession calismaz, oturuma ozet yazilmaz.
+        if (Livewire::isLivewireRequest()) {
+            return $next($request);
+        }
+
+        try {
+            return $next($request);
+        } finally {
+            // Yanit uretildikten sonra gercek hesap geri konur. Aksi halde
+            // AuthenticateSession yanit donerken secilen personelin parola
+            // ozetini oturuma yazar; bir sonraki istekte oturum sahibinin
+            // (sistem hesabi) ozetiyle eslesmez ve oturum kapanirdi
+            // (24 Eylul 2026 kullanici bildirimi: "oturumdan atiyor").
+            $guard->setUser($operator);
+            $request->setUserResolver($resolver);
+        }
     }
 }

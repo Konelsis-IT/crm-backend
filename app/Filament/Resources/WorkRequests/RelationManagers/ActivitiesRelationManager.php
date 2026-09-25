@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Models\Activity\PersonnelActivity;
 use App\Support\ActivityLabels;
 use BackedEnum;
@@ -66,7 +67,10 @@ class ActivitiesRelationManager extends RelationManager
             ])
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('personnel'))
             ->headerActions([])
-            ->recordActions([])
+            ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
+            ])
             ->toolbarActions([])
             ->defaultSort('occurred_at', 'desc')
             ->paginated([10, 25, 50])

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\DepartmentHandoffVersions\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -68,6 +69,8 @@ class ReviewsRelationManager extends RelationManager
                 
             ])
             ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
                 
             ])
             ->toolbarActions([])

@@ -113,6 +113,7 @@ return [
     ],
 
     'relation' => [
+        'about_personnel' => 'Hakkındaki raporlar',
         'authored' => 'Yazdığı raporlar',
         'authored_help' => 'Bu kişinin yazdığı raporlar; yalnız görme yetkiniz olanlar listelenir.',
         'authored_empty' => 'Bu kişi henüz rapor yazmamış.',

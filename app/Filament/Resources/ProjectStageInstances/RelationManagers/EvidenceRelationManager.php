@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProjectStageInstances\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -75,6 +76,8 @@ class EvidenceRelationManager extends RelationManager
                 
             ])
             ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
                 Action::make('accept')
                     ->label(__('stage_evidence.actions.accept'))
                     ->color('success')

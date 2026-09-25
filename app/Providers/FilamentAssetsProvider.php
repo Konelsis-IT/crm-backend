@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Filament\Support\Assets\KonelsisCss as Css;
 use App\Filament\Support\Assets\KonelsisJs as Js;
+use App\Models\Personnel\Personnel;
+use Filament\Facades\Filament;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\ServiceProvider;
 
@@ -72,6 +74,33 @@ final class FilamentAssetsProvider extends ServiceProvider
             Js::make('work-matrix', resource_path('js/work/work-matrix.js'))->loadedOnRequest(),
             Js::make('work-analysis', resource_path('js/work/work-analysis.js'))->loadedOnRequest(),
             Js::make('work-attention', resource_path('js/work/work-attention.js'))->loadedOnRequest(),
+            // Masaustu (Windows) bildirimi + bildirim sesi (D-126, kullanici onayi
+            // 25 Eylul 2026): her panel sayfasinda; ayarlari AlertFeed verir.
+            Js::make('konelsis-alerts', resource_path('js/konelsis-alerts.js')),
         ], 'konelsis');
+
+        // Betik ayarlari istek aninda (oturum, dil ve adres hazir): window.filamentData.konelsisAlerts.
+        Filament::serving(function (): void {
+            $user = auth()->user();
+
+            if (! $user instanceof Personnel || ! $user->isActive()) {
+                return;
+            }
+
+            FilamentAsset::registerScriptData([
+                'konelsisAlerts' => [
+                    'feed' => route('filament.admin.notifications.feed'),
+                    'user' => (int) $user->getKey(),
+                    'poll' => 20000,
+                    'icon' => asset('images/konelsis-favicon.png'),
+                    'labels' => [
+                        'app' => (string) __('app.name'),
+                        'enabled' => (string) __('alerts.messages.enabled'),
+                        'denied' => (string) __('alerts.messages.denied'),
+                        'unsupported' => (string) __('alerts.messages.unsupported'),
+                    ],
+                ],
+            ]);
+        });
     }
 }

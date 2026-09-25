@@ -28,6 +28,7 @@ use App\Models\Personnel\Personnel;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -104,14 +105,20 @@ class PersonnelResource extends Resource
         }
 
         if (SchemaReadiness::hasBatch('B10A')) {
-            $relations[] = SubjectReportsRelationManager::class;
-            // Kisinin kendi yazdigi raporlar (23 Eylul 2026 kullanici bildirimi).
-            $relations[] = AuthoredReportsRelationManager::class;
+            // Hakkindaki raporlar + yazdigi raporlar tek sekmede, alt alta
+            // (24 Eylul 2026 kullanici istegi).
+            $relations[] = RelationGroup::make(__('report.plural'), [
+                SubjectReportsRelationManager::class,
+                AuthoredReportsRelationManager::class,
+            ])->icon(Heroicon::OutlinedDocumentChartBar);
         }
 
         if (SchemaReadiness::hasBatch('B11B')) {
-            $relations[] = IncomingWorkRequestsRelationManager::class;
-            $relations[] = RequestedWorkRequestsRelationManager::class;
+            // Gelen talepler + actigi talepler tek sekmede (24 Eylul 2026).
+            $relations[] = RelationGroup::make(__('work_request.plural'), [
+                IncomingWorkRequestsRelationManager::class,
+                RequestedWorkRequestsRelationManager::class,
+            ])->icon(Heroicon::OutlinedInboxArrowDown);
         }
 
         // Is panosu (B36, D-115): Isler ve Kontrol sekmeleri.

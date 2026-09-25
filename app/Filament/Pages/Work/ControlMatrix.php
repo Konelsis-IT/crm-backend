@@ -26,9 +26,12 @@ use UnitEnum;
  */
 class ControlMatrix extends Page
 {
-    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedTableCells;
+    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
 
     protected static string | UnitEnum | null $navigationGroup = NavigationGroup::Reports;
+
+    // Sol menude yok; ust cubuktaki dugmeyle acilir (24 Eylul 2026).
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?int $navigationSort = 4;
 

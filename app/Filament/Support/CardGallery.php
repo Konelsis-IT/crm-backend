@@ -113,7 +113,7 @@ final class CardGallery
                 Text::make(__('ui_gallery.values.steps_ready', ['ready' => $ready, 'total' => count($steps)]))->badge()->color($ready === count($steps) && $steps !== [] ? 'success' : 'gray')->icon(Heroicon::OutlinedCheckCircle),
             ],
             entries: [
-                $this->entry('manager', __('ui_gallery.entries.manager'), $manager?->full_name ?? '-', Heroicon::OutlinedUserCircle, $manager !== null ? 'primary' : 'gray'),
+                $this->entry('manager', __('ui_gallery.entries.manager'), $manager?->full_name ?? '-', Heroicon::OutlinedUserCircle, $manager !== null ? 'primary' : 'gray', $manager !== null ? RecordLinks::detailUrl($manager, checkRecord: false) : null),
                 $this->entry('city', __('ui_gallery.entries.city'), $project->site_city ?: '-', Heroicon::OutlinedMapPin, 'danger'),
                 $this->entry('dates', __('ui_gallery.entries.dates'), ($project->planned_start_on?->format('d.m.Y') ?? '-').' → '.($project->planned_finish_on?->format('d.m.Y') ?? '-'), Heroicon::OutlinedCalendarDays, 'warning'),
                 $this->entry('value', __('ui_gallery.entries.value'), $this->money($project->contract_value_snapshot, $project->currency_code), Heroicon::OutlinedBanknotes, 'success'),
@@ -417,8 +417,8 @@ final class CardGallery
                 $document->is_controlled ? Text::make(__('document.fields.is_controlled'))->badge()->color('success')->icon(Heroicon::OutlinedShieldCheck) : null,
             ])),
             entries: [
-                $this->entry('owner', __('ui_gallery.entries.owner'), $document->owner?->full_name ?? '-', Heroicon::OutlinedUserCircle, 'primary'),
-                $this->entry('project', __('ui_gallery.entries.project'), $document->project?->name ?? '-', Heroicon::OutlinedRocketLaunch, $document->project !== null ? 'primary' : 'gray'),
+                $this->entry('owner', __('ui_gallery.entries.owner'), $document->owner?->full_name ?? '-', Heroicon::OutlinedUserCircle, 'primary', $document->owner !== null ? RecordLinks::detailUrl($document->owner, checkRecord: false) : null),
+                $this->entry('project', __('ui_gallery.entries.project'), $document->project?->name ?? '-', Heroicon::OutlinedRocketLaunch, $document->project !== null ? 'primary' : 'gray', $document->project !== null ? RecordLinks::detailUrl($document->project, checkRecord: false) : null),
                 $this->entry('file', __('ui_gallery.entries.file'), $file !== null ? $file->original_name.' · '.$file->humanSize() : (($revision?->isAuthored() ?? false) ? __('document_revision.values.authored') : '-'), Heroicon::OutlinedPaperClip, 'gray'),
                 $this->entry('updated', __('ui_gallery.entries.updated'), DisplayTime::format($document->updated_at), Heroicon::OutlinedClock, 'gray'),
             ],
@@ -593,7 +593,7 @@ final class CardGallery
                     : null,
             ])),
             entries: [
-                $this->entry('author', __('report.fields.author'), (string) ($report->author?->full_name ?: '-'), Heroicon::OutlinedUserCircle, 'primary'),
+                $this->entry('author', __('report.fields.author'), (string) ($report->author?->full_name ?: '-'), Heroicon::OutlinedUserCircle, 'primary', $report->author !== null ? RecordLinks::detailUrl($report->author, checkRecord: false) : null),
                 $this->entry('subject', __('report.fields.subject'), (string) ($report->subjectLabel() ?: '-'), $report->subject_kind->getIcon(), 'warning', $subjectUrl),
                 $this->entry('period', __('report.fields.period'), (string) ($report->periodLabel() ?: '-'), Heroicon::OutlinedCalendarDays, 'success'),
                 $this->entry('unit', __('report.fields.author_org_unit'), (string) ($report->authorOrgUnit?->name ?: '-'), Heroicon::OutlinedBuildingOffice2, 'gray'),

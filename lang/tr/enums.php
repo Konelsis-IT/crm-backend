@@ -1275,7 +1275,7 @@ return [
         'in_progress' => 'Devam ediyor',
         'waiting' => 'Bekleniyor',
         'done' => 'Tamamlandı',
-        'blocked' => 'Engellendi',
+        'blocked' => 'İptal',
     ],
 
     // Is panosu (B36, D-115)
@@ -1284,7 +1284,7 @@ return [
         'in_progress' => 'Devam ediyor',
         'waiting' => 'Bekleniyor',
         'done' => 'Tamamlandı',
-        'blocked' => 'Engellendi',
+        'blocked' => 'İptal',
     ],
     'work_item_source' => [
         'manual' => 'Elle',

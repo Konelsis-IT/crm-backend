@@ -246,6 +246,34 @@ foreach (phpFiles($root.'/database/migrations') as $file) {
     }
 }
 
+// 6. Table interaction standard (D-125, user decision 2026-09-25) ---------------
+// Satira tiklamak detayi acar, Goruntule / Ac dugmesi yok, satir eylemleri
+// simge + ipucu, bagli kayit tiklanabilir ve simgeli, personel adinda kisi
+// simgesi. Kural App\Filament\Support\TableConventions ile tek noktadan uygulanir.
+$provider = (string) @file_get_contents($root.'/app/Providers/AppServiceProvider.php');
+
+if (! str_contains($provider, 'TableConventions::register()')) {
+    $failures[] = 'Table standard: app/Providers/AppServiceProvider.php must call TableConventions::register() (row click opens detail, icon-only row actions, linked related records).';
+}
+
+foreach (phpFiles($root.'/app/Filament') as $file) {
+    $relativePath = relative($root, $file);
+
+    if (str_ends_with(str_replace('\\', '/', $relativePath), 'app/Filament/Support/TableConventions.php')) {
+        continue;
+    }
+
+    $source = (string) file_get_contents($file);
+
+    if (str_contains($source, '->modifyUngroupedRecordActionsUsing(')) {
+        $failures[] = sprintf('Table standard: %s overrides modifyUngroupedRecordActionsUsing(); row actions must stay icon-only with tooltips (TableConventions).', $relativePath);
+    }
+
+    if (preg_match('/->recordUrl\(\s*null\s*\)/', $source) === 1 && ! str_contains($source, '->recordAction(')) {
+        $failures[] = sprintf('Table standard: %s disables the row link without a row action; every row opens its detail (use RowDetail::action() when there is no detail page).', $relativePath);
+    }
+}
+
 // Report ------------------------------------------------------------------------
 fwrite(STDOUT, sprintf("Konelsis safe verification: %d PHP files linted.%s", $linted, PHP_EOL));
 

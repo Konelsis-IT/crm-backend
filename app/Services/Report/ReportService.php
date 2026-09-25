@@ -176,9 +176,17 @@ final class ReportService extends AbstractService
                 'inceleyen' => $report->reviewer?->full_name,
             ]);
 
-            if ($report->reviewer instanceof Personnel) {
-                $this->notify($report, collect([$report->reviewer]), 'submitted');
+            // Rapor butun amirlere ve ust yonetime ayni anda gider (24 Eylul 2026).
+            $recipients = Personnel::query()
+                ->whereKey($this->queries->reportRecipientIds((int) $report->author_personnel_id))
+                ->get()
+                ->filter(fn (Personnel $person): bool => $person->isReachable());
+
+            if ($report->reviewer instanceof Personnel && ! $recipients->contains(fn (Personnel $person): bool => $person->is($report->reviewer))) {
+                $recipients->push($report->reviewer);
             }
+
+            $this->notify($report, $recipients, 'submitted');
 
             return $report;
         });

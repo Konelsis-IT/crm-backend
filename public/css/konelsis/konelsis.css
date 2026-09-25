@@ -804,3 +804,103 @@ body:has(#konelsis-chat-root) .fi-main {
 .fi-in-entry .fi-in-entry-label,
 .fi-fo-fieldset-label,
 .fi-sc-field-label { font-weight: 600; }
+
+/*
+ * Hizli islemler dairesi (D-122, kullanici onayi 24 Eylul 2026): ust cubuktaki
+ * "Hizli islemler" dugmesinin actigi panelde islemler bir dairenin cevresine
+ * dizilir (Dynamics 365 tarzi). Konum --kc-qa-i (sira) ve --kc-qa-n (toplam)
+ * ile hesaplanir; ilk islem tepededir, saat yonunde ilerler.
+ */
+.kc-qa {
+    --kc-qa-size: 20rem;
+    --kc-qa-radius: 7rem;
+    --kc-qa-bubble: 3rem;
+    position: relative;
+    width: var(--kc-qa-size);
+    height: var(--kc-qa-size);
+    margin: 0.5rem auto 2rem;
+}
+.kc-qa::before {
+    content: "";
+    position: absolute;
+    inset: calc(50% - var(--kc-qa-radius));
+    border-radius: 9999px;
+    border: 1px dashed var(--gray-300);
+}
+.kc-qa-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8rem;
+    height: 8rem;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 12px 28px -14px rgb(0 0 0 / 0.45), inset 0 0 0 1px var(--gray-200);
+    text-align: center;
+}
+.kc-qa-center-icon { width: 1.5rem; height: 1.5rem; color: var(--primary-600); }
+.kc-qa-center-title { padding: 0 0.75rem; font-size: 0.875rem; font-weight: 700; line-height: 1.2; color: var(--gray-900); }
+.kc-qa-node {
+    --kc-qa-angle: calc(360deg / var(--kc-qa-n) * var(--kc-qa-i) - 90deg);
+    position: absolute;
+    left: calc(50% + cos(var(--kc-qa-angle)) * var(--kc-qa-radius));
+    top: calc(50% + sin(var(--kc-qa-angle)) * var(--kc-qa-radius));
+    width: 5.75rem;
+    transform: translate(-50%, calc(var(--kc-qa-bubble) / -2));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    text-decoration: none;
+}
+.kc-qa-bubble {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--kc-qa-bubble);
+    height: var(--kc-qa-bubble);
+    border-radius: 9999px;
+    background: var(--primary-600);
+    color: #fff;
+    box-shadow: 0 0 0 4px #fff, 0 8px 18px -8px rgb(0 0 0 / 0.5);
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.kc-qa-icon { width: 1.4rem; height: 1.4rem; }
+.kc-qa-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
+    color: var(--gray-700);
+}
+.kc-qa-node:hover .kc-qa-bubble,
+.kc-qa-node:focus-visible .kc-qa-bubble { transform: scale(1.08); background: var(--primary-700); }
+.kc-qa-node:focus-visible { outline: none; }
+.kc-qa-node:focus-visible .kc-qa-label { text-decoration: underline; }
+.kc-qa-node-add .kc-qa-bubble {
+    background: #fff;
+    color: var(--primary-600);
+    border: 2px dashed var(--primary-400);
+    box-shadow: none;
+}
+.kc-qa-node-add:hover .kc-qa-bubble { background: var(--primary-50); }
+.kc-qa-center:where(.dark, .dark *) { background: var(--gray-900); box-shadow: 0 12px 28px -14px rgb(0 0 0 / 0.8), inset 0 0 0 1px var(--gray-700); }
+.kc-qa-center-title:where(.dark, .dark *) { color: #fff; }
+.kc-qa:where(.dark, .dark *)::before { border-color: var(--gray-700); }
+.kc-qa-bubble:where(.dark, .dark *) { box-shadow: 0 0 0 4px var(--gray-900), 0 8px 18px -8px rgb(0 0 0 / 0.8); }
+.kc-qa-label:where(.dark, .dark *) { color: var(--gray-200); }
+.kc-qa-node-add .kc-qa-bubble:where(.dark, .dark *) { background: var(--gray-900); }
+
+/*
+ * Tablo kurallari (D-125, 25 Eylul 2026): satirdaki "Goruntule / Ac" dugmesi
+ * gosterilmez; satira tiklamak detayi acar. Eylem kayitli kalir, detay sayfasi
+ * olmayan kayitta satir tiklamasi ayni pencereyi acar
+ * (App\Filament\Support\TableConventions).
+ */
+.kc-row-action-hidden { display: none !important; }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Documents\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Enums\Document\DocumentShareStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DocumentWorkspace;
@@ -128,6 +129,8 @@ class SharesRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
                 Action::make('open')
                     ->label(__('document.actions.open_share'))
                     ->icon(Heroicon::OutlinedArrowTopRightOnSquare)

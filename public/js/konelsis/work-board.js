@@ -4,11 +4,13 @@
  *
  * Tek sayfa, dort tip: Panom, Ekip panosu, Proje panosu, Yonetim panosu. Suzgecler
  * tipe gore gelir, sayi gosterir, coklu secilir ve tip ile birlikte hatirlanir
- * (localStorage, yalniz tercih). Sistemden gelen oneriler (Kart yap / Yoksay),
- * hizli satir (is tarihi secici ile), bes durum sutunu, surukle-birak (durum +
- * sira; Bekleniyor'da kimden, Tamamlandi'da saat sorulur; Geri al), kart menusu
- * (klavye ve dokunmatik icin Durum), Yeni kalem / duzenleme penceresi, Gunu
- * kapat, Haftayi kapat ve Yonetim panosunu dondur pencereleri.
+ * (localStorage, yalniz tercih). Sistemden gelen oneriler (tiklayinca ayrinti
+ * penceresi; Ise donustur / Yoksay), hizli satir (is tarihi secici ile), bes
+ * durum sutunu (24 Eylul 2026: "Engellendi" -> "Iptal", kapali durum),
+ * surukle-birak (durum + sira; Bekleniyor'da kimden, Tamamlandi'da saat
+ * sorulur; Geri al), kart menusu (klavye ve dokunmatik icin Durum), Is ekle /
+ * duzenleme penceresi, gunluk / haftalik rapora donustur ve panoyu dondur
+ * pencereleri.
  *
  * Kok: [data-kw-root="work-board"]; data-config: WorkAppConfig::board().
  */
@@ -1079,28 +1081,47 @@
     /* Oneriler                                                             */
     /* ------------------------------------------------------------------ */
 
+    /** Tepsinin ac / kapa oku (24 Eylul 2026: daha buyuk ve anlasilir). */
+    function Chevron(props) {
+        return h('svg', { className: cx('kw-chevron', { open: props.open }), viewBox: '0 0 20 20', width: 20, height: 20, 'aria-hidden': 'true' },
+            h('path', { d: 'M5.5 7.5 10 12l4.5-4.5', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
     function Tray(props) {
-        const { suggestions, gone, onMake, onDismiss, dismissedMode, dismissed, onRestore, open, onToggle } = props;
+        const { suggestions, gone, onMake, onDismiss, onDetail, dismissedMode, dismissed, onRestore, open, onToggle } = props;
         const { t } = useApp();
         const list = dismissedMode ? dismissed : suggestions;
         const visible = list.filter((row) => dismissedMode || !gone[row.id] || gone[row.id] === 'fading');
         const count = dismissedMode ? visible.length : visible.filter((row) => !gone[row.id]).length;
+        const stop = (event) => event.stopPropagation();
 
         if (!dismissedMode && !visible.length) { return null; }
 
+        // Baslik satirinin tamami ac / kapa dugmesidir (kullanici istegi).
         return h('div', { className: cx('kw-tray', { closed: !open }), 'aria-label': t('tray_title') },
-            h('h3', null, h('button', {
+            h('button', {
                 type: 'button',
                 className: 'kw-tray-toggle',
                 'aria-expanded': String(!!open),
                 onClick: onToggle,
-            }, h('span', { className: 'kw-caret', 'aria-hidden': 'true' }, open ? '▾' : '▸'), dismissedMode ? t('dismissed_title') : t('tray_title'), ' ', h('span', { className: 'kw-count' }, count))),
+            },
+            h('span', { className: 'kw-tray-title' }, dismissedMode ? t('dismissed_title') : t('tray_title'), h('span', { className: 'kw-count' }, count)),
+            open && !dismissedMode ? h('span', { className: 'kw-tray-hint' }, t('suggestion_hint')) : null,
+            h('span', { className: 'kw-tray-state' }, open ? t('tray_hide') : t('tray_show'), h(Chevron, { open }))),
             open && dismissedMode ? h('p', { className: 'kw-tray-help' }, t('dismissed_help')) : null,
             open && dismissedMode && !visible.length ? h('p', { className: 'kw-tray-help' }, t('dismissed_empty')) : null,
             open ? visible.map((row) => {
                 const isGone = !dismissedMode && gone[row.id];
 
-                return h('div', { key: row.id, className: cx('kw-suggest', { gone: isGone }) },
+                // Oneriye tiklaninca ayrinti penceresi acilir; dugmeler ayri calisir.
+                return h('div', {
+                    key: row.id,
+                    className: cx('kw-suggest', { gone: isGone }),
+                    role: isGone ? null : 'button',
+                    tabIndex: isGone ? -1 : 0,
+                    onClick: isGone ? undefined : () => onDetail(row),
+                    onKeyDown: isGone ? undefined : (event) => { if (event.key === 'Enter' && event.target === event.currentTarget) { onDetail(row); } },
+                },
                     h('span', null,
                         row.label, ' · ',
                         h('b', { className: row.mono ? 'kw-mono' : null }, row.subject),
@@ -1108,7 +1129,7 @@
                     ),
                     isGone
                         ? h(Tag, null, t('dismissed_tag'))
-                        : h('span', { className: 'kw-btns' },
+                        : h('span', { className: 'kw-btns', onClick: stop },
                             dismissedMode
                                 ? h(Btn, { onClick: () => onRestore(row) }, t('undo'))
                                 : h(Fragment, null,
@@ -1119,6 +1140,47 @@
                 );
             }) : null,
         );
+    }
+
+    /** Oneri ayrintisi: kisi ise donusturmeden once ne oldugunu gorur. */
+    function SuggestionModal(props) {
+        const { suggestion, dismissedMode, onClose, onMake, onDismiss, onRestore } = props;
+        const { t } = useApp();
+        const d = suggestion.detail || {};
+        const changes = d.changes || [];
+        const record = [d.record_no, d.record_label].filter(Boolean).join(' · ');
+        const rows = [
+            [t('detail_action'), suggestion.label],
+            [t('detail_when'), d.occurred || suggestion.time],
+            [t('detail_module'), suggestion.module],
+            [t('detail_record'), record ? h(Fragment, null, d.record_kind ? h('span', { className: 'kw-muted' }, d.record_kind + ' · ') : null, record) : null],
+            [t('detail_status'), d.record_status],
+            [t('detail_project'), d.project],
+        ].filter((row) => row[1]);
+
+        return h(Modal, {
+            title: t('detail_title'),
+            sub: suggestion.label + ' · ' + suggestion.subject,
+            size: 'small',
+            onClose,
+            footer: [
+                d.record_url ? h(Btn, { key: 'r', href: d.record_url, target: '_blank', rel: 'noopener' }, t('open_record')) : null,
+                h(Btn, { key: 'c', onClick: onClose }, t('cancel')),
+                dismissedMode
+                    ? h(Btn, { key: 'u', variant: 'primary', onClick: () => { onClose(); onRestore(suggestion); } }, t('undo'))
+                    : h(Fragment, { key: 'a' },
+                        h(Btn, { onClick: () => { onClose(); onDismiss(suggestion); } }, t('dismiss')),
+                        h(Btn, { variant: 'primary', 'data-autofocus': true, onClick: () => onMake(suggestion) }, t('make_card')),
+                    ),
+            ],
+        },
+        h('p', { className: 'kw-info' }, t('detail_help')),
+        h('dl', { className: 'kw-detail' }, rows.map((row) => h(Fragment, { key: row[0] }, h('dt', null, row[0]), h('dd', null, row[1])))),
+        h('div', { className: 'kw-detail-changes' },
+            h('h4', null, t('detail_changes')),
+            changes.length
+                ? h('ul', null, changes.map((line, index) => h('li', { key: index }, line)))
+                : h('p', { className: 'kw-tray-help' }, t('detail_no_changes'))));
     }
 
     /* ------------------------------------------------------------------ */
@@ -1629,6 +1691,7 @@
                 dismissedMode,
                 dismissed,
                 onMake: (row) => setModal({ kind: 'make', suggestion: row }),
+                onDetail: (row) => setModal({ kind: 'suggestion', suggestion: row }),
                 onDismiss: dismiss,
                 onRestore: restore,
             }) : null,
@@ -1645,6 +1708,14 @@
             modal && modal.kind === 'item' ? h(ItemModal, { card: modal.card, scope, cards: data.cards, defaultProject: soleProject, onClose: () => setModal(null), onSaved: (card, isNew) => { upsert(card, isNew); app.toast({ text: isNew ? t('created') : t('saved'), tone: 'ok' }); } }) : null,
             modal && modal.kind === 'day' ? h(DayModal, { onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'week' ? h(WeekModal, { onClose: () => setModal(null), onDone: onReport }) : null,
+            modal && modal.kind === 'suggestion' ? h(SuggestionModal, {
+                suggestion: modal.suggestion,
+                dismissedMode,
+                onClose: () => setModal(null),
+                onMake: (row) => setModal({ kind: 'make', suggestion: row }),
+                onDismiss: dismiss,
+                onRestore: restore,
+            }) : null,
             modal && modal.kind === 'make' ? h(MakeCardModal, { suggestion: modal.suggestion, onClose: () => setModal(null), onCreated: onCreatedFromSuggestion }) : null,
             modal && modal.kind === 'freeze' ? h(FreezeModal, { cards: visibleCards, onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'prompt' ? h(PromptPop, {

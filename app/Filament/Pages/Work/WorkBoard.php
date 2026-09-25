@@ -26,9 +26,12 @@ use UnitEnum;
  */
 class WorkBoard extends Page
 {
-    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedViewColumns;
+    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
     protected static string | UnitEnum | null $navigationGroup = NavigationGroup::Reports;
+
+    // Sol menude yok; ust cubuktaki dugmeyle acilir (24 Eylul 2026).
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?int $navigationSort = 2;
 

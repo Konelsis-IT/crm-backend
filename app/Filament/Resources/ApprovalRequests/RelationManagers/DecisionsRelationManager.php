@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalRequests\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Models\Approval\ApprovalDecision;
 use BackedEnum;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -54,7 +55,10 @@ class DecisionsRelationManager extends RelationManager
                     ->dateTime('d.m.Y H:i'),
             ])
             ->headerActions([])
-            ->recordActions([])
+            ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
+            ])
             ->toolbarActions([])
             ->paginated(false)
             ->defaultSort('approval_decisions.decided_at', 'desc')

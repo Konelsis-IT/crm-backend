@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\LegalHolds\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\LegalHoldDocument;
 use App\Services\Audit\ActorContext;
@@ -94,6 +95,8 @@ class DocumentsRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
                 DeleteAction::make()
                     ->using(fn (LegalHoldDocument $record): bool => app(LegalHoldDocumentService::class)->delete($record)),
             ])

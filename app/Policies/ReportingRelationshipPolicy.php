@@ -22,14 +22,19 @@ final class ReportingRelationshipPolicy
         return $this->canRead($personnel) || $this->permits($personnel, 'view');
     }
 
+    /**
+     * Ek amir (islevsel / proje) eklemek (D-121): personel kartini
+     * duzenleyebilen kisi. Dogrudan amir yine personel formundan degisir.
+     */
     public function create(Personnel $personnel): bool
     {
-        return false;
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'create');
     }
 
+    /** Ek amir iliskisini kapatmak (D-121); dogrudan amir buradan kapanmaz. */
     public function update(Personnel $personnel, ReportingRelationship $record): bool
     {
-        return false;
+        return $this->hasFullAccess($personnel) || $this->permits($personnel, 'update');
     }
 
     public function delete(Personnel $personnel, ReportingRelationship $record): bool

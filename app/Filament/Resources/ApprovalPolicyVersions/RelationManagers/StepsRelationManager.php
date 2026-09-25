@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalPolicyVersions\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Enums\Approval\DecisionRule;
 use App\Enums\Approval\ResolverType;
 use App\Enums\Project\TeamRole;
@@ -194,6 +195,8 @@ class StepsRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
                 EditAction::make()
                     ->visible($isDraft)
                     ->using(function (ApprovalStep $record, array $data): Model {

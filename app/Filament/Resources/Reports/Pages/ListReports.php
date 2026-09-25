@@ -9,19 +9,14 @@ use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\ExportActions;
 use App\Models\Personnel\Personnel;
 use App\Query\Report\ReportQueries;
-use App\Reports\Templates\DailyWorkReportTemplate;
-use App\Support\DisplayTime;
-use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 /**
  * Rapor listesi: Raporlarim / Inceleme kutum / Ekibim / Tumu (gorebildiklerim).
- * "Bugunun raporu" kisayolu gunluk rapor yoksa gorunur.
  */
 class ListReports extends ListRecords
 {
@@ -37,16 +32,9 @@ class ListReports extends ListRecords
      */
     protected function getHeaderActions(): array
     {
-        $today = (new DailyWorkReportTemplate)->code();
-        $me = (int) auth()->id();
-
+        // "Bugunun raporu" dugmesi kaldirildi (24 Eylul 2026 kullanici istegi):
+        // gunluk rapor Is panosundaki "Gunluk rapora donustur" ile uretilir.
         return [
-            Action::make('today')
-                ->label(__('report.actions.today'))
-                ->icon(Heroicon::OutlinedSun)
-                ->color('gray')
-                ->url(ReportResource::getUrl('create', [CreateReport::QUERY_TEMPLATE => $today]))
-                ->visible(fn (): bool => $me > 0 && ! app(ReportQueries::class)->hasReportForDay($today, $me, Carbon::today(DisplayTime::zone()))),
             ExportActions::table(ReportExporter::class),
             CreateAction::make()->label(__('report.actions.create')),
         ];

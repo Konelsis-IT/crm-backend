@@ -110,8 +110,9 @@ final class WorkItemService extends AbstractService
                 'status' => $status->value,
                 'status_changed_at' => $since,
                 'started_at' => $status === WorkItemStatus::InProgress ? $since : null,
-                'completed_at' => $status === WorkItemStatus::Done ? $since : null,
-                'done_on' => $status === WorkItemStatus::Done ? $attributes['work_on'] : null,
+                // Kapali durum: Tamamlandi ya da Iptal (eski "Engellendi").
+                'completed_at' => ! $status->isOpen() ? $since : null,
+                'done_on' => ! $status->isOpen() ? $attributes['work_on'] : null,
                 'waiting_since' => $status === WorkItemStatus::Waiting ? $since : null,
                 'sort_order' => 0,
             ]);
@@ -146,7 +147,7 @@ final class WorkItemService extends AbstractService
                 ? (WorkItemStatus::tryFrom((string) ($data['status'] instanceof WorkItemStatus ? $data['status']->value : $data['status'])) ?? $item->status)
                 : $item->status;
 
-            if ($attributes['work_on'] > WorkItemQueries::today()->format('Y-m-d') && $target !== WorkItemStatus::Done) {
+            if ($attributes['work_on'] > WorkItemQueries::today()->format('Y-m-d') && $target->isOpen()) {
                 $target = WorkItemStatus::Planned;
             }
 
@@ -841,7 +842,7 @@ final class WorkItemService extends AbstractService
         $status = $raw instanceof WorkItemStatus ? $raw : (WorkItemStatus::tryFrom((string) ($raw ?? '')) ?? WorkItemStatus::Planned);
 
         // Ileri tarih verilirse kart Planlandi sayilir ve o gun panoya duser.
-        if ($attributes['work_on'] > WorkItemQueries::today()->format('Y-m-d') && $status !== WorkItemStatus::Done) {
+        if ($attributes['work_on'] > WorkItemQueries::today()->format('Y-m-d') && $status->isOpen()) {
             return WorkItemStatus::Planned;
         }
 
@@ -874,10 +875,12 @@ final class WorkItemService extends AbstractService
             $item->started_at = $now;
         }
 
-        if ($target === WorkItemStatus::Done) {
+        // Kapanis: Tamamlandi ya da Iptal (eski "Engellendi"); kapali bir
+        // durumdan acik duruma donen kartin kapanisi silinir.
+        if (! $target->isOpen()) {
             $item->completed_at = $now;
             $item->done_on = WorkItemQueries::today()->format('Y-m-d');
-        } elseif ($from === WorkItemStatus::Done) {
+        } elseif ($from !== null && ! $from->isOpen()) {
             $item->completed_at = null;
             $item->done_on = null;
         }
@@ -1034,7 +1037,8 @@ final class WorkItemService extends AbstractService
     private function generatedSummary(Collection $cards): string
     {
         $done = $cards->filter(fn (WorkItem $item): bool => $item->status === WorkItemStatus::Done)->pluck('title')->all();
-        $open = $cards->filter(fn (WorkItem $item): bool => in_array($item->status, [WorkItemStatus::InProgress, WorkItemStatus::Waiting, WorkItemStatus::Blocked], true))->pluck('title')->all();
+        // Iptal edilen is (eski "Engellendi") suren is sayilmaz.
+        $open = $cards->filter(fn (WorkItem $item): bool => in_array($item->status, [WorkItemStatus::InProgress, WorkItemStatus::Waiting], true))->pluck('title')->all();
         $parts = [];
 
         if ($done !== []) {

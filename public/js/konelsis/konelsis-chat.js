@@ -248,6 +248,12 @@
         const unreadTotal = useMemo(() => conversations.reduce((sum, item) => sum + (item.unread || 0), 0), [conversations]);
         const active = useMemo(() => conversations.find((item) => item.id === activeId) || null, [conversations, activeId]);
 
+        // Masaustu bildirimi / ses (D-126, konelsis-alerts.js): acik olan
+        // sohbetteki mesaj, sekme ondeyken ayrica bildirilmesin.
+        useEffect(() => {
+            window.KonelsisChatState = { open, activeId };
+        }, [open, activeId]);
+
         const showError = useCallback((failure) => {
             setError(failure && failure.message ? failure.message : t('error_generic'));
             window.setTimeout(() => setError(null), 4000);

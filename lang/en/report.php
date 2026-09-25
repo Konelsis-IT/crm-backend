@@ -113,6 +113,7 @@ return [
     ],
 
     'relation' => [
+        'about_personnel' => 'Reports about this person',
         'authored' => 'Reports written',
         'authored_help' => 'Reports written by this person; only the ones you may see are listed.',
         'authored_empty' => 'This person has not written a report yet.',

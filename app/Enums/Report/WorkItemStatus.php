@@ -12,8 +12,13 @@ use Filament\Support\Icons\Heroicon;
 
 /**
  * Is panosu kartinin durumu (B36, D-115): panonun bes sutunu. "Bekleniyor"
- * dis tarafa bagli beklemedir (kimden beklendigi zorunlu); "Engellendi" isin
- * ilerleyemedigi durumdur. Tamamlanmayan kartlar ertesi gunun panosuna devreder.
+ * dis tarafa bagli beklemedir (kimden beklendigi zorunlu). Tamamlanmayan
+ * kartlar ertesi gunun panosuna devreder.
+ *
+ * `blocked` degeri 24 Eylul 2026'dan beri "Iptal"dir (kullanici istegi:
+ * "Engellendi kisminin adini Iptal yapalim"): kapali bir durumdur - devretmez,
+ * rapordaki Engeller alanina girmez, suresi islemez. Veritabani degeri
+ * (CHECK kisiti) degismedi.
  */
 enum WorkItemStatus: string implements HasColor, HasIcon, HasLabel
 {
@@ -25,19 +30,21 @@ enum WorkItemStatus: string implements HasColor, HasIcon, HasLabel
     case Done = 'done';
     case Blocked = 'blocked';
 
-    /** Acik kart: tamamlanmamis; sonraki gune devreder. */
+    /** Acik kart: tamamlanmamis ve iptal edilmemis; sonraki gune devreder. */
     public function isOpen(): bool
     {
-        return $this !== self::Done;
+        return $this !== self::Done && $this !== self::Blocked;
     }
 
-    /** Surenin sayildigi kova (sure raporu): calisma, bekleme, engel. */
+    /**
+     * Surenin sayildigi kova (sure raporu): calisma, bekleme. Iptal edilen
+     * iste sure islemez; eski "engel" sureleri raporda kalir.
+     */
     public function durationBucket(): ?string
     {
         return match ($this) {
             self::InProgress => 'progress',
             self::Waiting => 'waiting',
-            self::Blocked => 'blocked',
             default => null,
         };
     }
@@ -83,7 +90,7 @@ enum WorkItemStatus: string implements HasColor, HasIcon, HasLabel
             self::InProgress => Heroicon::OutlinedPlayCircle,
             self::Waiting => Heroicon::OutlinedClock,
             self::Done => Heroicon::OutlinedCheckCircle,
-            self::Blocked => Heroicon::OutlinedHandRaised,
+            self::Blocked => Heroicon::OutlinedXCircle,
         };
     }
 }

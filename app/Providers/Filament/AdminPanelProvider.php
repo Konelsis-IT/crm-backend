@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\PersonnelProfile;
+use App\Filament\Clusters\Settings;
 use App\Filament\Pages\Dashboard;
 use App\Filament\NavigationGroup;
 use Filament\Navigation\NavigationGroup as FilamentNavigationGroup;
@@ -25,6 +26,7 @@ use App\Http\Controllers\Work\WorkInsightController;
 use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Notifications\ApprovalQuickDecisionController;
+use App\Http\Controllers\Notifications\AlertFeedController;
 use App\Http\Controllers\Notifications\BusinessAlertAcknowledgeController;
 use App\Http\Controllers\SocialMedia\SocialCatalogController;
 use App\Http\Controllers\SocialMedia\SocialCommentController;
@@ -44,14 +46,16 @@ use App\Services\Notification\AudienceResolver;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Filament\Support\ReleaseNotesSchema;
+use App\Filament\Support\TopbarShortcuts;
 use App\Support\ReleaseNotes;
 use App\Support\RoleLabels;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Forms\Components\Select;
 use Filament\Http\Middleware\Authenticate;
-use Filament\Http\Middleware\AuthenticateSession;
+use App\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
@@ -61,6 +65,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -116,6 +121,32 @@ class AdminPanelProvider extends PanelProvider
             // Sag ustteki kullanici menusunde giris yapan kisinin rolu ve
             // departmani; salt bilgi amacli, tiklanamaz.
             ->userMenuItems([
+                // En ustte kisinin adi tek satir baslik olarak (24 Eylul 2026
+                // kullanici istegi); baglantisiz profil ogesi Filament'te baslik
+                // olarak cizilir. Profil sayfasi ve Ayarlar hemen altinda.
+                'profile' => fn (Action $action): Action => $action
+                    ->label(fn (): string => Filament::getUserName(Filament::auth()->user()))
+                    ->url(null),
+                'my_profile' => Action::make('my_profile')
+                    ->label(fn (): string => PersonnelProfile::getLabel())
+                    ->icon(Heroicon::OutlinedIdentification)
+                    ->url(fn (): ?string => Filament::getProfileUrl())
+                    ->sort(-1),
+                // Ayarlar sol menude degil burada (24 Eylul 2026 kullanici istegi).
+                'settings' => Action::make('settings')
+                    ->label(fn (): string => __('app.nav.settings'))
+                    ->icon(Heroicon::OutlinedCog6Tooth)
+                    ->url(fn (): string => Settings::getUrl())
+                    ->visible(fn (): bool => Settings::canAccessClusteredComponents())
+                    ->sort(-1),
+                // Masaustu (Windows) bildirim izni (D-126): tarayici izni ancak
+                // kullanici tiklayinca sorar; konelsis-alerts.js izni ister,
+                // deneme sesi calar ve sonucu Filament bildirimiyle yazar.
+                'desktop_alerts' => Action::make('desktop_alerts')
+                    ->label(fn (): string => __('alerts.actions.enable'))
+                    ->icon(Heroicon::OutlinedBellAlert)
+                    ->alpineClickHandler('window.KonelsisAlerts && window.KonelsisAlerts.enable()')
+                    ->sort(-1),
                 // Personel degistir (D-120): yalniz gizli sistem hesabinda
                 // gorunur, Roller ekranindan verilmez ve alinamaz.
                 'impersonate' => Action::make('impersonate')
@@ -247,6 +278,8 @@ class AdminPanelProvider extends PanelProvider
                 Route::prefix('notifications')->name('notifications.')->group(function (): void {
                     Route::get('approvals/{approval}/approve', ApprovalQuickDecisionController::class)->name('approval-approve');
                     Route::get('alerts/{alert}/acknowledge', BusinessAlertAcknowledgeController::class)->name('alert-acknowledge');
+                    // Masaustu bildirimi + ses beslemesi (D-126): filament.admin.notifications.feed
+                    Route::get('feed', AlertFeedController::class)->name('feed');
                 });
 
                 // Kurum ici sohbet JSON uclari (D-83): filament.admin.chat.*
@@ -373,6 +406,12 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
                 fn () => view('filament.components.language-switcher', ['onLoginPage' => true]),
             )
+            // Ust cubuk kisayollari (24 Eylul 2026): Hizli islemler, Is panosu,
+            // Kontrol matrisi; TR / EN'nin solunda. Filament eylem bilesenleri.
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): Htmlable => TopbarShortcuts::render(),
+            )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
                 fn () => view('filament.components.language-switcher'),
@@ -439,6 +478,14 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
                 // Personel degistirme (D-120): oturum sistem hesabinda kalir,
                 // arayuz secilen personelin gozuyle calisir.
+                ImpersonatePersonnel::class,
+            ])
+            // Livewire guncelleme istekleri (tablo suzgeci, form kaydi, eylem,
+            // zil yoklamasi) da secilen personelin gozuyle calissin. Oturum
+            // korumasi projedeki alt siniftir (Filament'inki kalici listede
+            // sinif adiyla eslestigi icin burada ayrica kalici yapilir).
+            ->persistentMiddleware([
+                AuthenticateSession::class,
                 ImpersonatePersonnel::class,
             ]);
     }

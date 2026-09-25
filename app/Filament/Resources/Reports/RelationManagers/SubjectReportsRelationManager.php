@@ -54,7 +54,9 @@ class SubjectReportsRelationManager extends RelationManager
         $kind = ReportSubjectKind::forModel($this->getOwnerRecord());
 
         return $table
-            ->heading(__('report.plural'))
+            // Personel kartinda "Raporlar" sekmesi hakkindaki + yazdigi raporlari
+            // alt alta gosterir (24 Eylul 2026); baslik sekme adiyla karismasin.
+            ->heading($this->getOwnerRecord() instanceof Personnel ? __('report.relation.about_personnel') : __('report.plural'))
             ->description(__('report.relation.help'))
             ->columns([
                 TextColumn::make('report_no')->label(__('report.fields.report_no'))->badge()->color('gray'),

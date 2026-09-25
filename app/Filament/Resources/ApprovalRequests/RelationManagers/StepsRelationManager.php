@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalRequests\RelationManagers;
 
+use App\Filament\Support\RowDetail;
 use App\Models\Approval\ApprovalRequestStep;
 use BackedEnum;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -72,7 +73,10 @@ class StepsRelationManager extends RelationManager
                     ->placeholder('-'),
             ])
             ->headerActions([])
-            ->recordActions([])
+            ->recordActions([
+                // Satira tiklamak ayrinti penceresini acar (D-125); dugme gorunmez.
+                RowDetail::action(),
+            ])
             ->toolbarActions([])
             ->paginated(false)
             ->defaultSort('sequence_no');

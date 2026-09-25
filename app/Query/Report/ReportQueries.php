@@ -20,6 +20,7 @@ use App\Query\Project\ProjectCatalogQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Reports\ReportTemplate;
 use App\Reports\Templates\DailyControlReportTemplate;
+use App\Services\Authorization\ExecutiveDirectory;
 use App\Services\Authorization\PermissionKey;
 use App\Services\Authorization\RoleResolver;
 use App\Services\Platform\SchemaReadiness;
@@ -43,7 +44,9 @@ final class ReportQueries
     ) {}
 
     /**
-     * Dogrudan astlar (reporting_relationships `line`, gecerli).
+     * Astlar: acik butun amir iliskileri (dogrudan amir, islevsel amir,
+     * proje amiri). 24 Eylul 2026 kullanici karari: bir kisi birden fazla
+     * mudure baglidir; hepsi ayni sekilde gorur.
      *
      * @return list<int>
      */
@@ -55,7 +58,6 @@ final class ReportQueries
 
         return ReportingRelationship::query()
             ->where('manager_personnel_id', $managerId)
-            ->where('relation_type', ReportingRelationType::Line->value)
             ->whereNull('valid_until')
             ->pluck('personnel_id')
             ->map(fn ($id): int => (int) $id)
@@ -103,6 +105,71 @@ final class ReportQueries
         return array_values(array_unique(array_filter($ids, fn (int $id): bool => $id !== $personnelId)));
     }
 
+    /**
+     * Raporun gidecegi kisiler (24 Eylul 2026 kullanici karari): yazarin
+     * butun amirleri (dogrudan amir ve bagli oldugu birimlerin yoneticileri)
+     * ve ust yonetim (Idari mudur, Yonetim kurulu baskani). Ayrim yoktur:
+     * hepsi ayni anda gorur ve bildirim alir.
+     *
+     * @return list<int>
+     */
+    public function reportRecipientIds(int $authorId): array
+    {
+        $ids = [...$this->managerIds($authorId), ...$this->executiveIds()];
+
+        return array_values(array_unique(array_filter($ids, fn (int $id): bool => $id !== $authorId)));
+    }
+
+    /**
+     * Yazarin amirleri: dogrudan amir(ler)i ve bagli oldugu birimlerin
+     * yoneticileri.
+     *
+     * @return list<int>
+     */
+    public function managerIds(int $personnelId): array
+    {
+        if (! SchemaReadiness::hasBatch('B03')) {
+            return [];
+        }
+
+        $direct = ReportingRelationship::query()
+            ->where('personnel_id', $personnelId)
+            ->whereNull('valid_until')
+            ->pluck('manager_personnel_id');
+
+        $unitIds = Personnel::query()->whereKey($personnelId)->pluck('org_unit_id');
+
+        $unitManagers = OrgUnit::query()
+            ->whereIn('id', $unitIds->filter())
+            ->whereNotNull('manager_personnel_id')
+            ->pluck('manager_personnel_id');
+
+        return array_values(array_unique(array_map(
+            'intval',
+            [...$direct->all(), ...$unitManagers->all()],
+        )));
+    }
+
+    /** Ust yonetim (D-116): Idari mudur ve Yonetim kurulu baskani. @return list<int> */
+    public function executiveIds(): array
+    {
+        // Tam model yuklenir: ExecutiveDirectory durum ve birim kolonlarini okur.
+        return Personnel::query()
+            ->where('status', 'active')
+            ->with('orgUnit:id,code')
+            ->get()
+            ->filter(fn (Personnel $person): bool => app(ExecutiveDirectory::class)->isExecutive($person))
+            ->map(fn (Personnel $person): int => (int) $person->getKey())
+            ->values()
+            ->all();
+    }
+
+    /** Kisi ust yonetimde mi (rapor gorunurlugu icin). */
+    public function isExecutive(Personnel $personnel): bool
+    {
+        return app(ExecutiveDirectory::class)->isExecutive($personnel);
+    }
+
     /** Kisi bu personelin dogrudan amiri ya da departman yoneticisi mi? */
     public function managesPersonnel(int $managerId, int $personnelId): bool
     {
@@ -113,9 +180,10 @@ final class ReportQueries
         return in_array($personnelId, $this->teamPersonnelIds($managerId), true);
     }
 
+    /** Tam yetki: Yonetici / Gelistirici rolu ya da ust yonetim (D-116). */
     public function hasFullAccess(Personnel $personnel): bool
     {
-        return $personnel->isActive() && $this->roles->hasFullAccess($personnel);
+        return $personnel->isActive() && ($this->roles->hasFullAccess($personnel) || $this->isExecutive($personnel));
     }
 
     public function isAuditor(Personnel $personnel): bool
@@ -162,17 +230,42 @@ final class ReportQueries
         return $query->where('author_personnel_id', $personnelId);
     }
 
-    /** Inceleme kutum: bana atanmis, gonderilmis raporlar. */
+    /**
+     * Inceleme kutum: gonderilmis raporlardan bana atanmis olanlar ve
+     * amiri / ust yonetimi oldugum kisilerin raporlari (24 Eylul 2026:
+     * rapor butun mudurlere ve ust yonetime ayni anda gider).
+     */
     public function applyReviewInbox(Builder $query, int $personnelId): Builder
     {
+        $team = $this->teamPersonnelIds($personnelId);
+        $viewer = Personnel::query()->find($personnelId);
+        $seesAll = $viewer instanceof Personnel && $this->isExecutive($viewer);
+
         return $query
             ->where('status', ReportStatus::Submitted->value)
-            ->where('reviewer_personnel_id', $personnelId);
+            ->where(function (Builder $inner) use ($personnelId, $team, $seesAll): void {
+                $inner->where('reviewer_personnel_id', $personnelId);
+
+                if ($team !== []) {
+                    $inner->orWhereIn('author_personnel_id', $team);
+                }
+
+                if ($seesAll) {
+                    $inner->orWhere('author_personnel_id', '!=', $personnelId);
+                }
+            });
     }
 
     /** Ekibim: astlarimin ve yonettigim birimlerin uyelerinin (gizli olmayan) raporlari. */
     public function applyTeam(Builder $query, int $personnelId): Builder
     {
+        $viewer = Personnel::query()->find($personnelId);
+
+        // Ust yonetim (D-116) herkesin raporunu ekibinde gorur (24 Eylul 2026).
+        if ($viewer instanceof Personnel && $this->isExecutive($viewer)) {
+            return $query->where('author_personnel_id', '!=', $personnelId);
+        }
+
         $team = $this->teamPersonnelIds($personnelId);
 
         if ($team === []) {

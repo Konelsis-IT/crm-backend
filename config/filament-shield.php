@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 use App\Filament\Clusters\WorkReports;
+use App\Filament\Pages\QuickActionSettings;
 use App\Filament\Pages\Work\ControlMatrix;
 use App\Filament\Pages\Work\WorkAnalysis;
 use App\Filament\Pages\Work\WorkBoard;
 use App\Filament\Pages\Work\WorkDurationReport;
+use App\Filament\Resources\Notifications\NotificationResource;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Resources\SocialContents\SocialContentResource;
@@ -251,7 +253,9 @@ return [
             ],
         ],
         'exclude' => [
-            //
+            // Tum bildirimler (D-122): herkes yalniz kendi bildirimlerini gorur;
+            // Roller ekraninda izin kutusu olusmasin.
+            NotificationResource::class,
         ],
     ],
 
@@ -278,6 +282,8 @@ return [
             WorkAnalysis::class,
             WorkDurationReport::class,
             WorkReports::class,
+            // Kisisel hizli islemler (D-122): herkesin kendi tercihi; izin kutusu olmaz.
+            QuickActionSettings::class,
         ],
     ],
 

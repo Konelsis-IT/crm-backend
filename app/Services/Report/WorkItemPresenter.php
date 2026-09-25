@@ -8,6 +8,7 @@ use App\Enums\Report\WorkItemLinkKind;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
+use App\Filament\Resources\Contracts\ContractResource;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
 use App\Filament\Resources\Projects\ProjectResource;
@@ -36,7 +37,9 @@ use App\Models\WorkRequest\WorkRequest;
 use App\Query\Report\WorkItemQueries;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Reports\Work\WorkSuggestionCatalog;
+use App\Support\ActivityLabels;
 use App\Support\DisplayTime;
+use Filament\Support\Contracts\HasLabel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -284,6 +287,22 @@ final class WorkItemPresenter
                 ] : null,
                 'source_label' => __('work_item.values.automatic_source', ['module' => $this->suggestions->moduleLabel($code)]),
             ],
+            // Oneri ayrintisi penceresi (24 Eylul 2026 kullanici istegi: kisi
+            // ise donusturup donusturmeyecegine ayrintiyi gorerek karar versin).
+            // Oneri kisinin kendi hareketidir; kayit sayfasi ayrica yetki denetler.
+            'detail' => [
+                'occurred' => $at?->format('d.m.Y H:i'),
+                'record_no' => $resolved['link_no'],
+                'record_label' => $resolved['link_label'] ?? $resolved['name'],
+                'record_kind' => $kind !== WorkItemLinkKind::None ? $kind->getLabel() : $this->suggestions->moduleLabel($code),
+                'record_status' => $resolved['status'],
+                'record_url' => $resolved['url'],
+                'project' => $resolved['project_name'],
+                'changes' => array_map(
+                    fn (string $line): string => Str::limit($line, 240, '…'),
+                    array_slice(ActivityLabels::changeLines(is_array($activity->changes) ? $activity->changes : null), 0, 12),
+                ),
+            ],
         ];
     }
 
@@ -368,10 +387,21 @@ final class WorkItemPresenter
 
         $linkNo = null;
         $linkLabel = null;
+        $url = null;
 
         if ($link instanceof Model && $kind !== WorkItemLinkKind::None) {
             [$linkNo, $linkLabel] = $this->linkText($kind, $link);
+            $url = $this->recordUrl($kind, $link);
         }
+
+        // Bagli kaydi olmayan konular: kaydin kendi sayfasi (oneri ayrintisi).
+        $url ??= $this->safe(fn (): ?string => match (true) {
+            $subject instanceof Report => ReportResource::getUrl('view', ['record' => $subject]),
+            $subject instanceof Project => ProjectResource::getUrl('view', ['record' => $subject]),
+            $subject instanceof ProjectPhoto && $subject->project_id !== null => ProjectResource::getUrl('view', ['record' => $subject->project_id]),
+            $subject instanceof Contract => ContractResource::getUrl('view', ['record' => $subject]),
+            default => null,
+        });
 
         return [
             'name' => $name !== '' ? $name : (string) __('work_item.values.untitled'),
@@ -382,7 +412,21 @@ final class WorkItemPresenter
             'link_label' => $linkLabel,
             'project_id' => $project instanceof Project ? (int) $project->getKey() : null,
             'project_name' => $project instanceof Project ? (string) $project->name : null,
+            'url' => $url,
+            'status' => $this->statusLabel($link instanceof Model ? $link : $subject),
         ];
+    }
+
+    /** Kaydin durumu (etiketli durum alani varsa). */
+    private function statusLabel(Model $record): ?string
+    {
+        try {
+            $status = $record->getAttribute('status');
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $status instanceof HasLabel ? (string) $status->getLabel() : null;
     }
 
     /**
@@ -484,7 +528,8 @@ final class WorkItemPresenter
     }
 
     /**
-     * Engeller on dolu: engellenen kartlar ve uzun bekleyenler.
+     * Engeller on dolu: uzun bekleyen kartlar. Iptal edilen is (eski
+     * "Engellendi", 24 Eylul 2026) engel sayilmaz.
      *
      * @param  Collection<int, WorkItem>  $cards
      */
@@ -493,11 +538,7 @@ final class WorkItemPresenter
         $lines = [];
 
         foreach ($cards as $item) {
-            if ($item->status === WorkItemStatus::Blocked) {
-                $lines[] = filled($item->note)
-                    ? __('work_item.values.blocker_blocked', ['title' => $item->title, 'note' => Str::limit(Str::squish((string) $item->note), 160, '…')])
-                    : (string) $item->title.'.';
-            } elseif ($item->status === WorkItemStatus::Waiting && $item->isLongWaiting()) {
+            if ($item->status === WorkItemStatus::Waiting && $item->isLongWaiting()) {
                 $lines[] = __('work_item.values.blocker_waiting', ['title' => $item->title, 'days' => (int) $item->waitingDays(), 'who' => (string) ($item->waitingLabel() ?? '-')]);
             }
         }

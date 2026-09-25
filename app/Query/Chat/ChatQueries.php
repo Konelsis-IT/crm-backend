@@ -103,27 +103,8 @@ final class ChatQueries
             return [];
         }
 
-        $rows = Message::query()
-            ->from('messages as m')
-            ->join('conversation_memberships as cm', function ($join) use ($personnelId): void {
-                $join->on('cm.conversation_id', '=', 'm.conversation_id')
-                    ->where('cm.personnel_id', '=', $personnelId)
-                    ->whereNull('cm.left_at');
-            })
-            ->leftJoin('conversation_read_cursors as rc', function ($join) use ($personnelId): void {
-                $join->on('rc.conversation_id', '=', 'm.conversation_id')
-                    ->where('rc.personnel_id', '=', $personnelId);
-            })
+        $rows = $this->unreadMessages($personnelId)
             ->whereIn('m.conversation_id', $conversationIds)
-            ->where('m.author_personnel_id', '!=', $personnelId)
-            ->whereRaw('m.conversation_sequence > COALESCE(rc.last_read_sequence, 0)')
-            ->whereRaw('(cm.history_visible_from IS NULL OR m.sent_at > cm.history_visible_from)')
-            ->whereNotExists(function ($query) use ($personnelId): void {
-                $query->selectRaw('1')
-                    ->from('message_hides as h')
-                    ->whereColumn('h.message_id', 'm.id')
-                    ->where('h.personnel_id', $personnelId);
-            })
             ->groupBy('m.conversation_id')
             ->selectRaw('m.conversation_id as conversation_id, COUNT(*) as unread')
             ->get();
@@ -135,6 +116,62 @@ final class ChatQueries
         }
 
         return $counts;
+    }
+
+    /**
+     * Masaustu bildirimi / ses (D-126): kisinin en son okunmamis mesaji ve
+     * toplam okunmamis sayisi, arsivlenmemis sohbetlerde. Okunmamis kurali
+     * unreadCounts() ile aynidir.
+     *
+     * @return array{message: Message|null, total: int}
+     */
+    public function latestUnread(int $personnelId): array
+    {
+        $base = fn (): Builder => $this->unreadMessages($personnelId)
+            ->join('conversations as c', 'c.id', '=', 'm.conversation_id')
+            ->where('c.status', '!=', ConversationStatus::Archived->value);
+
+        $total = (int) $base()->count();
+
+        if ($total === 0) {
+            return ['message' => null, 'total' => 0];
+        }
+
+        $id = $base()->orderByDesc('m.id')->value('m.id');
+        $message = $id !== null
+            ? Message::query()->with(['author', 'conversation', 'attachments.fileObject', 'attachments.revision.document'])->find($id)
+            : null;
+
+        return ['message' => $message, 'total' => $total];
+    }
+
+    /**
+     * Kisinin okumadigi, gorebildigi mesajlar: baskasinin yazdigi, okuma
+     * imlecinden sonra, sohbetten ayrilmamis, tek tarafli silme ve gizleme
+     * disinda kalan.
+     */
+    private function unreadMessages(int $personnelId): Builder
+    {
+        return Message::query()
+            ->from('messages as m')
+            ->join('conversation_memberships as cm', function ($join) use ($personnelId): void {
+                $join->on('cm.conversation_id', '=', 'm.conversation_id')
+                    ->where('cm.personnel_id', '=', $personnelId)
+                    ->whereNull('cm.left_at');
+            })
+            ->leftJoin('conversation_read_cursors as rc', function ($join) use ($personnelId): void {
+                $join->on('rc.conversation_id', '=', 'm.conversation_id')
+                    ->where('rc.personnel_id', '=', $personnelId);
+            })
+            ->where('m.author_personnel_id', '!=', $personnelId)
+            ->whereRaw('m.conversation_sequence > COALESCE(rc.last_read_sequence, 0)')
+            ->whereRaw('(cm.history_visible_from IS NULL OR m.sent_at > cm.history_visible_from)')
+            ->whereNotExists(function ($query) use ($personnelId): void {
+                $query->selectRaw('1')
+                    ->from('message_hides as h')
+                    ->whereColumn('h.message_id', 'm.id')
+                    ->where('h.personnel_id', $personnelId);
+            });
     }
 
     /**
