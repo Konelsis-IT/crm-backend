@@ -11,6 +11,7 @@ use App\Filament\Resources\OperationGroupDefinitions\Pages\ListOperationGroupDef
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\OperationGroupDefinition;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\OperationGroupDefinitionService;
@@ -52,7 +53,7 @@ class OperationGroupDefinitionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::OperationGroups)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }
@@ -63,19 +64,9 @@ class OperationGroupDefinitionResource extends Resource
             Section::make(__('operation_group_definition.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        TextInput::make('code')
-                            ->label(__('operation_group_definition.fields.code'))
-                            ->required()
-                            ->alphaDash()
-                            ->maxLength(32)
-                            ->disabledOn('edit')
-                            ->dehydratedWhenHidden(false),
+                        // Kod arayuzde yok (D-130): OperationGroupDefinitionService Turkce addan uretir.
                         TextInput::make('name_tr')
                             ->label(__('operation_group_definition.fields.name_tr'))
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('operation_group_definition.fields.name_en'))
                             ->required()
                             ->maxLength(255),
                         TextInput::make('default_sort_order')
@@ -103,9 +94,6 @@ class OperationGroupDefinitionResource extends Resource
                 TextColumn::make('default_sort_order')
                     ->label(__('operation_group_definition.fields.default_sort_order'))
                     ->sortable(),
-                TextColumn::make('code')
-                    ->label(__('operation_group_definition.fields.code'))
-                    ->searchable(),
                 TextColumn::make('name_tr')
                     ->label(__('operation_group_definition.fields.name_tr'))
                     ->searchable(),

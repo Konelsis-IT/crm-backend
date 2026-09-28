@@ -9,6 +9,7 @@ use App\Enums\Acquisition\TenderSourceType;
 use App\Enums\Shared\ActiveStatus;
 use App\Models\Acquisition\TenderNotice;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Policies\TenderSourcePolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TenderSource extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

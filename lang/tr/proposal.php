@@ -6,26 +6,27 @@ return [
 
     'sections' => [
         'main' => 'Teklif bilgileri',
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'header' => 'Teklif kartı',
         'current_version' => 'Güncel sürüm',
     ],
 
     'fields' => [
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'created_at' => 'Oluşturulma',
         'current_version' => 'Güncel sürüm',
         'is_selected' => 'Seçili',
         'offer_status' => 'Teklif durumu',
         'owner' => 'Sahip',
         'proposal_no' => 'Teklif no',
+        'case_code' => 'Potansiyel iş kodu',
         'reason' => 'Gerekçe',
         'status' => 'Durum',
         'title' => 'Başlık',
     ],
 
     'help' => [
-        'business_case' => 'Teklif bu iş dosyası için açılır. Seçince iş dosyasının özeti aşağıda görünür.',
+        'business_case' => 'Teklif bu potansiyel iş için açılır. Seçince potansiyel işin özeti aşağıda görünür.',
     ],
 
     'relation' => [
@@ -45,7 +46,7 @@ return [
         'waive' => 'Muafiyet ver',
         'add_evidence' => 'Kanıt ekle',
         'accept' => 'Kabul et',
-        'open_business_case' => 'İş dosyasını aç',
+        'open_business_case' => 'Potansiyel işi aç',
     ],
 
     'steps' => [

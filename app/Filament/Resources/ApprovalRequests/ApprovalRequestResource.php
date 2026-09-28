@@ -12,6 +12,7 @@ use App\Filament\Resources\ApprovalRequests\RelationManagers\StepsRelationManage
 use App\Models\Approval\ApprovalRequest;
 use App\Models\Approval\ApprovalRequestStep;
 use App\Query\Approval\ApprovalQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -55,7 +56,7 @@ class ApprovalRequestResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('approvals.admin_ui')
+        return FeatureFlags::enabled(Feature::ApprovalRequests)
             && SchemaReadiness::hasBatch('B07')
             && parent::canAccess();
     }
@@ -87,7 +88,7 @@ class ApprovalRequestResource extends Resource
                     ->searchable()
                     ->wrap()
                     ->weight('semibold'),
-                TextColumn::make('policyVersion.policy.code')
+                TextColumn::make('policyVersion.policy.name_tr')
                     ->label(__('approval_request.fields.policy'))
                     ->badge()
                     ->color('gray')

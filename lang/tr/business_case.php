@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'İş Dosyası',
-    'plural' => 'İş Dosyaları',
+    'label' => 'Potansiyel İş',
+    'plural' => 'Potansiyel İşler',
 
     'sections' => [
         'identity' => 'Müşteri ve başlık',
@@ -13,15 +13,15 @@ return [
         'conversion' => 'Projeye dönüştürme',
         'site' => 'Saha adresi',
         'main' => 'İş bilgileri',
-        'header' => 'İş dosyası kartı',
-        'chain' => 'İş akışı: İş dosyası → Teklif → Proje',
-        'details' => 'İş dosyası ayrıntıları',
-        'summary_case' => 'İş dosyası özeti',
+        'header' => 'Potansiyel iş kartı',
+        'chain' => 'İş akışı: Potansiyel iş → Teklif → Proje',
+        'details' => 'Potansiyel iş ayrıntıları',
+        'summary_case' => 'Potansiyel iş özeti',
         'summary_proposal' => 'Teklif özeti',
     ],
 
     'wizard' => [
-        'case' => 'İş dosyası',
+        'case' => 'Potansiyel iş',
         'case_description' => 'Müşteri, başlık ve iş bilgileri',
         'proposal' => 'Teklif',
         'proposal_description' => 'İlk teklif ve sürümü (isteğe bağlı)',
@@ -37,7 +37,7 @@ return [
     ],
 
     'fields' => [
-        'acquisition_stage' => 'İş Alım aşaması',
+        'acquisition_stage' => 'Durum',
         'classification' => 'Gizlilik sınıfı',
         'country' => 'Ülke',
         'created_at' => 'Oluşturulma',
@@ -45,7 +45,8 @@ return [
         'currency' => 'Para birimi',
         'estimated_value' => 'Tahmini değer',
         'legal_entity' => 'Tüzel kişilik',
-        'offer_code' => 'TKLF kodu',
+        'offer_code' => 'Potansiyel iş kodu',
+        'code' => 'Kod',
         'offer_type' => 'Teklif tipi',
         'outcome' => 'Sonuç',
         'owner' => 'Kontrol eden',
@@ -53,7 +54,7 @@ return [
         'project_type_code' => 'Proje kategorisi',
         'proposal_owner' => 'Hazırlayan',
         'reason' => 'Gerekçe',
-        'scope_types' => 'Proje tip seçimi',
+        'scope_types' => 'Proje tipi',
         'short_description' => 'Kısa açıklama',
         'source_kind' => 'Kaynak',
         'title' => 'Başlık',
@@ -77,8 +78,9 @@ return [
     ],
 
     'relation' => [
-        'title' => 'İş Dosyaları',
-        'empty' => 'Henüz iş dosyası yok.',
+        'title' => 'Potansiyel İşler',
+        'empty' => 'Henüz potansiyel iş yok.',
+        'party_help' => 'Bu tarafın müşteri olduğu potansiyel işler (teklif süreçleri). Satıra tıklayınca potansiyel iş açılır.',
     ],
 
     'actions' => [
@@ -93,29 +95,28 @@ return [
         'waive' => 'Muafiyet ver',
         'add_evidence' => 'Kanıt ekle',
         'accept' => 'Kabul et',
-        'create' => 'İş dosyası oluştur',
+        'create' => 'Potansiyel iş oluştur',
     ],
 
     'messages' => [
         'status_changed' => 'Durum güncellendi.',
         'done' => 'İşlem tamamlandı.',
-        'created' => 'İş dosyası oluşturuldu: :code',
+        'created' => 'Potansiyel iş oluşturuldu: :code',
     ],
 
     'help' => [
-        'chain_intro' => 'Her iş tek bir iş dosyasıyla başlar (TKLF kodu). Teklif bu dosyaya bağlı hazırlanır ve sürümlenir; iş kazanılınca Operasyona devir kabulüyle proje (PRJ kodu) doğar. Üç adım burada aynı sırayla ilerler.',
         'edit_intro' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı üç adımı kullanır. İlk adımdaki alanlar "Kaydet" ile kaydedilir; teklif tablosu ve projeye dönüşüm anında uygulanır.',
-        'proposal_step' => 'İşaretliyse iş dosyasıyla birlikte ilk teklif (TKLF numarasıyla) ve taslak ilk sürümü açılır; iş dosyası "Teklif hazırlanıyor" aşamasına geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
-        'proposal_title' => 'Boş bırakılırsa iş dosyası başlığı kullanılır.',
-        'proposal_table' => 'Teklifler burada açılır; sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir. Sürüm incelemeye alındığında veya gönderildiğinde iş dosyası aşaması kendiliğinden ilerler.',
-        'project_step' => 'Yalnız kazanılmış ya da doğrudan yapılacak işler için: teklif sürümü onaylanır, iş dosyası "Kazanıldı" aşamasına yürütülür, Operasyona devir kaydı açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Normal akışta bu adımı boş bırakın; teklif kazanıldığında "Projeye dönüştür" ile yapılır.',
-        'project_name' => 'Boş bırakılırsa iş dosyası başlığı kullanılır.',
+        'proposal_step' => 'İşaretliyse potansiyel işle birlikte ilk teklif (kendi TKLF numarasıyla) ve taslak ilk sürümü açılır; potansiyel iş "Teklif hazırlanıyor" durumuna geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
+        'proposal_title' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
+        'proposal_table' => 'Teklifler burada açılır; sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir. Sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
+        'project_step' => 'Yalnız kazanılmış ya da doğrudan yapılacak işler için: teklif sürümü onaylanır, potansiyel iş "Kazanıldı" durumuna yürütülür, Operasyona devir kaydı açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Normal akışta bu adımı boş bırakın; teklif kazanıldığında "Projeye dönüştür" ile yapılır.',
+        'project_name' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
         'convert_requires_proposal' => 'Projeye dönüştürmek için önce teklif oluşturulmalıdır.',
         'project_exists' => 'Bu iş için proje oluşturuldu (:code); iş artık proje çalışma alanından adım adım yürütülür.',
-        'project_missing' => 'Bu iş dosyası için henüz proje yok. Teklif kazanıldığında "Projeye dönüştür" ile PRJ kodu verilir; Operasyona devir kaydı otomatik açılıp kabul edilir. Sözleşme daha sonra bağlanabilir.',
-        'stage_current' => 'İş dosyası şu an ":stage" aşamasında.',
-        'stage_next' => 'Sıradaki aşama: :stages.',
-        'stage_final' => 'Bu aşamadan sonra geçiş yoktur.',
+        'project_missing' => 'Bu potansiyel iş için henüz proje yok. Teklif kazanıldığında "Projeye dönüştür" ile PRJ kodu verilir; Operasyona devir kaydı otomatik açılıp kabul edilir. Sözleşme daha sonra bağlanabilir.',
+        'stage_current' => 'Durum: :stage',
+        'stage_next' => 'Sıradaki durum: :stages. Sonuç durumdan gelir: Kazanıldı ve devir durumlarında "Kazanıldı", Kaybedildi ve İptal edildi durumlarında aynı adla, diğer bütün durumlarda "Açık".',
+        'stage_final' => 'Bu durumdan sonra geçiş yoktur; sonuç kesinleşmiştir.',
         'scope_types' => 'Seçilen her tip için kendi alanları ve kapsam listesi yükleme alanı açılır.',
         'customer_expectations_file' => 'Firmanın teklife ilişkin beklentilerini içeren belge (yüklenirse teklif dokümanlarına eklenir).',
         'proposal_letter_file' => 'Teklif mektubu dosyası (yüklenirse teklif dokümanlarına eklenir).',

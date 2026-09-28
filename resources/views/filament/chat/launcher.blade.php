@@ -8,8 +8,10 @@
     yayimlanir. Arayuz metinleri lang/chat.php `ui` dizisinden gelir.
 --}}
 @php
+    use App\Enums\Platform\Feature;
     use App\Filament\Resources\WorkRequests\Pages\CreateWorkRequest;
     use App\Filament\Resources\WorkRequests\WorkRequestResource;
+    use App\Services\Platform\FeatureFlags;
     use Filament\Support\Facades\FilamentAsset;
 
     $config = [
@@ -22,10 +24,14 @@
             'documents' => route('filament.admin.chat.documents'),
             'conversation' => route('filament.admin.chat.messages', ['conversation' => '__ID__']),
             'message' => route('filament.admin.chat.messages.delete', ['message' => '__ID__']),
-            // Mesajdan talep acma (D-84): kaynak yoksa dugme gorunmez.
-            'request_create' => WorkRequestResource::canAccess()
+            // Mesajdan talep acma (D-84): kaynak yoksa ya da ozellik kapaliysa (D-128) dugme gorunmez.
+            'request_create' => FeatureFlags::enabled(Feature::ChatWorkRequests) && WorkRequestResource::canAccess()
                 ? WorkRequestResource::getUrl('create').'?'.CreateWorkRequest::QUERY_SOURCE_MESSAGE.'=__ID__'
                 : null,
+        ],
+        // Parca anahtarlari (D-128, features tablosu).
+        'features' => [
+            'groups' => FeatureFlags::enabled(Feature::ChatGroups),
         ],
         'csrf' => csrf_token(),
         'locale' => app()->getLocale(),

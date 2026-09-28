@@ -38,11 +38,13 @@ use App\Http\Controllers\SocialMedia\SocialPlanningController;
 use App\Http\Controllers\SocialMedia\SocialSettingsController;
 use App\Http\Controllers\SocialMedia\SocialUploadController;
 use App\Http\Middleware\ImpersonatePersonnel;
+use App\Http\Middleware\RequireFeature;
 use App\Http\Middleware\SetLocale;
 use App\Models\Personnel\Personnel;
 use App\Query\Personnel\PersonnelQueries;
 use App\Services\Authorization\ImpersonationService;
 use App\Services\Notification\AudienceResolver;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Filament\Support\ReleaseNotesSchema;
@@ -146,6 +148,7 @@ class AdminPanelProvider extends PanelProvider
                     ->label(fn (): string => __('alerts.actions.enable'))
                     ->icon(Heroicon::OutlinedBellAlert)
                     ->alpineClickHandler('window.KonelsisAlerts && window.KonelsisAlerts.enable()')
+                    ->visible(fn (): bool => FeatureFlags::enabled(Feature::AlertWindows))
                     ->sort(-1),
                 // Personel degistir (D-120): yalniz gizli sistem hesabinda
                 // gorunur, Roller ekranindan verilmez ve alinamaz.
@@ -191,6 +194,9 @@ class AdminPanelProvider extends PanelProvider
                         redirect(Dashboard::getUrl());
                     }),
                 // Surum notlari (D-91): her surum ayri acilir bolum, en yenisi acik.
+                // D-128 (25 Eylul 2026): notlar ReleaseNotes'ta yazilmaya devam eder,
+                // pencere yalniz `tools.release_notes` ozelligi veritabaninda aciksa
+                // gorunur (varsayilan kapali).
                 'release_notes' => Action::make('release_notes')
                     ->label(fn (): string => __('release.actions.open'))
                     ->icon(Heroicon::OutlinedSparkles)
@@ -200,7 +206,7 @@ class AdminPanelProvider extends PanelProvider
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel(fn (): string => __('release.actions.close'))
                     // Yayin tarihi gelmemis surumler gizli; hic yayin yoksa menude yer almaz.
-                    ->visible(fn (): bool => ReleaseNotes::published() !== [])
+                    ->visible(fn (): bool => FeatureFlags::enabled(Feature::ReleaseNotes) && ReleaseNotes::published() !== [])
                     ->schema(fn (Schema $schema): Schema => $schema
                         ->columns(1)
                         ->components(ReleaseNotesSchema::components())),
@@ -209,7 +215,8 @@ class AdminPanelProvider extends PanelProvider
                     ->label(fn (): string => __('announcement.actions.send'))
                     ->icon(Heroicon::OutlinedMegaphone)
                     ->url(fn (): string => Dashboard::getUrl(['bildirim' => 'gonder']))
-                    ->visible(fn (): bool => SchemaReadiness::hasBatch('B11A')
+                    ->visible(fn (): bool => FeatureFlags::enabled(Feature::Announcements)
+                        && SchemaReadiness::hasBatch('B11A')
                         && auth()->user() instanceof Personnel
                         && app(AudienceResolver::class)->permittedKinds(auth()->user()) !== []),
                 'current_role' => Action::make('current_role')
@@ -231,59 +238,68 @@ class AdminPanelProvider extends PanelProvider
                     ->visible(fn (): bool => SchemaReadiness::hasBatch('B03')),
             ])
             // Bildirimler Filament'in kendi bildirim arayuzunde gosterilir.
-            ->databaseNotifications(fn (): bool => FeatureFlags::enabled('notifications.database')
+            ->databaseNotifications(fn (): bool => FeatureFlags::enabled(Feature::Notifications)
                 && SchemaReadiness::hasBatch('B00'))
             // Yetki kontrollu dosya indirme/onizleme uclari (D-71); panelin kimlik
             // dogrulamali rota grubunda: filament.admin.files.revision / .photo
             ->authenticatedRoutes(function (Panel $panel): void {
                 // Gorusme plani takvim verisi (B34, D-109): filament.admin.meeting-calendar.data
-                Route::get('meeting-calendar/data', MeetingPlanCalendarController::class)->name('meeting-calendar.data');
+                // Kapali ozelligin uclari 404 doner (D-128, RequireFeature); ekran gizlense de
+                // JSON / dosya ucu dogrudan cagrilamaz.
+                Route::get('meeting-calendar/data', MeetingPlanCalendarController::class)
+                    ->middleware(RequireFeature::for(Feature::MeetingPlans))
+                    ->name('meeting-calendar.data');
 
                 // Is panosu, kontrol matrisi, is raporlari JSON uclari (B36, D-115): filament.admin.work.*
                 // Her uc B36 + etkin personel + politika kontrolunden gecer; kart silme yalniz
                 // elle girilen karti, sahibi ya da tam yetki siler.
                 Route::prefix('work')->name('work.')->whereNumber(['item', 'activity', 'personnel'])->group(function (): void {
-                    Route::get('board', [WorkBoardController::class, 'board'])->name('board');
-                    Route::get('dismissed', [WorkBoardController::class, 'dismissed'])->name('dismissed');
-                    Route::post('items', [WorkBoardController::class, 'store'])->name('items.store');
-                    Route::post('items/{item}', [WorkBoardController::class, 'update'])->name('items.update');
-                    Route::post('items/{item}/status', [WorkBoardController::class, 'status'])->name('items.status');
-                    Route::post('items/{item}/critical', [WorkBoardController::class, 'critical'])->name('items.critical');
-                    Route::post('items/{item}/delete', [WorkBoardController::class, 'destroy'])->name('items.delete');
-                    Route::post('reorder', [WorkBoardController::class, 'reorder'])->name('reorder');
-                    Route::post('suggestions/{activity}/card', [WorkBoardController::class, 'fromSuggestion'])->name('suggestions.card');
-                    Route::post('suggestions/{activity}/dismiss', [WorkBoardController::class, 'dismiss'])->name('suggestions.dismiss');
-                    Route::post('suggestions/{activity}/restore', [WorkBoardController::class, 'restore'])->name('suggestions.restore');
-                    Route::get('lookup/links', [WorkBoardController::class, 'links'])->name('lookup.links');
-                    Route::get('lookup/parties', [WorkBoardController::class, 'parties'])->name('lookup.parties');
-                    Route::get('day', [WorkBoardController::class, 'day'])->name('day');
-                    Route::post('day', [WorkBoardController::class, 'closeDay'])->name('day.close');
-                    Route::get('week', [WorkBoardController::class, 'week'])->name('week');
-                    Route::post('week', [WorkBoardController::class, 'closeWeek'])->name('week.close');
-                    Route::post('freeze', [WorkBoardController::class, 'freeze'])->name('freeze');
-                    Route::get('matrix', [ControlMatrixController::class, 'show'])->name('matrix');
-                    Route::post('matrix', [ControlMatrixController::class, 'save'])->name('matrix.save');
-                    Route::get('analysis', [WorkInsightController::class, 'analysis'])->name('analysis');
-                    Route::get('attention/{personnel}', [WorkInsightController::class, 'attention'])->name('attention');
+                    Route::middleware(RequireFeature::for(Feature::WorkBoard))->group(function (): void {
+                        Route::get('board', [WorkBoardController::class, 'board'])->name('board');
+                        Route::get('dismissed', [WorkBoardController::class, 'dismissed'])->name('dismissed');
+                        Route::post('items', [WorkBoardController::class, 'store'])->name('items.store');
+                        Route::post('items/{item}', [WorkBoardController::class, 'update'])->name('items.update');
+                        Route::post('items/{item}/status', [WorkBoardController::class, 'status'])->name('items.status');
+                        Route::post('items/{item}/critical', [WorkBoardController::class, 'critical'])->name('items.critical');
+                        Route::post('items/{item}/delete', [WorkBoardController::class, 'destroy'])->name('items.delete');
+                        Route::post('reorder', [WorkBoardController::class, 'reorder'])->name('reorder');
+                        Route::post('suggestions/{activity}/card', [WorkBoardController::class, 'fromSuggestion'])->name('suggestions.card');
+                        Route::post('suggestions/{activity}/dismiss', [WorkBoardController::class, 'dismiss'])->name('suggestions.dismiss');
+                        Route::post('suggestions/{activity}/restore', [WorkBoardController::class, 'restore'])->name('suggestions.restore');
+                        Route::get('lookup/links', [WorkBoardController::class, 'links'])->name('lookup.links');
+                        Route::get('lookup/parties', [WorkBoardController::class, 'parties'])->name('lookup.parties');
+                        Route::get('day', [WorkBoardController::class, 'day'])->name('day');
+                        Route::post('day', [WorkBoardController::class, 'closeDay'])->name('day.close');
+                        Route::get('week', [WorkBoardController::class, 'week'])->name('week');
+                        Route::post('week', [WorkBoardController::class, 'closeWeek'])->name('week.close');
+                        Route::post('freeze', [WorkBoardController::class, 'freeze'])->name('freeze');
+                    });
+                    Route::middleware(RequireFeature::for(Feature::ControlMatrix))->group(function (): void {
+                        Route::get('matrix', [ControlMatrixController::class, 'show'])->name('matrix');
+                        Route::post('matrix', [ControlMatrixController::class, 'save'])->name('matrix.save');
+                    });
+                    Route::get('analysis', [WorkInsightController::class, 'analysis'])->middleware(RequireFeature::for(Feature::AnalysisDashboard))->name('analysis');
+                    Route::get('attention/{personnel}', [WorkInsightController::class, 'attention'])->middleware(RequireFeature::for(Feature::AttentionCard))->name('attention');
                 });
 
                 Route::prefix('files')->name('files.')->group(function (): void {
-                    Route::get('revisions/{file}', RevisionFileController::class)->name('revision');
-                    Route::get('project-photos/{photo}', ProjectPhotoController::class)->name('photo');
-                    Route::get('work-request/{file}', WorkRequestFileController::class)->name('work-request');
+                    Route::get('revisions/{file}', RevisionFileController::class)->middleware(RequireFeature::for(Feature::Documents))->name('revision');
+                    Route::get('project-photos/{photo}', ProjectPhotoController::class)->middleware(RequireFeature::for(Feature::Projects))->name('photo');
+                    Route::get('work-request/{file}', WorkRequestFileController::class)->middleware(RequireFeature::for(Feature::WorkRequests))->name('work-request');
                 });
 
                 // Bildirimden tek tiklama (D-82): imzali baglantilar.
                 // filament.admin.notifications.approval-approve / .alert-acknowledge
                 Route::prefix('notifications')->name('notifications.')->group(function (): void {
-                    Route::get('approvals/{approval}/approve', ApprovalQuickDecisionController::class)->name('approval-approve');
-                    Route::get('alerts/{alert}/acknowledge', BusinessAlertAcknowledgeController::class)->name('alert-acknowledge');
+                    Route::get('approvals/{approval}/approve', ApprovalQuickDecisionController::class)->middleware(RequireFeature::for(Feature::Approvals))->name('approval-approve');
+                    Route::get('alerts/{alert}/acknowledge', BusinessAlertAcknowledgeController::class)->middleware(RequireFeature::for(Feature::BusinessAlerts))->name('alert-acknowledge');
                     // Masaustu bildirimi + ses beslemesi (D-126): filament.admin.notifications.feed
-                    Route::get('feed', AlertFeedController::class)->name('feed');
+                    Route::get('feed', AlertFeedController::class)->middleware(RequireFeature::for(Feature::DesktopAlerts))->name('feed');
                 });
 
                 // Kurum ici sohbet JSON uclari (D-83): filament.admin.chat.*
-                Route::prefix('chat')->name('chat.')->group(function (): void {
+                // Sohbet ve Sosyal Medya denetleyicileri ozelligi kendileri de denetler.
+                Route::prefix('chat')->name('chat.')->middleware(RequireFeature::for(Feature::Chat))->group(function (): void {
                     Route::get('bootstrap', [ChatController::class, 'bootstrap'])->name('bootstrap');
                     Route::get('sync', [ChatController::class, 'sync'])->name('sync');
                     Route::get('conversations', [ChatController::class, 'conversations'])->name('conversations');
@@ -305,7 +321,7 @@ class AdminPanelProvider extends PanelProvider
                 // etkin personel kontrolunden ve Gate::authorize'dan gecer. Silme ucu yoktur.
                 // Rota parametre adlari denetleyici arguman adlariyla aynidir (model baglama).
                 // Yeni rota eklenince App\Filament\Support\SocialAppConfig::ROUTES da guncellenir.
-                Route::prefix('social')->name('social.')->where([
+                Route::prefix('social')->name('social.')->middleware(RequireFeature::for(Feature::SocialMedia))->where([
                     'content' => '[0-9]+',
                     'comment' => '[0-9]+',
                     'media' => '[0-9]+',
@@ -355,14 +371,14 @@ class AdminPanelProvider extends PanelProvider
 
                     // Plan (takvim, ajanda), analiz ve depolama kutusu
                     Route::get('calendar', [SocialPlanningController::class, 'calendar'])->name('calendar');
-                    Route::get('agenda', [SocialPlanningController::class, 'agenda'])->name('agenda');
-                    Route::get('analytics', [SocialPlanningController::class, 'analytics'])->name('analytics');
-                    Route::get('storage', [SocialPlanningController::class, 'storage'])->name('storage');
+                    Route::get('agenda', [SocialPlanningController::class, 'agenda'])->middleware(RequireFeature::for(Feature::SocialPlan))->name('agenda');
+                    Route::get('analytics', [SocialPlanningController::class, 'analytics'])->middleware(RequireFeature::for(Feature::SocialAnalytics))->name('analytics');
+                    Route::get('storage', [SocialPlanningController::class, 'storage'])->middleware(RequireFeature::for(Feature::SocialStorageBox))->name('storage');
 
                     // Ilham ve rakipler + ayarlar (kategori, ozel gun, hesap baglantilari, sorumlu gorevler)
                     Route::get('watch', [SocialSettingsController::class, 'watch'])->name('watch');
-                    Route::post('watch', [SocialSettingsController::class, 'watchStore'])->name('watch.store');
-                    Route::post('watch/{account}', [SocialSettingsController::class, 'watchUpdate'])->name('watch.update');
+                    Route::post('watch', [SocialSettingsController::class, 'watchStore'])->middleware(RequireFeature::for(Feature::SocialInsights))->name('watch.store');
+                    Route::post('watch/{account}', [SocialSettingsController::class, 'watchUpdate'])->middleware(RequireFeature::for(Feature::SocialInsights))->name('watch.update');
                     Route::post('categories', [SocialSettingsController::class, 'categoryStore'])->name('categories.store');
                     Route::post('categories/{category}', [SocialSettingsController::class, 'categoryUpdate'])->name('categories.update');
                     Route::get('days', [SocialSettingsController::class, 'days'])->name('days');
@@ -373,14 +389,14 @@ class AdminPanelProvider extends PanelProvider
                     Route::post('responsibles', [SocialSettingsController::class, 'responsiblesSync'])->name('responsibles.sync');
 
                     // Platform istatistikleri (elle giris ya da rapor dosyasi)
-                    Route::get('metrics', [SocialMetricController::class, 'index'])->name('metrics');
-                    Route::post('metrics', [SocialMetricController::class, 'store'])->name('metrics.store');
-                    Route::post('metrics/{entry}', [SocialMetricController::class, 'update'])->name('metrics.update');
-                    Route::get('metrics/{entry}/file', [SocialMetricController::class, 'file'])->name('metrics.file');
+                    Route::get('metrics', [SocialMetricController::class, 'index'])->middleware(RequireFeature::for(Feature::SocialAnalytics))->name('metrics');
+                    Route::post('metrics', [SocialMetricController::class, 'store'])->middleware(RequireFeature::for(Feature::SocialAnalytics))->name('metrics.store');
+                    Route::post('metrics/{entry}', [SocialMetricController::class, 'update'])->middleware(RequireFeature::for(Feature::SocialAnalytics))->name('metrics.update');
+                    Route::get('metrics/{entry}/file', [SocialMetricController::class, 'file'])->middleware(RequireFeature::for(Feature::SocialAnalytics))->name('metrics.file');
 
                     // Sirket katalogu (DMS sabit belge turu KAT)
-                    Route::get('catalog', [SocialCatalogController::class, 'info'])->name('catalog');
-                    Route::get('catalog/file', [SocialCatalogController::class, 'file'])->name('catalog.file');
+                    Route::get('catalog', [SocialCatalogController::class, 'info'])->middleware(RequireFeature::for(Feature::SocialInsights))->name('catalog');
+                    Route::get('catalog/file', [SocialCatalogController::class, 'file'])->middleware(RequireFeature::for(Feature::SocialInsights))->name('catalog.file');
                 });
             })
             // Kumeler, onlara bagli kaynaklardan once kesfedilmeli; aksi halde

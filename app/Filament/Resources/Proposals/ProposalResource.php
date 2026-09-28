@@ -17,7 +17,9 @@ use App\Filament\Resources\Proposals\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\RecordLinks;
 use App\Models\Acquisition\Proposal;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -61,7 +63,7 @@ class ProposalResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Proposals)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }
@@ -111,11 +113,21 @@ class ProposalResource extends Resource
         $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
 
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('businessCase.codes'))
             ->columns([
                 TextColumn::make('proposal_no')
                     ->label(__('proposal.fields.proposal_no'))
                     ->searchable()
                     ->sortable(),
+                // Bagli potansiyel isin kodu (D-132): teklif hangi POTIS'e ait, listede gorunur.
+                TextColumn::make('case_code')
+                    ->label(__('proposal.fields.case_code'))
+                    ->state(fn (Proposal $record): ?string => $record->businessCase?->caseCode()?->formatted_code)
+                    ->badge()
+                    ->color('warning')
+                    ->icon(fn (Proposal $record) => $record->businessCase !== null ? RecordLinks::iconFor($record->businessCase) : null)
+                    ->url(fn (Proposal $record): ?string => $record->businessCase !== null ? RecordLinks::detailUrl($record->businessCase) : null)
+                    ->placeholder('-'),
                 TextColumn::make('title')
                     ->label(__('proposal.fields.title'))
                     ->limit(40)

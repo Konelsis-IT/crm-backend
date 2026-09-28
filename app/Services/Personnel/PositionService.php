@@ -6,6 +6,7 @@ namespace App\Services\Personnel;
 
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Authorization\PositionRoleSync;
+use App\Services\Support\CodeGenerator;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use App\Exceptions\CodeAlreadyInUseException;
@@ -18,7 +19,8 @@ use Illuminate\Support\Carbon;
  * Pozisyon katalogu servisi.
  *
  * create ve update override edilmistir: kod, birim icinde benzersiz
- * olmalidir ve duzenlemede degistirilemez.
+ * olmalidir ve duzenlemede degistirilemez. Kod arayuzde girilmez (D-130);
+ * verilmezse basliktan uretilir.
  */
 final class PositionService extends AbstractService
 {
@@ -32,6 +34,7 @@ final class PositionService extends AbstractService
         OptimisticLock $lock,
         ActivityRecorder $activities,
         private readonly PositionRoleSync $roles,
+        private readonly CodeGenerator $codes,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
@@ -41,8 +44,12 @@ final class PositionService extends AbstractService
      */
     public function create(array $data): Model
     {
-        $code = strtoupper(trim((string) ($data['code'] ?? '')));
         $orgUnitId = (int) ($data['org_unit_id'] ?? 0);
+
+        // Kod arayuzde girilmez (D-130): baslik adindan, birim icinde benzersiz uretilir.
+        $code = filled($data['code'] ?? null)
+            ? strtoupper(trim((string) $data['code']))
+            : $this->codes->unique((string) ($data['title'] ?? ''), Position::class, 'POZISYON', ['org_unit_id' => $orgUnitId]);
 
         if (Position::query()->where('org_unit_id', $orgUnitId)->where('code', $code)->exists()) {
             throw CodeAlreadyInUseException::make(['code' => $code]);

@@ -12,6 +12,7 @@ use App\Filament\Resources\StageNodes\RelationManagers\DependenciesRelationManag
 use App\Filament\Resources\StageNodes\RelationManagers\RequirementDefinitionsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\StageNode;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -41,7 +42,7 @@ class StageNodeResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static ?string $recordTitleAttribute = 'stage_code';
+    protected static ?string $recordTitleAttribute = 'name_tr';
 
     public static function getModelLabel(): string
     {
@@ -55,7 +56,7 @@ class StageNodeResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::StageTemplates)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }
@@ -66,10 +67,7 @@ class StageNodeResource extends Resource
             Section::make(__('stage_node.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        TextInput::make('stage_code')
-                            ->label(__('stage_node.fields.stage_code'))
-                            ->required()
-                            ->maxLength(32),
+                        // Onay kapisi kodu arayuzde yok (D-131): StageNodeService sira numarasindan uretir (G0, G1...).
                         TextInput::make('sequence_no')
                             ->label(__('stage_node.fields.sequence_no'))
                             ->numeric()
@@ -79,10 +77,6 @@ class StageNodeResource extends Resource
                             ->required(),
                         TextInput::make('name_tr')
                             ->label(__('stage_node.fields.name_tr'))
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('stage_node.fields.name_en'))
                             ->required()
                             ->maxLength(255),
                         Toggle::make('is_hard_gate')
@@ -105,12 +99,10 @@ class StageNodeResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('templateVersion.template.code')
+                TextColumn::make('templateVersion.template.name_tr')
                     ->label(__('stage_node.fields.template')),
                 TextColumn::make('templateVersion.version_no')
                     ->label(__('stage_node.fields.template_version')),
-                TextColumn::make('stage_code')
-                    ->label(__('stage_node.fields.stage_code')),
                 TextColumn::make('name_tr')
                     ->label(__('stage_node.fields.name_tr')),
                 IconColumn::make('is_hard_gate')

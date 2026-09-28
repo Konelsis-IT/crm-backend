@@ -49,6 +49,8 @@
 
     const VIEW_LABELS = { akis: 'view_feed', plan: 'view_plan', ilham: 'view_insights', analiz: 'view_analytics', ayarlar: 'settings' };
     const VIEW_ICONS = { akis: 'grid', plan: 'calendar', ilham: 'sparkles', analiz: 'chart', ayarlar: 'settings' };
+    // Sekme => boot.features anahtari (D-128; sunucu SocialContentController::bootstrap).
+    const VIEW_FEATURES = { akis: 'feed', plan: 'plan', ilham: 'insights', analiz: 'analytics' };
 
     // Tur menusu: simge + kisa aciklama. Etiketler sunucudan (boot.options.types) gelir.
     const TYPE_META = {
@@ -473,14 +475,19 @@
         const approver = !!abilities.approve_any;
         const counts = allCounts[profileId] || {};
 
-        // Ayarlar yalniz manage_data ile gorunur; yetkisiz derin baglanti akisa duser.
-        const shownView = view === 'ayarlar' && !canManage ? 'akis' : view;
+        // Sekme anahtarlari sunucudan gelir (D-128, features tablosu): kapali sekme
+        // cizilmez. Ayarlar yalniz manage_data ile gorunur. Izin verilmeyen ya da
+        // kapali sekmeye gelen derin baglanti ilk acik sekmeye duser.
+        const features = (boot && boot.features) || {};
+        const allowed = (value) => (value === 'ayarlar' ? canManage : features[VIEW_FEATURES[value]] !== false);
+        const firstView = ['akis', 'plan', 'ilham', 'analiz', 'ayarlar'].find(allowed) || 'akis';
+        const shownView = allowed(view) ? view : firstView;
 
         useEffect(() => {
-            if (view === 'ayarlar' && !canManage) {
-                KS.actions.setView('akis');
+            if (!allowed(view) && view !== firstView) {
+                KS.actions.setView(firstView);
             }
-        }, [view, canManage]);
+        }, [view, canManage, firstView]);
 
         // Sayaclar: 60 sn'de bir + pencere odaga / sekme gorunur hale geldiginde.
         const refresh = useCallback(() => {
@@ -553,7 +560,7 @@
             { value: 'ilham', label: t(VIEW_LABELS.ilham), icon: VIEW_ICONS.ilham },
             { value: 'analiz', label: t(VIEW_LABELS.analiz), icon: VIEW_ICONS.analiz },
             canManage ? { value: 'ayarlar', label: t(VIEW_LABELS.ayarlar), icon: VIEW_ICONS.ayarlar } : null,
-        ];
+        ].filter((tab) => tab && allowed(tab.value));
 
         // Kaplamalar da cizim aninda cozulur.
         const Detail = KS.views.Detail || null;

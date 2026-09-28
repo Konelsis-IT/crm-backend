@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Notification;
 
 use App\Models\Personnel\Personnel;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
@@ -20,7 +21,7 @@ final class PanelNotifier
 {
     public function enabled(): bool
     {
-        return FeatureFlags::enabled('notifications.database') && SchemaReadiness::hasBatch('B00');
+        return FeatureFlags::enabled(Feature::Notifications) && SchemaReadiness::hasBatch('B00');
     }
 
     /**

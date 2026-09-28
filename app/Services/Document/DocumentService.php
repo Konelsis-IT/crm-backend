@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Document;
 
+use App\Enums\Document\RevisionContentKind;
 use App\Models\Document\Document;
 use App\Models\Document\DocumentType;
 use App\Services\AbstractService;
@@ -78,10 +79,19 @@ final class DocumentService extends AbstractService
 
             $tempPath = $data['file_temp_path'] ?? ($data['file'] ?? null);
             $body = $data['body_html'] ?? null;
-            $kind = (string) ($data['content_kind'] ?? 'upload');
 
-            $hasFile = $kind === 'upload' && filled($tempPath);
-            $hasBody = $kind === 'authored' && is_string($body) && trim(strip_tags($body)) !== '';
+            // Icerik turu secimi formdan gonderilmez (yalniz alanlari acar);
+            // gorunen alan hangisiyse o gelir. Tur verilmisse (enum ya da metin)
+            // ona uyulur. Eskiden tur yoksa "dosya" sayiliyordu ve sistemde
+            // yazilan belgenin ilk revizyonu hic acilmiyordu (25 Eylul 2026).
+            $kindValue = $data['content_kind'] ?? null;
+            $kind = $kindValue instanceof RevisionContentKind ? $kindValue->value : (is_string($kindValue) ? $kindValue : null);
+
+            $hasFile = $kind !== RevisionContentKind::Authored->value && filled($tempPath);
+            $hasBody = ! $hasFile
+                && $kind !== RevisionContentKind::Upload->value
+                && is_string($body)
+                && trim(strip_tags($body)) !== '';
 
             if ($hasFile || $hasBody) {
                 $this->revisions->create([

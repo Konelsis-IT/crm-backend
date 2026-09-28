@@ -162,21 +162,14 @@ final class OperationHandoffService extends AbstractService
                 throw HandoffNotAcceptableException::make(['reason' => 'bu business case icin PRJ kodu zaten uretilmis']);
             }
 
-            $offerCode = $this->businessCases->offerCode($case);
+            // Proje kodu potansiyel isin kodundan dogar (POTIS -> PRJ, D-132); POTIS
+            // gecmis olarak kalir ve ekranda gorunmeye devam eder.
+            $caseCode = $this->businessCases->caseCode($case);
             $now = Carbon::now('UTC');
 
-            $projectCode = BusinessCode::query()->create([
-                'business_case_id' => $case->getKey(),
-                'sequence_no' => $case->sequence_no,
-                'code_kind' => BusinessCodeKind::Project,
-                'issued_at' => $now,
-                'issued_by_personnel_id' => $this->actor->personnelId() ?? $handoff->prepared_by_employee_id,
-                'predecessor_code_id' => $offerCode?->getKey(),
-                'status' => BusinessCodeStatus::Active,
-            ]);
-            $projectCode->refresh();
+            $projectCode = $this->businessCases->issueCode($case, BusinessCodeKind::Project, $caseCode?->getKey());
 
-            $offerCode?->forceFill(['status' => BusinessCodeStatus::Historical])->save();
+            $caseCode?->forceFill(['status' => BusinessCodeStatus::Historical])->save();
 
             $project = $this->opener->open($case, $version, $projectCode, $projectOverrides);
 

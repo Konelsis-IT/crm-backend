@@ -19,6 +19,7 @@ return [
         'offer_status' => 'Offer status',
         'owner' => 'Owner',
         'proposal_no' => 'Proposal no',
+        'case_code' => 'Potential job code',
         'reason' => 'Reason',
         'status' => 'Status',
         'title' => 'Title',

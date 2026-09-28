@@ -11,8 +11,7 @@ return [
     'fields' => [
         'parent' => 'Ana faaliyet alanı',
         'code' => 'Kod',
-        'name_tr' => 'Ad (TR)',
-        'name_en' => 'Ad (EN)',
+        'name_tr' => 'Ad',
         'sort_order' => 'Sıra',
         'status' => 'Durum',
     ],

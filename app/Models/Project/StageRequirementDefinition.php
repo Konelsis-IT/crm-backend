@@ -6,6 +6,7 @@ namespace App\Models\Project;
 
 use App\Enums\Project\EvidenceType;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Models\Document\DocumentType;
 use App\Models\Project\StageNode;
 use App\Policies\StageRequirementDefinitionPolicy;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StageRequirementDefinition extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     public const UPDATED_AT = null;
 

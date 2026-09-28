@@ -14,7 +14,7 @@ return [
     ],
 
     'fields' => [
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'captured_at' => 'Yakalanma tarihi',
         'created_at' => 'Oluşturulma',
         'current_version' => 'Güncel sürüm',

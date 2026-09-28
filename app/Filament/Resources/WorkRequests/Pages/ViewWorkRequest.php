@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
+use App\Filament\Support\FormState;
 use App\Enums\WorkRequest\RequestTargetKind;
 use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Exceptions\AbstractException;
@@ -126,7 +129,7 @@ class ViewWorkRequest extends ViewRecord
             Section::make(__('work_request.sections.thread'))
                 ->description(__('work_request.help.thread'))
                 ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
-                ->visible(fn (): bool => SchemaReadiness::hasBatch('B32'))
+                ->visible(fn (): bool => FeatureFlags::enabled(Feature::WorkRequestThread) && SchemaReadiness::hasBatch('B32'))
                 ->components([
                     Livewire::make(WorkRequestThread::class, fn (WorkRequest $record): array => ['requestId' => (int) $record->getKey()])
                         ->key('work-request-thread'),
@@ -269,15 +272,15 @@ class ViewWorkRequest extends ViewRecord
                         ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
                         ->searchable()
                         ->native(false)
-                        ->visible(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::Personnel->value)
-                        ->required(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::Personnel->value),
+                        ->visible(fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::Personnel->value)
+                        ->required(fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::Personnel->value),
                     Select::make('target_org_unit_id')
                         ->label(__('work_request.fields.target_org_unit'))
                         ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
                         ->searchable()
                         ->native(false)
-                        ->visible(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::OrgUnit->value)
-                        ->required(fn (Get $get): bool => $get('target_kind') === RequestTargetKind::OrgUnit->value),
+                        ->visible(fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::OrgUnit->value)
+                        ->required(fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::OrgUnit->value),
                     Textarea::make('reason')
                         ->label(__('work_request.thread.forward_reason'))
                         ->required()

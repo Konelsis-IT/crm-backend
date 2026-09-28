@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Notification\BusinessAlert;
@@ -32,7 +34,7 @@ class MyAlertsWidget extends TableWidget
 
     public static function canView(): bool
     {
-        return SchemaReadiness::hasBatch('B11A');
+        return FeatureFlags::enabled(Feature::BusinessAlerts) && SchemaReadiness::hasBatch('B11A');
     }
 
     public function table(Table $table): Table

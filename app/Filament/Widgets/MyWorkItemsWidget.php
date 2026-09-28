@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\WorkItem;
@@ -29,7 +31,7 @@ class MyWorkItemsWidget extends TableWidget
 
     public static function canView(): bool
     {
-        return SchemaReadiness::hasBatch('B36') && auth()->user() instanceof Personnel;
+        return FeatureFlags::enabled(Feature::WorkItems) && SchemaReadiness::hasBatch('B36') && auth()->user() instanceof Personnel;
     }
 
     public function table(Table $table): Table

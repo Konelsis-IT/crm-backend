@@ -137,12 +137,12 @@ if (! str_contains($providerSource, 'CreateRecord::disableCreateAnother()') || !
 // genislik (FieldGrid). DateTimePicker yasaktir; baska bicim/boyut/tip yoktur.
 // Denetim zincir bazlidir: `DatePicker::make(` ile baslayip ayni derinlikteki
 // ilk virgul/noktali virgul/parantezde biten metot zinciri incelenir.
-function dateInputChains(string $source): array
+function dateInputChains(string $source, string $needle = 'DatePicker::make('): array
 {
     $chains = [];
     $offset = 0;
 
-    while (($pos = strpos($source, 'DatePicker::make(', $offset)) !== false) {
+    while (($pos = strpos($source, $needle, $offset)) !== false) {
         $i = $pos;
         $depth = 0;
         $length = strlen($source);
@@ -205,6 +205,73 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
             $failures[] = sprintf('Date input standard: %s field [%s] uses ->seconds(); date inputs carry no time.', relative($root, $file), $field);
         }
     }
+}
+
+// 3d. Yukleme sinirlari (25 Eylul 2026 kullanici karari, D-127) ----------------
+// Genel gecici yukleme tavani belge siniridir (1 GB). Her FileUpload kendi
+// sinirini acikca yazar: belge alanlari UploadLimits::documentMaxKb(),
+// digerleri gereken kucuk boyut (fotograf 4-8 MB, ek 20 MB...).
+foreach ([$root.'/app/Filament', $root.'/app/Livewire'] as $uploadDirectory) {
+    if (! is_dir($uploadDirectory)) {
+        continue;
+    }
+
+    foreach (phpFiles($uploadDirectory) as $file) {
+        $source = (string) file_get_contents($file);
+
+        foreach (dateInputChains($source, 'FileUpload::make(') as $chain) {
+            if (! str_contains($chain, '->maxSize(')) {
+                $field = preg_match('/FileUpload::make\(([^)]*)\)/', $chain, $m) === 1 ? trim($m[1]) : '?';
+                $failures[] = sprintf('Upload limits: %s FileUpload [%s] has no ->maxSize(); the global cap is the 1 GB document limit, so every field states its own (documents: UploadLimits::documentMaxKb()).', relative($root, $file), $field);
+            }
+        }
+    }
+}
+
+if (! str_contains((string) file_get_contents($root.'/app/Providers/AppServiceProvider.php'), 'livewire.temporary_file_upload.rules')) {
+    $failures[] = 'Upload limits: app/Providers/AppServiceProvider.php must set livewire.temporary_file_upload.rules from UploadLimits (Livewire default caps every upload at 12 MB).';
+}
+
+// 3e. Ozellik anahtarlari (25 Eylul 2026 kullanici karari, D-128) ---------------
+// Her ozellik yalniz veritabanindan (features.is_active) acilip kapanir; durum
+// FeatureFlags::enabled(Feature::...) ile okunur. Dizge kod, .env bayragi ya da
+// config/features.php geri gelmez. Her kaynak, sayfa ve widget bir ozellige
+// baglidir ya da erisimini bagli bir siniftan alir (return X::canAccess();).
+if (is_file($root.'/config/features.php')) {
+    $failures[] = 'Feature switches: config/features.php must not exist; feature state lives only in the features table (FeatureFlags + App\Enums\Platform\Feature).';
+}
+
+foreach (phpFiles($root.'/app') as $file) {
+    if (preg_match('/FeatureFlags::enabled\(\s*[\'"]/', (string) file_get_contents($file)) === 1) {
+        $failures[] = sprintf('Feature switches: %s passes a string to FeatureFlags::enabled(); use a App\Enums\Platform\Feature case.', relative($root, $file));
+    }
+}
+
+$featureScoped = array_merge(
+    glob($root.'/app/Filament/Resources/*/*Resource.php') ?: [],
+    glob($root.'/app/Filament/Widgets/*.php') ?: [],
+    iterator_to_array(phpFiles($root.'/app/Filament/Pages'), false),
+);
+
+// Bilincli istisnalar: rolleri kapatmak yoneticiyi kilitler (D-130, Roller = Shield genisletmesi).
+$featureExempt = ['app/Filament/Resources/Roles/RoleResource.php'];
+
+foreach ($featureScoped as $file) {
+    $source = (string) file_get_contents($file);
+
+    if (in_array(str_replace('\\', '/', relative($root, $file)), $featureExempt, true)) {
+        continue;
+    }
+
+    if (! str_contains($source, 'Feature::') && preg_match('/return\s+[A-Z][A-Za-z]+::canAccess\(\);/', $source) !== 1) {
+        $failures[] = sprintf('Feature switches: %s is not tied to a feature; register it in App\Enums\Platform\Feature and check FeatureFlags::enabled(Feature::...) in canAccess()/canView().', relative($root, $file));
+    }
+}
+
+$appProvider = (string) file_get_contents($root.'/app/Providers/AppServiceProvider.php');
+
+if (! str_contains($appProvider, 'Gate::before(') || ! str_contains($appProvider, 'FeatureRegistry')) {
+    $failures[] = 'Feature switches: app/Providers/AppServiceProvider.php must register the FeatureRegistry Gate::before hook (disabled features deny their record types).';
 }
 
 // 4. Runtime schema change scan ---------------------------------------------
@@ -271,6 +338,13 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
 
     if (preg_match('/->recordUrl\(\s*null\s*\)/', $source) === 1 && ! str_contains($source, '->recordAction(')) {
         $failures[] = sprintf('Table standard: %s disables the row link without a row action; every row opens its detail (use RowDetail::action() when there is no detail page).', $relativePath);
+    }
+
+    // Enum secenekli alanda $get() enum nesnesi verir; ->value ile ham
+    // karsilastirma hic tutmaz ve bagli alan gizli kalir (25 Eylul 2026,
+    // dokumanda "Belgenin asli" alani). Deger FormState::value() ile indirilir.
+    if (preg_match('/(?<![A-Za-z_:(])\$get\(\'[A-Za-z_.]+\'\)\s*(===|!==)\s*[A-Z][A-Za-z]+::[A-Za-z]+->value|in_array\(\s*\$get\(|match\s*\(\s*\$get\(/', $source) === 1) {
+        $failures[] = sprintf('Form state: %s compares a raw $get() value with an enum ->value; wrap it with FormState::value($get(...)) (enum-option fields return enum instances).', $relativePath);
     }
 }
 

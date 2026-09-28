@@ -10,8 +10,7 @@ return [
 
     'fields' => [
         'code' => 'Code',
-        'name_tr' => 'Name (TR)',
-        'name_en' => 'Name (EN)',
+        'name_tr' => 'Name',
         'subject_type' => 'Subject type',
         'current_version' => 'Published version',
         'status' => 'Status',

@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'business_case_id', 'sequence_no', 'code_kind', 'issued_at', 'issued_by_personnel_id', 'predecessor_code_id',
     'status',
+    // B40 (D-132): yillik kod servisçe yazilir (POTIS-2026-0001); oncesinde uretilmis kolondu.
+    'formatted_code', 'code_year', 'year_sequence',
 ])]
 #[UsePolicy(BusinessCodePolicy::class)]
 class BusinessCode extends Model
@@ -35,6 +37,8 @@ class BusinessCode extends Model
     {
         return [
             'sequence_no' => 'integer',
+            'code_year' => 'integer',
+            'year_sequence' => 'integer',
             'code_kind' => BusinessCodeKind::class,
             'issued_at' => 'datetime',
             'status' => BusinessCodeStatus::class,

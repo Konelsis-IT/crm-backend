@@ -6,6 +6,7 @@ namespace App\Models\Project;
 
 use App\Enums\Shared\ActiveStatus;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Models\Project\ProjectWorkstream;
 use App\Policies\OperationGroupDefinitionPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class OperationGroupDefinition extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

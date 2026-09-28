@@ -15,6 +15,7 @@ use App\Models\Document\DocumentRevision;
 use App\Query\Approval\ApprovalQueries;
 use App\Services\Approval\ApprovalRequestService;
 use App\Services\Document\DocumentRevisionService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -293,6 +294,6 @@ class RevisionsRelationManager extends RelationManager
 
     private function approvalsEnabled(): bool
     {
-        return FeatureFlags::enabled('approvals.admin_ui') && SchemaReadiness::hasBatch('B07');
+        return FeatureFlags::enabled(Feature::Approvals) && SchemaReadiness::hasBatch('B07');
     }
 }

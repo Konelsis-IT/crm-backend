@@ -13,6 +13,7 @@ use App\Models\SocialMedia\SocialContent;
 use App\Query\Document\FixedDocumentQueries;
 use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\FileDeliveryService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Http\JsonResponse;
@@ -146,7 +147,7 @@ final class SocialCatalogController extends Controller
 
     private function me(Request $request): Personnel
     {
-        abort_unless(SchemaReadiness::hasBatch('B31') && FeatureFlags::enabled('social_media.admin_ui'), 404);
+        abort_unless(SchemaReadiness::hasBatch('B31') && FeatureFlags::enabled(Feature::SocialMedia), 404);
 
         $user = $request->user();
         abort_unless($user instanceof Personnel && $user->isActive(), 403);

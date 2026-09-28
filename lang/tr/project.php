@@ -30,7 +30,7 @@ return [
     'fields' => [
         'actual_finish_on' => 'Fiili bitiş',
         'actual_start_on' => 'Fiili başlangıç',
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'business_code' => 'PRJ kodu',
         'classification' => 'Gizlilik sınıfı',
         'components' => 'Bileşenler',
@@ -161,13 +161,13 @@ return [
         'focus_advanced' => 'Proje ":step" adımına geçti.',
         'converted' => 'Teklif projeye dönüştürüldü: :code',
         'created_direct' => 'Proje oluşturuldu: :code',
-        'already_project' => 'Bu iş dosyası için zaten bir proje var.',
+        'already_project' => 'Bu potansiyel iş için zaten bir proje var.',
         'site_updated' => 'Saha adresi güncellendi.',
         'dates_updated' => 'Plan tarihleri güncellendi.',
     ],
 
     'help' => [
-        'create_direct_intro' => 'Bu form teklif süreci yaşanmamış, geçmişte yapılmış veya halen süren bir projeyi sisteme alır. Sistem PRJ kodunu otomatik verir; iş dosyası "Operasyon" segmentinde açılır.',
+        'create_direct_intro' => 'Bu form teklif süreci yaşanmamış, geçmişte yapılmış veya halen süren bir projeyi sisteme alır. Sistem PRJ kodunu otomatik verir; potansiyel iş "Operasyon" segmentinde açılır.',
         'convert_intro' => 'Teklif seçili yapılır, sürüm gerekirse onaylanır, Operasyona devir kaydı otomatik açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Sözleşme daha sonra bağlanabilir.',
         'force' => 'İşaretlenirse mevcut adımın eksik zorunlu beklentilerine rağmen ilerlenir; gerekçe zorunludur.',
         'approve_draft' => 'Seçilen sürüm taslak veya incelemedeyse dönüşüm sırasında otomatik onaylanır.',

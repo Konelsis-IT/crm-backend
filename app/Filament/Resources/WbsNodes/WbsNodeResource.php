@@ -12,6 +12,7 @@ use App\Filament\Resources\WbsNodes\Pages\ViewWbsNode;
 use App\Filament\Resources\WbsNodes\RelationManagers\CbsMappingsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WbsNode;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -53,7 +54,7 @@ class WbsNodeResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::Projects)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }

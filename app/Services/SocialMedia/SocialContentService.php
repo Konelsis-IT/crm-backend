@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\SocialMedia;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\SocialMedia\SocialContentStatus;
 use App\Enums\SocialMedia\SocialContentType;
 use App\Enums\SocialMedia\SocialImageFormat;
@@ -117,7 +119,10 @@ final class SocialContentService extends AbstractService
         $type = SocialContentType::tryFrom((string) ($data['content_type'] ?? ''));
         $profileId = (int) ($data['profile_id'] ?? 0);
 
-        if ($type === null || ! $this->queries->profileExists($profileId)) {
+        // Blog yazma ayri ozelliktir (D-128); kapaliyken yeni blog acilamaz.
+        $blocked = $type === SocialContentType::Blog && ! FeatureFlags::enabled(Feature::SocialBlog);
+
+        if ($type === null || $blocked || ! $this->queries->profileExists($profileId)) {
             throw RecordNotFoundException::make();
         }
 

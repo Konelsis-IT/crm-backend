@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Exceptions\AbstractException;
 use App\Models\WorkRequest\WorkRequest;
 use App\Models\WorkRequest\WorkRequestMessage;
@@ -66,7 +68,7 @@ class WorkRequestThread extends Component implements HasSchemas
     {
         $request = $this->workRequest();
 
-        if (! Gate::allows('reply', $request)) {
+        if (! FeatureFlags::enabled(Feature::WorkRequestThread) || ! Gate::allows('reply', $request)) {
             return;
         }
 

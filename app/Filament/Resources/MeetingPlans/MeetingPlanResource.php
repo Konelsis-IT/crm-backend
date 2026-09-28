@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MeetingPlans;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\Party\MeetingChannel;
 use App\Enums\Party\MeetingPlanSource;
 use App\Enums\Party\MeetingPlanStatus;
@@ -86,7 +88,7 @@ class MeetingPlanResource extends Resource
 
     public static function canAccess(): bool
     {
-        return SchemaReadiness::hasBatch('B34') && parent::canAccess();
+        return FeatureFlags::enabled(Feature::MeetingPlans) && SchemaReadiness::hasBatch('B34') && parent::canAccess();
     }
 
     public static function form(Schema $schema): Schema

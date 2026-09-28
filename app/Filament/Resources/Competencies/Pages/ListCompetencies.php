@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Competencies\Pages;
 
-use App\Exceptions\CodeAlreadyInUseException;
 use App\Filament\Resources\Competencies\CompetencyResource;
 use App\Services\Personnel\CompetencyService;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Validation\ValidationException;
 
 class ListCompetencies extends ListRecords
 {
@@ -19,16 +17,9 @@ class ListCompetencies extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            // Kod arayuzde girilmez (D-130); servis addan benzersiz uretir.
             CreateAction::make()
-                ->using(function (array $data): Model {
-                    try {
-                        return app(CompetencyService::class)->create($data);
-                    } catch (CodeAlreadyInUseException) {
-                        throw ValidationException::withMessages([
-                            'data.code' => __('competency.validation.code_taken'),
-                        ]);
-                    }
-                }),
+                ->using(fn (array $data): Model => app(CompetencyService::class)->create($data)),
         ];
     }
 }

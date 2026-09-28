@@ -12,6 +12,7 @@ use App\Filament\Resources\FocusExpectations\Pages\ListFocusExpectations;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\FocusExpectation;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\FocusExpectationService;
@@ -62,7 +63,7 @@ class FocusExpectationResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::FocusExpectations)
             && SchemaReadiness::hasBatch('B17A')
             && parent::canAccess();
     }
@@ -91,10 +92,6 @@ class FocusExpectationResource extends Resource
                         ->label(__('focus_expectation.fields.name_tr'))
                         ->required()
                         ->maxLength(255),
-                    TextInput::make('name_en')
-                        ->label(__('focus_expectation.fields.name_en'))
-                        ->required()
-                        ->maxLength(255),
                     Select::make('kind')
                         ->label(__('focus_expectation.fields.kind'))
                         ->helperText(__('focus_expectation.help.kind'))
@@ -117,9 +114,6 @@ class FocusExpectationResource extends Resource
                         ->default(0),
                     Textarea::make('help_tr')
                         ->label(__('focus_expectation.fields.help_tr'))
-                        ->columnSpanFull(),
-                    Textarea::make('help_en')
-                        ->label(__('focus_expectation.fields.help_en'))
                         ->columnSpanFull(),
                     Select::make('status')
                         ->label(__('focus_expectation.fields.status'))

@@ -6,6 +6,7 @@ namespace App\Filament\Resources\SocialContents;
 
 use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
 use App\Models\SocialMedia\SocialContent;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -51,7 +52,7 @@ class SocialContentResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('social_media.admin_ui')
+        return FeatureFlags::enabled(Feature::SocialMedia)
             && SchemaReadiness::hasBatch('B31')
             && parent::canAccess();
     }

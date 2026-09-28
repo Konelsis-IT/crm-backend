@@ -11,6 +11,7 @@ use App\Filament\Resources\StageTemplateVersions\Pages\ViewStageTemplateVersion;
 use App\Filament\Resources\StageTemplateVersions\RelationManagers\NodesRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\StageTemplateVersion;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -51,7 +52,7 @@ class StageTemplateVersionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::StageTemplates)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }
@@ -74,7 +75,7 @@ class StageTemplateVersionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('template.code')
+                TextColumn::make('template.name_tr')
                     ->label(__('stage_template_version.fields.template')),
                 TextColumn::make('version_no')
                     ->label(__('stage_template_version.fields.version_no')),

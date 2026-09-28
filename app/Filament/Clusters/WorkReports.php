@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Clusters;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\NavigationGroup;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\WorkItem;
@@ -46,7 +48,8 @@ class WorkReports extends Cluster
     {
         $user = auth()->user();
 
-        return SchemaReadiness::hasBatch('B36')
+        return (FeatureFlags::enabled(Feature::AnalysisDashboard) || FeatureFlags::enabled(Feature::DurationReport))
+            && SchemaReadiness::hasBatch('B36')
             && $user instanceof Personnel
             && Gate::forUser($user)->allows('viewAnalytics', WorkItem::class);
     }

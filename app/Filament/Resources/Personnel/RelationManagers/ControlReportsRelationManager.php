@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Personnel\RelationManagers;
 
 use BackedEnum;
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Pages\Work\ControlMatrix;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Models\Personnel\Personnel;
@@ -41,7 +43,8 @@ class ControlReportsRelationManager extends RelationManager
     {
         $user = auth()->user();
 
-        return SchemaReadiness::hasBatch('B36')
+        return FeatureFlags::enabled(Feature::ControlPersonnelTab)
+            && SchemaReadiness::hasBatch('B36')
             && $user instanceof Personnel
             && $ownerRecord instanceof Personnel
             && Gate::forUser($user)->allows('viewControl', [WorkItem::class, $ownerRecord]);

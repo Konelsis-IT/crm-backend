@@ -68,6 +68,8 @@ final class SchemaReadiness
         'B36' => 'report_items.is_late',               // Is panosu (grubun son degisikligi)
         'B37' => 'work_items.requester_kind',          // Is kartinda talep eden
         'B38' => 'personnel_quick_actions',            // Kisisel hizli islemler
+        'B39' => 'features',                           // Ozellik anahtarlari (D-128)
+        'B40' => 'business_code_sequences',            // Yillik kodlar POTIS / TKLF / PRJ (D-132)
     ];
 
     /** @var array<string, bool> */

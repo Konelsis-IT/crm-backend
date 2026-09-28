@@ -461,6 +461,7 @@ return [
         'cancelled' => 'İptal edildi',
     ],
     'business_code_kind' => [
+        'potential' => 'Potansiyel iş (POTIS)',
         'offer' => 'Teklif (TKLF)',
         'project' => 'Proje (PRJ)',
     ],
@@ -1234,7 +1235,7 @@ return [
         'project' => 'Proje',
         'product' => 'Ürün / bileşen',
         'proposal' => 'Teklif',
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'personnel' => 'Personel',
         'system' => 'Sistem verisi',
     ],
@@ -1250,7 +1251,7 @@ return [
         'project' => 'Proje',
         'component' => 'Ürün / bileşen',
         'proposal' => 'Teklif',
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
     ],
     'report_period_mode' => [
         'none' => 'Dönemsiz',
@@ -1297,7 +1298,7 @@ return [
     ],
     'work_item_link_kind' => [
         'none' => 'Yok',
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'proposal' => 'Teklif',
         'tender_notice' => 'İhale ilanı',
         'document' => 'Belge',

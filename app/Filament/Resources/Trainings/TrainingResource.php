@@ -13,6 +13,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Training;
 use App\Services\Personnel\TrainingService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -55,7 +56,7 @@ class TrainingResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('personnel.admin_ui')
+        return FeatureFlags::enabled(Feature::Trainings)
             && SchemaReadiness::hasBatch('B13')
             && parent::canAccess();
     }

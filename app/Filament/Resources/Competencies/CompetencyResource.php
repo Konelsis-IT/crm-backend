@@ -13,6 +13,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Competency;
 use App\Services\Personnel\CompetencyService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -55,7 +56,7 @@ class CompetencyResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('personnel.admin_ui')
+        return FeatureFlags::enabled(Feature::Competencies)
             && SchemaReadiness::hasBatch('B02')
             && parent::canAccess();
     }
@@ -66,13 +67,7 @@ class CompetencyResource extends Resource
             Section::make(__('competency.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    TextInput::make('code')
-                        ->label(__('competency.fields.code'))
-                        ->required()
-                        ->alphaDash()
-                        ->maxLength(32)
-                        ->disabledOn('edit')
-                        ->dehydratedWhenHidden(false),
+                    // Kod arayuzde yok (D-130): CompetencyService addan uretir.
                     TextInput::make('name')
                         ->label(__('competency.fields.name'))
                         ->required()
@@ -101,10 +96,6 @@ class CompetencyResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('competency.fields.code'))
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('name')
                     ->label(__('competency.fields.name'))
                     ->searchable()

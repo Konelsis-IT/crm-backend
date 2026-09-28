@@ -25,6 +25,7 @@ use App\Filament\Resources\Personnel\Schemas\PersonnelForm;
 use App\Filament\Resources\Personnel\Schemas\PersonnelInfolist;
 use App\Filament\Resources\Personnel\Tables\PersonnelTable;
 use App\Models\Personnel\Personnel;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -59,7 +60,7 @@ class PersonnelResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('personnel.admin_ui')
+        return FeatureFlags::enabled(Feature::Personnel)
             && SchemaReadiness::hasBatch('B02')
             && parent::canAccess();
     }

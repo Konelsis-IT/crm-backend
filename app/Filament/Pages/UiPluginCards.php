@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\Document\RevisionContentKind;
 use App\Filament\Clusters\UiGallery;
 use App\Filament\Resources\Documents\DocumentResource;
@@ -77,7 +79,7 @@ class UiPluginCards extends CardsPage
 
         $user = auth()->user();
 
-        return $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
+        return FeatureFlags::enabled(Feature::UiGallery) && $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
     }
 
     /**

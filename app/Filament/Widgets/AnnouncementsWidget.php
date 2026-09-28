@@ -6,6 +6,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Notification\Announcement;
 use App\Query\Notification\AnnouncementQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
@@ -30,7 +31,7 @@ class AnnouncementsWidget extends TableWidget
 
     public static function canView(): bool
     {
-        return SchemaReadiness::hasBatch('B11A') && FeatureFlags::enabled('notifications.database');
+        return SchemaReadiness::hasBatch('B11A') && FeatureFlags::enabled(Feature::Announcements);
     }
 
     public function table(Table $table): Table

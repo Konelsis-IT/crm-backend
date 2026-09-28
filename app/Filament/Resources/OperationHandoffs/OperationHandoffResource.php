@@ -16,6 +16,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\OperationHandoff;
 use App\Services\Acquisition\OperationHandoffService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -63,7 +64,7 @@ class OperationHandoffResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::OperationHandoffs)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }

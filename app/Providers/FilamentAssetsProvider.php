@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Support\Assets\KonelsisCss as Css;
 use App\Filament\Support\Assets\KonelsisJs as Js;
 use App\Models\Personnel\Personnel;
@@ -83,7 +85,8 @@ final class FilamentAssetsProvider extends ServiceProvider
         Filament::serving(function (): void {
             $user = auth()->user();
 
-            if (! $user instanceof Personnel || ! $user->isActive()) {
+            if (! $user instanceof Personnel || ! $user->isActive() || ! FeatureFlags::enabled(Feature::DesktopAlerts)
+                || (! FeatureFlags::enabled(Feature::AlertSound) && ! FeatureFlags::enabled(Feature::AlertWindows))) {
                 return;
             }
 
@@ -92,6 +95,9 @@ final class FilamentAssetsProvider extends ServiceProvider
                     'feed' => route('filament.admin.notifications.feed'),
                     'user' => (int) $user->getKey(),
                     'poll' => 20000,
+                    // Ses ve Windows bildirimi ayri ozelliklerdir (D-128).
+                    'sound' => FeatureFlags::enabled(Feature::AlertSound),
+                    'windows' => FeatureFlags::enabled(Feature::AlertWindows),
                     'icon' => asset('images/konelsis-favicon.png'),
                     'labels' => [
                         'app' => (string) __('app.name'),

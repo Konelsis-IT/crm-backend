@@ -9,6 +9,7 @@ use App\Models\Approval\ApprovalRequest;
 use App\Models\Approval\ApprovalRequestStep;
 use App\Models\Personnel\Personnel;
 use App\Services\Authorization\RoleResolver;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
@@ -198,7 +199,7 @@ final class ApprovalNotifier
      */
     private function send(Personnel $personnel, string $title, string $body, ApprovalRequest $request, Heroicon $icon, string $color, array $extraActions = []): void
     {
-        if (! FeatureFlags::enabled('notifications.database') || ! SchemaReadiness::hasBatch('B00')) {
+        if (! FeatureFlags::enabled(Feature::Notifications) || ! SchemaReadiness::hasBatch('B00')) {
             return;
         }
 

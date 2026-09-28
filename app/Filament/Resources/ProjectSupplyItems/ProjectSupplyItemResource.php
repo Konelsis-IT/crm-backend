@@ -17,6 +17,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectSupplyItem;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Query\Reference\ReferenceOptions;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectSupplyItemService;
@@ -70,7 +71,7 @@ class ProjectSupplyItemResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::SupplyItems)
             && SchemaReadiness::hasBatch('B17A')
             && parent::canAccess();
     }

@@ -28,14 +28,12 @@ class CreateBusinessCase extends CreateRecord
 
     protected static string $resource = BusinessCaseResource::class;
 
+    /** Taraf kartindan acilinca musteri on secili (D-129): ?taraf=ID. */
+    public const QUERY_PARTY = 'taraf';
+
     public function getTitle(): string
     {
         return __('business_case.actions.create');
-    }
-
-    public function getSubheading(): ?string
-    {
-        return __('business_case.help.chain_intro');
     }
 
     /**
@@ -60,6 +58,19 @@ class CreateBusinessCase extends CreateRecord
             BusinessCaseWizard::STEP_CASE => 'saveCaseOnly',
             BusinessCaseWizard::STEP_PROPOSAL => 'saveWithProposal',
         ];
+    }
+
+    /**
+     * Taraf kartindaki "Is dosyasi olustur" (D-129) musteriyi on secer; gecersiz
+     * kimlik secim alaninin kendi dogrulamasina takilir.
+     */
+    protected function afterFill(): void
+    {
+        $partyId = request()->query(self::QUERY_PARTY);
+
+        if (is_numeric($partyId) && (int) $partyId > 0) {
+            $this->data['primary_party_id'] = (int) $partyId;
+        }
     }
 
     /** 1. adimdaki "Kaydet": yalniz is dosyasi acilir. */
@@ -96,7 +107,7 @@ class CreateBusinessCase extends CreateRecord
             $project = $case->project;
 
             DomainNotifications::success($project === null
-                ? __('business_case.messages.created', ['code' => $case->offerCode()?->formatted_code ?? '-'])
+                ? __('business_case.messages.created', ['code' => $case->caseCode()?->formatted_code ?? '-'])
                 : __('project.messages.converted', ['code' => $project->businessCode?->formatted_code ?? '-']));
 
             return $case;

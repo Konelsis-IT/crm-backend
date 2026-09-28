@@ -29,7 +29,7 @@ class ViewApprovalPolicyVersion extends ViewRecord
         /** @var ApprovalPolicyVersion $version */
         $version = $this->getRecord();
 
-        return ($version->policy?->code ?? '-').' · v'.$version->version_no;
+        return ($version->policy?->localizedName() ?? '-').' · v'.$version->version_no;
     }
 
     public function infolist(Schema $schema): Schema
@@ -39,7 +39,7 @@ class ViewApprovalPolicyVersion extends ViewRecord
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    TextEntry::make('policy.code')
+                    TextEntry::make('policy.name_tr')
                         ->label(__('approval_policy.label'))
                         ->badge()
                         ->color('gray')

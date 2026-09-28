@@ -14,6 +14,7 @@ use App\Filament\Resources\EstimateVersions\RelationManagers\ScenariosRelationMa
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\EstimateVersion;
 use App\Query\Reference\ReferenceOptions;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -58,7 +59,7 @@ class EstimateVersionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Proposals)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }

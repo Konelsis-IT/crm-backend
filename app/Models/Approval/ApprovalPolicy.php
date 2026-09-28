@@ -6,6 +6,7 @@ namespace App\Models\Approval;
 
 use App\Enums\Approval\ApprovalPolicyStatus;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Policies\ApprovalPolicyPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ApprovalPolicy extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

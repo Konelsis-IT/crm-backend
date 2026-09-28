@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ActivityAreas;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\Shared\ActiveStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Clusters\Settings;
@@ -63,7 +65,7 @@ class ActivityAreaResource extends Resource
 
     public static function canAccess(): bool
     {
-        return SchemaReadiness::hasBatch('B33') && parent::canAccess();
+        return FeatureFlags::enabled(Feature::ActivityAreas) && SchemaReadiness::hasBatch('B33') && parent::canAccess();
     }
 
     public static function form(Schema $schema): Schema
@@ -82,19 +84,10 @@ class ActivityAreaResource extends Resource
                         ->placeholder(__('activity_area.values.root'))
                         ->searchable()
                         ->native(false),
-                    TextInput::make('code')
-                        ->label(__('activity_area.fields.code'))
-                        ->required()
-                        ->alphaDash()
-                        ->maxLength(64)
-                        ->disabledOn('edit')
-                        ->dehydratedWhenHidden(false),
+                    // Kod arayuzde yok (D-130): ActivityAreaService Turkce addan uretir.
                     TextInput::make('name_tr')
                         ->label(__('activity_area.fields.name_tr'))
                         ->required()
-                        ->maxLength(150),
-                    TextInput::make('name_en')
-                        ->label(__('activity_area.fields.name_en'))
                         ->maxLength(150),
                     TextInput::make('sort_order')
                         ->label(__('activity_area.fields.sort_order'))
@@ -125,15 +118,6 @@ class ActivityAreaResource extends Resource
                 TextColumn::make('parent.name_tr')
                     ->label(__('activity_area.fields.parent'))
                     ->placeholder(__('activity_area.values.root')),
-                TextColumn::make('code')
-                    ->label(__('activity_area.fields.code'))
-                    ->badge()
-                    ->color('gray')
-                    ->searchable(),
-                TextColumn::make('name_en')
-                    ->label(__('activity_area.fields.name_en'))
-                    ->placeholder('-')
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('sort_order')
                     ->label(__('activity_area.fields.sort_order')),
                 TextColumn::make('status')

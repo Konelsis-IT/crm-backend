@@ -14,6 +14,7 @@ use App\Filament\Resources\DocumentTemplates\Pages\ViewDocumentTemplate;
 use App\Filament\Resources\DocumentTemplates\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\DocumentTemplate;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -54,7 +55,7 @@ class DocumentTemplateResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('documents.admin_ui')
+        return FeatureFlags::enabled(Feature::DocumentTemplates)
             && SchemaReadiness::hasBatch('B06')
             && parent::canAccess();
     }
@@ -65,13 +66,7 @@ class DocumentTemplateResource extends Resource
             Section::make(__('document_template.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    TextInput::make('code')
-                        ->label(__('document_template.fields.code'))
-                        ->required()
-                        ->alphaDash()
-                        ->maxLength(32)
-                        ->disabledOn('edit')
-                        ->dehydratedWhenHidden(false),
+                    // Kod arayuzde yok (D-130): DocumentTemplateService addan uretir.
                     TextInput::make('name')
                         ->label(__('document_template.fields.name'))
                         ->required()
@@ -97,10 +92,6 @@ class DocumentTemplateResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('document_template.fields.code'))
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('name')
                     ->label(__('document_template.fields.name'))
                     ->searchable()

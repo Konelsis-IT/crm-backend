@@ -12,7 +12,8 @@ use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Resources\SocialContents\SocialContentResource;
 use App\Filament\Widgets\UpcomingSocialContentsWidget;
-use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
+// Roller ekrani uygulamanin kaynagi (D-130): Shield'inkini genisletir, koruma adi gizli.
+use App\Filament\Resources\Roles\RoleResource;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;

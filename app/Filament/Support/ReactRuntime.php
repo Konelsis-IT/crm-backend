@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 
@@ -28,6 +29,6 @@ final class ReactRuntime
     {
         return auth()->check()
             && SchemaReadiness::hasBatch('B12A')
-            && FeatureFlags::enabled('chat.admin_ui');
+            && FeatureFlags::enabled(Feature::Chat);
     }
 }

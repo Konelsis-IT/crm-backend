@@ -14,6 +14,7 @@ use App\Filament\Resources\LegalHolds\Pages\ViewLegalHold;
 use App\Filament\Resources\LegalHolds\RelationManagers\DocumentsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\LegalHold;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -57,7 +58,7 @@ class LegalHoldResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('documents.admin_ui')
+        return FeatureFlags::enabled(Feature::LegalHolds)
             && SchemaReadiness::hasBatch('B06')
             && parent::canAccess();
     }

@@ -14,6 +14,7 @@ use App\Filament\Resources\Reports\Schemas\ReportInfolist;
 use App\Filament\Resources\Reports\Tables\ReportTable;
 use App\Models\Report\Report;
 use App\Query\Report\ReportQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -65,7 +66,7 @@ class ReportResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('reports.admin_ui')
+        return FeatureFlags::enabled(Feature::Reports)
             && SchemaReadiness::hasBatch('B10A')
             && parent::canAccess();
     }

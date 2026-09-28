@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Pages\QuickActionSettings;
 use App\Filament\Pages\Work\ControlMatrix;
 use App\Filament\Pages\Work\WorkBoard;
@@ -43,7 +45,7 @@ final class TopbarShortcuts
             fn (): string => NotificationResource::canAccess()
                 ? self::iconButton('allNotifications', __('notification_inbox.open_all'), Heroicon::OutlinedQueueList, NotificationResource::getUrl(), NotificationResource::getRouteBaseName().'.*')->toHtml()
                 : '',
-            fn (): string => self::quickActions((int) $user->getKey()),
+            fn (): string => QuickActionSettings::canAccess() ? self::quickActions((int) $user->getKey()) : '',
             // Simgeler sayfanin kendi simgesidir (24 Eylul 2026: daha anlasilir
             // simgeler - Is panosu is listesi panosu, Kontrol matrisi kontrol listesi).
             fn (): string => WorkBoard::canAccess()

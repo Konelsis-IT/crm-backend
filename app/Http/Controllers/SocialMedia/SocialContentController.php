@@ -23,6 +23,7 @@ use App\Policies\SocialContentPolicy;
 use App\Query\SocialMedia\SocialAnalyticsQueries;
 use App\Query\SocialMedia\SocialContentQueries;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\SocialMedia\SocialContentPresenter;
@@ -93,6 +94,15 @@ final class SocialContentController extends Controller
             'counts' => (object) $counts,
             'storage' => $this->storage(),
             'reminders' => ['last_run_at' => $this->lastReminderRun()],
+            // Sekme ve parca anahtarlari (D-128): React ekrani kapali olani cizmez.
+            'features' => [
+                'feed' => FeatureFlags::enabled(Feature::SocialFeed),
+                'watch' => FeatureFlags::enabled(Feature::SocialWatchBox),
+                'storage' => FeatureFlags::enabled(Feature::SocialStorageBox),
+                'plan' => FeatureFlags::enabled(Feature::SocialPlan),
+                'insights' => FeatureFlags::enabled(Feature::SocialInsights),
+                'analytics' => FeatureFlags::enabled(Feature::SocialAnalytics),
+            ],
         ]);
     }
 
@@ -385,7 +395,11 @@ final class SocialContentController extends Controller
             'types' => array_map(fn (SocialContentType $type): array => [
                 'value' => $type->value,
                 'label' => $type->getLabel(),
-            ], SocialContentType::cases()),
+            ], array_values(array_filter(
+                SocialContentType::cases(),
+                // Blog turu kapaliyken ekleme menusunde ve yazim ekraninda yer almaz (D-128).
+                fn (SocialContentType $type): bool => $type !== SocialContentType::Blog || FeatureFlags::enabled(Feature::SocialBlog),
+            ))),
             'statuses' => array_map(fn (SocialContentStatus $status): array => [
                 'value' => $status->value,
                 'label' => $status->getLabel(),
@@ -535,7 +549,7 @@ final class SocialContentController extends Controller
 
     private function me(Request $request): Personnel
     {
-        abort_unless(SchemaReadiness::hasBatch('B31') && FeatureFlags::enabled('social_media.admin_ui'), 404);
+        abort_unless(SchemaReadiness::hasBatch('B31') && FeatureFlags::enabled(Feature::SocialMedia), 404);
 
         $user = $request->user();
         abort_unless($user instanceof Personnel && $user->isActive(), 403);

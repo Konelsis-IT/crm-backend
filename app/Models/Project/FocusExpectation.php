@@ -7,6 +7,7 @@ namespace App\Models\Project;
 use App\Enums\Project\ExpectationKind;
 use App\Enums\Shared\ActiveStatus;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Policies\FocusExpectationPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -24,6 +25,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class FocusExpectation extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
+
+    /**
+     * Ingilizce ad ve yardim metni arayuzde yok (D-131); Turkcesinden doldurulur.
+     *
+     * @return array<string, string>
+     */
+    public function mirroredLocaleFields(): array
+    {
+        return ['name_en' => 'name_tr', 'help_en' => 'help_tr'];
+    }
 
     /**
      * @return array<string, string>

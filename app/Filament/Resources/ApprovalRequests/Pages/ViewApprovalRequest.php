@@ -95,7 +95,7 @@ class ViewApprovalRequest extends ViewRecord
                         TextEntry::make('status')
                             ->label(__('approval_request.fields.status'))
                             ->badge(),
-                        TextEntry::make('policyVersion.policy.code')
+                        TextEntry::make('policyVersion.policy.name_tr')
                             ->label(__('approval_request.fields.policy'))
                             ->badge()
                             ->color('gray')

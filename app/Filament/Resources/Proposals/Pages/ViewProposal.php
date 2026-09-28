@@ -66,7 +66,6 @@ class ViewProposal extends ViewRecord
             ...($case !== null ? [$wizard->stageCallout($case)] : []),
             Section::make(__('business_case.sections.chain'))
                 ->icon(Heroicon::OutlinedArrowLongRight)
-                ->description(__('business_case.help.chain_intro'))
                 ->components([
                     Wizard::make($steps)
                         ->skippable()

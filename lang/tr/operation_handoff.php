@@ -12,7 +12,7 @@ return [
         'accepted_at' => 'Kabul tarihi',
         'accepted_version' => 'Kabul edilen sürüm',
         'acceptor' => 'Kabul eden',
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'created_at' => 'Oluşturulma',
         'prepared_by' => 'Prepared by',
         'preparer' => 'Hazırlayan',
@@ -42,7 +42,7 @@ return [
     'messages' => [
         'status_changed' => 'Durum güncellendi.',
         'done' => 'İşlem tamamlandı.',
-        'duplicate' => 'Bu iş dosyası için zaten bir devir kaydı var.',
+        'duplicate' => 'Bu potansiyel iş için zaten bir devir kaydı var.',
     ],
 
     'validation' => [

@@ -17,6 +17,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ProjectWizard;
 use App\Models\Project\Project;
 use App\Query\Project\ProjectCatalogQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectService;
@@ -66,7 +67,7 @@ class ProjectResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::Projects)
             && SchemaReadiness::hasBatch('B17')
             && SchemaReadiness::hasBatch('B17A')
             && parent::canAccess();

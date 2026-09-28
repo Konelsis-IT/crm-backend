@@ -59,10 +59,6 @@ class RequirementDefinitionsRelationManager extends RelationManager
                             ->label(__('stage_requirement_definition.fields.name_tr'))
                             ->required()
                             ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('stage_requirement_definition.fields.name_en'))
-                            ->required()
-                            ->maxLength(255),
                         Toggle::make('is_mandatory')
                             ->label(__('stage_requirement_definition.fields.is_mandatory'))
                             ->default(true),

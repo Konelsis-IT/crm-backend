@@ -375,7 +375,7 @@ return [
         'labels' => [
             'proposal_created' => 'Teklif oluşturuldu',
             'proposal_version_created' => 'Teklif sürümü oluşturuldu',
-            'business_case_created' => 'İş dosyası açıldı',
+            'business_case_created' => 'Potansiyel iş açıldı',
             'tender_notice_created' => 'İhale ilanı kaydedildi',
             'document_created' => 'Belge oluşturuldu',
             'document_revision_created' => 'Belge revize edildi',
@@ -394,7 +394,7 @@ return [
         'titles' => [
             'proposal_created' => 'Teklif hazırlandı',
             'proposal_version_created' => 'Teklif revize edildi',
-            'business_case_created' => 'İş dosyası açıldı',
+            'business_case_created' => 'Potansiyel iş açıldı',
             'tender_notice_created' => 'İhale ilanı incelendi',
             'document_created' => 'Belge hazırlandı',
             'document_revision_created' => 'Belge revize edildi',
@@ -412,7 +412,7 @@ return [
         ],
         'modules' => [
             'proposals' => 'Teklifler',
-            'business_cases' => 'İş dosyaları',
+            'business_cases' => 'Potansiyel işler',
             'tenders' => 'İhale takibi',
             'documents' => 'Belgeler',
             'supply' => 'Tedarik',

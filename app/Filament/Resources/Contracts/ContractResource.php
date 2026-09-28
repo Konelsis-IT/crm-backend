@@ -14,6 +14,7 @@ use App\Filament\Resources\Contracts\Pages\ViewContract;
 use App\Filament\Resources\Contracts\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\Contract;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -55,7 +56,7 @@ class ContractResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Contracts)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }

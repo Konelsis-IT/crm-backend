@@ -46,10 +46,7 @@ class NodesRelationManager extends RelationManager
             Section::make(__('stage_node.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        TextInput::make('stage_code')
-                            ->label(__('stage_node.fields.stage_code'))
-                            ->required()
-                            ->maxLength(32),
+                        // Onay kapisi kodu arayuzde yok (D-131): StageNodeService sira numarasindan uretir (G0, G1...).
                         TextInput::make('sequence_no')
                             ->label(__('stage_node.fields.sequence_no'))
                             ->numeric()
@@ -59,10 +56,6 @@ class NodesRelationManager extends RelationManager
                             ->required(),
                         TextInput::make('name_tr')
                             ->label(__('stage_node.fields.name_tr'))
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('stage_node.fields.name_en'))
                             ->required()
                             ->maxLength(255),
                         Toggle::make('is_hard_gate')
@@ -86,13 +79,11 @@ class NodesRelationManager extends RelationManager
         return $table
             ->modelLabel(__('stage_node.label'))
             ->heading(__('stage_node.relation.title'))
-            ->recordTitleAttribute('stage_code')
+            ->recordTitleAttribute('name_tr')
             ->columns([
                 TextColumn::make('sequence_no')
                     ->label(__('stage_node.fields.sequence_no'))
                     ->sortable(),
-                TextColumn::make('stage_code')
-                    ->label(__('stage_node.fields.stage_code')),
                 TextColumn::make('name_tr')
                     ->label(__('stage_node.fields.name_tr')),
                 IconColumn::make('is_hard_gate')

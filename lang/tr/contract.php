@@ -9,7 +9,7 @@ return [
     ],
 
     'fields' => [
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'contract_no' => 'Sözleşme no',
         'contract_type' => 'Sözleşme türü',
         'created_at' => 'Oluşturulma',

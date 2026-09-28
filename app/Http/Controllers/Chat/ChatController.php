@@ -15,6 +15,7 @@ use App\Services\Chat\ChatPresence;
 use App\Services\Chat\ChatPresenter;
 use App\Services\Chat\ConversationService;
 use App\Services\Chat\MessageService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Http\JsonResponse;
@@ -85,6 +86,9 @@ final class ChatController extends Controller
             'personnel_ids' => ['nullable', 'array', 'max:50'],
             'personnel_ids.*' => ['integer'],
         ]);
+
+        // Grup acma ayri ozelliktir (D-128); birebir sohbet etkilenmez.
+        abort_unless(filled($data['personnel_id'] ?? null) || FeatureFlags::enabled(Feature::ChatGroups), 404);
 
         try {
             $conversation = filled($data['personnel_id'] ?? null)
@@ -317,7 +321,7 @@ final class ChatController extends Controller
 
     private function me(Request $request): Personnel
     {
-        abort_unless(SchemaReadiness::hasBatch('B12A') && FeatureFlags::enabled('chat.admin_ui'), 404);
+        abort_unless(SchemaReadiness::hasBatch('B12A') && FeatureFlags::enabled(Feature::Chat), 404);
 
         $user = $request->user();
         abort_unless($user instanceof Personnel && $user->isActive(), 403);

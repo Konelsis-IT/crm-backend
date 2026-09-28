@@ -25,7 +25,6 @@ final class PositionInfolist
                 ->columns(['default' => 1, 'md' => 3])
                 ->components([
                     TextEntry::make('title')->label(__('position.fields.title'))->weight('semibold'),
-                    TextEntry::make('code')->label(__('position.fields.code'))->badge()->color('gray'),
                     TextEntry::make('orgUnit.name')->label(__('position.fields.org_unit'))->icon(Heroicon::OutlinedBuildingOffice2)->placeholder('–'),
                     TextEntry::make('grade')->label(__('position.fields.grade'))->placeholder('–'),
                     TextEntry::make('managerial_level')->label(__('position.fields.managerial_level')),

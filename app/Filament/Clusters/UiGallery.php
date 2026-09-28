@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Clusters;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Models\Personnel\Personnel;
 use App\Services\Authorization\RoleResolver;
 use BackedEnum;
@@ -39,6 +41,6 @@ class UiGallery extends Cluster
     {
         $user = auth()->user();
 
-        return $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
+        return FeatureFlags::enabled(Feature::UiGallery) && $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
     }
 }

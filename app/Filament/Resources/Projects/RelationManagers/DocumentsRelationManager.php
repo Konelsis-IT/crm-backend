@@ -15,6 +15,7 @@ use App\Filament\Support\FileLinks;
 use App\Models\Document\Document;
 use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentService;
+use App\Support\UploadLimits;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -114,6 +115,7 @@ class DocumentsRelationManager extends RelationManager
                         ->disk('local')
                         ->directory('document-uploads-tmp')
                         ->storeFileNamesIn('file_original_name')
+                        ->maxSize(UploadLimits::documentMaxKb())
                         ->required()
                         ->columnSpanFull(),
                     Hidden::make('file_original_name'),

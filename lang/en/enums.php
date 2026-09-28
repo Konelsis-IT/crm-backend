@@ -461,6 +461,7 @@ return [
         'cancelled' => 'Cancelled',
     ],
     'business_code_kind' => [
+        'potential' => 'Potential job (POTIS)',
         'offer' => 'Offer (TKLF)',
         'project' => 'Project (PRJ)',
     ],

@@ -8,6 +8,7 @@ use App\Models\Project\StageNode;
 use App\Models\Project\StageTemplateVersion;
 use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
+use App\Services\Support\CodeGenerator;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Illuminate\Database\Eloquent\Model;
@@ -35,8 +36,15 @@ final class StageNodeService extends AbstractService
      */
     public function create(array $data): Model
     {
-        $this->versions->assertDraft(StageTemplateVersion::query()->findOrFail((int) ($data['stage_template_version_id'] ?? 0)));
-        $data['stage_code'] = strtoupper(trim((string) ($data['stage_code'] ?? '')));
+        $versionId = (int) ($data['stage_template_version_id'] ?? 0);
+        $this->versions->assertDraft(StageTemplateVersion::query()->findOrFail($versionId));
+
+        // Onay kapisi kodu arayuzde girilmez (D-131): verilmezse sira numarasindan
+        // uretilir ("G" + sira: G0, G1...); ayni surumde varsa sonuna -2, -3 eklenir.
+        $code = strtoupper(trim((string) ($data['stage_code'] ?? '')));
+        $data['stage_code'] = $code !== ''
+            ? $code
+            : app(CodeGenerator::class)->unique('G'.(int) ($data['sequence_no'] ?? 0), StageNode::class, 'G', ['stage_template_version_id' => $versionId], column: 'stage_code');
 
         return parent::create($data);
     }

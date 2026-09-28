@@ -21,6 +21,7 @@ use App\Filament\Resources\Parties\Pages\ListParties;
 use App\Filament\Resources\Parties\Pages\ViewParty;
 use App\Filament\Resources\Parties\RelationManagers\AddressesRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\AnnualReviewsRelationManager;
+use App\Filament\Resources\Parties\RelationManagers\BusinessCasesRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\CertificatesRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\ContactsRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\LicensesRelationManager;
@@ -38,6 +39,7 @@ use App\Query\Party\PartyQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Party\PartyService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -96,7 +98,7 @@ class PartyResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Parties)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }
@@ -637,6 +639,8 @@ class PartyResource extends Resource
             AddressesRelationManager::class,
             ContactsRelationManager::class,
             ...(SchemaReadiness::hasBatch('B28') ? [MeetingNotesRelationManager::class] : []),
+            // Tarafin musteri oldugu is dosyalari (D-129).
+            BusinessCasesRelationManager::class,
             LicensesRelationManager::class,
             CertificatesRelationManager::class,
             AnnualReviewsRelationManager::class,

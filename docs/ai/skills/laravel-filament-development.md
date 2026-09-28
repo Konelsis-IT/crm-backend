@@ -130,6 +130,14 @@ Do not default new form/infolist fields to a full-width row just because that is
 - After changing a shared layout like this, verify what actually renders — a schema built in a scratch script only proves the `columnSpan`/`columns` values are correct, not that the page looks right. Open the page in the browser preview at a desktop width (`xl` breakpoint, e.g. 1440px) and confirm nothing is visually cramped or wrapped before calling the change done.
 - Reference implementation: `app/Filament/Support/BusinessCaseWizard.php::caseSections()` (the "İş dosyası" step: "Müşteri ve başlık" + "Sınıflandırma" side by side, "Ticari bilgiler" + "Sorumlular" side by side, each narrowed with `FieldGrid::HALF_COLUMNS`).
 
+### No manual codes, no language suffixes (user decision, 2026-09-28, D-130)
+
+Users never type technical keys. Catalog tables keep their `code` column (and document types their `numbering_prefix`), but forms, tables, detail pages and record titles never show them; the service generates the value when it is not supplied (`App\Services\Support\CodeGenerator::unique($name, Model::class, $fallback)`, e.g. "Satış Müdürü" → `SATIS-MUDURU`; seeders may still pass fixed codes). Stored codes never change on edit, so code-based lookups keep working. Role `guard_name` is never shown and is always `web` (`App\Filament\Resources\Roles\RoleResource`). Name labels carry no language suffix, and there is only one name field (D-131): forms never ask for an English name or English help text. Tables that keep `name_en`/`help_en` columns get them filled from the Turkish value by `App\Models\Concerns\MirrorsTurkishFields`; add that trait to any new model with such a column.
+
+### Yearly business codes (user decision, 2026-09-28, D-132)
+
+The acquisition chain is shown as Potansiyel iş → Teklif → Proje ("İş dosyası" is no longer a UI term; tables and classes keep the `business_case` names). Codes are `PREFIX-YYYY-NNNN` with the year taken automatically from the institution day: potential job `POTIS`, each proposal its own `TKLF` (`proposals.proposal_no`), project `PRJ`; every prefix restarts at 0001 each year. Allocate them only through `App\Services\Numbering\YearlyCodeAllocator::next()` inside the writing transaction (row-locked counter in `business_code_sequences`, gapless, rolled back with the transaction), and issue business codes through `BusinessCaseService::issueCode()`; read a case's current code with `BusinessCase::caseCode()`. Never build or type these codes by hand. Wherever a proposal is listed or shown, also show the POTIS code of its potential job so the link is visible. Before B40 is applied the legacy `TKLF-n` / `PRJ-n` numbering keeps running.
+
 ### Table interaction standard (user decision, 2026-09-25, D-125)
 
 Every table in this project — resource lists, relation managers (including grouped tabs), widget tables, and tables on custom pages — follows the same interaction rules. They are applied centrally by `App\Filament\Support\TableConventions::register()` (called from `AppServiceProvider::configureFilamentDefaults()`); new code inherits them automatically and must not work against them:
@@ -141,6 +149,21 @@ Every table in this project — resource lists, relation managers (including gro
 5. Per-table explicit settings (`->recordUrl(...)`, a column's own `->url()`/`->icon()`) override the defaults and must keep the same outcome: a row that goes to its detail, a link on a related record.
 
 `tools/safe-verify.php` fails when `TableConventions::register()` is missing from the provider, when a file under `app/Filament` overrides `modifyUngroupedRecordActionsUsing()`, or when a table sets `->recordUrl(null)` without a row action.
+
+### Feature switches (user decision, 2026-09-25, D-128)
+
+Every developed feature can be switched on or off, and the switch lives **only in the database** (`features.is_active`, batch B39). There is no settings screen, no `.env` variable and no config file for it; the user flips the value in the database.
+
+- The catalog is `App\Enums\Platform\Feature`. The code is dotted and carries the hierarchy (`acquisition.proposals` belongs to `acquisition`); a disabled parent disables its children. Each case has a Turkish name, a description of what disappears when it is off, its decision reference, and `models()` — record types that belong only to that feature.
+- `FeatureRegistry` syncs the catalog into the table on the first request: missing rows are inserted with `defaultActive()`, name/description/parent/order are refreshed, and the application never writes `is_active` on an existing row or deletes a row. Until B39 is applied every feature is on except `tools.release_notes`.
+- Read a switch only through `FeatureFlags::enabled(Feature::X)`; never pass a string.
+- **Every new user-visible feature is registered in the catalog in the same change** and gated wherever it appears: resource/page `canAccess()`, widget `canView()`, relation manager `canViewForRecord()` when it does not go through a policy, user-menu and topbar `visible()`, render hooks and script data, and its JSON/file routes (`->middleware(RequireFeature::for(Feature::X))`). Record types that belong to one feature only go into `models()`; `Gate::before` then denies them everywhere (resource, relation tabs, links, file endpoints). Shared record types (personnel, party, org unit, position) never go into `models()`.
+- Granularity follows the user's list: tabs and parts of a screen are separate features when the user names them (social media tabs, feed boxes, executive profile, blog; request thread; chat groups and request-from-chat; control matrix parts on the personnel card; analysis dashboard vs duration report; Excel vs PDF; alert sound vs Windows notification).
+- React screens (social media, chat, desktop alerts) receive the switches in the data they already load (`boot.features`, chat `config.features`, `konelsisAlerts.sound/windows`) and do not draw a disabled part; the server also closes that part's endpoint (`RequireFeature`, `SocialAppConfig::ROUTE_FEATURES` returns a null endpoint). Changing those JS/Blade files still needs case-specific approval each time.
+- Moving the switches to production: `php artisan konelsis:features:export` writes the local states to `database/seeders/data/features.php`; `FeatureSeeder` (end of `DatabaseSeeder`, or alone with the schema-guard permission) syncs the catalog and applies that file. Re-run export after the user changes states locally.
+- New features default to on. Only a feature the user explicitly wants hidden starts off (today: release notes).
+- Release notes keep being written in `App\Support\ReleaseNotes` for every change even while the window is hidden.
+- `tools/safe-verify.php` fails on a string passed to `FeatureFlags::enabled()`, on `config/features.php`, on a resource/page/widget not tied to a feature (neither `Feature::` nor a delegated `X::canAccess()`), and when the `Gate::before` hook is missing.
 
 ## Plugin and dependency boundary
 
@@ -166,6 +189,10 @@ Resources, Pages, Widgets, schemas, tables, and Actions:
 They do not contain business workflows, transaction orchestration, raw SQL, or explicit Eloquent/query-builder chains.
 
 Filament already performs plain create, update and delete through its own resource, form and table APIs. Leave it to do that. Reach for a service only when the work is genuinely more than a form save, or when the same work must run outside the panel (a job, a command, a scheduled task, an external call).
+
+Form state of an enum-option field: a field whose options come from an enum class (`->options(SomeEnum::class)`) returns an **enum instance** from `$get()`, not the string value. A raw `$get('field') === SomeEnum::Case->value`, `in_array($get(...), [...])` or `match ($get(...))` never matches, so the dependent field silently stays hidden (2026-09-25: the "Belgenin aslı" upload never appeared on document create). Always compare through `App\Filament\Support\FormState::value($get('field'))`. `tools/safe-verify.php` fails on the raw forms under `app/Filament`.
+
+Upload limits (user decision, 2026-09-25, D-127): document and belge fields — anything stored in the document library (document / revision create, project Documents tab, business case files) — accept up to 1 GB through `App\Support\UploadLimits::documentMaxKb()` (`config/konelsis.php` `uploads`). Every other upload keeps a size fit for its purpose (personnel photo 4 MB, project cover and photos 8 MB, work request attachments and chat 20 MB, social media per its own config). The global Livewire temporary-upload cap is the document limit (set in `AppServiceProvider::configureUploads`), so every `FileUpload` must state its own `->maxSize()`; `tools/safe-verify.php` fails on a `FileUpload` without one. Services that receive uploads never read the whole file into memory: hash with `hash_file`, move on disk, read image bytes only below `UploadLimits::imageProcessingMaxBytes()`.
 
 ### Service layer (rule S-2)
 

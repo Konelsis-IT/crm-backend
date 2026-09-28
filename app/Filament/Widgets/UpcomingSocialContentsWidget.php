@@ -12,6 +12,7 @@ use App\Models\SocialMedia\SocialContent;
 use App\Query\SocialMedia\SocialContentQueries;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Authorization\RoleResolver;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
@@ -45,7 +46,7 @@ class UpcomingSocialContentsWidget extends TableWidget
 
     public static function canView(): bool
     {
-        if (! SchemaReadiness::hasBatch('B31') || ! FeatureFlags::enabled('social_media.admin_ui')) {
+        if (! SchemaReadiness::hasBatch('B31') || ! FeatureFlags::enabled(Feature::SocialMedia)) {
             return false;
         }
 

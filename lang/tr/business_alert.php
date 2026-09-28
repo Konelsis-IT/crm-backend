@@ -35,7 +35,7 @@ return [
         'body' => ':subject — son tarih :date',
     ],
 
-    // Tarama kaynakları; :subject kayıt adı, :context proje / iş dosyası / kişi.
+    // Tarama kaynakları; :subject kayıt adı, :context proje / potansiyel iş / kişi.
     'triggers' => [
         'deadline_project_issue' => 'Sorun son tarihi: :subject (:context)',
         'deadline_project_risk_review' => 'Risk gözden geçirme tarihi: :subject (:context)',

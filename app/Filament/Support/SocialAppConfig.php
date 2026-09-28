@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Enums\Platform\Feature;
 use App\Filament\Resources\SocialContents\SocialContentResource;
+use App\Services\Platform\FeatureFlags;
 use App\Services\SocialMedia\SocialClock;
 use Throwable;
 
@@ -58,6 +60,26 @@ final class SocialAppConfig
     private const ID = '__ID__';
 
     private const TOKEN = '__TOKEN__';
+
+    /**
+     * Rota adi => o ucun bagli oldugu ozellik (D-128). Ozellik kapaliysa uc
+     * istemciye verilmez (null: istemci o parcayi gizler) ve rota 404 doner.
+     *
+     * @var array<string, Feature>
+     */
+    private const ROUTE_FEATURES = [
+        'storage' => Feature::SocialStorageBox,
+        'agenda' => Feature::SocialPlan,
+        'analytics' => Feature::SocialAnalytics,
+        'metrics' => Feature::SocialAnalytics,
+        'metrics.store' => Feature::SocialAnalytics,
+        'metrics.update' => Feature::SocialAnalytics,
+        'metrics.file' => Feature::SocialAnalytics,
+        'watch.store' => Feature::SocialInsights,
+        'watch.update' => Feature::SocialInsights,
+        'catalog' => Feature::SocialInsights,
+        'catalog.file' => Feature::SocialInsights,
+    ];
 
     /**
      * Rota adi (social. sonrasi) => yer tutuculu parametreler. AdminPanelProvider'daki
@@ -170,6 +192,15 @@ final class SocialAppConfig
         $endpoints = [];
 
         foreach (self::ROUTES as $name => $parameters) {
+            // Kapali ozelligin ucu verilmez (D-128); rota da RequireFeature ile kapalidir.
+            $feature = self::ROUTE_FEATURES[$name] ?? null;
+
+            if ($feature !== null && ! FeatureFlags::enabled($feature)) {
+                $endpoints[$name] = null;
+
+                continue;
+            }
+
             try {
                 $endpoints[$name] = route(self::ROUTE_PREFIX.$name, $parameters, absolute: false);
             } catch (Throwable) {

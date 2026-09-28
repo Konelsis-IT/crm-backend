@@ -19,6 +19,7 @@ use App\Filament\Resources\Documents\RelationManagers\SharesRelationManager;
 use App\Filament\Resources\Documents\Schemas\DocumentForm;
 use App\Filament\Resources\Documents\Tables\DocumentTable;
 use App\Models\Document\Document;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -54,7 +55,7 @@ class DocumentResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('documents.admin_ui')
+        return FeatureFlags::enabled(Feature::Documents)
             && SchemaReadiness::hasBatch('B06')
             && parent::canAccess();
     }
@@ -75,7 +76,7 @@ class DocumentResource extends Resource
         // eklenmez; detay sayfasi (ViewDocumentRecord) ayni kosulla sekme kurar.
         return [
             ...(SchemaReadiness::hasBatch('B06A') ? [SharesRelationManager::class] : []),
-            ...(FeatureFlags::enabled('approvals.admin_ui') && SchemaReadiness::hasBatch('B07') ? [ApprovalRequestsRelationManager::class] : []),
+            ...(FeatureFlags::enabled(Feature::Approvals) && SchemaReadiness::hasBatch('B07') ? [ApprovalRequestsRelationManager::class] : []),
             RevisionsRelationManager::class,
             LinksRelationManager::class,
             ReviewsRelationManager::class,

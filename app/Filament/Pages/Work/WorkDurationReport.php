@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Work;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Clusters\WorkReports;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Models\Personnel\Personnel;
@@ -75,7 +77,7 @@ class WorkDurationReport extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return WorkReports::canAccess();
+        return FeatureFlags::enabled(Feature::DurationReport) && WorkReports::canAccess();
     }
 
     public function content(Schema $schema): Schema

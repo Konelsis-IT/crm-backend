@@ -9,6 +9,7 @@ use App\Models\Notification\PanelNotification;
 use App\Models\Personnel\Personnel;
 use App\Query\Notification\NotificationInboxQueries;
 use App\Services\Notification\NotificationInboxService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -52,7 +53,7 @@ class NotificationResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user() instanceof Personnel
-            && FeatureFlags::enabled('notifications.database')
+            && FeatureFlags::enabled(Feature::NotificationsInbox)
             && SchemaReadiness::hasBatch('B00')
             && parent::canAccess();
     }

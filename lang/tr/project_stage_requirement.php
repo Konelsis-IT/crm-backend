@@ -15,7 +15,7 @@ return [
         'due_at' => 'Termin',
         'evidence_type_snapshot' => 'Kanıt türü',
         'is_mandatory_snapshot' => 'Zorunlu',
-        'name_snapshot_tr' => 'Gereksinim (TR)',
+        'name_snapshot_tr' => 'Gereksinim',
         'outcome_note' => 'Sonuç notu',
         'owner' => 'Sahip',
         'reason' => 'Gerekçe',

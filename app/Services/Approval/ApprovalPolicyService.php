@@ -8,6 +8,7 @@ use App\Enums\Approval\ApprovalPolicyStatus;
 use App\Exceptions\CodeAlreadyInUseException;
 use App\Models\Approval\ApprovalPolicy;
 use App\Services\AbstractService;
+use App\Services\Support\CodeGenerator;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -28,6 +29,11 @@ final class ApprovalPolicyService extends AbstractService
     protected function prepare(array $data, ?Model $record): array
     {
         $data = parent::prepare($data, $record);
+
+        // Kod arayuzde girilmez (D-130): yeni politikada verilmezse Turkce addan uretilir.
+        if ($record === null && blank($data['code'] ?? null)) {
+            $data['code'] = app(CodeGenerator::class)->unique((string) ($data['name_tr'] ?? ''), ApprovalPolicy::class, 'POLITIKA');
+        }
 
         if (isset($data['code'])) {
             $data['code'] = strtoupper(trim((string) $data['code']));

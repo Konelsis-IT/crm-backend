@@ -7,6 +7,7 @@ namespace App\Services\Project;
 use App\Exceptions\CodeAlreadyInUseException;
 use App\Models\Project\OperationGroupDefinition;
 use App\Services\AbstractService;
+use App\Services\Support\CodeGenerator;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -23,7 +24,10 @@ final class OperationGroupDefinitionService extends AbstractService
      */
     public function create(array $data): Model
     {
-        $code = strtoupper(trim((string) ($data['code'] ?? '')));
+        // Kod arayuzde girilmez (D-130): verilmezse Turkce addan uretilir.
+        $code = filled($data['code'] ?? null)
+            ? strtoupper(trim((string) $data['code']))
+            : app(CodeGenerator::class)->unique((string) ($data['name_tr'] ?? ''), OperationGroupDefinition::class, 'GRUP');
 
         if (OperationGroupDefinition::query()->where('code', $code)->exists()) {
             throw CodeAlreadyInUseException::make(['code' => $code]);

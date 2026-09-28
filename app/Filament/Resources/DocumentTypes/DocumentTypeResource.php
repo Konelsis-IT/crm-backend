@@ -13,6 +13,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\DocumentType;
 use App\Services\Document\DocumentTypeService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -57,7 +58,7 @@ class DocumentTypeResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('documents.admin_ui')
+        return FeatureFlags::enabled(Feature::DocumentTypes)
             && SchemaReadiness::hasBatch('B06')
             && parent::canAccess();
     }
@@ -85,11 +86,8 @@ class DocumentTypeResource extends Resource
                         ->default(DocumentDiscipline::General->value)
                         ->required()
                         ->native(false),
-                    TextInput::make('numbering_prefix')
-                        ->label(__('document_type.fields.numbering_prefix'))
-                        ->required()
-                        ->alphaDash()
-                        ->maxLength(32),
+                    // Numaralandirma oneki arayuzde yok (D-130): DocumentTypeService
+                    // yeni tipte kodu onek yapar; dokuman no "KOD-00001".
                     Select::make('default_classification_id')
                         ->label(__('document_type.fields.default_classification'))
                         ->relationship('defaultClassification', 'name_tr')
@@ -141,8 +139,6 @@ class DocumentTypeResource extends Resource
                 TextColumn::make('discipline')
                     ->label(__('document_type.fields.discipline'))
                     ->badge(),
-                TextColumn::make('numbering_prefix')
-                    ->label(__('document_type.fields.numbering_prefix')),
                 IconColumn::make('is_controlled')
                     ->label(__('document_type.fields.is_controlled'))
                     ->boolean(),

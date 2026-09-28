@@ -28,7 +28,7 @@ return [
         'subject_project' => 'İlgili proje',
         'subject_component' => 'İlgili ürün / bileşen',
         'subject_proposal' => 'İlgili teklif',
-        'subject_business_case' => 'İlgili iş dosyası',
+        'subject_business_case' => 'İlgili potansiyel iş',
         'period' => 'Dönem',
         'period_none' => 'Dönem',
         'period_day' => 'Tarih',
@@ -256,8 +256,8 @@ return [
             ],
         ],
         'business_case_review' => [
-            'name' => 'İş dosyası değerlendirme raporu',
-            'description' => 'Seçilen iş dosyası için ticari ve teknik risk, müşteri ilişkisi, öneri ve aksiyonlar; departman yöneticisi inceler.',
+            'name' => 'Potansiyel iş değerlendirme raporu',
+            'description' => 'Seçilen potansiyel iş için ticari ve teknik risk, müşteri ilişkisi, öneri ve aksiyonlar; departman yöneticisi inceler.',
             'fields' => [
                 'commercial_risk' => 'Ticari risk',
                 'technical_risk' => 'Teknik risk',

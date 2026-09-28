@@ -46,10 +46,12 @@ final class ProposalDetail
         $owner = $proposal->owner;
         $version = $proposal->currentVersion;
         $project = $case?->project;
-        $caseCode = $case?->offerCode()?->formatted_code;
+        $caseCode = $case?->caseCode()?->formatted_code;
 
         $badges = [
             Text::make((string) $proposal->proposal_no)->badge()->color('gray')->icon(Heroicon::OutlinedHashtag),
+            // Bagli oldugu potansiyel isin kodu (D-132): hangi POTIS'e ait oldugu hep gorunur.
+            ...($caseCode !== null ? [Text::make($caseCode)->badge()->color('warning')->icon(Heroicon::OutlinedBriefcase)] : []),
             Text::make((string) $proposal->status?->getLabel())->badge()->color($proposal->status?->getColor() ?? 'gray'),
         ];
 
@@ -168,7 +170,7 @@ final class ProposalDetail
 
         return Step::make(__('business_case.wizard.case'))
             ->id(BusinessCaseWizard::STEP_CASE)
-            ->description($case === null ? '-' : trim(($case->offerCode()?->formatted_code ?? '').' · '.$case->title, ' ·'))
+            ->description($case === null ? '-' : trim(($case->caseCode()?->formatted_code ?? '').' · '.$case->title, ' ·'))
             ->icon(Heroicon::OutlinedBriefcase)
             ->completedIcon(Heroicon::OutlinedBriefcase)
             ->formWrapper(false)

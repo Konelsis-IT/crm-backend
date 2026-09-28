@@ -18,6 +18,7 @@ use App\Filament\Resources\Parties\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\Parties\Schemas\PartyInfolist;
 use App\Models\Party\Party;
 use App\Query\Party\PartyQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -66,7 +67,7 @@ class AssociationResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Associations)
             && SchemaReadiness::hasBatch('B33')
             && parent::canAccess();
     }

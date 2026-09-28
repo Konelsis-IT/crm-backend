@@ -9,7 +9,7 @@ return [
     ],
 
     'fields' => [
-        'business_case' => 'İş dosyası',
+        'business_case' => 'Potansiyel iş',
         'comment' => 'Yorum',
         'contract_version' => 'Sözleşme sürümü',
         'created_at' => 'Oluşturulma',
@@ -61,6 +61,6 @@ return [
 
     'help' => [
         'proposal_version' => 'Boş bırakılırsa seçili teklifin onaylı sürümü bağlanır.',
-        'contract_version' => 'Boş bırakılırsa iş dosyasının yürürlükteki sözleşme sürümü bağlanır (D-10).',
+        'contract_version' => 'Boş bırakılırsa potansiyel işin yürürlükteki sözleşme sürümü bağlanır (D-10).',
     ],
 ];

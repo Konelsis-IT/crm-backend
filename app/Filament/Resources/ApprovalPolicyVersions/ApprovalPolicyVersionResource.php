@@ -11,6 +11,7 @@ use App\Filament\Resources\ApprovalPolicyVersions\Pages\ViewApprovalPolicyVersio
 use App\Filament\Resources\ApprovalPolicyVersions\RelationManagers\StepsRelationManager;
 use App\Filament\Resources\ApprovalPolicyVersions\Schemas\PolicyVersionForm;
 use App\Models\Approval\ApprovalPolicyVersion;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -52,7 +53,7 @@ class ApprovalPolicyVersionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('approvals.admin_ui')
+        return FeatureFlags::enabled(Feature::ApprovalPolicies)
             && SchemaReadiness::hasBatch('B07')
             && parent::canAccess();
     }
@@ -66,7 +67,7 @@ class ApprovalPolicyVersionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('policy.code')
+                TextColumn::make('policy.name_tr')
                     ->label(__('approval_policy.label')),
                 TextColumn::make('version_no')
                     ->label(__('approval_policy_version.fields.version_no')),

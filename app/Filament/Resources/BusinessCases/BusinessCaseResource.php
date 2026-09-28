@@ -25,6 +25,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\BusinessCase;
 use App\Services\Acquisition\BusinessCaseService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -68,7 +69,7 @@ class BusinessCaseResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::BusinessCases)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }
@@ -91,17 +92,22 @@ class BusinessCaseResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['codes', 'primaryParty', 'owner', ...($b29() ? ['scopes'] : [])]))
             ->columns([
+                // Kendi listesinde yalniz "Kod"; tekliflerde "Potansiyel iş kodu" (28 Eylul 2026 kullanici istegi).
                 TextColumn::make('offer_code')
-                    ->label(__('business_case.fields.offer_code'))
-                    ->getStateUsing(fn (BusinessCase $record): ?string => $record->offerCode()?->formatted_code)
+                    ->label(__('business_case.fields.code'))
+                    ->getStateUsing(fn (BusinessCase $record): ?string => $record->caseCode()?->formatted_code)
                     ->placeholder('-'),
                 TextColumn::make('title')
                     ->label(__('business_case.fields.title'))
                     ->limit(50)
                     ->searchable()
                     ->sortable(),
+                // Taraf tablosundaki ad sutunuyla ayni kisalik (28 Eylul 2026 kullanici istegi);
+                // uzun adin tamami ipucunda.
                 TextColumn::make('primaryParty.display_name')
-                    ->label(__('business_case.fields.primary_party')),
+                    ->label(__('business_case.fields.primary_party'))
+                    ->limit(25)
+                    ->tooltip(fn (BusinessCase $record): ?string => mb_strlen((string) $record->primaryParty?->display_name) > 25 ? $record->primaryParty?->display_name : null),
                 TextColumn::make('acquisition_stage')
                     ->label(__('business_case.fields.acquisition_stage'))
                     ->badge(),
@@ -181,11 +187,12 @@ class BusinessCaseResource extends Resource
     }
 
     /**
-     * Izin verilen her hedef durum icin ayri islem (docs/planning/14).
+     * Izin verilen her hedef durum icin ayri islem (docs/planning/14). Tablo
+     * satirinda ve detay sayfasinin basliginda ayni islemler kullanilir.
      *
      * @return list<Action>
      */
-    private static function statusActions(): array
+    public static function statusActions(): array
     {
         $actions = [];
 

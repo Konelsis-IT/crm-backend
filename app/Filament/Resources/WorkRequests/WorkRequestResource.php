@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests;
 
+use App\Filament\Support\FormState;
 use App\Enums\WorkRequest\RequestTargetKind;
 use App\Enums\WorkRequest\WorkRequestPriority;
 use App\Enums\WorkRequest\WorkRequestStatus;
@@ -19,6 +20,7 @@ use App\Query\Personnel\OrganizationQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -76,7 +78,7 @@ class WorkRequestResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('work_requests.admin_ui')
+        return FeatureFlags::enabled(Feature::WorkRequests)
             && SchemaReadiness::hasBatch('B11B')
             && parent::canAccess();
     }
@@ -103,8 +105,8 @@ class WorkRequestResource extends Resource
     {
         $user = auth()->user();
         $myUnitId = $user instanceof Personnel && $user->org_unit_id !== null ? (int) $user->org_unit_id : null;
-        $isPersonnel = fn (Get $get): bool => $get('target_kind') === RequestTargetKind::Personnel->value;
-        $isUnit = fn (Get $get): bool => $get('target_kind') === RequestTargetKind::OrgUnit->value;
+        $isPersonnel = fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::Personnel->value;
+        $isUnit = fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::OrgUnit->value;
 
         $half = ['default' => 1, 'md' => 2];
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Query\SocialMedia;
 
+use App\Enums\SocialMedia\SocialProfileKind;
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\Shared\ActiveStatus;
 use App\Enums\SocialMedia\SocialContentStatus;
 use App\Enums\SocialMedia\SocialMediaUsage;
@@ -581,7 +584,7 @@ final class SocialContentQueries
             return new Collection;
         }
 
-        return SocialProfile::query()
+        return $this->visibleProfiles(SocialProfile::query())
             ->with(['links', 'owner.orgUnit'])
             ->where('status', ActiveStatus::Active->value)
             ->orderBy('sort_order')
@@ -606,7 +609,21 @@ final class SocialContentQueries
     /** Hesap var mi (etkin olsun olmasin)? */
     public function profileExists(int $profileId): bool
     {
-        return $profileId > 0 && SocialProfile::query()->whereKey($profileId)->exists();
+        return $profileId > 0 && $this->visibleProfiles(SocialProfile::query())->whereKey($profileId)->exists();
+    }
+
+    /**
+     * Yonetici hesaplari ayri ozelliktir (D-128, social_media.executive_profiles):
+     * kapaliyken hesap secicide gorunmez, bu hesaba icerik acilamaz.
+     *
+     * @param  Builder<SocialProfile>  $query
+     * @return Builder<SocialProfile>
+     */
+    private function visibleProfiles(Builder $query): Builder
+    {
+        return FeatureFlags::enabled(Feature::SocialExecutiveProfiles)
+            ? $query
+            : $query->where('kind', '!=', SocialProfileKind::Executive->value);
     }
 
     public function categoryExists(int $categoryId): bool
@@ -734,6 +751,10 @@ final class SocialContentQueries
     private function upcomingWindow(Builder $query): Builder
     {
         $today = SocialClock::today();
+
+        if (! FeatureFlags::enabled(Feature::SocialExecutiveProfiles)) {
+            $query->whereHas('profile', fn (Builder $profile): Builder => $profile->where('kind', '!=', SocialProfileKind::Executive->value));
+        }
 
         return $this->applyPlannable($query)
             ->where('planned_on', '>=', $today->subDays(self::UPCOMING_MISSED_DAYS)->format('Y-m-d'))

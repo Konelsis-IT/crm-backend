@@ -12,6 +12,7 @@ use App\Filament\Support\ExportActions;
 use App\Models\Acquisition\BusinessCase;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
@@ -39,7 +40,7 @@ class ViewBusinessCase extends ViewRecord
         /** @var BusinessCase $case */
         $case = $this->getRecord();
 
-        return ($case->offerCode()?->formatted_code ?? '').' · '.$case->title;
+        return ($case->caseCode()?->formatted_code ?? '').' · '.$case->title;
     }
 
     public function content(Schema $schema): Schema
@@ -66,7 +67,6 @@ class ViewBusinessCase extends ViewRecord
             // 1. adim bos (is dosyasi zaten ustte); teklif ve proje adimlari ayrintilidir.
             Section::make(__('business_case.sections.chain'))
                 ->icon(Heroicon::OutlinedArrowLongRight)
-                ->description(__('business_case.help.chain_intro'))
                 ->components([
                     Wizard::make([
                         $wizard->caseViewStep(),
@@ -109,6 +109,12 @@ class ViewBusinessCase extends ViewRecord
                 ->color('gray')
                 ->visible(fn (): bool => $this->getRecord()->project !== null)
                 ->url(fn (): string => ProjectResource::getUrl('view', ['record' => $this->getRecord()->project])),
+            // Durum yalniz izinli gecislerle degisir; sonuc durumdan gelir (28 Eylul 2026).
+            ActionGroup::make(BusinessCaseResource::statusActions())
+                ->label(__('business_case.actions.change_status'))
+                ->icon(Heroicon::OutlinedArrowPath)
+                ->color('gray')
+                ->button(),
             $wizard->convertAction($case),
             ExportActions::record(BusinessCaseExporter::class),
         ];

@@ -14,6 +14,7 @@ use App\Filament\Resources\StageTemplates\Pages\ViewStageTemplate;
 use App\Filament\Resources\StageTemplates\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\StageTemplate;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -39,7 +40,7 @@ class StageTemplateResource extends Resource
 
     protected static ?int $navigationSort = 120;
 
-    protected static ?string $recordTitleAttribute = 'code';
+    protected static ?string $recordTitleAttribute = 'name_tr';
 
     public static function getModelLabel(): string
     {
@@ -53,7 +54,7 @@ class StageTemplateResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::StageTemplates)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }
@@ -64,19 +65,9 @@ class StageTemplateResource extends Resource
             Section::make(__('stage_template.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                        TextInput::make('code')
-                            ->label(__('stage_template.fields.code'))
-                            ->required()
-                            ->alphaDash()
-                            ->maxLength(64)
-                            ->disabledOn('edit')
-                            ->dehydratedWhenHidden(false),
+                        // Kod arayuzde yok (D-130): StageTemplateService Turkce addan uretir.
                         TextInput::make('name_tr')
                             ->label(__('stage_template.fields.name_tr'))
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('stage_template.fields.name_en'))
                             ->required()
                             ->maxLength(255),
                         Select::make('project_type')
@@ -100,13 +91,10 @@ class StageTemplateResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('stage_template.fields.code'))
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('name_tr')
                     ->label(__('stage_template.fields.name_tr'))
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('project_type')
                     ->label(__('stage_template.fields.project_type'))
                     ->badge(),
@@ -122,7 +110,7 @@ class StageTemplateResource extends Resource
                 EditAction::make(),
             ])
             ->toolbarActions([])
-            ->defaultSort('code');
+            ->defaultSort('name_tr');
     }
 
     public static function getRelations(): array

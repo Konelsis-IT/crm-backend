@@ -7,6 +7,7 @@ namespace App\Models\Approval;
 use App\Enums\Approval\DecisionRule;
 use App\Enums\Approval\ResolverType;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Policies\ApprovalStepPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -27,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ApprovalStep extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

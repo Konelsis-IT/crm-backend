@@ -35,6 +35,7 @@ use App\Query\Reference\ReferenceOptions;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectConversionService;
 use App\Support\DisplayTime;
+use App\Support\UploadLimits;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -114,9 +115,6 @@ final class BusinessCaseWizard
 
     /** Gecici yukleme dizini (DocumentService dosyayi buradan alir). */
     private const UPLOAD_DIRECTORY = 'document-uploads-tmp';
-
-    /** Yukleme ust siniri (KB). */
-    private const UPLOAD_MAX_KB = 20480;
 
     /** @var list<string> Kapsam listesi icin kabul edilen dosya turleri. */
     private const SCOPE_FILE_TYPES = [
@@ -698,7 +696,7 @@ final class BusinessCaseWizard
         $stage = $case->acquisition_stage;
 
         $badges = [
-            Text::make($case->offerCode()?->formatted_code ?? '-')->badge()->color('gray')->icon(Heroicon::OutlinedHashtag),
+            Text::make($case->caseCode()?->formatted_code ?? '-')->badge()->color('gray')->icon(Heroicon::OutlinedHashtag),
             Text::make($stage->getLabel())->badge()->color($stage->getColor()),
             Text::make($case->outcome?->getLabel() ?? '-')->badge()->color($case->outcome?->getColor() ?? 'gray'),
         ];
@@ -940,7 +938,7 @@ final class BusinessCaseWizard
                 ->disk('local')
                 ->directory(self::UPLOAD_DIRECTORY)
                 ->storeFileNamesIn('customer_expectations_file_name')
-                ->maxSize(self::UPLOAD_MAX_KB)
+                ->maxSize(UploadLimits::documentMaxKb())
                 ->visible($whenProposalB29)
                 ->columnSpanFull(),
             Hidden::make('customer_expectations_file_name'),
@@ -950,7 +948,7 @@ final class BusinessCaseWizard
                 ->disk('local')
                 ->directory(self::UPLOAD_DIRECTORY)
                 ->storeFileNamesIn('proposal_letter_file_name')
-                ->maxSize(self::UPLOAD_MAX_KB)
+                ->maxSize(UploadLimits::documentMaxKb())
                 ->visible($whenProposalB29)
                 ->columnSpanFull(),
             Hidden::make('proposal_letter_file_name'),
@@ -1140,7 +1138,7 @@ final class BusinessCaseWizard
                 ->directory(self::UPLOAD_DIRECTORY)
                 ->storeFileNamesIn($path.'.scope_file_name')
                 ->acceptedFileTypes(self::SCOPE_FILE_TYPES)
-                ->maxSize(self::UPLOAD_MAX_KB)
+                ->maxSize(UploadLimits::documentMaxKb())
                 ->columnSpanFull(),
             Hidden::make($path.'.scope_file_name'),
         ];

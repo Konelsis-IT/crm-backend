@@ -15,6 +15,7 @@ use App\Filament\Resources\Transmittals\Pages\ViewTransmittal;
 use App\Filament\Resources\Transmittals\RelationManagers\ItemsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\Transmittal;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -56,7 +57,7 @@ class TransmittalResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('documents.admin_ui')
+        return FeatureFlags::enabled(Feature::Transmittals)
             && SchemaReadiness::hasBatch('B06')
             && parent::canAccess();
     }

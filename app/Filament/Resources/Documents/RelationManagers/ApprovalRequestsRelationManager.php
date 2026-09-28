@@ -40,7 +40,7 @@ class ApprovalRequestsRelationManager extends RelationManager
                     ->label(__('approval_request.fields.subject'))
                     ->wrap()
                     ->weight('semibold'),
-                TextColumn::make('policyVersion.policy.code')
+                TextColumn::make('policyVersion.policy.name_tr')
                     ->label(__('approval_request.fields.policy'))
                     ->badge()
                     ->color('gray'),

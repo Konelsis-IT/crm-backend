@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Project;
 
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Models\Project\OperationGroupDefinition;
 use App\Models\Project\StageDependency;
 use App\Models\Project\StageRequirementDefinition;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class StageNode extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     public const UPDATED_AT = null;
 

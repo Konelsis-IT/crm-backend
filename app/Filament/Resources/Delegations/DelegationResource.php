@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Delegations;
 
+use App\Filament\Support\FormState;
 use App\Enums\Approval\DelegationScopeType;
 use App\Enums\Approval\DelegationStatus;
 use App\Filament\NavigationGroup;
@@ -17,6 +18,7 @@ use App\Models\Personnel\Personnel;
 use App\Query\Approval\ApprovalQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Services\Authorization\RoleResolver;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -65,7 +67,7 @@ class DelegationResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('approvals.admin_ui')
+        return FeatureFlags::enabled(Feature::Delegations)
             && SchemaReadiness::hasBatch('B07')
             && parent::canAccess();
     }
@@ -120,8 +122,8 @@ class DelegationResource extends Resource
                         ->options(fn (): array => app(ApprovalQueries::class)->allPolicyOptions())
                         ->searchable()
                         ->native(false)
-                        ->visible(fn (Get $get): bool => $get('scope_type') === DelegationScopeType::ApprovalPolicy->value)
-                        ->required(fn (Get $get): bool => $get('scope_type') === DelegationScopeType::ApprovalPolicy->value),
+                        ->visible(fn (Get $get): bool => FormState::value($get('scope_type')) === DelegationScopeType::ApprovalPolicy->value)
+                        ->required(fn (Get $get): bool => FormState::value($get('scope_type')) === DelegationScopeType::ApprovalPolicy->value),
                 ])),
             Section::make(__('delegation.sections.validity'))
                 ->icon(Heroicon::OutlinedCalendarDays)

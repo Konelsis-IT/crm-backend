@@ -15,7 +15,7 @@ return [
         'due_at' => 'Due at',
         'evidence_type_snapshot' => 'Evidence type',
         'is_mandatory_snapshot' => 'Mandatory',
-        'name_snapshot_tr' => 'Requirement (TR)',
+        'name_snapshot_tr' => 'Requirement',
         'outcome_note' => 'Outcome note',
         'owner' => 'Owner',
         'reason' => 'Reason',

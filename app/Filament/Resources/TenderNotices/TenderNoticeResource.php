@@ -14,6 +14,7 @@ use App\Filament\Resources\TenderNotices\RelationManagers\VersionsRelationManage
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\TenderNotice;
 use App\Query\Document\DocumentQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -71,7 +72,7 @@ class TenderNoticeResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Tenders)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }

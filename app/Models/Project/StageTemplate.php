@@ -7,6 +7,7 @@ namespace App\Models\Project;
 use App\Enums\Project\StageTemplateProjectType;
 use App\Enums\Project\StageTemplateStatus;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Models\Project\StageTemplateVersion;
 use App\Policies\StageTemplatePolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class StageTemplate extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

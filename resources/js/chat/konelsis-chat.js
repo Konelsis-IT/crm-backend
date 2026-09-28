@@ -605,7 +605,8 @@
                 h(Icon, { name: 'search' }),
                 h('input', { type: 'search', value: term, placeholder: t('search_people'), onChange: (event) => setTerm(event.target.value), 'aria-label': t('search_people') }),
             ),
-            h('div', { className: 'kc-group-bar' },
+            // Grup acma ayri ozelliktir (D-128, config.features.groups); kapaliysa cubuk cizilmez.
+            (config.features || {}).groups === false ? null : h('div', { className: 'kc-group-bar' },
                 h('button', { type: 'button', className: 'kc-btn kc-btn-ghost kc-btn-sm', onClick: () => { setGroupMode(! groupMode); setSelected([]); } },
                     h(Icon, { name: groupMode ? 'close' : 'users' }), groupMode ? t('cancel') : t('new_group')),
                 groupMode ? h('input', { type: 'text', className: 'kc-input', value: groupTitle, placeholder: t('group_title'), maxLength: 160, onChange: (event) => setGroupTitle(event.target.value) }) : null,

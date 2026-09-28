@@ -88,6 +88,11 @@
     });
 
     function chime() {
+        // Bildirim sesi ayri ozelliktir (D-128, features tablosu).
+        if (data.sound === false) {
+            return;
+        }
+
         const context = audioContext();
 
         if (!context) {
@@ -124,7 +129,8 @@
     }
 
     function desktop(item, granted) {
-        if (!supported() || (granted !== true && window.Notification.permission !== 'granted')) {
+        // Windows bildirimi ayri ozelliktir (D-128, features tablosu).
+        if (data.windows === false || !supported() || (granted !== true && window.Notification.permission !== 'granted')) {
             return;
         }
 

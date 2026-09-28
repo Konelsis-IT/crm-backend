@@ -14,6 +14,7 @@ use App\Filament\Resources\ProjectStageInstances\RelationManagers\ReviewsRelatio
 use App\Filament\Resources\ProjectStageInstances\RelationManagers\WaiversRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectStageInstance;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -55,7 +56,7 @@ class ProjectStageInstanceResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::StageGates)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }

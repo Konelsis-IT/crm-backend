@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Support\QuickActions\QuickAction;
 use App\Filament\Support\QuickActions\QuickActionCatalog;
 use App\Models\Personnel\Personnel;
@@ -42,7 +44,7 @@ class QuickActionSettings extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user() instanceof Personnel;
+        return FeatureFlags::enabled(Feature::QuickActions) && auth()->user() instanceof Personnel;
     }
 
     public function getTitle(): string | Htmlable

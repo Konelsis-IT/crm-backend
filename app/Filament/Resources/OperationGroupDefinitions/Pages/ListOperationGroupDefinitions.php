@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\OperationGroupDefinitions\Pages;
 
-use App\Exceptions\CodeAlreadyInUseException;
-use Illuminate\Validation\ValidationException;
 use App\Filament\Resources\OperationGroupDefinitions\OperationGroupDefinitionResource;
 use App\Services\Project\OperationGroupDefinitionService;
 use Filament\Actions\CreateAction;
@@ -19,16 +17,9 @@ class ListOperationGroupDefinitions extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            // Kod arayuzde girilmez (D-130); servis Turkce addan benzersiz uretir.
             CreateAction::make()
-                ->using(function (array $data): Model {
-                    try {
-                        return app(OperationGroupDefinitionService::class)->create($data);
-                    } catch (CodeAlreadyInUseException) {
-                        throw ValidationException::withMessages([
-                            'data.code' => __('operation_group_definition.validation.code_taken'),
-                        ]);
-                    }
-                }),
+                ->using(fn (array $data): Model => app(OperationGroupDefinitionService::class)->create($data)),
         ];
     }
 }

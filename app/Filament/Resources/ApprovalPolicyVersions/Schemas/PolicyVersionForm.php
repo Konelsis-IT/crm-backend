@@ -7,6 +7,7 @@ namespace App\Filament\Resources\ApprovalPolicyVersions\Schemas;
 use App\Enums\Approval\ApprovalMode;
 use App\Enums\Approval\RiskLevel;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\FormState;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -45,8 +46,9 @@ final class PolicyVersionForm
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(20)
-                        ->visible(fn (Get $get): bool => $get('mode') === ApprovalMode::Quorum->value)
-                        ->required(fn (Get $get): bool => $get('mode') === ApprovalMode::Quorum->value),
+                        // Enum secenekli alan: $get() enum verir (FormState).
+                        ->visible(fn (Get $get): bool => FormState::value($get('mode')) === ApprovalMode::Quorum->value)
+                        ->required(fn (Get $get): bool => FormState::value($get('mode')) === ApprovalMode::Quorum->value),
                     Toggle::make('requires_maker_checker')
                         ->label(__('approval_policy_version.fields.requires_maker_checker'))
                         ->helperText(__('approval_policy_version.help.requires_maker_checker'))

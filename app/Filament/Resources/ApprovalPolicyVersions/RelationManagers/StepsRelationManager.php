@@ -11,6 +11,7 @@ use App\Enums\Project\TeamRole;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\FormState;
 use App\Models\Approval\ApprovalPolicyVersion;
 use App\Models\Approval\ApprovalStep;
 use App\Query\Approval\ApprovalQueries;
@@ -80,10 +81,6 @@ class StepsRelationManager extends RelationManager
                         ->label(__('approval_step.fields.name_tr'))
                         ->required()
                         ->maxLength(255),
-                    TextInput::make('name_en')
-                        ->label(__('approval_step.fields.name_en'))
-                        ->required()
-                        ->maxLength(255),
                     TextInput::make('sla_minutes')
                         ->label(__('approval_step.fields.sla_minutes'))
                         ->helperText(__('approval_step.help.sla_minutes'))
@@ -102,28 +99,30 @@ class StepsRelationManager extends RelationManager
                         ->required()
                         ->native(false)
                         ->live(),
+                    // resolver_type enum secenekli: $get() enum verir, once duz degere
+                    // indirilir (FormState); aksi halde bagli alanlar hic gorunmuyordu.
                     Select::make('resolver_target_id')
-                        ->label(fn (Get $get): string => $get('resolver_type') === ResolverType::Position->value
+                        ->label(fn (Get $get): string => FormState::value($get('resolver_type')) === ResolverType::Position->value
                             ? __('approval_step.fields.target_position')
                             : __('approval_step.fields.target_personnel'))
-                        ->options(fn (Get $get): array => $get('resolver_type') === ResolverType::Position->value
+                        ->options(fn (Get $get): array => FormState::value($get('resolver_type')) === ResolverType::Position->value
                             ? app(PersonnelQueries::class)->positionOptions()
                             : app(PersonnelQueries::class)->personnelOptions())
                         ->searchable()
                         ->native(false)
-                        ->visible(fn (Get $get): bool => in_array($get('resolver_type'), [ResolverType::Personnel->value, ResolverType::Position->value], true))
-                        ->required(fn (Get $get): bool => in_array($get('resolver_type'), [ResolverType::Personnel->value, ResolverType::Position->value], true)),
+                        ->visible(fn (Get $get): bool => in_array(FormState::value($get('resolver_type')), [ResolverType::Personnel->value, ResolverType::Position->value], true))
+                        ->required(fn (Get $get): bool => in_array(FormState::value($get('resolver_type')), [ResolverType::Personnel->value, ResolverType::Position->value], true)),
                     Select::make('role_code')
                         ->label(__('approval_step.fields.role_code'))
-                        ->options(fn (Get $get): array => match ($get('resolver_type')) {
+                        ->options(fn (Get $get): array => match (FormState::value($get('resolver_type'))) {
                             ResolverType::RbacRole->value => app(ApprovalQueries::class)->roleOptions(),
                             ResolverType::ProjectRole->value => TeamRole::options(),
                             default => [],
                         })
                         ->searchable()
                         ->native(false)
-                        ->visible(fn (Get $get): bool => in_array($get('resolver_type'), [ResolverType::RbacRole->value, ResolverType::ProjectRole->value], true))
-                        ->required(fn (Get $get): bool => in_array($get('resolver_type'), [ResolverType::RbacRole->value, ResolverType::ProjectRole->value], true)),
+                        ->visible(fn (Get $get): bool => in_array(FormState::value($get('resolver_type')), [ResolverType::RbacRole->value, ResolverType::ProjectRole->value], true))
+                        ->required(fn (Get $get): bool => in_array(FormState::value($get('resolver_type')), [ResolverType::RbacRole->value, ResolverType::ProjectRole->value], true)),
                     Toggle::make('is_optional')
                         ->label(__('approval_step.fields.is_optional'))
                         ->helperText(__('approval_step.help.is_optional'))

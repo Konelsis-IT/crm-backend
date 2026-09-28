@@ -24,7 +24,7 @@ return [
         'work_request_create' => 'Talep aç',
         'meeting_plan_create' => 'Görüşme planla',
         'meeting_plan_index' => 'Görüşme takvimi',
-        'business_case_create' => 'İş dosyası aç',
+        'business_case_create' => 'Potansiyel iş aç',
         'proposal_create' => 'Teklif oluştur',
         'tender_notice_create' => 'İhale ilanı ekle',
         'party_create' => 'Firma ekle',

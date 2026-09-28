@@ -76,6 +76,23 @@ return [
     ],
 
     /*
+    | Dosya yukleme sinirlari (D-127, 25 Eylul 2026 kullanici karari: "1gb'a
+    | kadar belge dokuman yuklenebilir yap, ama gerisini gereken boyutlarda
+    | yuklenme sistemi devam etsin"). Belge alanlari (dokuman / revizyon, proje
+    | dokumani, is dosyasi belgeleri, talep ekleri) 1 GB kabul eder; fotograf,
+    | gorsel ve sohbet alanlari kendi sinirlarini tasir. Sunucuda PHP
+    | upload_max_filesize / post_max_size ve web sunucusu govde siniri en az
+    | bu kadar olmalidir (yerelde .php-ini/konelsis.ini).
+    */
+    'uploads' => [
+        'document_max_kb' => (int) env('KONELSIS_DOCUMENT_UPLOAD_MAX_KB', 1048576),   // 1 GB
+        // Buyuk dosyanin yuklenmesi uzun surebilir: gecici yukleme imzasi (dk).
+        'max_upload_minutes' => 120,
+        // Bu boyutun ustundeki gorselden kucuk gorsel / olcu uretilmez (bellek).
+        'image_processing_max_kb' => 51200,                                          // 50 MB
+    ],
+
+    /*
     | Sosyal Medya modulu (B31, D-106). Boyutlar kilobayt/megabayt cinsindedir;
     | dosyalar `local` diskte ilgili dizinlere yazilir, uygulama hicbir dosyayi
     | silmez. "Bugun" her yerde organization.default_timezone ile hesaplanir

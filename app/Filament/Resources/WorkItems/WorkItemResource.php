@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkItems;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\WorkItems\Pages\CreateWorkItem;
 use App\Filament\Resources\WorkItems\Pages\EditWorkItem;
@@ -61,7 +63,7 @@ class WorkItemResource extends Resource
 
     public static function canAccess(): bool
     {
-        return SchemaReadiness::hasBatch('B36') && parent::canAccess();
+        return FeatureFlags::enabled(Feature::WorkItems) && SchemaReadiness::hasBatch('B36') && parent::canAccess();
     }
 
     public static function getEloquentQuery(): Builder

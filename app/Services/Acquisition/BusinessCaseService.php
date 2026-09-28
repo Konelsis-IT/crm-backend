@@ -21,6 +21,7 @@ use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Numbering\AllocateBusinessNumber;
+use App\Services\Numbering\YearlyCodeAllocator;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
@@ -31,8 +32,10 @@ use Illuminate\Support\Carbon;
  * Business case (tek ticari is koku) servisi (10 SS2, 14 SS2.21 SM-BC).
  *
  * create override edilmistir: global sira numarasi ayrilir
- * (AllocateBusinessNumber), ayni transaction'da TKLF-n kodu
- * (business_codes) ve 1:1 firsat kaydi (opportunities) acilir.
+ * (AllocateBusinessNumber, ic kimlik), ayni transaction'da potansiyel is
+ * kodu (business_codes; B40 ile POTIS-YYYY-NNNN, oncesinde TKLF-n) ve 1:1
+ * firsat kaydi (opportunities) acilir. Teklif numarasi (TKLF-YYYY-NNNN)
+ * teklifin kendisindedir (ProposalService, D-132).
  *
  * changeStage bes temel islemin disinda, SM-BC gecislerini uygular;
  * handover_accepted yalniz OperationHandoffService::accept() icinde
@@ -58,6 +61,7 @@ final class BusinessCaseService extends AbstractService
         ActivityRecorder $activities,
         private readonly ActorContext $actor,
         private readonly AllocateBusinessNumber $allocator,
+        private readonly YearlyCodeAllocator $codes,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
@@ -83,14 +87,8 @@ final class BusinessCaseService extends AbstractService
                 'owner_employee_id' => $data['owner_employee_id'] ?? $this->actor->personnelId(),
             ]);
 
-            $code = BusinessCode::query()->create([
-                'business_case_id' => $case->getKey(),
-                'sequence_no' => $sequenceNo,
-                'code_kind' => BusinessCodeKind::Offer,
-                'issued_at' => Carbon::now('UTC'),
-                'issued_by_personnel_id' => $this->actor->personnelId() ?? $case->owner_employee_id,
-                'status' => BusinessCodeStatus::Active,
-            ]);
+            // Potansiyel isin kodu: POTIS-YYYY-NNNN (B40, D-132); oncesinde TKLF-n.
+            $code = $this->issueCode($case, BusinessCodeKind::Potential);
 
             Opportunity::query()->create([
                 'business_case_id' => $case->getKey(),
@@ -99,7 +97,7 @@ final class BusinessCaseService extends AbstractService
                 'expected_value' => $data['estimated_value'] ?? null,
             ]);
 
-            $this->recordActivity($case, 'code_issued', ['kod' => 'TKLF-'.$sequenceNo, 'business_case_id' => $case->getKey(), 'business_code_id' => $code->getKey()]);
+            $this->recordActivity($case, 'code_issued', ['kod' => $code->formatted_code, 'business_case_id' => $case->getKey(), 'business_code_id' => $code->getKey()]);
 
             if ($syncScopes) {
                 app(BusinessCaseScopeService::class)->sync($case, $scopeTypes, $scopeRows);
@@ -140,18 +138,10 @@ final class BusinessCaseService extends AbstractService
                 'owner_employee_id' => $data['owner_employee_id'] ?? $this->actor->personnelId(),
             ]);
 
-            /** @var BusinessCode $code */
-            $code = BusinessCode::query()->create([
-                'business_case_id' => $case->getKey(),
-                'sequence_no' => $sequenceNo,
-                'code_kind' => BusinessCodeKind::Project,
-                'issued_at' => $now,
-                'issued_by_personnel_id' => $this->actor->personnelId() ?? $case->owner_employee_id,
-                'status' => BusinessCodeStatus::Active,
-            ]);
-            $code->refresh();
+            // Proje kodu: PRJ-YYYY-NNNN (B40, D-132); oncesinde PRJ-n.
+            $code = $this->issueCode($case, BusinessCodeKind::Project);
 
-            $this->recordActivity($case, 'code_issued', ['kod' => 'PRJ-'.$sequenceNo, 'business_case_id' => $case->getKey(), 'business_code_id' => $code->getKey(), 'kaynak' => 'dogrudan proje']);
+            $this->recordActivity($case, 'code_issued', ['kod' => $code->formatted_code, 'business_case_id' => $case->getKey(), 'business_code_id' => $code->getKey(), 'kaynak' => 'dogrudan proje']);
 
             return [$case, $code];
         });
@@ -222,10 +212,40 @@ final class BusinessCaseService extends AbstractService
         });
     }
 
-    /** Aktif TKLF kodu. */
-    public function offerCode(BusinessCase $case): ?BusinessCode
+    /** Potansiyel isin kodu (POTIS; B40 oncesi kayitlarda eski TKLF-n). */
+    public function caseCode(BusinessCase $case): ?BusinessCode
     {
-        return $case->codes()->where('code_kind', BusinessCodeKind::Offer->value)->first();
+        return $case->loadMissing('codes')->caseCode();
+    }
+
+    /**
+     * Is kodu verir (D-132). B40 uygulandiysa yillik kod (POTIS / PRJ -YYYY-NNNN,
+     * YearlyCodeAllocator); uygulanmadiysa eski uretilmis kolon: potansiyel is
+     * kodu "offer" turunde TKLF-n, proje PRJ-n. Ayni transaction icinde cagrilir.
+     */
+    public function issueCode(BusinessCase $case, BusinessCodeKind $kind, ?int $predecessorId = null): BusinessCode
+    {
+        $attributes = [
+            'business_case_id' => $case->getKey(),
+            'sequence_no' => $case->sequence_no,
+            'code_kind' => $kind,
+            'issued_at' => Carbon::now('UTC'),
+            'issued_by_personnel_id' => $this->actor->personnelId() ?? $case->owner_employee_id,
+            'predecessor_code_id' => $predecessorId,
+            'status' => BusinessCodeStatus::Active,
+        ];
+
+        if ($this->codes->enabled()) {
+            $attributes = [...$attributes, ...$this->codes->next($kind->prefix())];
+        } elseif ($kind === BusinessCodeKind::Potential) {
+            $attributes['code_kind'] = BusinessCodeKind::Offer;
+        }
+
+        /** @var BusinessCode $code */
+        $code = BusinessCode::query()->create($attributes);
+        $code->refresh();
+
+        return $code;
     }
 
     /**

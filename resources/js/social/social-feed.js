@@ -1452,11 +1452,18 @@
         const [layout, setLayout] = useLayout();
         const firstVersion = useRef(feedVersion);
         const storageAt = useRef(0);
-        const showWatch = KS.hasEndpoint('watch');
+        // Kutu anahtarlari sunucudan gelir (D-128, features tablosu): kapali kutu cizilmez.
+        const features = (KS.useBoot() || {}).features || {};
+        const showStorage = features.storage !== false;
+        const showWatch = KS.hasEndpoint('watch') && features.watch !== false;
 
         // Depolama: acilista yoksa ve akis tazelenince (yeni medya yuklenmis olabilir) guncellenir;
         // toplama sorgusu agir oldugu icin en cok 20 saniyede bir istenir.
         useEffect(() => {
+            if (!showStorage) {
+                return;
+            }
+
             const missing = !KS.store.getState().storage;
             const changed = feedVersion !== firstVersion.current;
 
@@ -1530,7 +1537,7 @@
             h('div', { className: 'ks-feed-top-wrap' },
                 h('div', { className: 'ks-feed-top' },
                     h(ProfileHeader, { profile, counts, tab, onTab, canManage: !!abilities.manage_data }),
-                    h(StorageBox, { storage }),
+                    showStorage ? h(StorageBox, { storage }) : null,
                 ),
             ),
             showWatch && !wide ? h(WatchPanel, { mode: 'strip', resource: watch, canManage: !!abilities.manage_data }) : null,

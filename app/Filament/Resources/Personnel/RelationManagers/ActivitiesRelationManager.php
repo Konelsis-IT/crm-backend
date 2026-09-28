@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\RelationManagers;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\Activity\ActivityChannel;
 use App\Filament\Support\FieldGrid;
 use App\Models\Activity\PersonnelActivity;
@@ -48,7 +50,8 @@ class ActivitiesRelationManager extends RelationManager
     {
         $user = auth()->user();
 
-        return $user instanceof Personnel
+        return FeatureFlags::enabled(Feature::PersonnelActivities)
+            && $user instanceof Personnel
             && $ownerRecord instanceof Personnel
             && Gate::forUser($user)->allows('viewActivities', $ownerRecord);
     }

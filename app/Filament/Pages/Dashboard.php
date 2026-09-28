@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
+use App\Filament\Support\FormState;
 use App\Enums\Notification\AnnouncementAudience;
 use App\Enums\Notification\AnnouncementPriority;
 use App\Exceptions\AbstractException;
@@ -95,16 +98,16 @@ class Dashboard extends BaseDashboard
                             ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
                             ->searchable()
                             ->native(false)
-                            ->required(fn (Get $get): bool => $get('audience_kind') === AnnouncementAudience::Department->value)
-                            ->visible(fn (Get $get): bool => $get('audience_kind') === AnnouncementAudience::Department->value)
+                            ->required(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Department->value)
+                            ->visible(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Department->value)
                             ->columnSpan(FieldGrid::FULL),
                         Select::make('role_id')
                             ->label(__('announcement.fields.role'))
                             ->options(fn (): array => app(RoleQueries::class)->roleOptions())
                             ->searchable()
                             ->native(false)
-                            ->required(fn (Get $get): bool => $get('audience_kind') === AnnouncementAudience::Role->value)
-                            ->visible(fn (Get $get): bool => $get('audience_kind') === AnnouncementAudience::Role->value)
+                            ->required(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Role->value)
+                            ->visible(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Role->value)
                             ->columnSpan(FieldGrid::FULL),
                         Select::make('audience_ids')
                             ->label(__('announcement.fields.personnel'))
@@ -112,8 +115,8 @@ class Dashboard extends BaseDashboard
                             ->multiple()
                             ->searchable()
                             ->native(false)
-                            ->required(fn (Get $get): bool => $get('audience_kind') === AnnouncementAudience::Personnel->value)
-                            ->visible(fn (Get $get): bool => $get('audience_kind') === AnnouncementAudience::Personnel->value)
+                            ->required(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Personnel->value)
+                            ->visible(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Personnel->value)
                             ->columnSpan(FieldGrid::FULL),
                         TextInput::make('title')
                             ->label(__('announcement.fields.title'))
@@ -188,7 +191,8 @@ class Dashboard extends BaseDashboard
     {
         $user = auth()->user();
 
-        return SchemaReadiness::hasBatch('B11A')
+        return FeatureFlags::enabled(Feature::Announcements)
+            && SchemaReadiness::hasBatch('B11A')
             && $user instanceof Personnel
             && app(AudienceResolver::class)->permittedKinds($user) !== [];
     }

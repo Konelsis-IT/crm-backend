@@ -113,13 +113,17 @@ class BusinessCase extends Model
         return $this->hasMany(BusinessCaseScope::class, 'business_case_id');
     }
 
-    /** TKLF-n kodu. */
-    public function offerCode(): ?BusinessCode
+    /**
+     * Potansiyel isin kendi kodu: POTIS-YYYY-NNNN (B40, D-132); B40 oncesi
+     * kayitlarda eski TKLF-n. Teklif numaralari tekliflerdedir (proposal_no).
+     */
+    public function caseCode(): ?BusinessCode
     {
-        return $this->codes->firstWhere('code_kind', BusinessCodeKind::Offer);
+        return $this->codes->firstWhere('code_kind', BusinessCodeKind::Potential)
+            ?? $this->codes->firstWhere('code_kind', BusinessCodeKind::Offer);
     }
 
-    /** PRJ-n kodu (yalniz devir kabulunden sonra). */
+    /** Proje kodu: PRJ-YYYY-NNNN (B40 oncesi PRJ-n); yalniz projeye donusunce. */
     public function projectCode(): ?BusinessCode
     {
         return $this->codes->firstWhere('code_kind', BusinessCodeKind::Project);

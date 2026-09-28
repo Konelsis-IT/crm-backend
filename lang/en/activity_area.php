@@ -11,8 +11,7 @@ return [
     'fields' => [
         'parent' => 'Main activity area',
         'code' => 'Code',
-        'name_tr' => 'Name (TR)',
-        'name_en' => 'Name (EN)',
+        'name_tr' => 'Name',
         'sort_order' => 'Order',
         'status' => 'Status',
     ],

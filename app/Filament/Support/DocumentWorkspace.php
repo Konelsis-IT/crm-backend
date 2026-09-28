@@ -24,9 +24,11 @@ use App\Query\Approval\ApprovalQueries;
 use App\Services\Approval\ApprovalRequestService;
 use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentShareService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
+use App\Support\UploadLimits;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -550,8 +552,13 @@ final class DocumentWorkspace
     public static function revisionContentFields(bool $forCreate, string $kindField = 'content_kind', string $fileField = 'file', string $bodyField = 'body_html'): array
     {
         $authoring = SchemaReadiness::hasBatch('B06A');
-        $isUpload = fn (Get $get): bool => ! $authoring || ($get($kindField) ?? RevisionContentKind::Upload->value) === RevisionContentKind::Upload->value;
-        $isAuthored = fn (Get $get): bool => $authoring && $get($kindField) === RevisionContentKind::Authored->value;
+        // Filament enum secenekli alanin degerini $get() ile enum nesnesi olarak
+        // verir; metinle karsilastirma hic tutmuyordu ve "Belgenin asli"
+        // bolumunde ne dosya yukleme ne yazma alani gorunuyordu (25 Eylul 2026
+        // kullanici bildirimi). Deger once duz metne indirilir.
+        $kindOf = fn (Get $get): string => FormState::value($get($kindField)) ?: RevisionContentKind::Upload->value;
+        $isUpload = fn (Get $get): bool => ! $authoring || $kindOf($get) === RevisionContentKind::Upload->value;
+        $isAuthored = fn (Get $get): bool => $authoring && $kindOf($get) === RevisionContentKind::Authored->value;
 
         return [
             ToggleButtons::make($kindField)
@@ -570,6 +577,7 @@ final class DocumentWorkspace
                 ->disk('local')
                 ->directory('document-uploads-tmp')
                 ->storeFileNamesIn('file_original_name')
+                ->maxSize(UploadLimits::documentMaxKb())
                 ->visible(fn (Get $get): bool => $forCreate && $isUpload($get))
                 ->required(fn (Get $get): bool => $forCreate && $isUpload($get))
                 ->columnSpanFull(),
@@ -603,6 +611,6 @@ final class DocumentWorkspace
 
     public function approvalsEnabled(): bool
     {
-        return FeatureFlags::enabled('approvals.admin_ui') && SchemaReadiness::hasBatch('B07');
+        return FeatureFlags::enabled(Feature::Approvals) && SchemaReadiness::hasBatch('B07');
     }
 }

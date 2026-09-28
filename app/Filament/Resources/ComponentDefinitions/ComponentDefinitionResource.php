@@ -11,6 +11,7 @@ use App\Filament\Resources\ComponentDefinitions\Pages\ListComponentDefinitions;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ComponentDefinition;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ComponentDefinitionService;
@@ -52,7 +53,7 @@ class ComponentDefinitionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('projects.admin_ui')
+        return FeatureFlags::enabled(Feature::ProjectComponents)
             && SchemaReadiness::hasBatch('B17')
             && parent::canAccess();
     }
@@ -72,10 +73,6 @@ class ComponentDefinitionResource extends Resource
                             ->dehydratedWhenHidden(false),
                         TextInput::make('name_tr')
                             ->label(__('component_definition.fields.name_tr'))
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('component_definition.fields.name_en'))
                             ->required()
                             ->maxLength(255),
                         TextInput::make('discipline')

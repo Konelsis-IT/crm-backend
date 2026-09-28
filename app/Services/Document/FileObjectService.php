@@ -14,6 +14,7 @@ use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
+use App\Support\UploadLimits;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -57,16 +58,21 @@ final class FileObjectService extends AbstractService
 
     public function createFromUpload(string $tempPath, ?string $originalName): FileObject
     {
-        return $this->transactions->run(function () use ($tempPath, $originalName): FileObject {
-            $disk = Storage::disk('local');
-            $bytes = $disk->get($tempPath);
+        $disk = Storage::disk('local');
 
-            if ($bytes === null) {
-                throw RecordNotFoundException::make();
-            }
+        if (! $disk->exists($tempPath)) {
+            throw RecordNotFoundException::make();
+        }
 
-            $sha256 = hash('sha256', $bytes);
+        // Belge 1 GB'a kadar olabilir (D-127): dosya bellege okunmaz, ozet
+        // diskten akarak ve islem (transaction) acilmadan hesaplanir.
+        $sha256 = hash_file('sha256', $disk->path($tempPath));
 
+        if (! is_string($sha256) || $sha256 === '') {
+            throw RecordNotFoundException::make();
+        }
+
+        return $this->transactions->run(function () use ($disk, $tempPath, $originalName, $sha256): FileObject {
             /** @var FileObject|null $existing */
             $existing = FileObject::query()->where('sha256', $sha256)->first();
 
@@ -84,7 +90,13 @@ final class FileObjectService extends AbstractService
             $disk->move($tempPath, $storageKey);
 
             $mimeType = (string) ($disk->mimeType($storageKey) ?: 'application/octet-stream');
-            $dimensions = str_starts_with($mimeType, 'image/') ? $this->imageDimensions($bytes) : null;
+            $byteSize = (int) $disk->size($storageKey);
+            // Olcu yalniz dosya basligindan okunur; icerik yalniz kucuk gorsel
+            // icin ve makul boyuttaki gorselde bellege alinir.
+            $dimensions = str_starts_with($mimeType, 'image/') ? $this->imageDimensionsFromPath($disk->path($storageKey)) : null;
+            $bytes = str_starts_with($mimeType, 'image/') && $byteSize <= UploadLimits::imageProcessingMaxBytes()
+                ? $disk->get($storageKey)
+                : null;
 
             /** @var FileObject $fileObject */
             $fileObject = parent::create([
@@ -94,7 +106,7 @@ final class FileObjectService extends AbstractService
                 'extension' => $extension,
                 'mime_type' => $mimeType,
                 'declared_mime_type' => $mimeType,
-                'byte_size' => $disk->size($storageKey),
+                'byte_size' => $byteSize,
                 'sha256' => $sha256,
                 'scan_status' => 'skipped',
                 'image_width' => $dimensions[0] ?? null,
@@ -196,6 +208,11 @@ final class FileObjectService extends AbstractService
             return null;
         }
 
+        // Cok buyuk gorsel bellege alinmaz (D-127); kart gorsel yerine simge gosterir.
+        if ((int) $fileObject->byte_size > UploadLimits::imageProcessingMaxBytes()) {
+            return null;
+        }
+
         $existing = $fileObject->thumbnail();
 
         if ($existing !== null) {
@@ -262,15 +279,13 @@ final class FileObjectService extends AbstractService
     }
 
     /**
+     * Gorsel olcusu; getimagesize yalniz dosya basligini okur.
+     *
      * @return array{0: int, 1: int}|null
      */
-    private function imageDimensions(string $bytes): ?array
+    private function imageDimensionsFromPath(string $path): ?array
     {
-        if (! function_exists('getimagesizefromstring')) {
-            return null;
-        }
-
-        $info = @getimagesizefromstring($bytes);
+        $info = @getimagesize($path);
 
         if ($info === false || ! isset($info[0], $info[1])) {
             return null;

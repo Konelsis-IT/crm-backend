@@ -6,6 +6,7 @@ namespace App\Models\Party;
 
 use App\Enums\Shared\ActiveStatus;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Policies\ActivityAreaPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ActivityArea extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

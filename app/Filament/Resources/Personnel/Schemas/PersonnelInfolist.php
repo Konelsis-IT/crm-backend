@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\Schemas;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Support\CardGallery;
 use App\Filament\Support\WorkAppConfig;
 use App\Models\Personnel\Personnel;
@@ -67,7 +69,8 @@ final class PersonnelInfolist
             // kisi kendi kartini gormez. Betik ViewPersonnelRecord kapsamli BODY_END kancasindan gelir.
             View::make('filament.work.attention-card')
                 ->viewData(['config' => SchemaReadiness::hasBatch('B36') ? WorkAppConfig::attention($record) : []])
-                ->visible(fn (): bool => SchemaReadiness::hasBatch('B36')
+                ->visible(fn (): bool => FeatureFlags::enabled(Feature::AttentionCard)
+                    && SchemaReadiness::hasBatch('B36')
                     && auth()->user() instanceof Personnel
                     && Gate::forUser(auth()->user())->allows('viewAttentionCard', [WorkItem::class, $record])),
         ]);

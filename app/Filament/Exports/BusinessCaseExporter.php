@@ -20,7 +20,7 @@ class BusinessCaseExporter extends KonelsisExporter
     {
         return [
             self::text('offer_code', __('business_case.fields.offer_code'))
-                ->state(fn (BusinessCase $record): ?string => $record->offerCode()?->formatted_code),
+                ->state(fn (BusinessCase $record): ?string => $record->caseCode()?->formatted_code),
             self::text('title', __('business_case.fields.title')),
             self::text('primaryParty.display_name', __('business_case.fields.primary_party')),
             self::text('acquisition_stage', __('business_case.fields.acquisition_stage')),

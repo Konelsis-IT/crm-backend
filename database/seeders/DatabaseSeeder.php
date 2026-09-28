@@ -79,9 +79,16 @@ class DatabaseSeeder extends Seeder
             // Gorusme plani (B34, D-109): haftalik ziyaret plani + var olan notlarin yansimasi
             WeeklyVisitPlanSeeder::class,
 
+            // Firma takip listesindeki projeler = is dosyalari (D-129, 28 Eylul 2026):
+            // taraflar ve Ersin Ozdemir (RealPersonnelSeeder) hazir olduktan sonra.
+            FirmaTakipBusinessCaseSeeder::class,
+
             // Sosyal medya (B31, D-106): gercek hesaplar ve resmi ulusal gunler
             SocialProfileSeeder::class,
             SocialSpecialDaySeeder::class,
+
+            // Ozellik anahtarlari (B39, D-128): katalog + data/features.php durumlari
+            FeatureSeeder::class,
         ]);
     }
 }

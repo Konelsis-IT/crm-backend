@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Business case',
-    'plural' => 'Business cases',
+    'label' => 'Potential job',
+    'plural' => 'Potential jobs',
 
     'sections' => [
         'identity' => 'Customer and title',
@@ -37,7 +37,7 @@ return [
     ],
 
     'fields' => [
-        'acquisition_stage' => 'Acquisition stage',
+        'acquisition_stage' => 'Status',
         'classification' => 'Classification',
         'country' => 'Country',
         'created_at' => 'Created at',
@@ -45,7 +45,8 @@ return [
         'currency' => 'Currency',
         'estimated_value' => 'Estimated value',
         'legal_entity' => 'Legal entity',
-        'offer_code' => 'TKLF code',
+        'offer_code' => 'Potential job code',
+        'code' => 'Code',
         'offer_type' => 'Offer type',
         'outcome' => 'Outcome',
         'owner' => 'Reviewer',
@@ -53,7 +54,7 @@ return [
         'project_type_code' => 'Project category',
         'proposal_owner' => 'Preparer',
         'reason' => 'Reason',
-        'scope_types' => 'Project types',
+        'scope_types' => 'Project type',
         'short_description' => 'Short description',
         'source_kind' => 'Source kind',
         'title' => 'Title',
@@ -79,6 +80,7 @@ return [
     'relation' => [
         'title' => 'Business cases',
         'empty' => 'No business cases yet.',
+        'party_help' => 'Business cases (offer processes) where this party is the customer. Click a row to open it.',
     ],
 
     'actions' => [
@@ -103,7 +105,6 @@ return [
     ],
 
     'help' => [
-        'chain_intro' => 'Every job starts with a single business case (TKLF code). The proposal is prepared and versioned under it; when the job is won, the project (PRJ code) is born through the accepted operations handoff. The three steps follow the same order here.',
         'edit_intro' => 'The edit screen uses the same three steps as the creation wizard. Fields in the first step are saved with "Save"; the proposal table and the conversion apply instantly.',
         'proposal_step' => 'When checked, the first proposal (with its TKLF number) and a draft first version are opened together with the business case, which moves to "Preparing proposal". Version details can be changed later from the proposal.',
         'proposal_title' => 'Leave blank to use the business case title.',
@@ -113,9 +114,9 @@ return [
         'convert_requires_proposal' => 'A proposal must be created before converting to a project.',
         'project_exists' => 'A project was created for this job (:code); it now runs step by step from the project workspace.',
         'project_missing' => 'No project yet for this business case. When the proposal is won, "Convert to project" issues the PRJ code; the operations handoff is opened and accepted automatically. A contract can be linked later.',
-        'stage_current' => 'The business case is currently at the ":stage" stage.',
-        'stage_next' => 'Next stage: :stages.',
-        'stage_final' => 'There is no transition after this stage.',
+        'stage_current' => 'Status: :stage',
+        'stage_next' => 'Next status: :stages. The outcome follows the status: "Won" for won and handoff statuses, "Lost" / "Cancelled" for those statuses, otherwise "Open".',
+        'stage_final' => 'No transition after this status; the outcome is final.',
         'scope_types' => 'Each selected type opens its own fields and a scope list upload.',
         'customer_expectations_file' => 'Document describing the customer\'s expectations for the offer (attached to the proposal documents when uploaded).',
         'proposal_letter_file' => 'Proposal letter file (attached to the proposal documents when uploaded).',

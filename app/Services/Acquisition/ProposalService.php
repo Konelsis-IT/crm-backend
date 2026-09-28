@@ -4,18 +4,25 @@ declare(strict_types=1);
 
 namespace App\Services\Acquisition;
 
+use App\Enums\Acquisition\BusinessCodeKind;
 use App\Enums\Acquisition\ProposalStatus;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Proposal;
 use App\Services\AbstractService;
+use App\Services\Audit\ActivityRecorder;
+use App\Services\Numbering\YearlyCodeAllocator;
+use App\Services\Support\OptimisticLock;
+use App\Services\Support\TransactionRunner;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Teklif koku servisi (10 SS3.1, D-29: business case basina 1:N teklif,
  * tek secili teklif).
  *
- * create override edilmistir: proposal_no business case'in TKLF kodundan
- * uretilir (ilk teklif "TKLF-n", alternatifler "TKLF-n-B", "-C" ...); ilk
+ * create override edilmistir: her teklif kendi numarasini alir, TKLF-YYYY-NNNN
+ * (B40, D-132; yil ve yillik sira YearlyCodeAllocator'dan). Hangi potansiyel
+ * ise bagli oldugu ekranda POTIS koduyla gosterilir. B40 oncesi numara
+ * potansiyel isin sirasindandir ("TKLF-n", alternatifler "-B", "-C"). Ilk
  * teklif otomatik secili olur. select() secili teklifi degistirir.
  */
 final class ProposalService extends AbstractService
@@ -24,6 +31,15 @@ final class ProposalService extends AbstractService
     protected array $with = ['businessCase', 'owner', 'currentVersion'];
 
     protected string $orderBy = 'proposal_no';
+
+    public function __construct(
+        TransactionRunner $transactions,
+        OptimisticLock $lock,
+        ActivityRecorder $activities,
+        private readonly YearlyCodeAllocator $codes,
+    ) {
+        parent::__construct($transactions, $lock, $activities);
+    }
 
     /**
      * @param  array<string, mixed>  $data
@@ -34,14 +50,9 @@ final class ProposalService extends AbstractService
             /** @var BusinessCase $case */
             $case = BusinessCase::query()->lockForUpdate()->findOrFail((int) ($data['business_case_id'] ?? 0));
             $existing = Proposal::query()->where('business_case_id', $case->getKey())->count();
-
-            $base = 'TKLF-'.$case->sequence_no;
-            $proposalNo = $existing === 0 ? $base : $base.'-'.chr(ord('A') + $existing);
-
-            while (Proposal::query()->where('proposal_no', $proposalNo)->exists()) {
-                $existing++;
-                $proposalNo = $base.'-'.chr(ord('A') + $existing);
-            }
+            $proposalNo = $this->codes->enabled()
+                ? $this->codes->next(BusinessCodeKind::Offer->prefix())['formatted_code']
+                : $this->legacyNumber($case, $existing);
 
             return parent::create([
                 ...$data,
@@ -52,6 +63,20 @@ final class ProposalService extends AbstractService
                 'is_selected' => $existing === 0,
             ]);
         });
+    }
+
+    /** B40 oncesi numara: potansiyel isin sirasindan "TKLF-n", alternatifler "-B", "-C"... */
+    private function legacyNumber(BusinessCase $case, int $existing): string
+    {
+        $base = 'TKLF-'.$case->sequence_no;
+        $proposalNo = $existing === 0 ? $base : $base.'-'.chr(ord('A') + $existing);
+
+        while (Proposal::query()->where('proposal_no', $proposalNo)->exists()) {
+            $existing++;
+            $proposalNo = $base.'-'.chr(ord('A') + $existing);
+        }
+
+        return $proposalNo;
     }
 
     /**

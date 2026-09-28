@@ -12,6 +12,7 @@ use App\Models\Personnel\Personnel;
 use App\Query\Chat\ChatQueries;
 use App\Query\Notification\NotificationInboxQueries;
 use App\Services\Chat\ChatPresenter;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Http\JsonResponse;
@@ -50,7 +51,7 @@ final class AlertFeedController extends Controller
      */
     private function notification(Personnel $me): ?array
     {
-        if (! FeatureFlags::enabled('notifications.database') || ! SchemaReadiness::hasBatch('B00')) {
+        if (! FeatureFlags::enabled(Feature::Notifications) || ! SchemaReadiness::hasBatch('B00')) {
             return null;
         }
 
@@ -75,7 +76,7 @@ final class AlertFeedController extends Controller
      */
     private function chatMessage(Personnel $me): ?array
     {
-        if (! SchemaReadiness::hasBatch('B12A') || ! FeatureFlags::enabled('chat.admin_ui')) {
+        if (! SchemaReadiness::hasBatch('B12A') || ! FeatureFlags::enabled(Feature::Chat)) {
             return null;
         }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\Project\ProjectStatus;
 use App\Filament\Clusters\UiGallery;
 use App\Filament\Concerns\InteractsWithCardView;
@@ -104,7 +106,7 @@ class UiCardGallery extends Page implements HasCardView, HasTable
 
         $user = auth()->user();
 
-        return $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
+        return FeatureFlags::enabled(Feature::UiGallery) && $user instanceof Personnel && app(RoleResolver::class)->hasFullAccess($user);
     }
 
     /**

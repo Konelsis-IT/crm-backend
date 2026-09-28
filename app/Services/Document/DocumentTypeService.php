@@ -30,7 +30,13 @@ final class DocumentTypeService extends AbstractService
             throw CodeAlreadyInUseException::make(['code' => $code]);
         }
 
-        return parent::create([...$data, 'code' => $code]);
+        // Numaralandirma oneki arayuzde gosterilmez (D-130): verilmezse tipin
+        // kodudur (DocumentTypeSeeder ile ayni kural); dokuman no "KOD-00001".
+        $prefix = filled($data['numbering_prefix'] ?? null)
+            ? strtoupper(trim((string) $data['numbering_prefix']))
+            : $code;
+
+        return parent::create([...$data, 'code' => $code, 'numbering_prefix' => $prefix]);
     }
 
     /**
@@ -38,7 +44,8 @@ final class DocumentTypeService extends AbstractService
      */
     public function update(Model|int|string $record, array $data): Model
     {
-        unset($data['code']);
+        // Kod ve numaralandirma oneki duzenlenmez (onek dokuman numaralarinda yasar).
+        unset($data['code'], $data['numbering_prefix']);
 
         return parent::update($record, $data);
     }

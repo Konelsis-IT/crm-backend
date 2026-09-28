@@ -12,6 +12,7 @@ use App\Filament\Resources\TenderNoticeVersions\RelationManagers\DeadlinesRelati
 use App\Filament\Resources\TenderNoticeVersions\RelationManagers\RequirementsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\TenderNoticeVersion;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -52,7 +53,7 @@ class TenderNoticeVersionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Tenders)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }

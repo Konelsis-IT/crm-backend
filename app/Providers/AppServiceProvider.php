@@ -9,7 +9,9 @@ use App\Filament\Support\TableConventions;
 use App\Infrastructure\Console\SchemaChangeGuard;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Audit\ActorContext;
+use App\Services\Platform\FeatureRegistry;
 use App\Support\DisplayTime;
+use App\Support\UploadLimits;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\Exports\Jobs\ExportCompletion;
@@ -22,6 +24,7 @@ use Filament\Support\Facades\FilamentTimezone;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -35,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
         // politika ayni istekte defalarca sorar, sonuc ornekte bellekte tutulur.
         $this->app->scoped(SocialResponsibilityQueries::class);
 
+        // Ozellik anahtarlari istek/is basina bir kez okunur (B39, D-128).
+        $this->app->scoped(FeatureRegistry::class);
+
         // Excel disa aktarimi (D-110): dosya dogrudan iner, "dosya hazir"
         // bildirimi yalniz aktarilamayan satir varsa cikar.
         $this->app->bind(ExportCompletion::class, KonelsisExportCompletion::class);
@@ -46,7 +52,27 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(CommandStarting::class, SchemaChangeGuard::class);
         DB::prohibitDestructiveCommands($this->app->isProduction());
 
+        // Kapali ozelligin kayit turleri butun yetki kontrollerinde reddedilir
+        // (D-128): kaynak menusu, alt sekmeler, baglantilar ve dosya uclari
+        // birlikte kapanir. Aciksa karar politikaya birakilir (null).
+        Gate::before(fn (mixed $user, string $ability, array $arguments): ?bool => app(FeatureRegistry::class)->deniesAbility($arguments) ? false : null);
+
+        $this->configureUploads();
         $this->configureFilamentDefaults();
+    }
+
+    /**
+     * Gecici yukleme ust siniri (D-127): Livewire varsayilani 12 MB tum
+     * yukleme alanlarini keserdi. Genel tavan belge siniridir (1 GB); her
+     * alan kendi siniri ile daraltilir (fotograf 4-8 MB, sohbet 20 MB...).
+     * Buyuk dosya uzun surebildiginden yukleme imzasi da uzatilir.
+     */
+    private function configureUploads(): void
+    {
+        config([
+            'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.UploadLimits::documentMaxKb()],
+            'livewire.temporary_file_upload.max_upload_time' => UploadLimits::uploadMinutes(),
+        ]);
     }
 
     /**

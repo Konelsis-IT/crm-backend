@@ -11,6 +11,7 @@ use App\Models\Personnel\Personnel;
 use App\Models\SocialMedia\SocialComment;
 use App\Models\SocialMedia\SocialContent;
 use App\Query\SocialMedia\SocialContentQueries;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\SocialMedia\SocialCommentPresenter;
@@ -153,7 +154,7 @@ final class SocialCommentController extends Controller
 
     private function me(Request $request): Personnel
     {
-        abort_unless(SchemaReadiness::hasBatch('B31') && FeatureFlags::enabled('social_media.admin_ui'), 404);
+        abort_unless(SchemaReadiness::hasBatch('B31') && FeatureFlags::enabled(Feature::SocialMedia), 404);
 
         $user = $request->user();
         abort_unless($user instanceof Personnel && $user->isActive(), 403);

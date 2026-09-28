@@ -18,6 +18,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\OrgUnit;
 use App\Query\Personnel\OrganizationQueries;
 use App\Services\Personnel\OrgUnitService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -60,7 +61,7 @@ class OrgUnitResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('personnel.admin_ui')
+        return FeatureFlags::enabled(Feature::OrgUnits)
             && SchemaReadiness::hasBatch('B03')
             && parent::canAccess();
     }

@@ -14,6 +14,7 @@ use App\Filament\Resources\ApprovalPolicies\RelationManagers\VersionsRelationMan
 use App\Filament\Support\FieldGrid;
 use App\Models\Approval\ApprovalPolicy;
 use App\Services\Approval\Subjects\ApprovalSubjectRegistry;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -44,7 +45,7 @@ class ApprovalPolicyResource extends Resource
 
     protected static ?int $navigationSort = 140;
 
-    protected static ?string $recordTitleAttribute = 'code';
+    protected static ?string $recordTitleAttribute = 'name_tr';
 
     public static function getModelLabel(): string
     {
@@ -58,7 +59,7 @@ class ApprovalPolicyResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('approvals.admin_ui')
+        return FeatureFlags::enabled(Feature::ApprovalPolicies)
             && SchemaReadiness::hasBatch('B07')
             && parent::canAccess();
     }
@@ -71,14 +72,7 @@ class ApprovalPolicyResource extends Resource
                 ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    TextInput::make('code')
-                        ->label(__('approval_policy.fields.code'))
-                        ->helperText(__('approval_policy.help.code'))
-                        ->required()
-                        ->alphaDash()
-                        ->maxLength(64)
-                        ->disabledOn('edit')
-                        ->dehydratedWhenHidden(false),
+                    // Kod arayuzde yok (D-130): ApprovalPolicyService Turkce addan uretir.
                     Select::make('subject_type')
                         ->label(__('approval_policy.fields.subject_type'))
                         ->helperText(__('approval_policy.help.subject_type'))
@@ -88,10 +82,6 @@ class ApprovalPolicyResource extends Resource
                         ->disabled(fn (?ApprovalPolicy $record): bool => $record?->current_version_id !== null),
                     TextInput::make('name_tr')
                         ->label(__('approval_policy.fields.name_tr'))
-                        ->required()
-                        ->maxLength(255),
-                    TextInput::make('name_en')
-                        ->label(__('approval_policy.fields.name_en'))
                         ->required()
                         ->maxLength(255),
                     Select::make('status')
@@ -110,14 +100,11 @@ class ApprovalPolicyResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('approval_policy.fields.code'))
-                    ->searchable()
-                    ->sortable()
-                    ->weight('semibold'),
                 TextColumn::make('name_tr')
                     ->label(__('approval_policy.fields.name_tr'))
                     ->searchable()
+                    ->sortable()
+                    ->weight('semibold')
                     ->limit(50),
                 TextColumn::make('subject_type')
                     ->label(__('approval_policy.fields.subject_type'))
@@ -147,7 +134,7 @@ class ApprovalPolicyResource extends Resource
                 EditAction::make(),
             ])
             ->toolbarActions([])
-            ->defaultSort('code');
+            ->defaultSort('name_tr');
     }
 
     public static function getRelations(): array

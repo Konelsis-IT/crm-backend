@@ -10,8 +10,7 @@ return [
 
     'fields' => [
         'code' => 'Kod',
-        'name_tr' => 'Ad (TR)',
-        'name_en' => 'Ad (EN)',
+        'name_tr' => 'Ad',
         'subject_type' => 'Konu türü',
         'current_version' => 'Yayımlı sürüm',
         'status' => 'Durum',

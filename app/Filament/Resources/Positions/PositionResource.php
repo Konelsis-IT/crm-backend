@@ -15,6 +15,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Position;
 use App\Services\Personnel\PositionService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -58,7 +59,7 @@ class PositionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('personnel.admin_ui')
+        return FeatureFlags::enabled(Feature::Positions)
             && SchemaReadiness::hasBatch('B03')
             && parent::canAccess();
     }
@@ -81,13 +82,7 @@ class PositionResource extends Resource
                         ->preload()
                         ->required()
                         ->native(false),
-                    TextInput::make('code')
-                        ->label(__('position.fields.code'))
-                        ->required()
-                        ->alphaDash()
-                        ->maxLength(32)
-                        ->disabledOn('edit')
-                        ->dehydratedWhenHidden(false),
+                    // Kod arayuzde yok (D-130): PositionService basliktan uretir.
                     TextInput::make('title')
                         ->label(__('position.fields.title'))
                         ->required()
@@ -124,10 +119,6 @@ class PositionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('position.fields.code'))
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('title')
                     ->label(__('position.fields.title'))
                     ->searchable()

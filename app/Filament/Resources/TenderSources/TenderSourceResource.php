@@ -14,6 +14,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\TenderSource;
 use App\Services\Acquisition\TenderSourceService;
+use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
@@ -56,7 +57,7 @@ class TenderSourceResource extends Resource
 
     public static function canAccess(): bool
     {
-        return FeatureFlags::enabled('acquisition.admin_ui')
+        return FeatureFlags::enabled(Feature::Tenders)
             && SchemaReadiness::hasBatch('B16')
             && parent::canAccess();
     }
@@ -76,10 +77,6 @@ class TenderSourceResource extends Resource
                             ->dehydratedWhenHidden(false),
                         TextInput::make('name_tr')
                             ->label(__('tender_source.fields.name_tr'))
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('name_en')
-                            ->label(__('tender_source.fields.name_en'))
                             ->required()
                             ->maxLength(255),
                         Select::make('source_type')

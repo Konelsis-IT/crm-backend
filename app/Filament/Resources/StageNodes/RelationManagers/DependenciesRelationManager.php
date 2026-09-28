@@ -46,7 +46,7 @@ class DependenciesRelationManager extends RelationManager
                             ->label(__('stage_dependency.fields.successor_node'))
                             ->relationship(
                             'successor',
-                            'stage_code',
+                            'name_tr',
                             modifyQueryUsing: fn ($query) => $query->where('stage_template_version_id', $this->getOwnerRecord()->stage_template_version_id),
                         )
                             ->searchable()
@@ -67,10 +67,8 @@ class DependenciesRelationManager extends RelationManager
             ->heading(__('stage_dependency.relation.title'))
             ->recordTitleAttribute('id')
             ->columns([
-                TextColumn::make('successor.stage_code')
-                    ->label(__('stage_dependency.fields.successor')),
                 TextColumn::make('successor.name_tr')
-                    ->label(__('stage_dependency.fields.name')),
+                    ->label(__('stage_dependency.fields.successor')),
                 IconColumn::make('is_hard')
                     ->label(__('stage_dependency.fields.is_hard'))
                     ->boolean(),

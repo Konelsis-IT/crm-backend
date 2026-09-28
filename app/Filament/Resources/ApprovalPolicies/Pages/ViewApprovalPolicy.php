@@ -23,7 +23,7 @@ class ViewApprovalPolicy extends ViewRecord
         /** @var ApprovalPolicy $policy */
         $policy = $this->getRecord();
 
-        return $policy->code.' · '.$policy->localizedName();
+        return $policy->localizedName();
     }
 
     public function infolist(Schema $schema): Schema
@@ -33,7 +33,6 @@ class ViewApprovalPolicy extends ViewRecord
                 ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
-                    TextEntry::make('code')->label(__('approval_policy.fields.code'))->badge()->color('gray'),
                     TextEntry::make('subject_type')
                         ->label(__('approval_policy.fields.subject_type'))
                         ->formatStateUsing(fn (string $state): string => __('approval_policy.subject_types.'.$state))
@@ -41,7 +40,6 @@ class ViewApprovalPolicy extends ViewRecord
                         ->color('info'),
                     TextEntry::make('status')->label(__('approval_policy.fields.status'))->badge(),
                     TextEntry::make('name_tr')->label(__('approval_policy.fields.name_tr')),
-                    TextEntry::make('name_en')->label(__('approval_policy.fields.name_en')),
                     TextEntry::make('currentVersion.version_no')
                         ->label(__('approval_policy.fields.current_version'))
                         ->placeholder(__('approval_policy.help.no_version'))

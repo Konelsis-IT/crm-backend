@@ -6,6 +6,7 @@ namespace App\Models\Project;
 
 use App\Enums\Shared\ActiveStatus;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\MirrorsTurkishFields;
 use App\Models\Project\ProjectComponent;
 use App\Policies\ComponentDefinitionPolicy;
 use App\Models\Report\Report;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ComponentDefinition extends Model
 {
     use HasAuditColumns;
+    use MirrorsTurkishFields;
 
     /**
      * @return array<string, string>

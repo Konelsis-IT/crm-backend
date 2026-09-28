@@ -7,6 +7,7 @@ namespace App\Services\Personnel;
 use App\Exceptions\CodeAlreadyInUseException;
 use App\Models\Personnel\Competency;
 use App\Services\AbstractService;
+use App\Services\Support\CodeGenerator;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -24,7 +25,10 @@ final class CompetencyService extends AbstractService
      */
     public function create(array $data): Model
     {
-        $code = strtoupper(trim((string) ($data['code'] ?? '')));
+        // Kod arayuzde girilmez (D-130): verilmezse addan uretilir.
+        $code = filled($data['code'] ?? null)
+            ? strtoupper(trim((string) $data['code']))
+            : app(CodeGenerator::class)->unique((string) ($data['name'] ?? ''), Competency::class, 'YETKINLIK');
 
         if (Competency::query()->where('code', $code)->exists()) {
             throw CodeAlreadyInUseException::make(['code' => $code]);

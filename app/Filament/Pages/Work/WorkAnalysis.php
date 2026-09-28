@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Work;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Clusters\WorkReports;
 use App\Filament\Support\WorkAppConfig;
 use BackedEnum;
@@ -53,7 +55,7 @@ class WorkAnalysis extends Page
 
     public static function canAccess(): bool
     {
-        return WorkReports::canAccess();
+        return FeatureFlags::enabled(Feature::AnalysisDashboard) && WorkReports::canAccess();
     }
 
     /**

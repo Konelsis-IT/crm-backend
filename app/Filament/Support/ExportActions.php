@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\Exports\KonelsisExporter;
 use App\Filament\Exports\RecordPdf;
 use App\Query\Export\ExportQueries;
@@ -55,7 +57,7 @@ final class ExportActions
                 ? $livewire->scopeExportQuery($query)
                 : $query)
             ->after(self::downloadFile($exporter))
-            ->visible(fn (): bool => SchemaReadiness::hasBatch('B35'));
+            ->visible(fn (): bool => FeatureFlags::enabled(Feature::ExcelExport) && SchemaReadiness::hasBatch('B35'));
     }
 
     /**
@@ -72,10 +74,11 @@ final class ExportActions
                 ->columnMapping(false)
                 ->modifyQueryUsing(fn (Builder $query, Model $record): Builder => $query->whereKey($record->getKey()))
                 ->after(self::downloadFile($exporter))
-                ->visible(fn (): bool => SchemaReadiness::hasBatch('B35')),
+                ->visible(fn (): bool => FeatureFlags::enabled(Feature::ExcelExport) && SchemaReadiness::hasBatch('B35')),
             Action::make('exportRecordPdf')
                 ->label(__('export.actions.record_pdf'))
                 ->icon(Heroicon::OutlinedDocumentText)
+                ->visible(fn (): bool => FeatureFlags::enabled(Feature::PdfExport))
                 ->action(fn (Model $record, ViewRecord $livewire): StreamedResponse => app(RecordPdf::class)->download(
                     $exporter,
                     $record,

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Enums\WorkRequest\RequestTargetKind;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
@@ -92,7 +94,7 @@ class CreateWorkRequest extends CreateRecord
 
         $messageId = request()->query(self::QUERY_SOURCE_MESSAGE);
 
-        if (! is_numeric($messageId) || ! SchemaReadiness::hasBatch('B12A')) {
+        if (! is_numeric($messageId) || ! SchemaReadiness::hasBatch('B12A') || ! FeatureFlags::enabled(Feature::ChatWorkRequests)) {
             return $data;
         }
 

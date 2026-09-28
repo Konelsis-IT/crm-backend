@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Work;
 
+use App\Services\Platform\FeatureFlags;
+use App\Enums\Platform\Feature;
 use App\Filament\NavigationGroup;
 use App\Filament\Support\WorkAppConfig;
 use App\Models\Personnel\Personnel;
@@ -67,7 +69,8 @@ class WorkBoard extends Page
     {
         $user = auth()->user();
 
-        return SchemaReadiness::hasBatch('B36')
+        return FeatureFlags::enabled(Feature::WorkBoard)
+            && SchemaReadiness::hasBatch('B36')
             && $user instanceof Personnel
             && Gate::forUser($user)->allows('viewAny', WorkItem::class);
     }
