@@ -95,6 +95,7 @@ final class ReleaseNotes
                         'Teklif oluştur ekranı iş dosyası sihirbazının Teklif adımı biçimine geldi: önce iş dosyası seçiliyor (zorunlu), seçilince iş dosyasının özeti (müşteri, başlık, teklif tipi, proje tipleri, tahmini değer, sorumlular) kartta görünüyor; teklif fiyat, marj, geçerlilik, teklif durumu ve belgeleriyle bu bağlamda oluşturuluyor. İş dosyasının projesi yoksa aynı ekrandan hemen projeye dönüştürülebiliyor.',
                         '"İş dosyası" artık "Potansiyel iş". Kodlar yıla göre otomatik: potansiyel iş POTIS-2026-0001, teklif TKLF-2026-0001, proje PRJ-2026-0001; her yıl 0001\'den başlıyor. Bir potansiyel işe birden fazla teklif bağlanabiliyor; her teklifin yanında bağlı olduğu POTIS kodu görünüyor (Teklifler listesinde ayrı sütun, teklif detayında rozet). Potansiyel işler listesinde müşteri adı taraf listesindeki gibi kısa, tamamı üzerine gelince görünüyor.',
                         'Potansiyel işte "İş Alım aşaması" artık "Durum". Sonuç durumdan kendiliğinden geliyor: Kazanıldı ve devir durumlarında "Kazanıldı", Kaybedildi ve İptal edildi durumlarında aynı adla, diğerlerinde "Açık". Detay sayfasının üstünde "Durum değiştir" düğmesi var. "Proje tip seçimi" sütunu "Proje tipi" oldu.',
+                        'Taraflar listesinde süzgeçler birlikte (VE) çalışıyor ve seçilen alanı boş olan kayıtları getirmiyor: örneğin proje tipi HES seçilince proje tipi girilmemiş firmalar, köken seçilince kökeni girilmemiş firmalar listelenmiyor.',
                     ],
                 ],
             ],

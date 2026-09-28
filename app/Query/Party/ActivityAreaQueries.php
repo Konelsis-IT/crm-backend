@@ -93,9 +93,10 @@ final class ActivityAreaQueries
     }
 
     /**
-     * Faaliyet suzgeci: secilen kosullarin HEPSI ayni faaliyet satirinda
-     * saglanmalidir. Proje tipi secildiginde "tum proje tipleri" satirlari da
-     * eslesir (or. her tipte calisan CED firmasi HES aramasinda gorunur).
+     * Faaliyet suzgeci: secilen kosullarin HEPSI (VE) ayni faaliyet satirinda
+     * saglanmalidir. Secilen alan bos olan satirlar eslesmez (28 Eylul 2026
+     * kullanici karari, D-134): proje tipi girilmemis ("tum proje tipleri")
+     * satir HES aramasinda gelmez.
      */
     public function applyFilter(Builder $query, ?string $projectType, ?int $areaId, ?int $subId): Builder
     {
@@ -105,7 +106,7 @@ final class ActivityAreaQueries
 
         return $query->whereHas('activityAreas', function (Builder $rows) use ($projectType, $areaId, $subId): void {
             if (filled($projectType)) {
-                $rows->where(fn (Builder $type): Builder => $type->where('project_type', $projectType)->orWhereNull('project_type'));
+                $rows->where('project_type', $projectType);
             }
 
             if (($areaId ?? 0) > 0) {
