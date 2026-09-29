@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Party;
 
+use App\Exceptions\Party\MeetingNoteProposalMismatchException;
+use App\Models\Acquisition\BusinessCase;
+use App\Models\Acquisition\Proposal;
 use App\Models\Party\PartyMeetingNote;
 use App\Services\AbstractService;
 use App\Services\Audit\ActorContext;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -37,7 +41,7 @@ final class PartyMeetingNoteService extends AbstractService
     protected string $orderDirection = 'desc';
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $data  B41: business_case_id, proposal_ids (ayni potansiyel isin teklifleri)
      */
     public function create(array $data): Model
     {
@@ -53,9 +57,12 @@ final class PartyMeetingNoteService extends AbstractService
         }
 
         return $this->transactions->run(function () use ($data, $planId): Model {
+            [$data, $proposalIds] = $this->resolveDealLinks($data);
+
             /** @var PartyMeetingNote $note */
             $note = parent::create($data);
 
+            $this->syncProposals($note, $proposalIds);
             app(MeetingPlanService::class)->syncFromNote($note, $planId);
 
             return $note;
@@ -68,13 +75,86 @@ final class PartyMeetingNoteService extends AbstractService
     public function update(Model|int|string $record, array $data): Model
     {
         return $this->transactions->run(function () use ($record, $data): Model {
+            /** @var PartyMeetingNote $current */
+            $current = $this->show($record);
+            $data['party_id'] ??= $current->party_id;
+
+            if (! array_key_exists('business_case_id', $data) && array_key_exists('proposal_ids', $data)) {
+                $data['business_case_id'] = $current->business_case_id;
+            }
+
+            [$data, $proposalIds] = $this->resolveDealLinks($data);
+            $data['party_id'] = $current->party_id;
+
             /** @var PartyMeetingNote $note */
             $note = parent::update($record, $data);
 
+            $this->syncProposals($note, $proposalIds);
             app(MeetingPlanService::class)->syncFromNote($note);
 
             return $note;
         });
+    }
+
+    /**
+     * Potansiyel is ve teklif baglantisi (B41, D-137). Teklifler tek bir
+     * potansiyel ise ait olmalidir; potansiyel is bos ise tekliflerinkinden
+     * gelir, taraf bos ise potansiyel isin musterisinden. Grup uygulanmadiysa
+     * baglanti anahtarlari yok sayilir. $proposalIds null = baglantilara dokunma.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: array<string, mixed>, 1: list<int>|null}
+     */
+    private function resolveDealLinks(array $data): array
+    {
+        $proposalIds = array_key_exists('proposal_ids', $data)
+            ? array_values(array_unique(array_map('intval', array_filter((array) $data['proposal_ids']))))
+            : null;
+        unset($data['proposal_ids']);
+
+        if (! SchemaReadiness::hasBatch('B41')) {
+            unset($data['business_case_id']);
+
+            return [$data, null];
+        }
+
+        $caseId = filled($data['business_case_id'] ?? null) ? (int) $data['business_case_id'] : null;
+
+        if ($proposalIds !== null && $proposalIds !== []) {
+            $caseIds = Proposal::query()->whereKey($proposalIds)->distinct()->pluck('business_case_id')->map(fn (mixed $id): int => (int) $id)->all();
+
+            if (count($caseIds) !== 1 || ($caseId !== null && $caseIds[0] !== $caseId)) {
+                throw MeetingNoteProposalMismatchException::make();
+            }
+
+            $caseId = $caseIds[0];
+        }
+
+        if (array_key_exists('business_case_id', $data) || $caseId !== null) {
+            $data['business_case_id'] = $caseId;
+        }
+
+        if ($caseId !== null && blank($data['party_id'] ?? null)) {
+            $data['party_id'] = BusinessCase::query()->whereKey($caseId)->value('primary_party_id');
+        }
+
+        if ($caseId === null && $proposalIds === null && array_key_exists('business_case_id', $data)) {
+            $proposalIds = [];
+        }
+
+        return [$data, $proposalIds];
+    }
+
+    /** @param  list<int>|null  $proposalIds */
+    private function syncProposals(PartyMeetingNote $note, ?array $proposalIds): void
+    {
+        if ($proposalIds === null) {
+            return;
+        }
+
+        $actor = app(ActorContext::class)->personnelId();
+
+        $note->proposals()->sync(array_fill_keys($proposalIds, ['created_by_personnel_id' => $actor]));
     }
 
     public function delete(Model|int|string $record): bool

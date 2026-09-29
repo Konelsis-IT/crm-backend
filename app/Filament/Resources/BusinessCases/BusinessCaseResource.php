@@ -16,6 +16,7 @@ use App\Filament\Resources\BusinessCases\Pages\ListBusinessCases;
 use App\Filament\Resources\BusinessCases\Pages\ViewBusinessCase;
 use App\Filament\Resources\BusinessCases\RelationManagers\ActivitiesRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\ContractsRelationManager;
+use App\Filament\Resources\BusinessCases\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OperationHandoffsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OpportunityRelationManager;
 use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
@@ -167,6 +168,8 @@ class BusinessCaseResource extends Resource
     {
         // Teklifler zincir sihirbazinin 2. adimindadir (BusinessCaseWizard::proposalTableStep).
         return [
+            // Gorusme notlari (B41, D-137): bu is ve teklifleri hakkindaki gorusmeler.
+            MeetingNotesRelationManager::class,
             OpportunityRelationManager::class,
             ActivitiesRelationManager::class,
             TenderNoticesRelationManager::class,

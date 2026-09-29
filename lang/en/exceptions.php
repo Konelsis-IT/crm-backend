@@ -74,6 +74,7 @@ return [
     ],
     'party' => [
         'activity_area_parent_invalid' => 'A sub-activity area can only belong to a main activity area; a main area with sub-areas cannot be moved under another area.',
+        'meeting_note_proposal_mismatch' => 'Only proposals of the selected potential job can be linked to the meeting note.',
     ],
     'work_request' => [
         'message_empty' => 'The reply is empty; add text, a link or a file.',

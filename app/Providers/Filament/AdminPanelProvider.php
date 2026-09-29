@@ -106,6 +106,11 @@ class AdminPanelProvider extends PanelProvider
             // alanin tamamini kullanir. Sayfa bazinda daraltmak gerekirse ilgili
             // Page sinifinda $maxContentWidth ozelligi ile asilir.
             ->maxContentWidth(Width::Full)
+            // Sol menu genisligi (29 Eylul 2026 kullanici istegi: "inanilmaz
+            // fazlaca bos alan kapliyor"): Filament varsayilani 20rem; en uzun
+            // etiket ("Organizasyon Birimleri") 15rem'e kesilmeden sigar. Satir
+            // ve grup araliklari konelsis.css'te (D-138).
+            ->sidebarWidth('15rem')
             // Her kaynak icin Policy zorunlu; tanimsiz yetki reddedilir.
             ->strictAuthorization()
             // Goruntuleme sayfalari bu urunde calisma alanidir (proje, is dosyasi,

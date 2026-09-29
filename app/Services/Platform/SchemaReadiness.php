@@ -70,6 +70,7 @@ final class SchemaReadiness
         'B38' => 'personnel_quick_actions',            // Kisisel hizli islemler
         'B39' => 'features',                           // Ozellik anahtarlari (D-128)
         'B40' => 'business_code_sequences',            // Yillik kodlar POTIS / TKLF / PRJ (D-132)
+        'B41' => 'party_meeting_note_proposals',       // Gorusme notu - potansiyel is / teklif baglantisi (D-137)
     ];
 
     /** @var array<string, bool> */

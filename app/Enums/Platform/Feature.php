@@ -88,6 +88,7 @@ enum Feature: string
     case Parties = 'acquisition.parties';
     case Associations = 'acquisition.associations';
     case BusinessCases = 'acquisition.business_cases';
+    case DealMeetingNotes = 'acquisition.business_cases.meeting_notes';
     case Proposals = 'acquisition.proposals';
     case Contracts = 'acquisition.contracts';
     case OperationHandoffs = 'acquisition.operation_handoffs';
@@ -268,6 +269,7 @@ enum Feature: string
             self::Parties => ['Taraflar', 'İş Alım > Taraflar ekranı ve taraf kartı.', 'D-67'],
             self::Associations => ['Dernekler', 'İş Alım > Dernekler ekranı.', 'D-107'],
             self::BusinessCases => ['Potansiyel işler', 'İş Alım > Potansiyel İşler, sihirbaz ve diğer kartlardaki potansiyel iş sekmeleri.', 'D-101'],
+            self::DealMeetingNotes => ['Potansiyel iş ve teklif görüşme notları', 'Potansiyel iş ve teklif sayfalarındaki Görüşme notları sekmesi; taraf görüşme notunda potansiyel iş ve teklif seçimi.', 'D-137'],
             self::Proposals => ['Teklifler', 'İş Alım > Teklifler, teklif sürümleri ve maliyet tahminleri.', 'D-67'],
             self::Contracts => ['Sözleşmeler', 'İş Alım > Sözleşmeler ve sözleşme sürümleri.', 'D-67'],
             self::OperationHandoffs => ['Operasyona devirler', 'Tekliften operasyona devir kayıtları ve sürümleri.', 'D-67'],

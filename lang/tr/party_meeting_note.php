@@ -9,6 +9,8 @@ return [
     ],
 
     'fields' => [
+        'business_case' => 'Potansiyel iş',
+        'proposals' => 'Teklifler',
         'channel' => 'Kanal',
         'contact' => 'Görüşülen kişi',
         'created_at' => 'Oluşturulma',
@@ -22,6 +24,8 @@ return [
     ],
 
     'help' => [
+        'business_case' => 'Görüşme bir potansiyel işle ilgiliyse seçin; not o işin sayfasında da görünür.',
+        'proposals' => 'Görüşmede konuşulan teklifler (seçilen potansiyel işin teklifleri); not teklif sayfasında da görünür.',
         'next_action_reminder' => 'Sonraki adım tarihi verilirse bu adım Görüşme planı takvimine planlı görüşme olarak düşer; tarihten 1 gün önce ve o günün sabahı görüşen personele zil bildirimi gider.',
     ],
 

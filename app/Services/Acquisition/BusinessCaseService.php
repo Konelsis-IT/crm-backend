@@ -170,10 +170,16 @@ final class BusinessCaseService extends AbstractService
 
     /**
      * SM-BC gecisi. Kazanma/kaybetme/iptalde outcome da guncellenir.
+     *
+     * $reasonCode kod bicimindeyse (or. direct_project) outcome_reason_code
+     * kolonuna (32) yazilir; "Durum degistir" penceresindeki serbest gerekce
+     * metni yalniz etkinlik gecmisine yazilir (28 Eylul 2026: uzun gerekce
+     * kolonu tasiriyordu).
      */
     public function changeStage(Model|int|string $record, AcquisitionStage $target, ?string $reasonCode = null): BusinessCase
     {
         return $this->transactions->run(function () use ($record, $target, $reasonCode): BusinessCase {
+            $code = $reasonCode !== null && preg_match('/^[a-z0-9_.-]{1,32}$/', $reasonCode) === 1 ? $reasonCode : null;
             /** @var BusinessCase $case */
             $case = $this->lockForUpdate($record);
             $from = $case->acquisition_stage;
@@ -194,7 +200,7 @@ final class BusinessCaseService extends AbstractService
             if ($outcome !== null && $case->outcome !== $outcome) {
                 $attributes['outcome'] = $outcome;
                 $attributes['outcome_at'] = Carbon::now('UTC');
-                $attributes['outcome_reason_code'] = $reasonCode;
+                $attributes['outcome_reason_code'] = $code;
             }
 
             if ($target === AcquisitionStage::HandoverAccepted) {

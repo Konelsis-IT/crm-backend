@@ -21,6 +21,7 @@ use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\TenderNotice;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Party\Party;
+use App\Models\Party\PartyMeetingNote;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Reference\Country;
@@ -190,5 +191,11 @@ class BusinessCase extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class, 'subject_business_case_id');
+    }
+
+    /** Bu potansiyel isle ilgili gorusme notlari; tekliflerinin notlari dahil (B41, D-137). */
+    public function meetingNotes(): HasMany
+    {
+        return $this->hasMany(PartyMeetingNote::class, 'business_case_id');
     }
 }

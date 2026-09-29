@@ -11,6 +11,13 @@ return [
         'current_version' => 'Current version',
     ],
 
+    'tabs' => [
+        'all' => 'All',
+        'submitted' => 'Submitted proposals',
+        'to_be_submitted' => 'Proposals to submit',
+        'lost' => 'Lost opportunity',
+    ],
+
     'fields' => [
         'business_case' => 'Business case',
         'created_at' => 'Created at',

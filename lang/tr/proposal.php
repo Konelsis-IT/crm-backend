@@ -11,6 +11,13 @@ return [
         'current_version' => 'Güncel sürüm',
     ],
 
+    'tabs' => [
+        'all' => 'Tümü',
+        'submitted' => 'Verilen Teklifler',
+        'to_be_submitted' => 'Verilecek Teklifler',
+        'lost' => 'Kaçan Fırsat',
+    ],
+
     'fields' => [
         'business_case' => 'Potansiyel iş',
         'created_at' => 'Oluşturulma',

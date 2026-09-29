@@ -139,6 +139,64 @@
 }
 
 /*
+ * Sol menu (29 Eylul 2026, kullanici istegi D-138: "sol navigation bar'daki
+ * bu gereksiz buyuklugu kucultelim inanilmaz fazlaca bos alan kapliyor").
+ * Filament'in menu genisligi ayari var (AdminPanelProvider::sidebarWidth,
+ * 20rem -> 15rem) ama satir, grup ve kenar araliklari icin ayari yok;
+ * varsayilanlar: ust bosluk 2rem, yan bosluk 1.5rem, gruplar arasi 1.75rem,
+ * oge dolgusu 0.5rem, simge 1.5rem, icerik kenar boslugu 2rem. Menu yapisi
+ * (gruplar, siralama, kapali baslama) degismez; yalniz olculer kuculur.
+ */
+.fi-sidebar-nav {
+    row-gap: 0.75rem;
+    padding: 0.75rem 0.75rem 1rem;
+    scrollbar-width: thin;
+}
+
+.fi-sidebar-nav-groups {
+    margin-inline: -0.25rem;
+    row-gap: 0.625rem;
+}
+
+.fi-sidebar-group {
+    row-gap: 0.125rem;
+}
+
+.fi-sidebar-group-items,
+.fi-sidebar-sub-group-items {
+    row-gap: 0.125rem;
+}
+
+.fi-sidebar-group-btn {
+    column-gap: 0.625rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.fi-sidebar-group-label {
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+}
+
+.fi-sidebar-item-btn {
+    column-gap: 0.625rem;
+    padding: 0.375rem 0.5rem;
+}
+
+.fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-group-btn > .fi-icon,
+.fi-sidebar-item-grouped-border {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Icerik alaninin sol menuye ve sag kenara uzakligi (2rem -> 1.25rem). */
+@media (min-width: 64rem) {
+    .fi-main {
+        padding-inline: 1.25rem;
+    }
+}
+
+/*
  * Kayit karti (UI deneme, 10 Eylul 2026): Filament Section tabanli kart.
  * Yan yana duran kartlarda her sey ayni hizada olsun diye bolgeler sabit
  * yuksekliktedir: gorsel kutusu (gorsel de simge de ayni kutu), tek satir

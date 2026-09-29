@@ -9,6 +9,8 @@ return [
     ],
 
     'fields' => [
+        'business_case' => 'Potential job',
+        'proposals' => 'Proposals',
         'channel' => 'Channel',
         'contact' => 'Contact person',
         'created_at' => 'Created at',
@@ -22,6 +24,8 @@ return [
     ],
 
     'help' => [
+        'business_case' => 'Choose if the meeting is about a potential job; the note also shows on that job.',
+        'proposals' => 'Proposals discussed in the meeting (proposals of the selected potential job); the note also shows on the proposal.',
         'next_action_reminder' => 'If a next step date is given, the step appears on the Meeting plan calendar as a planned meeting; the personnel who held the meeting gets a bell notification 1 day before and on the morning of that day.',
     ],
 

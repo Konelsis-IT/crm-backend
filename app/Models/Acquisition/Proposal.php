@@ -9,6 +9,7 @@ use App\Enums\Acquisition\ProposalStatus;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\ProposalVersion;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Party\PartyMeetingNote;
 use App\Models\Personnel\Personnel;
 use App\Policies\ProposalPolicy;
 use App\Models\Report\Report;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
@@ -72,5 +74,11 @@ class Proposal extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class, 'subject_proposal_id');
+    }
+
+    /** Bu teklifin konusuldugu gorusme notlari (B41, D-137). */
+    public function meetingNotes(): BelongsToMany
+    {
+        return $this->belongsToMany(PartyMeetingNote::class, 'party_meeting_note_proposals', 'proposal_id', 'party_meeting_note_id');
     }
 }

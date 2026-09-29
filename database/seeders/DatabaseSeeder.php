@@ -83,6 +83,10 @@ class DatabaseSeeder extends Seeder
             // taraflar ve Ersin Ozdemir (RealPersonnelSeeder) hazir olduktan sonra.
             FirmaTakipBusinessCaseSeeder::class,
 
+            // KKS teklif takip listesi = teklifler (D-135, 28 Eylul 2026): firma takip
+            // potansiyel isleri hazir olduktan sonra (ayni ada teklif baglanir).
+            KksProposalSeeder::class,
+
             // Sosyal medya (B31, D-106): gercek hesaplar ve resmi ulusal gunler
             SocialProfileSeeder::class,
             SocialSpecialDaySeeder::class,

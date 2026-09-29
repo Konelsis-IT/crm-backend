@@ -27,4 +27,23 @@ final class BusinessCaseQueries
 
         return $case;
     }
+
+    /**
+     * Bir tarafin musteri oldugu potansiyel isler (gorusme notu baglantisi,
+     * D-137): id => "POTIS-... · baslik", en yenisi ustte.
+     *
+     * @return array<int, string>
+     */
+    public function optionsForParty(int $partyId): array
+    {
+        return BusinessCase::query()
+            ->with('codes')
+            ->where('primary_party_id', $partyId)
+            ->orderByDesc('id')
+            ->get(['id', 'title', 'sequence_no'])
+            ->mapWithKeys(static fn (BusinessCase $case): array => [
+                (int) $case->getKey() => trim(($case->caseCode()?->formatted_code ?? '').' · '.$case->title, ' ·'),
+            ])
+            ->all();
+    }
 }

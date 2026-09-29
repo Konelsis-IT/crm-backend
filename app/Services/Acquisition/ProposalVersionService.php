@@ -97,13 +97,18 @@ final class ProposalVersionService extends AbstractService
         return parent::update($current, $data);
     }
 
+    /**
+     * $submittedAt: gonderim tarihi bilinen eski teklifler icin (liste
+     * aktarimi); verilmezse simdiki an yazilir.
+     */
     public function changeStatus(
         Model|int|string $record,
         ProposalVersionStatus $target,
         ?SubmissionChannel $channel = null,
         ?int $evidenceDocumentRevisionId = null,
+        ?Carbon $submittedAt = null,
     ): ProposalVersion {
-        return $this->transactions->run(function () use ($record, $target, $channel, $evidenceDocumentRevisionId): ProposalVersion {
+        return $this->transactions->run(function () use ($record, $target, $channel, $evidenceDocumentRevisionId, $submittedAt): ProposalVersion {
             /** @var ProposalVersion $version */
             $version = $this->lockForUpdate($record);
             $from = $version->status;
@@ -131,7 +136,7 @@ final class ProposalVersionService extends AbstractService
             }
 
             if ($target === ProposalVersionStatus::Submitted) {
-                $attributes['submitted_at'] = Carbon::now('UTC');
+                $attributes['submitted_at'] = $submittedAt?->copy()->utc() ?? Carbon::now('UTC');
                 $attributes['submitted_channel'] = $channel ?? SubmissionChannel::Email;
                 $attributes['submission_evidence_document_revision_id'] = $evidenceDocumentRevisionId;
                 $proposal->forceFill(['status' => ProposalStatus::Submitted])->save();
@@ -156,6 +161,37 @@ final class ProposalVersionService extends AbstractService
             ]);
 
             $this->syncBusinessCaseStage($proposal, $target);
+
+            return $version;
+        });
+    }
+
+    /**
+     * Liste aktarimiyla yazilmis ozetin duzeltilmesi (D-137: gorusme notlari
+     * ozetten cikip gorusme notu kaydina tasindi). Surum durumundan bagimsiz
+     * calisir; onayli surumun ozeti hash'e girdiginden hash yeniden hesaplanir.
+     * Eski ozet etkinlik gecmisinde kalir.
+     */
+    public function correctImportedSummary(Model|int|string $record, string $summary): ProposalVersion
+    {
+        return $this->transactions->run(function () use ($record, $summary): ProposalVersion {
+            /** @var ProposalVersion $version */
+            $version = $this->lockForUpdate($record);
+            $previous = (string) $version->summary;
+
+            if ($previous === $summary) {
+                return $version;
+            }
+
+            $version->forceFill(['summary' => $summary]);
+
+            if ($version->version_hash !== null) {
+                $version->forceFill(['version_hash' => $this->hashVersion($version)]);
+            }
+
+            $version->save();
+
+            $this->recordActivity($version, 'summary_corrected', ['onceki_ozet' => $previous]);
 
             return $version;
         });
