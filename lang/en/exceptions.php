@@ -61,7 +61,7 @@ return [
     ],
 
     'notification' => [
-        'notification_scope_not_allowed' => 'You are not allowed to notify this audience.',
+        'notification_scope_not_allowed' => 'You are not allowed to send announcements to this audience.',
         'no_recipients' => 'No active recipient other than you was found in the selected audience.',
         'alert_not_open' => 'This alert is no longer open.',
     ],
@@ -124,5 +124,10 @@ return [
         'body_too_large' => 'The text is too long. Maximum allowed size: :max',
         'urgent_no_recipient' => 'No approver could be notified about the urgent approval. Please inform your manager directly.',
         'content_published' => 'Published content cannot be changed. Undo the publication first to edit it.',
+    ],
+    'platform' => [
+        'invalid_release_version' => 'Version ":version" is not valid. Write it as "2.4" or "2.4.1".',
+        'release_already_published' => ':version is already the published version.',
+        'release_downgrade' => ':version is older than the published :current. To roll back, run the command with the --geri-al option; features that came with :current are hidden again.',
     ],
 ];

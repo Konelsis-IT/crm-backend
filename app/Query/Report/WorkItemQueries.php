@@ -270,6 +270,85 @@ final class WorkItemQueries
         );
     }
 
+    /** Genel bakis gruplari (D-146), sira ekrandaki siradir. */
+    public const AGENDA_GROUPS = ['overdue', 'today', 'tomorrow'];
+
+    /**
+     * "Gorevlerim ve islerim" tablosu (D-146; D-147: yalniz bana ait isler):
+     * kisinin bugun / yarin kartlari ile onceki gunlerden devreden acik
+     * kartlari. Her satir `agenda_group` tasir (0 geciken, 1 bugun, 2 yarin);
+     * $from secili sekmedir ve liste o gruptan baslar.
+     */
+    public function agendaQuery(Personnel $viewer, string $from): Builder
+    {
+        $today = self::today();
+        [$groupSql, $bindings] = $this->agendaGroupSql($today);
+
+        $query = WorkItem::query()
+            ->select('work_items.*')
+            ->selectRaw($groupSql.' as agenda_group', $bindings)
+            ->with(['project:id,name', 'personnel:id,full_name,photo_path'])
+            ->where('work_items.personnel_id', (int) $viewer->getKey());
+
+        $this->applyRange($query, $today, $today->copy()->addDay());
+
+        $start = array_search($from, self::AGENDA_GROUPS, true);
+
+        if (is_int($start) && $start > 0) {
+            $query->whereRaw($groupSql.' >= ?', [...$bindings, $start]);
+        }
+
+        // Grup ifadesi once: onceki gunden tamamlanan kart "Bugün" grubunda kalir.
+        return $query
+            ->orderByRaw($groupSql, $bindings)
+            ->orderBy('work_items.work_on')
+            ->orderBy('work_items.work_at')
+            ->orderBy('work_items.id');
+    }
+
+    /**
+     * Sekme ve istatistik sayilari (D-146), yalniz kisinin kendi kartlari (D-147).
+     *
+     * @return array{overdue: int, today: int, tomorrow: int}
+     */
+    public function agendaCounts(Personnel $viewer): array
+    {
+        $today = self::today();
+        [$groupSql, $bindings] = $this->agendaGroupSql($today);
+
+        $query = WorkItem::query()->where('work_items.personnel_id', (int) $viewer->getKey());
+        $this->applyRange($query, $today, $today->copy()->addDay());
+
+        $rows = $query
+            ->selectRaw($groupSql.' as agenda_group, count(*) as aggregate', $bindings)
+            ->groupBy('agenda_group')
+            ->pluck('aggregate', 'agenda_group');
+
+        return [
+            'overdue' => (int) ($rows[0] ?? 0),
+            'today' => (int) ($rows[1] ?? 0),
+            'tomorrow' => (int) ($rows[2] ?? 0),
+        ];
+    }
+
+    /**
+     * Grup ifadesi: onceki gunden devreden acik kart 0, bugunun ve bugun
+     * tamamlanan kartlar 1, yarinin kartlari 2.
+     *
+     * @return array{0: string, 1: list<string>}
+     */
+    private function agendaGroupSql(Carbon $today): array
+    {
+        $day = $today->format('Y-m-d');
+        $open = WorkItemStatus::openValues();
+        $marks = implode(', ', array_fill(0, count($open), '?'));
+
+        return [
+            "(CASE WHEN work_items.work_on < ? AND work_items.status IN ({$marks}) THEN 0 WHEN work_items.work_on <= ? THEN 1 ELSE 2 END)",
+            [$day, ...$open, $day],
+        ];
+    }
+
     /**
      * Verilen projelerden bu kisinin yonettikleri (D-119): proje yoneticisi
      * kendi projesinin butun kartlarini gorur.

@@ -12,12 +12,17 @@ use App\Policies\Concerns\ResolvesInterimRoles;
 use App\Query\Report\ReportQueries;
 
 /**
- * Rapor (D-86): her aktif personel rapor yazar; raporu yazar, inceleyen,
- * yazarin yoneticileri (gizli degilse) ve yetkili gorur. Gizli raporlar
- * (kisi hakkinda degerlendirme) konu personele gosterilmez; konu personelin
- * yoneticileri, yazar, inceleyen ve `ViewConfidential:Report` izni gorur.
- * Yazar taslagi duzenler, gonderir, inceleme baslamadan geri ceker, taslagi
- * siler; inceleyen onaylar / revizyon ister / reddeder.
+ * Rapor (D-86): her aktif personel rapor yazar. Gizli raporlar (kisi hakkinda
+ * degerlendirme) konu personele gosterilmez. Yazar taslagi duzenler, gonderir,
+ * inceleme baslamadan geri ceker, taslagi siler; inceleyen onaylar / revizyon
+ * ister / reddeder.
+ *
+ * Gorunurluk (D-147, 30 Eylul 2026 kullanici karari): raporu yalniz yazari,
+ * inceleyeni, yazarin amirleri (ekibi; gizli raporda konu personelin amirleri),
+ * hakkinda yazilan kisi (gizli degilse) ve ust yonetim (Yonetim kurulu baskani,
+ * Idari mudur) gorur. Tam yetkili rol, denetci ya da Shield izni baska
+ * personelin / departmanin raporunu gostermez; ListReports ve
+ * ReportQueries::applyVisible ayni kurali uygular.
  */
 final class ReportPolicy
 {
@@ -34,18 +39,15 @@ final class ReportPolicy
             return false;
         }
 
-        if ($this->isAuthor($personnel, $record) || $this->isReviewer($personnel, $record) || $this->hasFullAccess($personnel)) {
+        if ($this->isAuthor($personnel, $record) || $this->isReviewer($personnel, $record) || $this->isExecutive($personnel)) {
             return true;
         }
 
         if ($record->is_confidential) {
-            return $this->permits($personnel, 'viewConfidential')
-                || $this->managesSubject($personnel, $record);
+            return $this->managesSubject($personnel, $record);
         }
 
-        return $this->isAuditor($personnel)
-            || $this->permits($personnel, 'view')
-            || $this->managesAuthor($personnel, $record)
+        return $this->managesAuthor($personnel, $record)
             || (int) $record->subject_personnel_id === (int) $personnel->getKey();
     }
 
@@ -54,10 +56,10 @@ final class ReportPolicy
         return $personnel->isActive();
     }
 
+    /** Taslagi yalniz yazari duzenler (D-147: baskasinin raporu acilmaz). */
     public function update(Personnel $personnel, Report $record): bool
     {
-        return $record->status->isEditable()
-            && ($this->isAuthor($personnel, $record) || $this->hasFullAccess($personnel));
+        return $record->status->isEditable() && $this->isAuthor($personnel, $record);
     }
 
     public function submit(Personnel $personnel, Report $record): bool
@@ -70,7 +72,7 @@ final class ReportPolicy
     {
         return $record->status === ReportStatus::Submitted
             && $record->reviewed_at === null
-            && ($this->isAuthor($personnel, $record) || $this->hasFullAccess($personnel));
+            && $this->isAuthor($personnel, $record);
     }
 
     /**
@@ -84,9 +86,11 @@ final class ReportPolicy
             return false;
         }
 
+        // Iletebilen raporu gorebilmelidir: inceleyen, ust yonetim ya da
+        // inceleme izni olan yazarin amiri (D-147).
         return $this->isReviewer($personnel, $record)
-            || $this->hasFullAccess($personnel)
-            || $this->permits($personnel, 'review');
+            || $this->isExecutive($personnel)
+            || ($this->permits($personnel, 'review') && $this->managesAuthor($personnel, $record));
     }
 
     /**
@@ -105,13 +109,15 @@ final class ReportPolicy
 
         $needsReview = ($record->template()?->reviewMode() ?? ReportReviewMode::None) !== ReportReviewMode::None;
 
-        return $needsReview && ($this->hasFullAccess($personnel) || $this->permits($personnel, 'review'));
+        return $needsReview && (
+            $this->isExecutive($personnel)
+            || ($this->permits($personnel, 'review') && $this->managesAuthor($personnel, $record))
+        );
     }
 
     public function delete(Personnel $personnel, Report $record): bool
     {
-        return $record->status === ReportStatus::Draft
-            && ($this->isAuthor($personnel, $record) || $this->hasFullAccess($personnel));
+        return $record->status === ReportStatus::Draft && $this->isAuthor($personnel, $record);
     }
 
     /** IK gorusu taslagini yazma yetkisi (Shield: AuthorHrEvaluation:Report). */
@@ -120,7 +126,11 @@ final class ReportPolicy
         return $this->hasFullAccess($personnel) || $this->permits($personnel, 'authorHrEvaluation');
     }
 
-    /** Gizli raporlari (kisi degerlendirmeleri) gorme yetkisi. */
+    /**
+     * Shield izni olarak duruyor; D-147'den beri gizli rapor gorunurlugu
+     * vermez (gizli raporu yazar, inceleyen, konu personelin amiri ve ust
+     * yonetim gorur).
+     */
     public function viewConfidential(Personnel $personnel): bool
     {
         return $this->hasFullAccess($personnel) || $this->permits($personnel, 'viewConfidential');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
 /**
@@ -27,5 +28,20 @@ final class DisplayTime
     public static function format(?CarbonInterface $value, string $format = 'd.m.Y H:i', string $empty = '-'): string
     {
         return $value === null ? $empty : $value->copy()->timezone(self::zone())->format($format);
+    }
+
+    /** Kurum saatinde bugunun basi. */
+    public static function today(): CarbonImmutable
+    {
+        return CarbonImmutable::now(self::zone())->startOfDay();
+    }
+
+    /**
+     * Takvim gununun bugune uzakligi (gecmis icin negatif). Tarih kolonu
+     * verilir; saatli deger once kurum saatine cevrilmelidir.
+     */
+    public static function daysFromToday(CarbonInterface $day): int
+    {
+        return (int) round(self::today()->diffInDays(CarbonImmutable::parse($day->format('Y-m-d'), self::zone()), false));
     }
 }

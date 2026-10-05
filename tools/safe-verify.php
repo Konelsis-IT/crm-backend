@@ -348,6 +348,66 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
     }
 }
 
+// 7. Button colour standard (D-148, user decision 2026-09-30) -------------------
+// Kaydet / onay yesil, Iptal / Kapat gul kirmizisi, Duzenle turuncu, Yeni
+// zumrut yesili, Goruntule mavi. Kural App\Filament\Support\ActionColors ile
+// tek noktadan uygulanir; Olustur / Duzenle sayfalarinin alt dugmeleri
+// HasColoredFormActions ile boyanir (Filament Iptal'i sayfada gri kurar).
+if (! str_contains($provider, 'ActionColors::register()')) {
+    $failures[] = 'Button colours: app/Providers/AppServiceProvider.php must call ActionColors::register() (save green, cancel rose, edit orange, create emerald).';
+}
+
+// Dolu dugmelerde yazi beyaz (D-149): Filament'in dugme rengi bileseni
+// WhiteTextButtonComponent'e baglanir (acik tonlu renkte zemin koyulasir).
+if (! str_contains($provider, 'WhiteTextButtonComponent::class')) {
+    $failures[] = 'Button colours: app/Providers/AppServiceProvider.php must bind ButtonComponent to WhiteTextButtonComponent (filled buttons always carry white text).';
+}
+
+foreach (phpFiles($root.'/app/Providers/Filament') as $file) {
+    $source = (string) file_get_contents($file);
+
+    if (str_contains($source, '->colors([') && ! str_contains($source, 'ActionColors::panelColors()')) {
+        $failures[] = sprintf('Button colours: %s registers panel colours without ActionColors::panelColors(); the orange / emerald / rose button tones must exist on every panel.', relative($root, $file));
+    }
+}
+
+foreach (phpFiles($root.'/app/Filament') as $file) {
+    $source = (string) file_get_contents($file);
+
+    if (preg_match('/^(?:final\s+|abstract\s+)?class\s+\w+\s+extends\s+(?:EditRecord|CreateRecord)\b/m', $source) === 1 && ! str_contains($source, 'use HasColoredFormActions;')) {
+        $failures[] = sprintf('Button colours: %s is a create/edit page without HasColoredFormActions; its Kaydet / Oluştur button must be green and İptal rose.', relative($root, $file));
+    }
+}
+
+// 8. Feature versions (D-151, user decision 2026-10-02) ---------------------------
+// Kod canliya dogrudan gider; yeni ozellik surumu yayinlanana kadar gorunmez.
+// Bu yuzden katalogdaki her ozelligin tanim satiri bir surum tasimalidir
+// ([ad, aciklama, karar, surum]); surumsuz ozellik hemen canliya acilirdi.
+$featureSource = (string) @file_get_contents($root.'/app/Enums/Platform/Feature.php');
+preg_match_all('/^\s*case\s+([A-Za-z]+)\s*=/m', $featureSource, $featureCases);
+$definitionPart = (string) substr($featureSource, (int) strpos($featureSource, 'private function definition(): array'));
+preg_match_all("/^\\s*self::([A-Za-z]+) => \\[.*, '(\\d+\\.\\d+(?:\\.\\d+)?)'\\],\\r?$/m", $definitionPart, $versionedFeatures);
+$unversioned = array_diff($featureCases[1], $versionedFeatures[1]);
+
+if ($featureCases[1] === [] || $unversioned !== []) {
+    $failures[] = sprintf('Feature versions: App\Enums\Platform\Feature cases without a release version in definition() [name, description, decision, version]: %s.', $unversioned === [] ? '(catalog not found)' : implode(', ', $unversioned));
+}
+
+// Sira gelen guncelleme (D-152): hicbir ozellik Feature::NEXT_RELEASE'ten buyuk surum tasiyamaz.
+if (preg_match("/const NEXT_RELEASE = '(\\d+\\.\\d+(?:\\.\\d+)?)';/", $featureSource, $nextRelease) !== 1) {
+    $failures[] = 'Feature versions: App\Enums\Platform\Feature must declare NEXT_RELEASE (the upcoming release every new holdable feature uses).';
+} else {
+    foreach ($versionedFeatures[1] as $index => $case) {
+        if (version_compare($versionedFeatures[2][$index], $nextRelease[1], '>')) {
+            $failures[] = sprintf('Feature versions: Feature::%s has version %s, above NEXT_RELEASE %s.', $case, $versionedFeatures[2][$index], $nextRelease[1]);
+        }
+    }
+}
+
+if (! str_contains((string) @file_get_contents($root.'/app/Services/Platform/SchemaReadiness.php'), "'B42'")) {
+    $failures[] = 'Feature versions: SchemaReadiness must keep the B42 signature (features.version + feature_releases).';
+}
+
 // Report ------------------------------------------------------------------------
 fwrite(STDOUT, sprintf("Konelsis safe verification: %d PHP files linted.%s", $linted, PHP_EOL));
 

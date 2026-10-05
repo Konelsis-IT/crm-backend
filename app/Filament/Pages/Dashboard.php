@@ -16,6 +16,11 @@ use App\Models\Personnel\Personnel;
 use App\Query\Authorization\RoleQueries;
 use App\Query\Personnel\OrganizationQueries;
 use App\Query\Personnel\PersonnelQueries;
+use App\Filament\Widgets\AnnouncementsWidget;
+use App\Filament\Widgets\DashboardStatsWidget;
+use App\Filament\Widgets\MyAlertsWidget;
+use App\Filament\Widgets\MyWorkItemsWidget;
+use App\Filament\Widgets\UpcomingSocialContentsWidget;
 use App\Services\Notification\AnnouncementService;
 use App\Services\Notification\AudienceResolver;
 use App\Services\Platform\SchemaReadiness;
@@ -24,20 +29,32 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Flex;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Genel bakis (D-82; ad D-119): ustte "Bildirim gonder" eylemi — gonderenin izinli oldugu
- * kitleye (ekibi, departman, rol, secili kisiler, herkes) Filament zili
- * bildirimi. Sag ust kullanici menusundeki "Bildirim gonder" de buraya
- * `?bildirim=gonder` ile gelir ve pencereyi dogrudan acar.
+ * Genel bakis (D-82; ad D-119): "Duyuru gonder" eylemi (D-148'e kadar adi
+ * "Bildirim gonder") — gonderenin izinli oldugu kitleye (ekibi, departman, rol,
+ * secili kisiler, herkes) duyuru: Filament zili bildirimi ve Duyurular kutusu.
+ * Sag ust kullanici menusundeki "Duyuru gonder" de buraya `?duyuru=gonder` ile
+ * gelir ve pencereyi dogrudan acar.
+ *
+ * D-146 (30 Eylul 2026 kullanici tasarimi): sayfa 3/4 + 1/4 bolunur. Solda
+ * "Genel bakış" basligi ile ayni satirda Bugün / Geciken / Yaklaşan sayilari
+ * (Filament istatistik gorunumu), altinda "Görevlerim ve işlerim"; sagda
+ * "Duyuru gönder", yaklasan tarihler, duyurular ve sosyal medya. Filament'in
+ * sayfa basligi yerine baslik icerikte cizilir (sayilarla ayni hizada).
  */
 class Dashboard extends BaseDashboard
 {
-    public const SEND_ACTION = 'send_notification';
+    public const SEND_ACTION = 'sendNotification';
 
     public static function getNavigationLabel(): string
     {
@@ -49,28 +66,60 @@ class Dashboard extends BaseDashboard
         return __('app.dashboard.title');
     }
 
+    /** Baslik icerikte, sayilarla ayni satirda (D-146); Filament basligi cizilmez. */
     public function getHeading(): string
     {
-        return __('app.dashboard.title');
+        return '';
     }
 
     public function mount(): void
     {
-        if (request()->query('bildirim') === 'gonder' && $this->canSendNotification()) {
+        // ?duyuru=gonder (D-148); eski ?bildirim=gonder baglantilari da calisir.
+        $wantsSend = request()->query('duyuru') === 'gonder' || request()->query('bildirim') === 'gonder';
+
+        if ($wantsSend && $this->canSendNotification()) {
             $this->mountAction(self::SEND_ACTION);
         }
     }
 
-    /**
-     * @return array<Action>
-     */
-    protected function getHeaderActions(): array
+    public function content(Schema $schema): Schema
     {
-        return [
-            Action::make(self::SEND_ACTION)
+        return $schema->components([
+            Grid::make(['default' => 1, 'lg' => 4])->schema([
+                Group::make([
+                    Flex::make([
+                        // Alt baslik ("Bugün ve yarın yapılacak işlerim") kaldirildi (D-149).
+                        Group::make([
+                            Text::make(__('app.dashboard.title'))->extraAttributes(['class' => 'kc-dash-title']),
+                        ])->grow(false)->extraAttributes(['class' => 'kc-dash-heading']),
+                        Group::make($this->getWidgetsSchemaComponents([DashboardStatsWidget::class])),
+                    ])->from('md')->verticallyAlignCenter(),
+                    ...$this->getWidgetsSchemaComponents([MyWorkItemsWidget::class]),
+                ])->columnSpan(['lg' => 3]),
+                Group::make([
+                    // Dugme ozellikle kapanir; eylem kapanmaz: sag ust menudeki
+                    // "Duyuru gonder" (?duyuru=gonder) pencereyi yine acar.
+                    Actions::make([$this->sendNotificationAction()])
+                        ->fullWidth()
+                        ->visible(fn (): bool => FeatureFlags::enabled(Feature::DashboardSendNotification)),
+                    ...$this->getWidgetsSchemaComponents([
+                        MyAlertsWidget::class,
+                        AnnouncementsWidget::class,
+                        UpcomingSocialContentsWidget::class,
+                    ]),
+                ])->columnSpan(['lg' => 1]),
+            ]),
+        ]);
+    }
+
+    public function sendNotificationAction(): Action
+    {
+        // Turuncu dugme (D-147, 30 Eylul 2026 kullanici istegi; panelde kayitli 'orange').
+        // Pencerenin "Gonder" dugmesi yesil, "Iptal" gul kirmizisi (D-148, ActionColors).
+        return Action::make(self::SEND_ACTION)
                 ->label(__('announcement.actions.send'))
                 ->icon(Heroicon::OutlinedMegaphone)
-                ->color('primary')
+                ->color('orange')
                 ->visible(fn (): bool => $this->canSendNotification())
                 ->modalHeading(__('announcement.actions.send'))
                 ->modalDescription(__('announcement.help.send'))
@@ -155,16 +204,15 @@ class Dashboard extends BaseDashboard
                         ]);
 
                         DomainNotifications::success(__('announcement.messages.sent', ['count' => $announcement->recipient_count]));
+
+                        // Gonderen duyuruyu hemen Duyurular kutusunda gorur; kendisi de
+                        // alicilar arasindaysa (personel degistirme) zil hemen dolar.
+                        $this->dispatch(AnnouncementsWidget::SENT_EVENT);
+                        $this->dispatch('databaseNotificationsSent');
                     } catch (AbstractException $exception) {
                         DomainNotifications::failure($exception);
                     }
-                }),
-        ];
-    }
-
-    public function getColumns(): int | array
-    {
-        return ['default' => 1, 'lg' => 2];
+                });
     }
 
     /**

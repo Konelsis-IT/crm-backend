@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Notification;
 
+use App\Models\Personnel\Personnel;
 use App\Policies\PanelNotificationPolicy;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Notifications\DatabaseNotification;
@@ -38,6 +39,21 @@ class PanelNotification extends DatabaseNotification
         $color = $this->data['iconColor'] ?? $this->data['status'] ?? null;
 
         return is_string($color) && $color !== '' ? $color : 'gray';
+    }
+
+    /** Bildirimin gittigi personel (D-149: sistem hesabinin tablosundaki "Alici"). */
+    public function recipient(): ?Personnel
+    {
+        $notifiable = $this->notifiable;
+
+        return $notifiable instanceof Personnel ? $notifiable : null;
+    }
+
+    /** Bildirim bu kisiye mi gitmis (okundu / okunmadi isaretlemesi yalniz kendi bildiriminde). */
+    public function isFor(Personnel $personnel): bool
+    {
+        return $this->notifiable_type === $personnel->getMorphClass()
+            && (int) $this->notifiable_id === (int) $personnel->getKey();
     }
 
     /** Bildirimin goturdugu sayfa (ilk baglantili eylem); yoksa null. */

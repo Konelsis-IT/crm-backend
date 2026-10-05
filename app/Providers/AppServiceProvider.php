@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Filament\Exports\Jobs\KonelsisExportCompletion;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\TableConventions;
+use App\Filament\Support\WhiteTextButtonComponent;
 use App\Infrastructure\Console\SchemaChangeGuard;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
 use App\Services\Audit\ActorContext;
@@ -21,6 +23,7 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Facades\FilamentTimezone;
+use Filament\Support\View\Components\ButtonComponent;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -44,6 +47,10 @@ class AppServiceProvider extends ServiceProvider
         // Excel disa aktarimi (D-110): dosya dogrudan iner, "dosya hazir"
         // bildirimi yalniz aktarilamayan satir varsa cikar.
         $this->app->bind(ExportCompletion::class, KonelsisExportCompletion::class);
+
+        // Dolu dugmelerde yazi beyaz (D-149): Filament dugme rengini bu bilesenle
+        // hesaplar; turuncu / yesil / zumrut dugmeler koyu tona gecer.
+        $this->app->bind(ButtonComponent::class, WhiteTextButtonComponent::class);
     }
 
     public function boot(): void
@@ -100,5 +107,9 @@ class AppServiceProvider extends ServiceProvider
         // dugmesi yok, satir eylemleri simge + ipucu, bagli kayit tiklanabilir
         // ve simgeli, personel adinda kisi simgesi.
         TableConventions::register();
+
+        // Dugme renkleri (D-148): Kaydet / onay yesil, Iptal / Kapat gul
+        // kirmizisi, Duzenle turuncu, Yeni zumrut yesili, Goruntule mavi.
+        ActionColors::register();
     }
 }

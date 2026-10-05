@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\BusinessCases\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Projects\ProjectResource;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class CreateBusinessCase extends CreateRecord
 {
+    use HasColoredFormActions;
     use HasSaveableWizard;
 
     protected static string $resource = BusinessCaseResource::class;

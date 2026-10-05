@@ -142,6 +142,8 @@ return [
         'not' => 'Not',
         'dosya' => 'Dosya',
         'surum' => 'Sürüm',
+        'onceki_surum' => 'Önceki sürüm',
+        'acilan_ozellikler' => 'Açılan özellikler',
         'sira' => 'Sıra',
         'aciklama' => 'Açıklama',
         'paylasim_baglantilari' => 'Paylaşım bağlantıları',
@@ -181,6 +183,7 @@ return [
 
     // Kayıt türlerinin Türkçe adları
     'subjects' => [
+        'feature_release' => 'Sürüm yayını',
         'work_request' => 'Talep',
         'report' => 'Rapor',
         'report_item' => 'Rapor iş kalemi',
@@ -327,6 +330,7 @@ return [
 
     // Yapılan işlemlerin Türkçe cümleleri
     'actions' => [
+        'feature_release.created' => 'Sürüm canlıda yayınlandı',
         'work_request.approval_requested' => 'Talep onaya gönderildi',
         'work_request.approval_approved' => 'Talep onaylandı',
         'work_request.approval_rejected' => 'Talep onayı reddedildi',

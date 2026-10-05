@@ -8,6 +8,7 @@ use App\Enums\Project\StageInstanceStatus;
 use App\Enums\Project\StageReviewDecision;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ProjectStageInstances\ProjectStageInstanceResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Services\Project\ProjectStageInstanceService;
@@ -35,7 +36,7 @@ class ViewProjectStageInstance extends ViewRecord
                 ->icon(Heroicon::OutlinedArrowPath),
             Action::make('review')
                 ->label(__('project_stage_instance.actions.review'))
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedCheckBadge)
                 ->requiresConfirmation()
                 ->schema(fn (Schema $schema): Schema => $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([

@@ -40,16 +40,18 @@ final class TableConventions
 
     public static function register(): void
     {
+        // Kayit Eloquent modeli degilse (dizi verili tablo, orn. UI Deneme liste
+        // denemeleri) baglanti ve simge kurali uygulanmaz.
         Table::configureUsing(function (Table $table): void {
             $table
-                ->recordUrl(fn (Model $record, Table $table): ?string => self::rowUrl($record, $table))
+                ->recordUrl(fn (mixed $record, Table $table): ?string => $record instanceof Model ? self::rowUrl($record, $table) : null)
                 ->modifyUngroupedRecordActionsUsing(fn (Action $action) => self::recordAction($action));
         });
 
         TextColumn::configureUsing(function (TextColumn $column): void {
             $column
-                ->url(fn (TextColumn $column, ?Model $record): ?string => $record instanceof Model ? self::relatedUrl($record, $column->getName()) : null)
-                ->icon(fn (TextColumn $column, ?Model $record) => $record instanceof Model ? self::icon($record, $column->getName()) : null);
+                ->url(fn (TextColumn $column, mixed $record): ?string => $record instanceof Model ? self::relatedUrl($record, $column->getName()) : null)
+                ->icon(fn (TextColumn $column, mixed $record) => $record instanceof Model ? self::icon($record, $column->getName()) : null);
         });
 
         TextEntry::configureUsing(function (TextEntry $entry): void {

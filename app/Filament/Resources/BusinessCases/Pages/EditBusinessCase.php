@@ -6,8 +6,10 @@ namespace App\Filament\Resources\BusinessCases\Pages;
 
 use App\Enums\Acquisition\OfferType;
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Acquisition\BusinessCase;
@@ -29,6 +31,7 @@ use Livewire\Attributes\Url;
  */
 class EditBusinessCase extends EditRecord
 {
+    use HasColoredFormActions;
     use HasSaveableWizard;
 
     protected static string $resource = BusinessCaseResource::class;
@@ -52,7 +55,7 @@ class EditBusinessCase extends EditRecord
 
         return [
             $wizard->caseStep(),
-            $wizard->proposalTableStep($case, static::class),
+            $wizard->proposalTableStep($case),
             $wizard->projectStep($case),
         ];
     }
@@ -82,6 +85,7 @@ class EditBusinessCase extends EditRecord
             Action::make('save_now')
                 ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
                 ->icon(Heroicon::OutlinedCheck)
+                ->color(ActionColors::SAVE)
                 ->action('save'),
             ViewAction::make(),
         ];

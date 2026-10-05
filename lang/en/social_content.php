@@ -17,6 +17,13 @@ return [
         'empty_description' => 'Contents are listed here when their planned date is approaching.',
         'open' => 'Open',
         'at_time' => 'At :time',
+        'show_all' => 'See all',
+        'when' => [
+            'today' => 'Today :time',
+            'tomorrow' => 'Tomorrow :time',
+            'in_days' => 'in :count days',
+            'missed' => ':count days late',
+        ],
         'columns' => [
             'stage' => 'When',
             'title' => 'Content',

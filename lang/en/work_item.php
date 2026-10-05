@@ -107,6 +107,28 @@ return [
         'empty' => 'Nothing planned for today or tomorrow',
     ],
 
+    'dashboard' => [
+        'heading' => 'My tasks and work',
+        'empty' => 'Nothing overdue, today or tomorrow',
+        'tabs' => [
+            'overdue' => 'Overdue (:count)',
+            'today' => 'Today (:count)',
+            'tomorrow' => 'Tomorrow (:count)',
+        ],
+        'columns' => [
+            'title' => 'Title',
+            'project' => 'Project',
+            'status' => 'Status',
+            'date' => 'Date',
+            'owner' => 'Owner',
+        ],
+        'stats' => [
+            'today' => 'Today',
+            'overdue' => 'Overdue',
+            'upcoming' => 'Upcoming',
+        ],
+    ],
+
     'table' => [
         'date' => 'Date',
         'item' => 'Work item',

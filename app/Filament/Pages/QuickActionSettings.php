@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\QuickActions\QuickAction;
 use App\Filament\Support\QuickActions\QuickActionCatalog;
 use App\Models\Personnel\Personnel;
@@ -112,6 +113,7 @@ class QuickActionSettings extends Page
                     Actions::make([
                         Action::make('save')
                             ->label(__('quick_action.settings.save'))
+                            ->color(ActionColors::SAVE)
                             ->submit('save')
                             ->keyBindings(['mod+s'])
                             ->visible(fn (): bool => SchemaReadiness::hasBatch('B38')),

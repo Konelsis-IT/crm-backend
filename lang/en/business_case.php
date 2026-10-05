@@ -105,10 +105,10 @@ return [
     ],
 
     'help' => [
-        'edit_intro' => 'The edit screen uses the same three steps as the creation wizard. Fields in the first step are saved with "Save"; the proposal table and the conversion apply instantly.',
+        'edit_intro' => 'The edit screen uses the same three steps as the creation wizard. Fields in the first step are saved with "Save"; proposals are managed in the "Proposals" tab below and the conversion applies instantly.',
         'proposal_step' => 'When checked, the first proposal (with its TKLF number) and a draft first version are opened together with the business case, which moves to "Preparing proposal". Version details can be changed later from the proposal.',
         'proposal_title' => 'Leave blank to use the business case title.',
-        'proposal_table' => 'Proposals are opened here; versions, documents and submission are managed in the proposal itself. The business case stage advances automatically when a version goes to review or is submitted.',
+        'proposal_table' => 'The proposals of this potential job are in the "Proposals" tab at the bottom of the page: create, select and edit them there. Versions, documents and submission are managed in the proposal itself; the stage advances automatically when a version goes to review or is submitted.',
         'project_step' => 'Only for won or direct jobs: the proposal version is approved, the business case is walked to "Won", a handoff is opened and accepted, and the project is created with a PRJ code. In the normal flow leave this step empty and use "Convert to project" once the proposal is won.',
         'project_name' => 'Leave blank to use the business case title.',
         'convert_requires_proposal' => 'A proposal must be created before converting to a project.',

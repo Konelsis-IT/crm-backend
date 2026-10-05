@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 use App\Filament\Resources\Projects\RelationManagers\Concerns\OpensFromChecklist;
 use App\Enums\Project\BaselineSource;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ScheduleBaseline;
@@ -133,7 +134,7 @@ class ScheduleBaselinesRelationManager extends RelationManager
                     }),
                 Action::make('approve')
                     ->label(__('schedule_baseline.actions.approve'))
-                    ->color('success')
+                    ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->requiresConfirmation()
                     ->visible(fn (ScheduleBaseline $record): bool => $record->status === \App\Enums\Project\BaselineStatus::Draft)

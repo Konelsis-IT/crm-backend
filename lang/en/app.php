@@ -13,6 +13,11 @@ return [
         'title' => 'Overview',
     ],
 
+    'days' => [
+        'today' => 'Today',
+        'tomorrow' => 'Tomorrow',
+    ],
+
     'nav' => [
         'reports' => 'Reports',
         'analytics' => 'Analytics',

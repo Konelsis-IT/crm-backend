@@ -13,6 +13,11 @@ return [
         'title' => 'Genel bakış',
     ],
 
+    'days' => [
+        'today' => 'Bugün',
+        'tomorrow' => 'Yarın',
+    ],
+
     'nav' => [
         'reports' => 'Raporlar',
         'analytics' => 'Analizler',

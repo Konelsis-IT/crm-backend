@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Projects\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\Projects\Pages\Concerns\OpensChecklistTargets;
 use App\Filament\Resources\Projects\ProjectResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ProjectWizard;
 use App\Models\Project\Project;
@@ -31,6 +33,7 @@ use Livewire\Attributes\Url;
  */
 class EditProject extends EditRecord
 {
+    use HasColoredFormActions;
     use HasSaveableWizard;
     use OpensChecklistTargets;
 
@@ -89,6 +92,7 @@ class EditProject extends EditRecord
             Action::make('save_now')
                 ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
                 ->icon(Heroicon::OutlinedCheck)
+                ->color(ActionColors::SAVE)
                 ->action('save'),
             ViewAction::make()
                 ->label(__('project.actions.open_workspace'))

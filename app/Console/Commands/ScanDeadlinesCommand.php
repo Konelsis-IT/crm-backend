@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\Platform\Feature;
 use App\Services\Audit\ActorContext;
 use App\Services\Notification\DeadlineScanner;
+use App\Services\Platform\FeatureFlags;
 use Illuminate\Console\Command;
 
 /**
@@ -21,6 +23,13 @@ final class ScanDeadlinesCommand extends Command
 
     public function handle(DeadlineScanner $scanner, ActorContext $actor): int
     {
+        // Ozellik kapaliysa (ya da surumu canlida yayinlanmadiysa, D-151) uyari acilmaz.
+        if (! FeatureFlags::enabled(Feature::BusinessAlerts)) {
+            $this->info('Is uyarilari ozelligi kapali; atlandi.');
+
+            return self::SUCCESS;
+        }
+
         $result = $actor->runAsSystem(fn (): array => $scanner->scan());
 
         $this->info(sprintf(

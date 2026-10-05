@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Proposals\Pages;
 
 use App\Enums\Acquisition\OfferStatus;
+use App\Enums\Platform\Feature;
 use App\Filament\Exports\ProposalExporter;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\ExportActions;
 use App\Query\Acquisition\ProposalQueries;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -39,7 +41,8 @@ class ListProposals extends ListRecords
      */
     public function getTabs(): array
     {
-        if (! SchemaReadiness::hasBatch('B29')) {
+        // Durum sekmeleri kendi ozellik anahtariyla kapanabilir (D-147).
+        if (! SchemaReadiness::hasBatch('B29') || ! FeatureFlags::enabled(Feature::ProposalStatusTabs)) {
             return [];
         }
 

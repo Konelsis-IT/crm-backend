@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MeetingPlans\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Party\MeetingPlanService;
@@ -18,6 +19,8 @@ use Illuminate\Validation\ValidationException;
  */
 class CreateMeetingPlan extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = MeetingPlanResource::class;
 
     public const QUERY_DATE = 'tarih';

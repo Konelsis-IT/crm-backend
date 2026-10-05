@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Documents\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Document\DocumentService;
@@ -19,6 +20,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class CreateDocumentRecord extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = DocumentResource::class;
 
     public function getSubheading(): ?string

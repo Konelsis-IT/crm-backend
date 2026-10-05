@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ProjectWorkstreams\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\ProjectWorkstreams\ProjectWorkstreamResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Project\ProjectWorkstreamService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditProjectWorkstream extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ProjectWorkstreamResource::class;
 
     protected function getHeaderActions(): array

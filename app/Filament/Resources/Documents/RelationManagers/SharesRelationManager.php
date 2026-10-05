@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Documents\RelationManagers;
 use App\Filament\Support\RowDetail;
 use App\Enums\Document\DocumentShareStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DocumentWorkspace;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -140,7 +141,7 @@ class SharesRelationManager extends RelationManager
                 Action::make('revoke')
                     ->label(__('document_share.actions.revoke'))
                     ->icon(Heroicon::OutlinedNoSymbol)
-                    ->color('danger')
+                    ->color(ActionColors::CANCEL)
                     ->requiresConfirmation()
                     ->visible(fn (DocumentShare $record): bool => $record->status === DocumentShareStatus::Active)
                     ->action(function (DocumentShare $record): void {

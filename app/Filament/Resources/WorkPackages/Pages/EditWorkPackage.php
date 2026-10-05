@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WorkPackages\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\WorkPackages\WorkPackageResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Project\WorkPackageService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditWorkPackage extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = WorkPackageResource::class;
 
     protected function getHeaderActions(): array

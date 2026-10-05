@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ApprovalRequests\Pages;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ApprovalRequests\ApprovalRequestResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Query\Document\DocumentQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
@@ -44,7 +45,7 @@ class ListApprovalRequests extends ListRecords
             Action::make('open_request')
                 ->label(__('approval_request.actions.create'))
                 ->icon(Heroicon::OutlinedPlusCircle)
-                ->color('primary')
+                ->color(ActionColors::CREATE)
                 ->modalHeading(__('approval_request.actions.create'))
                 ->modalDescription(__('approval_request.help.create'))
                 ->modalWidth(Width::TwoExtraLarge)

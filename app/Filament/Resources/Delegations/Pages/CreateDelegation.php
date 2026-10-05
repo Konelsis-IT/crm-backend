@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Delegations\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Delegations\DelegationResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Approval\DelegationService;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CreateDelegation extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = DelegationResource::class;
 
     protected function handleRecordCreation(array $data): Model

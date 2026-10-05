@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Reports\RelationManagers;
 use App\Enums\Report\ReportSubjectKind;
 use App\Filament\Resources\Reports\Pages\CreateReport;
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Support\ActionColors;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
 use App\Query\Report\ReportQueries;
@@ -78,6 +79,7 @@ class SubjectReportsRelationManager extends RelationManager
                 Action::make('write_report')
                     ->label(__('report.actions.create'))
                     ->icon(Heroicon::OutlinedPlus)
+                    ->color(ActionColors::CREATE)
                     ->visible(fn (): bool => $user instanceof Personnel
                         && $kind !== ReportSubjectKind::None
                         && array_filter(app(ReportTemplateRegistry::class)->forSubject($kind), fn ($template): bool => app(ReportQueries::class)->canAuthorTemplate($template, $user)) !== [])

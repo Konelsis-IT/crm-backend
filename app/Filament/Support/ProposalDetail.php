@@ -12,15 +12,12 @@ use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
-use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Flex;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
-use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
@@ -28,13 +25,11 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Number;
 
 /**
- * Teklif detay sayfasi (22 Eylul 2026 kullanici karari): is dosyasi detay
- * sayfasiyla ayni yapi — kart, asama uyarisi ve "Is dosyasi -> Teklif ->
- * Proje" adimlari (D-112, D-113). Ustte teklif karti ve guncel surum karti yan
- * yana. Teklif sayfanin kendisi oldugu icin 2. adim bostur; 1. adim is
- * dosyasinin ozet karti (sihirbazdaki kart), 3. adim proje / bu teklifle
- * donusum (BusinessCaseWizard::projectStep). Surumler, dokumanlar ve raporlar
- * sayfanin alt listelerindedir.
+ * Teklif detay sayfasi (22 Eylul 2026 kullanici karari, D-112, D-113): ustte
+ * teklif karti ve guncel surum karti yan yana. Potansiyel is / teklif / proje
+ * iliskisi D-143'ten beri "Bu is nerede?" dikey hattinda (DealTrack); eski
+ * "Is akisi" adimlari kaldirildi. Surumler, gorusme notlari, dokumanlar ve
+ * raporlar sayfanin alt listelerindedir.
  */
 final class ProposalDetail
 {
@@ -161,62 +156,6 @@ final class ProposalDetail
                             ->columnSpanFull(),
                     ]),
             ]);
-    }
-
-    /** Adim 1: is dosyasinin ozet karti (sihirbazdaki kartin aynisi) ve baglanti. */
-    public function caseStep(Proposal $proposal): Step
-    {
-        $case = $proposal->businessCase;
-
-        return Step::make(__('business_case.wizard.case'))
-            ->id(BusinessCaseWizard::STEP_CASE)
-            ->description($case === null ? '-' : trim(($case->caseCode()?->formatted_code ?? '').' · '.$case->title, ' ·'))
-            ->icon(Heroicon::OutlinedBriefcase)
-            ->completedIcon(Heroicon::OutlinedBriefcase)
-            ->formWrapper(false)
-            ->schema($case === null ? [] : [
-                app(BusinessCaseWizard::class)->recordCaseSummary('proposal-view', (int) $case->getKey()),
-                Actions::make([
-                    Action::make('open_business_case')
-                        ->label(__('proposal.actions.open_business_case'))
-                        ->icon(Heroicon::OutlinedBriefcase)
-                        ->color('gray')
-                        ->visible(fn (): bool => Gate::allows('view', $case))
-                        ->url(BusinessCaseResource::getUrl('view', ['record' => $case])),
-                ]),
-            ]);
-    }
-
-    /**
-     * Adim 2 (22 Eylul 2026 kullanici karari): bos. Teklifin kendisi sayfanin
-     * ustundeki kart ve guncel surum kartinda; surumler, dokumanlar ve raporlar
-     * alt listelerde.
-     */
-    public function proposalStep(Proposal $proposal): Step
-    {
-        $version = $proposal->currentVersion;
-
-        return Step::make(__('business_case.wizard.proposal'))
-            ->id(BusinessCaseWizard::STEP_PROPOSAL)
-            ->description($version === null ? __('proposal.steps.no_version') : self::versionLine($version))
-            ->icon(Heroicon::OutlinedClipboardDocumentList)
-            ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
-            ->formWrapper(false)
-            ->schema([]);
-    }
-
-    /** Acilacak adim: istenen kimlik, yoksa proje varsa 3, degilse is dosyasi adimi (2. adim bostur). */
-    public function startStep(Proposal $proposal, ?string $requestedId): int
-    {
-        if ($requestedId !== null) {
-            $index = array_search($requestedId, BusinessCaseWizard::STEP_IDS, true);
-
-            if ($index !== false) {
-                return $index + 1;
-            }
-        }
-
-        return $proposal->businessCase?->project !== null ? 3 : 1;
     }
 
     private static function versionLine(ProposalVersion $version): string

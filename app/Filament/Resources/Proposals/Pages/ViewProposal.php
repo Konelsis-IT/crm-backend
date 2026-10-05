@@ -4,34 +4,31 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Proposals\Pages;
 
+use App\Enums\Platform\Feature;
 use App\Filament\Exports\ProposalExporter;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\BusinessCaseWizard;
+use App\Filament\Support\DealTrack;
+use App\Services\Platform\FeatureFlags;
 use App\Filament\Support\ExportActions;
 use App\Filament\Support\ProposalDetail;
 use App\Models\Acquisition\Proposal;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
-use Livewire\Attributes\Url;
 
 /**
- * Teklif detayi (22 Eylul 2026 kullanici karari, D-112, D-113): is dosyasi
- * detay sayfasiyla ayni yapi. Ustte teklif karti ve guncel surum karti yan
- * yana, is dosyasinin asama uyarisi, "Is dosyasi -> Teklif -> Proje" adimlari
- * (2. adim bos; is dosyasi ve proje adimlari ayrintili) ve altta surumler,
- * dokumanlar ve raporlar.
+ * Teklif detayi (22 Eylul 2026 kullanici karari, D-112, D-113): ustte teklif
+ * karti ve guncel surum karti yan yana. D-143 (29 Eylul 2026): eski "Is akisi"
+ * sihirbazi (sayfa Potansiyel is adimiyla aciliyordu) ve ayri durum notu yerine
+ * "Bu is nerede?" dikey hatti (DealTrack): potansiyel is ozet etiketlerle,
+ * "Buradasiniz" bu teklif (durum cumlesi, isin diger teklifleri), proje ya da
+ * acilis kosullari. Altta surumler, gorusme notlari, dokumanlar ve raporlar.
  */
 class ViewProposal extends ViewRecord
 {
     protected static string $resource = ProposalResource::class;
-
-    #[Url]
-    public ?string $step = null;
 
     public function getTitle(): string
     {
@@ -46,15 +43,9 @@ class ViewProposal extends ViewRecord
         /** @var Proposal $proposal */
         $proposal = $this->getRecord();
         $proposal->loadMissing(['businessCase.primaryParty', 'businessCase.project', 'owner', 'currentVersion.preparer']);
-        $case = $proposal->businessCase;
-        $wizard = app(BusinessCaseWizard::class);
         $detail = app(ProposalDetail::class);
-
-        $steps = [$detail->caseStep($proposal), $detail->proposalStep($proposal)];
-
-        if ($case !== null) {
-            $steps[] = $wizard->projectStep($case, $proposal);
-        }
+        // "Bu iş nerede?" kendi ozellik anahtariyla kapanabilir (D-147).
+        $track = FeatureFlags::enabled(Feature::DealTrack) ? app(DealTrack::class)->forProposal($proposal) : null;
 
         return $schema->columns(1)->components([
             Grid::make(['default' => 1, 'xl' => 2])
@@ -63,15 +54,7 @@ class ViewProposal extends ViewRecord
                     $detail->headerCard($proposal),
                     $detail->versionCard($proposal),
                 ]),
-            ...($case !== null ? [$wizard->stageCallout($case)] : []),
-            Section::make(__('business_case.sections.chain'))
-                ->icon(Heroicon::OutlinedArrowLongRight)
-                ->components([
-                    Wizard::make($steps)
-                        ->skippable()
-                        ->startOnStep($detail->startStep($proposal, $this->step))
-                        ->contained(false),
-                ]),
+            ...($track !== null ? [$track] : []),
             $this->getRelationManagersContentComponent(),
         ]);
     }

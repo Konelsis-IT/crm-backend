@@ -6,6 +6,7 @@ namespace App\Services\Platform;
 
 use App\Enums\Platform\Feature;
 use App\Query\Platform\FeatureQueries;
+use App\Query\Platform\FeatureReleaseQueries;
 use Throwable;
 
 /**
@@ -18,11 +19,17 @@ use Throwable;
  *   yazamadiysa) katalogdaki varsayilan durumunu alir.
  * - Tablo katalogla esit degilse ilk okumada PlatformFeatureService esitler;
  *   esitleme basarisiz olursa (ayni anda baska istek yazdi vb.) okuma bozulmaz.
+ * - Surum (B42, D-151): canlida yayin surumu kayitliysa, kendisinin ya da bir
+ *   ustunun surumu ondan buyuk olan ozellik anahtari acik olsa da kapalidir.
+ *   Yayin kaydi yoksa (yerel ortam, ilk yayindan once) surum suzgeci yoktur.
  */
 final class FeatureRegistry
 {
     /** @var array<string, bool>|null */
     private ?array $states = null;
+
+    /** Gecerli yayin surumu; false = henuz okunmadi, null = yayin kaydi yok. */
+    private string | false | null $published = false;
 
     /** @var array<class-string, Feature>|null */
     private static ?array $modelMap = null;
@@ -30,19 +37,42 @@ final class FeatureRegistry
     public function __construct(
         private readonly FeatureQueries $queries,
         private readonly PlatformFeatureService $features,
+        private readonly FeatureReleaseQueries $releases,
     ) {}
 
     public function enabled(Feature $feature): bool
     {
         $states = $this->states();
+        $published = $this->publishedVersion();
 
         for ($current = $feature; $current !== null; $current = $current->parent()) {
             if (! ($states[$current->value] ?? $current->defaultActive())) {
                 return false;
             }
+
+            if ($published !== null && version_compare($current->version(), $published, '>')) {
+                return false;
+            }
         }
 
         return true;
+    }
+
+    /** Canlidaki yayin surumu (D-151); kayit yoksa null. */
+    public function publishedVersion(): ?string
+    {
+        if ($this->published !== false) {
+            return $this->published;
+        }
+
+        try {
+            return $this->published = $this->releases->currentVersion();
+        } catch (Throwable $exception) {
+            // Okunamazsa surum suzgeci uygulanmaz (bugunku davranis); hata gunluge yazilir.
+            report($exception);
+
+            return $this->published = null;
+        }
     }
 
     /**

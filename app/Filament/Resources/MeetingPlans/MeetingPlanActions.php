@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MeetingPlans;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Party\MeetingPlan;
@@ -33,7 +34,7 @@ final class MeetingPlanActions
         return Action::make('complete')
             ->label(__('meeting_plan.actions.complete'))
             ->icon(Heroicon::OutlinedCheckCircle)
-            ->color('success')
+            ->color(ActionColors::SAVE)
             ->visible(fn (MeetingPlan $record): bool => Gate::allows('complete', $record))
             ->modalHeading(__('meeting_plan.actions.complete'))
             ->modalDescription(__('meeting_plan.help.complete'))
@@ -97,7 +98,7 @@ final class MeetingPlanActions
         return Action::make('cancel')
             ->label(__('meeting_plan.actions.cancel'))
             ->icon(Heroicon::OutlinedXCircle)
-            ->color('danger')
+            ->color(ActionColors::CANCEL)
             ->visible(fn (MeetingPlan $record): bool => Gate::allows('cancel', $record))
             ->modalHeading(__('meeting_plan.actions.cancel'))
             ->modalDescription(__('meeting_plan.help.cancel'))

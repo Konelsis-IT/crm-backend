@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WorkItems\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Report\WorkItemService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 /** Isler > Yeni is: kayit WorkItemService'ten gecer (varsayilanlar, gecis kurali, hareket). */
 class CreateWorkItem extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = WorkItemResource::class;
 
     protected function handleRecordCreation(array $data): Model

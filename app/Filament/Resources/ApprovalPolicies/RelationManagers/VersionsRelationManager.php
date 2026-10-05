@@ -8,6 +8,7 @@ use App\Enums\Approval\PolicyVersionStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ApprovalPolicyVersions\ApprovalPolicyVersionResource;
 use App\Filament\Resources\ApprovalPolicyVersions\Schemas\PolicyVersionForm;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Approval\ApprovalPolicyVersion;
 use App\Services\Approval\ApprovalPolicyVersionService;
@@ -116,7 +117,7 @@ class VersionsRelationManager extends RelationManager
                     }),
                 Action::make('publish')
                     ->label(__('approval_policy_version.actions.publish'))
-                    ->color('success')
+                    ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedRocketLaunch)
                     ->requiresConfirmation()
                     ->modalDescription(__('approval_policy_version.help.publish'))

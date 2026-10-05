@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MeetingPlans\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Party\MeetingPlanService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 /** Yalniz planli gorusme duzenlenir (MeetingPlanPolicy::update). */
 class EditMeetingPlan extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = MeetingPlanResource::class;
 
     protected function handleRecordUpdate(Model $record, array $data): Model

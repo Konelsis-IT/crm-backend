@@ -6,10 +6,13 @@ return [
     'singular' => 'Notification',
     'plural' => 'All notifications',
     'help' => 'Every notification sent to you, older ones included. Clicking a row opens the related page and marks the notification as read.',
+    'help_all' => 'Notifications sent to all personnel, older ones included. The "Recipient" column shows who received each one; pick a person in the filter. Clicking a row opens the related page; someone else\'s notification is not marked as read.',
     'open_all' => 'See all notifications',
     'empty' => 'You have no notifications yet',
+    'empty_all' => 'No notifications yet',
     'fields' => [
         'status' => 'Status',
+        'recipient' => 'Recipient',
         'title' => 'Title',
         'body' => 'Content',
         'created_at' => 'Date',
@@ -20,6 +23,7 @@ return [
     ],
     'filters' => [
         'read' => 'Read status',
+        'recipient' => 'Recipient',
     ],
     'tabs' => [
         'all' => 'All',

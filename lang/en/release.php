@@ -18,6 +18,7 @@ return [
 
     'version' => 'Version :version — :date',
     'latest' => 'Latest release',
+    'published_version' => 'Version :version',
 
     'groups' => [
         'features' => 'New features',

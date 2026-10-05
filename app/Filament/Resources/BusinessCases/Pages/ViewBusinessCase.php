@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\Pages;
 
+use App\Enums\Platform\Feature;
 use App\Filament\Exports\BusinessCaseExporter;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\BusinessCaseWizard;
+use App\Filament\Support\DealTrack;
+use App\Services\Platform\FeatureFlags;
 use App\Filament\Support\ExportActions;
 use App\Models\Acquisition\BusinessCase;
 use App\Services\Platform\SchemaReadiness;
@@ -16,24 +19,22 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Livewire\Attributes\Url;
 
 /**
- * Is dosyasi goruntuleme (D-72, D-113): kart ve ayrinti karti yan yana, asama
- * uyarisi, "Is dosyasi -> Teklif -> Proje" adimlari (1. adim bos; teklif ve
- * proje adimlari ayrintili) ve altta diger alt listeler (firsat, aktiviteler,
- * ihale ilanlari, sozlesmeler, Operasyona devirler).
+ * Potansiyel is goruntuleme (D-72, D-113): kart ve ayrinti karti yan yana.
+ * D-143 (29 Eylul 2026): eski "Is akisi" sihirbazi ve ayri durum notu yerine
+ * "Bu is nerede?" dikey hatti (DealTrack): "Buradasiniz" bu potansiyel is
+ * (durum, siradaki durumlar, sonuc, son gorusme), teklifleri kisa satirlarla ve
+ * "Teklif olustur", proje ya da acilis kosullari. Tekliflerin tam tablosu
+ * (secili yap, duzenle) altta "Teklifler" sekmesinde; diger alt listeler
+ * (gorusme notlari, firsat, aktiviteler, ihale ilanlari, sozlesmeler,
+ * Operasyona devirler) yaninda.
  */
 class ViewBusinessCase extends ViewRecord
 {
     protected static string $resource = BusinessCaseResource::class;
-
-    #[Url]
-    public ?string $step = null;
 
     public function getTitle(): string
     {
@@ -49,7 +50,7 @@ class ViewBusinessCase extends ViewRecord
         $case = $this->getRecord();
         $wizard = app(BusinessCaseWizard::class);
 
-        // B29: kart rozetleri ve ayrinti adimi kapsamlari tek yuklemeyle okur.
+        // B29: kart rozetleri ve ayrinti karti kapsamlari tek yuklemeyle okur.
         if (SchemaReadiness::hasBatch('B29')) {
             $case->loadMissing('scopes.scopeDocument.revisions.files.fileObject');
         }
@@ -63,32 +64,10 @@ class ViewBusinessCase extends ViewRecord
                     $wizard->headerCard($case),
                     $wizard->detailsCard($case),
                 ]),
-            $wizard->stageCallout($case),
-            // 1. adim bos (is dosyasi zaten ustte); teklif ve proje adimlari ayrintilidir.
-            Section::make(__('business_case.sections.chain'))
-                ->icon(Heroicon::OutlinedArrowLongRight)
-                ->components([
-                    Wizard::make([
-                        $wizard->caseViewStep(),
-                        $wizard->proposalTableStep($case, static::class),
-                        $wizard->projectStep($case),
-                    ])
-                        ->skippable()
-                        ->startOnStep($this->startStep($case))
-                        ->contained(false),
-                ]),
+            // "Bu iş nerede?" kendi ozellik anahtariyla kapanabilir (D-147).
+            ...(FeatureFlags::enabled(Feature::DealTrack) ? [app(DealTrack::class)->forBusinessCase($case)] : []),
             $this->getRelationManagersContentComponent(),
         ]);
-    }
-
-    /** Acilacak adim: istenen, yoksa proje varsa 3, degilse teklif adimi (1. adim bostur). */
-    private function startStep(BusinessCase $case): int
-    {
-        if ($this->step !== null && in_array($this->step, BusinessCaseWizard::STEP_IDS, true)) {
-            return (int) array_search($this->step, BusinessCaseWizard::STEP_IDS, true) + 1;
-        }
-
-        return $case->project !== null ? 3 : 2;
     }
 
     protected function getHeaderActions(): array

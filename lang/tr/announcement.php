@@ -5,7 +5,7 @@ return [
     'plural' => 'Duyurular',
 
     'actions' => [
-        'send' => 'Bildirim gönder',
+        'send' => 'Duyuru gönder',
         'submit' => 'Gönder',
         'open' => 'Aç',
         'read' => 'Oku',
@@ -28,8 +28,8 @@ return [
     ],
 
     'help' => [
-        'send' => 'Seçtiğiniz kitledeki herkesin bildirim ziline düşer. Yalnız yetkiniz olan kitleler listelenir.',
-        'action_url' => 'Uygulama içi bir sayfa bağlantısı ekleyebilirsiniz; bildirimde "Aç" düğmesi olarak görünür.',
+        'send' => 'Duyuru seçtiğiniz kitledeki herkesin bildirim ziline düşer ve Genel bakıştaki Duyurular bölümünde görünür. Yalnız yetkiniz olan kitleler listelenir.',
+        'action_url' => 'Uygulama içi bir sayfa bağlantısı ekleyebilirsiniz; zil bildiriminde "Aç", Duyurular bölümünde "Bağlantıyı aç" olarak görünür.',
     ],
 
     'audiences' => [
@@ -45,12 +45,14 @@ return [
     ],
 
     'messages' => [
-        'sent' => 'Bildirim :count kişiye gönderildi.',
+        'sent' => 'Duyuru :count kişiye gönderildi.',
     ],
 
     'widget' => [
         'heading' => 'Duyurular',
-        'description' => 'Gönderilen bildirim ve duyurular; en yeni üstte.',
+        'description' => 'Gönderilen duyurular; en yeni üstte.',
         'empty' => 'Henüz duyuru yok.',
+        'open_link' => 'Bağlantıyı aç',
+        'show_all' => 'Tümünü gör',
     ],
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
 use App\Enums\WorkRequest\RequestTargetKind;
@@ -27,6 +28,8 @@ use Illuminate\Validation\ValidationException;
  */
 class CreateWorkRequest extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = WorkRequestResource::class;
 
     public const QUERY_SOURCE_MESSAGE = 'kaynak_mesaj';

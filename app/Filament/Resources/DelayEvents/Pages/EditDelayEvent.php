@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\DelayEvents\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\DelayEvents\DelayEventResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Project\DelayEventService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditDelayEvent extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = DelayEventResource::class;
 
     protected function getHeaderActions(): array

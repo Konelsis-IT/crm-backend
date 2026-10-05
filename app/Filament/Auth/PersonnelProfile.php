@@ -6,12 +6,14 @@ namespace App\Filament\Auth;
 
 use App\Exceptions\Personnel\EmailAlreadyInUseException;
 use App\Exceptions\StaleRecordException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\PersonnelFormData;
 use App\Models\Personnel\Personnel;
 use App\Query\Personnel\PersonnelQueries;
 use App\Services\Personnel\PersonnelService;
+use Filament\Actions\Action;
 use Filament\Auth\Pages\EditProfile;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -44,6 +46,18 @@ class PersonnelProfile extends EditProfile
     public function getTitle(): string
     {
         return __('personnel.profile.title');
+    }
+
+    /** Dugme renkleri (D-148): Kaydet yesil. */
+    protected function getSaveFormAction(): Action
+    {
+        return ActionColors::save(parent::getSaveFormAction());
+    }
+
+    /** Dugme renkleri (D-148): Iptal gul kirmizisi. */
+    protected function getCancelFormAction(): Action
+    {
+        return ActionColors::cancel(parent::getCancelFormAction());
     }
 
     public function form(Schema $schema): Schema

@@ -61,7 +61,7 @@ return [
     ],
 
     'notification' => [
-        'notification_scope_not_allowed' => 'Bu kitleye bildirim gönderme yetkiniz yok.',
+        'notification_scope_not_allowed' => 'Bu kitleye duyuru gönderme yetkiniz yok.',
         'no_recipients' => 'Seçilen kitlede size ek olarak aktif bir alıcı bulunamadı.',
         'alert_not_open' => 'Bu uyarı artık açık değil.',
     ],
@@ -124,5 +124,10 @@ return [
         'body_too_large' => 'Metin çok uzun. İzin verilen en büyük boyut: :max',
         'urgent_no_recipient' => 'Acil onay bildirimi gönderilebilecek bir onaycı bulunamadı. Yöneticinize doğrudan haber verin.',
         'content_published' => 'Paylaşılmış içerik değiştirilemez. Düzenlemek için önce paylaşımı geri alın.',
+    ],
+    'platform' => [
+        'invalid_release_version' => 'Sürüm numarası ":version" geçersiz. "2.4" ya da "2.4.1" biçiminde yazın.',
+        'release_already_published' => ':version zaten canlıdaki yayın sürümü.',
+        'release_downgrade' => ':version, canlıdaki :current sürümünden eski. Geri almak istiyorsanız komutu --geri-al seçeneğiyle çalıştırın; :current ile gelen özellikler yeniden kapanır.',
     ],
 ];

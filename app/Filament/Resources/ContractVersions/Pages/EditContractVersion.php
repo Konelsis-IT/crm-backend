@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ContractVersions\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\ContractVersions\ContractVersionResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Acquisition\ContractVersionService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditContractVersion extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ContractVersionResource::class;
 
     protected function getHeaderActions(): array

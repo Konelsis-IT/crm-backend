@@ -17,8 +17,9 @@ use Illuminate\Support\Carbon;
  *
  * Yerelde `features` tablosunda acip kapattiginiz durumlar
  * database/seeders/data/features.php dosyasina yazilir; canlida FeatureSeeder
- * bu dosyayi uygular. Dosyadaki her satir `kod => acik mi` ve yaninda
- * ozelligin adidir; elle de duzenlenebilir.
+ * bu dosyayi yalniz yeni eklenen ozelliklerin ilk durumu icin uygular (D-151:
+ * canlida acilip kapatilmis ozelliklere dokunmaz). Dosyadaki her satir
+ * `kod => acik mi` ve yaninda ozelligin adidir; elle de duzenlenebilir.
  *
  * Komut yalniz okur ve dosya yazar; tek istisna, tablo katalogla esit
  * degilse once eksik satirlari ekler (uygulamanin ilk istekte yaptigi

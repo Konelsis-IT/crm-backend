@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Personnel\Pages;
 
 use App\Exceptions\Personnel\EmailAlreadyInUseException;
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Personnel\Actions\PersonnelStatusActions;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Support\DomainNotifications;
@@ -21,6 +22,8 @@ use Illuminate\Validation\ValidationException;
 
 class EditPersonnelRecord extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = PersonnelResource::class;
 
     protected function getHeaderActions(): array

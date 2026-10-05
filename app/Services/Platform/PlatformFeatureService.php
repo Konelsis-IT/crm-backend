@@ -14,9 +14,12 @@ use Illuminate\Support\Collection;
  *
  * - Katalogda olup tabloda olmayan ozellik, varsayilan durumuyla eklenir
  *   (Feature::defaultActive(): surum notlari kapali, digerleri acik).
- * - Ad, aciklama, karar, ust ozellik ve sira katalogdan guncellenir.
- * - `is_active` degerine ASLA dokunulmaz: o deger yalniz veritabanindan
- *   degistirilir (kullanici karari). Katalogdan kalkan satir silinmez.
+ * - Ad, aciklama, karar, surum (B42, D-151), ust ozellik ve sira katalogdan
+ *   guncellenir.
+ * - Esitleme `is_active` degerine ASLA dokunmaz: o deger veritabanindan
+ *   degistirilir (kullanici karari). Tek istisna surum yayinidir (D-153):
+ *   `konelsis:release` yayinlanan surumle gelen kapali ozellikleri acar
+ *   (openReleased). Katalogdan kalkan satir silinmez.
  *
  * Katalog esitlemesi bir is kaydi degildir (PersonnelQuickActionService ile
  * ayni gerekce): Personel Hareketleri'ne satir yazilmaz. Durumu degistiren
@@ -123,22 +126,77 @@ final class PlatformFeatureService extends AbstractService
     }
 
     /**
-     * Katalogdan gelen tanim kolonlari (is_active haric).
+     * Yayinlanan guncellemeyle gelen ozellikler (D-153): surumu ($after, $upTo]
+     * araliginda olanlar. Ilk yayinda ($after null) yalniz $upTo surumundekiler;
+     * daha eski surumlerde canlida kapatilmis ozelliklere dokunulmaz.
+     *
+     * @return list<Feature>
+     */
+    public static function releasedBetween(?string $after, string $upTo): array
+    {
+        return array_values(array_filter(
+            Feature::cases(),
+            static fn (Feature $feature): bool => $after === null
+                ? version_compare($feature->version(), $upTo, '==')
+                : version_compare($feature->version(), $after, '>') && version_compare($feature->version(), $upTo, '<='),
+        ));
+    }
+
+    /**
+     * Sira gelen guncellemenin ozelliklerini acar (D-153, 3 Ekim 2026 kullanici
+     * karari: "sirasi gelen guncellemeyle acilacak"): yayinlanan araliktaki
+     * kapali satirlar `is_active = 1` olur. Yalniz FeatureReleaseService cagirir;
+     * hareket kaydini yayin yazar.
+     *
+     * @return list<string> acilan ozellik kodlari
+     */
+    public function openReleased(?string $after, string $upTo): array
+    {
+        $codes = array_map(static fn (Feature $feature): string => $feature->value, self::releasedBetween($after, $upTo));
+
+        if ($codes === []) {
+            return [];
+        }
+
+        return $this->transactions->run(function () use ($codes): array {
+            $rows = PlatformFeature::query()
+                ->whereIn('code', $codes)
+                ->where('is_active', false)
+                ->get();
+
+            foreach ($rows as $row) {
+                $row->is_active = true;
+                $row->save();
+            }
+
+            return $rows->map(fn (PlatformFeature $row): string => (string) $row->code)->values()->all();
+        });
+    }
+
+    /**
+     * Katalogdan gelen tanim kolonlari (is_active haric). Surum kolonu B42 ile
+     * gelir (D-151); uygulanmadan once yazilmaz.
      *
      * @param  array<string, int>  $ids
-     * @return array{parent_id: int|null, name: string, description: string, decision_ref: string|null, sort_order: int}
+     * @return array<string, int|string|null>
      */
     private function expected(Feature $feature, array $ids): array
     {
         $parent = $feature->parent();
 
-        return [
+        $columns = [
             'parent_id' => $parent === null ? null : ($ids[$parent->value] ?? null),
             'name' => $feature->title(),
             'description' => $feature->description(),
             'decision_ref' => $feature->decision(),
             'sort_order' => $feature->sortOrder(),
         ];
+
+        if (SchemaReadiness::hasBatch('B42')) {
+            $columns['version'] = $feature->version();
+        }
+
+        return $columns;
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Filament\Support;
 
 use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\BusinessCriticality;
+use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\BusinessSourceKind;
 use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\OfferType;
@@ -15,7 +16,6 @@ use App\Enums\Document\DocumentRevisionFileRole;
 use App\Enums\Reference\ClassificationCode;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
-use App\Filament\Resources\BusinessCases\RelationManagers\ProposalsRelationManager;
 use App\Filament\Resources\OperationHandoffs\OperationHandoffResource;
 use App\Filament\Resources\Parties\PartyResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
@@ -54,7 +54,6 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Flex;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
-use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
@@ -433,21 +432,6 @@ final class BusinessCaseWizard
     }
 
     /**
-     * Goruntuleme sayfasinin 1. adimi (22 Eylul 2026 kullanici karari): bos.
-     * Is dosyasinin kendisi sayfanin ustundeki kart ve ayrinti kartindadir.
-     */
-    public function caseViewStep(): Step
-    {
-        return Step::make(__('business_case.wizard.case'))
-            ->id(self::STEP_CASE)
-            ->description(__('business_case.wizard.case_description'))
-            ->icon(Heroicon::OutlinedBriefcase)
-            ->completedIcon(Heroicon::OutlinedBriefcase)
-            ->formWrapper(false)
-            ->schema([]);
-    }
-
-    /**
      * Is dosyasi ayrintilari: kartta olmayan ve olusturmada girilen her sey
      * (aciklama, kaynak, teklif tipi, proje kategorisi, ulke, para birimi,
      * tuzel kisilik, gizlilik sinifi, olusturulma, proje kapsamlari). Sayfanin
@@ -521,8 +505,12 @@ final class BusinessCaseWizard
             ]);
     }
 
-    /** Adim 2 (duzenleme/goruntuleme): teklifler tablosu. */
-    public function proposalTableStep(BusinessCase $case, string $pageClass): Step
+    /**
+     * Adim 2 (duzenleme): tekliflerin ozeti. Tam tablo (ac, duzenle, secili
+     * yap, teklif olustur) sayfanin altindaki "Teklifler" sekmesindedir
+     * (D-143); burada ayrica gomulu tablo yok, iki kez gorunmesin (29 Eylul 2026).
+     */
+    public function proposalTableStep(BusinessCase $case): Step
     {
         $count = $case->proposals()->count();
         $selected = $case->selectedOrLatestProposal();
@@ -541,11 +529,6 @@ final class BusinessCaseWizard
                     ->info(),
                 // Olusturmada 2. adimda girilenler (22 Eylul 2026): secili teklifin ozeti.
                 ...($selected !== null ? [$this->recordProposalSummary($selected)] : []),
-                Livewire::make(ProposalsRelationManager::class, [
-                    'ownerRecord' => $case,
-                    'pageClass' => $pageClass,
-                    ...ProposalsRelationManager::getDefaultProperties(),
-                ])->key('rm-proposals'),
             ]);
     }
 
@@ -657,12 +640,14 @@ final class BusinessCaseWizard
         return Action::make($name)
             ->label(__('project.actions.convert'))
             ->icon(Heroicon::OutlinedRocketLaunch)
-            ->color('success')
+            ->color(ActionColors::SAVE)
             ->modalHeading(__('project.actions.convert'))
             ->modalDescription(__('project.help.convert_intro'))
             ->modalSubmitActionLabel(__('project.actions.convert'))
+            // Kaybedilen / iptal edilen isten projeye gecis yok (durum gecisi izin vermez, D-143).
             ->visible(fn (): bool => Gate::allows('update', $case)
                 && $case->project()->doesntExist()
+                && ! in_array($case->outcome, [BusinessOutcome::Lost, BusinessOutcome::Cancelled], true)
                 && $target() !== null)
             ->schema(function () use ($target): array {
                 $proposal = $target();
@@ -776,30 +761,6 @@ final class BusinessCaseWizard
                 Flex::make($badges),
                 Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])->components($entries),
             ]);
-    }
-
-    /** "Su an hangi asamada / sirada ne var" uyarisi. */
-    public function stageCallout(BusinessCase $case): Component
-    {
-        $stage = $case->acquisition_stage;
-        $next = array_values(array_filter(
-            $stage->allowedTargets(),
-            static fn (AcquisitionStage $target): bool => ! in_array($target, [AcquisitionStage::Lost, AcquisitionStage::Cancelled], true),
-        ));
-
-        $description = $next === []
-            ? __('business_case.help.stage_final')
-            : __('business_case.help.stage_next', ['stages' => implode(' / ', array_map(static fn (AcquisitionStage $s): string => $s->getLabel(), $next))]);
-
-        $callout = Callout::make(__('business_case.help.stage_current', ['stage' => $stage->getLabel()]))
-            ->description($description)
-            ->icon(Heroicon::OutlinedFlag);
-
-        return match ($stage) {
-            AcquisitionStage::Won, AcquisitionStage::HandoverAccepted => $callout->success(),
-            AcquisitionStage::Lost, AcquisitionStage::Cancelled => $callout->danger(),
-            default => $callout->info(),
-        };
     }
 
     /** Acilacak adim: istenen kimlik, yoksa zincirde gelinen nokta. */
@@ -1413,15 +1374,6 @@ final class BusinessCaseWizard
         ];
 
         return $this->proposalSummarySection(static fn (): Closure => static fn (string $path): mixed => data_get($data, $path));
-    }
-
-    /**
-     * Kayitli bir is dosyasinin ozet karti (teklif sayfasi, 22 Eylul 2026):
-     * sihirbazdaki kartin aynisi, kaydin degerleriyle.
-     */
-    public function recordCaseSummary(string $stage, int $caseId): Component
-    {
-        return $this->caseSummarySection($stage, fn (): Closure => fn (string $path): mixed => data_get($this->caseSummaryData($caseId), $path));
     }
 
     /**

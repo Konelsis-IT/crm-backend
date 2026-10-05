@@ -577,6 +577,7 @@ final class ProjectWizard
         return Action::make($name)
             ->label(__('project.actions.edit_site'))
             ->icon(Heroicon::OutlinedMapPin)
+            ->color(ActionColors::EDIT)
             ->modalHeading(__('project.actions.edit_site'))
             ->modalDescription(__('project.help.site_address'))
             ->modalSubmitActionLabel(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
@@ -595,6 +596,7 @@ final class ProjectWizard
         return Action::make($name)
             ->label(__('project.actions.edit_dates'))
             ->icon(Heroicon::OutlinedCalendarDays)
+            ->color(ActionColors::EDIT)
             ->modalHeading(__('project.actions.edit_dates'))
             ->modalSubmitActionLabel(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
             ->visible(fn (): bool => Gate::allows('update', $project))
@@ -730,7 +732,7 @@ final class ProjectWizard
                 ->tooltip(__('project.actions.quick_add'))
                 ->icon(Heroicon::OutlinedPlus)
                 ->iconButton()
-                ->color('primary')
+                ->color(ActionColors::CREATE)
                 // Sayfa hedef tabloyu (gerekirse) hemen kurar ve tabloya olusturma olayini yollar.
                 ->action(function (LivewireComponent $livewire) use ($key): void {
                     if (method_exists($livewire, 'checklistCreate')) {

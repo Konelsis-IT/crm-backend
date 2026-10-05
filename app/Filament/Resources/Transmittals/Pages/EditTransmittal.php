@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Transmittals\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Transmittals\TransmittalResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Document\TransmittalService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditTransmittal extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = TransmittalResource::class;
 
     protected function getHeaderActions(): array

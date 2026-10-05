@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TenderNotices\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\TenderNotices\TenderNoticeResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Acquisition\TenderNoticeService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditTenderNotice extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = TenderNoticeResource::class;
 
     protected function getHeaderActions(): array

@@ -54,5 +54,9 @@ return [
         'description' => 'Open alerts you own; critical ones first.',
         'description_all' => 'All open alerts; critical ones first.',
         'empty' => 'No open alerts.',
+        'days_left' => ':count days left',
+        'days_over' => ':count days overdue',
+        'show_all' => 'See all',
+        'show_less' => 'Show less',
     ],
 ];

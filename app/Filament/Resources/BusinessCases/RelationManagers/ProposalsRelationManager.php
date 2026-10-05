@@ -7,6 +7,7 @@ namespace App\Filament\Resources\BusinessCases\RelationManagers;
 use App\Enums\Acquisition\OfferStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\Proposal;
@@ -123,7 +124,7 @@ class ProposalsRelationManager extends RelationManager
                     }),
                 Action::make('select')
                     ->label(__('proposal.actions.select'))
-                    ->color('success')
+                    ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->requiresConfirmation()
                     ->visible(fn (Proposal $record): bool => ! $record->is_selected)

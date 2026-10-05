@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\Platform\Feature;
 use App\Services\Approval\ApprovalRequestService;
 use App\Services\Audit\ActorContext;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Console\Command;
 
@@ -24,6 +26,13 @@ final class ExpireApprovalsCommand extends Command
     {
         if (! SchemaReadiness::hasBatch('B07')) {
             $this->info('B07 uygulanmadi; atlandi.');
+
+            return self::SUCCESS;
+        }
+
+        // Ozellik kapaliysa (ya da surumu canlida yayinlanmadiysa, D-151) islem yapilmaz.
+        if (! FeatureFlags::enabled(Feature::Approvals)) {
+            $this->info('Onay ozelligi kapali; atlandi.');
 
             return self::SUCCESS;
         }

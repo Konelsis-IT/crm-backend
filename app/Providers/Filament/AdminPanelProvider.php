@@ -15,6 +15,7 @@ use App\Filament\Pages\Work\WorkBoard;
 use App\Filament\Resources\MeetingPlans\Pages\MeetingPlanCalendar;
 use App\Filament\Resources\Personnel\Pages\ViewPersonnelRecord;
 use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatController;
@@ -46,6 +47,7 @@ use App\Services\Authorization\ImpersonationService;
 use App\Services\Notification\AudienceResolver;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
+use App\Services\Platform\FeatureRegistry;
 use App\Services\Platform\SchemaReadiness;
 use App\Filament\Support\ReleaseNotesSchema;
 use App\Filament\Support\TopbarShortcuts;
@@ -99,6 +101,10 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Red,
                 // Is panosu "Bekleniyor" durumu (B36, D-115).
                 'violet' => Color::Violet,
+                // Dugme tonlari (D-147 / D-148, ActionColors): turuncu (Duzenle,
+                // "Duyuru gonder", "Yaklasan"; warning sariya kaciyor), zumrut
+                // yesili ("Yeni"), gul kirmizisi (Iptal / Kapat).
+                ...ActionColors::panelColors(),
             ])
             // Icerik alani tam genislik (17 Eylul 2026 kullanici karari): Filament
             // varsayilani 7xl (1280px) icerigi ortalayip genis ekranda kenarlarda
@@ -215,11 +221,12 @@ class AdminPanelProvider extends PanelProvider
                     ->schema(fn (Schema $schema): Schema => $schema
                         ->columns(1)
                         ->components(ReleaseNotesSchema::components())),
-                // Bildirim/duyuru gonderme (D-82): panoya gider ve pencereyi acar.
+                // Duyuru gonderme (D-82; D-148'e kadar adi "Bildirim gonder"): panoya
+                // gider ve pencereyi acar.
                 'send_notification' => Action::make('send_notification')
                     ->label(fn (): string => __('announcement.actions.send'))
                     ->icon(Heroicon::OutlinedMegaphone)
-                    ->url(fn (): string => Dashboard::getUrl(['bildirim' => 'gonder']))
+                    ->url(fn (): string => Dashboard::getUrl(['duyuru' => 'gonder']))
                     ->visible(fn (): bool => FeatureFlags::enabled(Feature::Announcements)
                         && SchemaReadiness::hasBatch('B11A')
                         && auth()->user() instanceof Personnel
@@ -241,6 +248,12 @@ class AdminPanelProvider extends PanelProvider
                     ->icon(Heroicon::OutlinedBuildingOffice2)
                     ->disabled()
                     ->visible(fn (): bool => SchemaReadiness::hasBatch('B03')),
+                // Canlidaki yayin surumu (D-151); yayin kaydi olmayan ortamda (yerel) gorunmez.
+                'published_version' => Action::make('published_version')
+                    ->label(fn (): string => __('release.published_version', ['version' => (string) app(FeatureRegistry::class)->publishedVersion()]))
+                    ->icon(Heroicon::OutlinedTag)
+                    ->disabled()
+                    ->visible(fn (): bool => app(FeatureRegistry::class)->publishedVersion() !== null),
             ])
             // Bildirimler Filament'in kendi bildirim arayuzunde gosterilir.
             ->databaseNotifications(fn (): bool => FeatureFlags::enabled(Feature::Notifications)

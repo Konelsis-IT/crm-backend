@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ApprovalPolicyVersions\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\ApprovalPolicyVersions\ApprovalPolicyVersionResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Approval\ApprovalPolicyVersionService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditApprovalPolicyVersion extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ApprovalPolicyVersionResource::class;
 
     protected function getHeaderActions(): array

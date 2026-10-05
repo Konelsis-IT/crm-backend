@@ -18,6 +18,7 @@ return [
 
     'version' => 'Sürüm :version — :date',
     'latest' => 'En son yayın',
+    'published_version' => 'Sürüm :version',
 
     'groups' => [
         'features' => 'Yeni özellikler',

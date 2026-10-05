@@ -8,6 +8,9 @@ use App\Models\Personnel\Competency;
 use App\Models\Personnel\Personnel;
 use App\Models\Personnel\PersonnelCompetency;
 use App\Models\Personnel\Position;
+use App\Models\Personnel\PositionAssignment;
+use App\Support\DisplayTime;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Personel ekranlarinin okuma sorgulari.
@@ -76,6 +79,28 @@ final class PersonnelQueries
         $name = Personnel::query()->whereKey($id)->value('full_name');
 
         return $name === null ? null : (string) $name;
+    }
+
+    /**
+     * Ust cubuk profil alanindaki ikinci satir (D-145): kisinin gecerli asil
+     * pozisyonunun adi; pozisyonu yoksa is unvani, o da yoksa null.
+     */
+    public function menuTitle(Personnel $personnel): ?string
+    {
+        $today = DisplayTime::today()->format('Y-m-d');
+
+        $title = PositionAssignment::query()
+            ->join('positions', 'positions.id', '=', 'position_assignments.position_id')
+            ->where('position_assignments.personnel_id', (int) $personnel->getKey())
+            ->where(fn (Builder $query) => $query->whereNull('position_assignments.valid_from')->orWhere('position_assignments.valid_from', '<=', $today))
+            ->where(fn (Builder $query) => $query->whereNull('position_assignments.valid_until')->orWhere('position_assignments.valid_until', '>=', $today))
+            ->orderByDesc('position_assignments.is_primary')
+            ->orderBy('position_assignments.id')
+            ->value('positions.title');
+
+        $title = filled($title) ? (string) $title : (string) $personnel->job_title;
+
+        return trim($title) !== '' ? trim($title) : null;
     }
 
     /**

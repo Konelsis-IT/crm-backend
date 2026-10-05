@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Proposals\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\BusinessCaseWizard;
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class CreateProposal extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ProposalResource::class;
 
     /** Teklif bu istekte projeye donusturulduyse proje calisma alanina gecilir. */

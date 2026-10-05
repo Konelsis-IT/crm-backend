@@ -331,10 +331,10 @@ return [
     | kapsamlari. Anahtar bicimi PermissionKey::custom(): notify:team -> Notify:Team.
     */
     'custom_permissions' => [
-        'notify:team' => 'Ekibine (kendisine bağlı personele) bildirim gönder',
-        'notify:department' => 'Departmana bildirim gönder',
-        'notify:role' => 'Bir role bildirim gönder',
-        'notify:personnel' => 'Seçili personele bildirim gönder',
+        'notify:team' => 'Ekibine (kendisine bağlı personele) duyuru gönder',
+        'notify:department' => 'Departmana duyuru gönder',
+        'notify:role' => 'Bir role duyuru gönder',
+        'notify:personnel' => 'Seçili personele duyuru gönder',
         'notify:all' => 'Genel duyuru yayımla (herkese)',
     ],
 

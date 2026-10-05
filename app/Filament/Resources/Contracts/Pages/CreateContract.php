@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Contracts\Pages;
 
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Contracts\ContractResource;
 use App\Services\Acquisition\ContractService;
 use Filament\Resources\Pages\CreateRecord;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CreateContract extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ContractResource::class;
 
     protected function handleRecordCreation(array $data): Model

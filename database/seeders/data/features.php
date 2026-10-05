@@ -2,32 +2,44 @@
 
 // Ozellik anahtarlari (D-128): FeatureSeeder bu dosyadaki durumlari canlidaki
 // `features` tablosuna uygular. true = acik, false = kapali. Katalog sirasi.
-// Uretim: php artisan konelsis:features:export (25.09.2026 16:32, yerel veritabani).
+// Uretim: php artisan konelsis:features:export (30.09.2026 16:16, yerel veritabani).
+// 3 Ekim 2026 (D-153): canlidaki durum kullanicinin listesinden islendi; 31 ozellik
+// canlida kapali ve surumu 2.4 (sira gelen guncellemeyle acilir).
 // Elle de duzenlenebilir; katalogda olmayan kod atlanir.
 
 return [
+    'dashboard' => true, // Genel bakış
+    'dashboard.stats' => true, // Genel bakış: Sayılar
+    'dashboard.agenda' => true, // Genel bakış: Görevlerim ve işlerim
+    'dashboard.send_notification' => true, // Genel bakış: Duyuru gönder düğmesi
+    'dashboard.alerts' => true, // Genel bakış: Yaklaşan tarihler ve uyarılar
+    'dashboard.announcements' => true, // Genel bakış: Duyurular
+    'dashboard.social' => true, // Genel bakış: Yaklaşan sosyal medya paylaşımları
     'personnel' => true, // Personel ve organizasyon
     'personnel.org_units' => true, // Organizasyon birimleri
     'personnel.positions' => true, // Pozisyonlar
     'personnel.competencies' => true, // Yetkinlikler
     'personnel.certifications' => true, // Sertifikalar
     'personnel.trainings' => true, // Eğitimler
-    'personnel.activities' => true, // Personel Hareketleri
+    'personnel.activities' => false, // Personel Hareketleri
     'approvals' => true, // Onay motoru
     'approvals.requests' => true, // Onaylar ekranı
     'approvals.policies' => true, // Onay politikaları
-    'approvals.delegations' => true, // Vekaletler
+    'approvals.delegations' => false, // Vekaletler
     'documents' => true, // Doküman yönetimi
-    'documents.legal_holds' => true, // Hukuki tutmalar
-    'documents.transmittals' => true, // Teslim tutanakları
+    'documents.legal_holds' => false, // Hukuki tutmalar
+    'documents.transmittals' => false, // Teslim tutanakları
     'documents.types' => true, // Doküman tipleri
     'documents.templates' => true, // Doküman şablonları
     'acquisition' => true, // İş alım
     'acquisition.parties' => true, // Taraflar
     'acquisition.associations' => true, // Dernekler
-    'acquisition.business_cases' => true, // İş dosyaları
+    'acquisition.business_cases' => true, // Potansiyel işler
+    'acquisition.business_cases.meeting_notes' => true, // Potansiyel iş ve teklif görüşme notları
+    'acquisition.deal_track' => true, // Bu iş nerede?
     'acquisition.proposals' => true, // Teklifler
-    'acquisition.contracts' => true, // Sözleşmeler
+    'acquisition.proposals.status_tabs' => true, // Teklifler: Durum sekmeleri
+    'acquisition.contracts' => false, // Sözleşmeler
     'acquisition.operation_handoffs' => true, // Operasyona devirler
     'acquisition.tenders' => true, // İhaleler
     'acquisition.meeting_plans' => true, // Görüşme planı
@@ -36,10 +48,10 @@ return [
     'projects.supply_items' => true, // Tedarik kalemleri
     'projects.stage_gates' => true, // Proje onay kapıları
     'projects.catalogs' => true, // Proje ayarları
-    'projects.catalogs.components' => true, // Proje bileşenleri
+    'projects.catalogs.components' => false, // Proje bileşenleri
     'projects.catalogs.operation_groups' => true, // Operasyon grupları
-    'projects.catalogs.focus_expectations' => true, // Odak beklentileri
-    'projects.catalogs.stage_templates' => true, // Onay kapısı şablonları
+    'projects.catalogs.focus_expectations' => false, // Odak beklentileri
+    'projects.catalogs.stage_templates' => false, // Onay kapısı şablonları
     'work_requests' => true, // Talepler
     'work_requests.thread' => true, // Talep yazışması (talep sohbeti)
     'reports' => true, // Raporlar
@@ -47,35 +59,35 @@ return [
     'work.items' => true, // İşler ekranı
     'work.board' => true, // İş panosu
     'work.control_matrix' => true, // Kontrol matrisi
-    'work.control_matrix.personnel_tab' => true, // Personel kartı: Haftalık kontrol sekmesi
-    'work.control_matrix.attention_card' => true, // Personel kartı: Dikkat kartı
-    'work.analysis' => true, // İş raporları
-    'work.analysis.dashboard' => true, // İş raporları: Analiz panosu
-    'work.analysis.duration' => true, // İş raporları: Süre raporu
+    'work.control_matrix.personnel_tab' => false, // Personel kartı: Haftalık kontrol sekmesi
+    'work.control_matrix.attention_card' => false, // Personel kartı: Dikkat kartı
+    'work.analysis' => false, // İş raporları
+    'work.analysis.dashboard' => false, // İş raporları: Analiz panosu
+    'work.analysis.duration' => false, // İş raporları: Süre raporu
     'social_media' => true, // Sosyal medya
-    'social_media.feed' => true, // Sosyal medya: Akış sekmesi
+    'social_media.feed' => false, // Sosyal medya: Akış sekmesi
     'social_media.feed.watch' => true, // Sosyal medya: Akış > Rakipler ve kurumlar kutusu
-    'social_media.feed.storage' => true, // Sosyal medya: Akış > Depolama kutusu
-    'social_media.plan' => true, // Sosyal medya: Plan sekmesi
+    'social_media.feed.storage' => false, // Sosyal medya: Akış > Depolama kutusu
+    'social_media.plan' => false, // Sosyal medya: Plan sekmesi
     'social_media.insights' => true, // Sosyal medya: İlham ve Rakipler sekmesi
-    'social_media.analytics' => true, // Sosyal medya: Analiz sekmesi
-    'social_media.blog' => true, // Sosyal medya: Blog yazma
-    'social_media.executive_profiles' => true, // Sosyal medya: Yönetici hesabı (Hüseyin Güneş)
+    'social_media.analytics' => false, // Sosyal medya: Analiz sekmesi
+    'social_media.blog' => false, // Sosyal medya: Blog yazma
+    'social_media.executive_profiles' => false, // Sosyal medya: Yönetici hesabı (Hüseyin Güneş)
     'chat' => true, // Kurum içi sohbet
-    'chat.groups' => true, // Sohbet: Grup açma
-    'chat.work_requests' => true, // Sohbet: Mesajdan talep açma
+    'chat.groups' => false, // Sohbet: Grup açma
+    'chat.work_requests' => false, // Sohbet: Mesajdan talep açma
     'notifications' => true, // Bildirimler
-    'notifications.inbox' => true, // Tüm bildirimler tablosu
+    'notifications.inbox' => false, // Tüm bildirimler tablosu
     'notifications.announcements' => true, // Duyurular
     'notifications.business_alerts' => true, // İş uyarıları
-    'notifications.desktop_alerts' => true, // Masaüstü uyarıları
-    'notifications.desktop_alerts.sound' => true, // Bildirim sesi
-    'notifications.desktop_alerts.windows' => true, // Windows bildirimi
+    'notifications.desktop_alerts' => false, // Masaüstü uyarıları
+    'notifications.desktop_alerts.sound' => false, // Bildirim sesi
+    'notifications.desktop_alerts.windows' => false, // Windows bildirimi
     'tools' => true, // Genel araçlar
-    'tools.quick_actions' => true, // Hızlı işlemler
-    'tools.exports' => true, // Dışa aktarım
-    'tools.exports.excel' => true, // Excel indirme
-    'tools.exports.pdf' => true, // PDF indirme
+    'tools.quick_actions' => false, // Hızlı işlemler
+    'tools.exports' => false, // Dışa aktarım
+    'tools.exports.excel' => false, // Excel indirme
+    'tools.exports.pdf' => false, // PDF indirme
     'tools.release_notes' => false, // Sürüm notları
-    'tools.ui_gallery' => true, // UI Deneme
+    'tools.ui_gallery' => false, // UI Deneme
 ];

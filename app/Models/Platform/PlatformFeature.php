@@ -13,10 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Ozellik anahtari (B39, D-128). Katalog App\Enums\Platform\Feature'dadir;
  * bu satir ozelligin veritabanindaki acik / kapali durumunu tasir.
- * `is_active` yalniz veritabanindan degistirilir.
+ * `is_active` yalniz veritabanindan degistirilir. `version` (B42, D-151)
+ * ozelligin yayinlandigi surumdur; katalogdan yazilir.
  */
 #[Table('features')]
-#[Fillable(['code', 'parent_id', 'name', 'description', 'decision_ref', 'sort_order', 'is_active'])]
+#[Fillable(['code', 'parent_id', 'name', 'description', 'decision_ref', 'version', 'sort_order', 'is_active'])]
 class PlatformFeature extends Model
 {
     use HasAuditColumns;

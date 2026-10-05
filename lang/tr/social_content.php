@@ -17,6 +17,13 @@ return [
         'empty_description' => 'Planlanan tarihi yaklaşan içerik olduğunda burada listelenir.',
         'open' => 'Aç',
         'at_time' => 'Saat :time',
+        'show_all' => 'Tümünü gör',
+        'when' => [
+            'today' => 'Bugün :time',
+            'tomorrow' => 'Yarın :time',
+            'in_days' => ':count gün sonra',
+            'missed' => ':count gün gecikti',
+        ],
         'columns' => [
             'stage' => 'Ne zaman',
             'title' => 'İçerik',

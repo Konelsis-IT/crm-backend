@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Projects\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\DomainNotifications;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class CreateProject extends CreateRecord
 {
+    use HasColoredFormActions;
     use HasSaveableWizard;
 
     protected static string $resource = ProjectResource::class;

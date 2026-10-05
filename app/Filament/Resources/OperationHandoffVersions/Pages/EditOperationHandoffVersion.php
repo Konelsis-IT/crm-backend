@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\OperationHandoffVersions\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\OperationHandoffVersions\OperationHandoffVersionResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Acquisition\OperationHandoffVersionService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditOperationHandoffVersion extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = OperationHandoffVersionResource::class;
 
     protected function getHeaderActions(): array

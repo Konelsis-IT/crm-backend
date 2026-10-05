@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\Platform\Feature;
 use App\Services\Audit\ActorContext;
 use App\Services\Party\MeetingReminderScanner;
+use App\Services\Platform\FeatureFlags;
 use Illuminate\Console\Command;
 
 /**
@@ -22,6 +24,13 @@ final class RemindMeetingPlansCommand extends Command
 
     public function handle(MeetingReminderScanner $scanner, ActorContext $actor): int
     {
+        // Ozellik kapaliysa (ya da surumu canlida yayinlanmadiysa, D-151) hatirlatma gitmez.
+        if (! FeatureFlags::enabled(Feature::MeetingPlans)) {
+            $this->info('Gorusme plani ozelligi kapali; atlandi.');
+
+            return self::SUCCESS;
+        }
+
         $result = $actor->runAsSystem(fn (): array => $scanner->scan());
 
         $this->info(sprintf(

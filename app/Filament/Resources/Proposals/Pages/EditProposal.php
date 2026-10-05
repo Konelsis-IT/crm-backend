@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Proposals\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Acquisition\ProposalService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditProposal extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ProposalResource::class;
 
     protected function getHeaderActions(): array

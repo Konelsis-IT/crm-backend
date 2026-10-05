@@ -105,10 +105,10 @@ return [
     ],
 
     'help' => [
-        'edit_intro' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı üç adımı kullanır. İlk adımdaki alanlar "Kaydet" ile kaydedilir; teklif tablosu ve projeye dönüşüm anında uygulanır.',
+        'edit_intro' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı üç adımı kullanır. İlk adımdaki alanlar "Kaydet" ile kaydedilir; teklifler alttaki "Teklifler" sekmesinde yönetilir, projeye dönüşüm anında uygulanır.',
         'proposal_step' => 'İşaretliyse potansiyel işle birlikte ilk teklif (kendi TKLF numarasıyla) ve taslak ilk sürümü açılır; potansiyel iş "Teklif hazırlanıyor" durumuna geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
         'proposal_title' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
-        'proposal_table' => 'Teklifler burada açılır; sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir. Sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
+        'proposal_table' => 'Bu potansiyel işin teklifleri sayfanın altındaki "Teklifler" sekmesinde: yeni teklif, seçili yapma ve düzenleme oradan. Sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir; sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
         'project_step' => 'Yalnız kazanılmış ya da doğrudan yapılacak işler için: teklif sürümü onaylanır, potansiyel iş "Kazanıldı" durumuna yürütülür, Operasyona devir kaydı açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Normal akışta bu adımı boş bırakın; teklif kazanıldığında "Projeye dönüştür" ile yapılır.',
         'project_name' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
         'convert_requires_proposal' => 'Projeye dönüştürmek için önce teklif oluşturulmalıdır.',

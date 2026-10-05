@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\LegalHolds\Pages;
 
 use App\Exceptions\CodeAlreadyInUseException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\LegalHolds\LegalHoldResource;
 use App\Services\Document\LegalHoldService;
 use Filament\Resources\Pages\CreateRecord;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class CreateLegalHold extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = LegalHoldResource::class;
 
     protected function handleRecordCreation(array $data): Model

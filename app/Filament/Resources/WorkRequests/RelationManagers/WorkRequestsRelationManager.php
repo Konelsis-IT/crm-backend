@@ -6,6 +6,7 @@ namespace App\Filament\Resources\WorkRequests\RelationManagers;
 
 use App\Filament\Resources\WorkRequests\Pages\CreateWorkRequest;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
+use App\Filament\Support\ActionColors;
 use App\Models\Party\Party;
 use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
@@ -61,6 +62,7 @@ abstract class WorkRequestsRelationManager extends RelationManager
                 Action::make('open_request')
                     ->label(__('work_request.actions.create'))
                     ->icon(Heroicon::OutlinedPlus)
+                    ->color(ActionColors::CREATE)
                     ->visible(fn (): bool => static::$allowsCreate
                         && self::prefillParams($owner) !== []
                         && auth()->user()?->can('create', WorkRequest::class))

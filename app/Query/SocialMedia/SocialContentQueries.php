@@ -358,7 +358,7 @@ final class SocialContentQueries
      * Pano listesi (widget): yaklasan ve yeni geciken plan adaylari. Sorumlu
      * personel ve tam yetkili hepsini, digerleri yalniz kendi icerigini gorur.
      */
-    public function upcomingFor(Personnel $viewer): Builder
+    public function upcomingFor(Personnel $viewer, ?int $limit = null): Builder
     {
         $query = $this->upcomingWindow(
             SocialContent::query()->with(['profile', 'platforms', 'createdBy']),
@@ -372,7 +372,10 @@ final class SocialContentQueries
             $query->where('created_by_personnel_id', $viewerId);
         }
 
-        return $query->orderBy('planned_on')->orderBy('planned_time')->orderBy('id');
+        $query->orderBy('planned_on')->orderBy('planned_time')->orderBy('id');
+
+        // Genel bakis (D-146) yalniz ilk birkac paylasimi gosterir.
+        return $limit !== null ? $query->limit($limit) : $query;
     }
 
     /** Kisinin pano listesine girecek kendi icerigi var mi? */

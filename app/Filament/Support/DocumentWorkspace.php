@@ -376,7 +376,7 @@ final class DocumentWorkspace
         return Action::make($name)
             ->label(__('document.actions.new_revision'))
             ->icon(Heroicon::OutlinedDocumentPlus)
-            ->color('primary')
+            ->color(ActionColors::CREATE)
             ->visible(fn (): bool => Gate::allows('update', $document))
             ->modalHeading(__('document.actions.new_revision'))
             ->modalDescription(__('document.help.new_revision'))

@@ -7,6 +7,7 @@ namespace App\Filament\Resources\DepartmentHandoffVersions\Pages;
 use App\Enums\Acquisition\ReviewDecision;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\DepartmentHandoffVersions\DepartmentHandoffVersionResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -25,7 +26,7 @@ class ViewDepartmentHandoffVersion extends ViewRecord
             EditAction::make(),
             Action::make('submit')
                 ->label(__('department_handoff_version.actions.submit'))
-                ->color('primary')
+                ->color(ActionColors::SEND)
                 ->icon(Heroicon::OutlinedPaperAirplane)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => $this->getRecord()->status === \App\Enums\Acquisition\HandoffVersionStatus::Draft)
@@ -40,7 +41,7 @@ class ViewDepartmentHandoffVersion extends ViewRecord
                 }),
             Action::make('review')
                 ->label(__('department_handoff_version.actions.review'))
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedCheckBadge)
                 ->requiresConfirmation()
                 ->schema([

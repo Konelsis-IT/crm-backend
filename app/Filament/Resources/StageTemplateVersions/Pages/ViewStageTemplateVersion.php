@@ -6,6 +6,7 @@ namespace App\Filament\Resources\StageTemplateVersions\Pages;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\StageTemplateVersions\StageTemplateVersionResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -22,7 +23,7 @@ class ViewStageTemplateVersion extends ViewRecord
             EditAction::make(),
             Action::make('publish')
                 ->label(__('stage_template_version.actions.publish'))
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => $this->getRecord()->status === \App\Enums\Project\StageTemplateVersionStatus::Draft)

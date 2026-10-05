@@ -61,7 +61,7 @@ return [
 
     'help' => [
         'forward' => 'The report goes to the manager you pick, waits for their decision and they get a notification. The previous decision stays in the history.',
-        'list' => 'My reports: reports I wrote. Review inbox: reports sent to me. My team: reports of my subordinates and department.',
+        'list' => 'My reports: reports I wrote. Review inbox: reports sent to me. My team (only for people with staff): reports of the people under me. Other people\'s reports are not shown.',
         'report' => 'Choose the report template first; it determines the fields and the layout.',
         'title' => 'Leave empty to generate it from the template name, related record and period.',
         'answers' => 'These fields belong to the selected template.',

@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Delegations\Pages;
 use App\Enums\Approval\DelegationStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Delegations\DelegationResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Approval\Delegation;
@@ -59,7 +60,7 @@ class ViewDelegation extends ViewRecord
             Action::make('revoke')
                 ->label(__('delegation.actions.revoke'))
                 ->icon(Heroicon::OutlinedNoSymbol)
-                ->color('danger')
+                ->color(ActionColors::CANCEL)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => Gate::allows('update', $this->getRecord())
                     && in_array($this->getRecord()->status, [DelegationStatus::Pending, DelegationStatus::Active], true))

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\OperationHandoffs\Pages;
 
 use App\Exceptions\DuplicateRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use Illuminate\Validation\ValidationException;
 use App\Filament\Resources\OperationHandoffs\OperationHandoffResource;
 use App\Services\Acquisition\OperationHandoffService;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CreateOperationHandoff extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = OperationHandoffResource::class;
 
     protected function handleRecordCreation(array $data): Model

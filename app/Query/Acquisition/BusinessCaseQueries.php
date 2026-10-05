@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Query\Acquisition;
 
 use App\Models\Acquisition\BusinessCase;
+use App\Models\Party\PartyMeetingNote;
+use App\Services\Platform\SchemaReadiness;
+use Illuminate\Support\Carbon;
 
 /** Is dosyasi okuma sorgulari. */
 final class BusinessCaseQueries
@@ -26,6 +29,21 @@ final class BusinessCaseQueries
             ->find($id);
 
         return $case;
+    }
+
+    /**
+     * Potansiyel isin son gorusme tarihi ("Bu is nerede?" etiketi, D-143);
+     * gorusme notu - potansiyel is baglantisi (B41) yoksa bos.
+     */
+    public function lastMeetingOn(int $businessCaseId): ?Carbon
+    {
+        if (! SchemaReadiness::hasBatch('B41')) {
+            return null;
+        }
+
+        $value = PartyMeetingNote::query()->where('business_case_id', $businessCaseId)->max('noted_on');
+
+        return $value === null ? null : Carbon::parse($value);
     }
 
     /**

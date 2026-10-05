@@ -189,6 +189,444 @@
     height: 1.25rem;
 }
 
+/*
+ * Liste satiri ayirici ve onem seridi (UI Deneme > Liste denemeleri, D-139).
+ * .kc-list-row: sema ile cizilen alt alta kayitlar (zaman akisi, kisa liste)
+ * arasinda ince cizgi. .kc-tone-*: tablo satirinin solunda onem rengi seridi
+ * (gri normal, sari onemli, kirmizi acil); onem ayri sutun yer kaplamaz.
+ */
+/* Filament her bileseni .fi-grid-col > .fi-sc-component icine sarar. */
+.fi-grid-col + .fi-grid-col > .fi-sc-component > .kc-list-row {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 0.75rem;
+}
+
+.fi-grid-col + .fi-grid-col > .fi-sc-component > .kc-list-row:where(.dark, .dark *) {
+    border-top-color: var(--gray-800);
+}
+
+.kc-tone-gray {
+    box-shadow: inset 3px 0 0 var(--gray-300);
+}
+
+.kc-tone-warning {
+    box-shadow: inset 3px 0 0 var(--warning-500);
+}
+
+.kc-tone-danger {
+    box-shadow: inset 3px 0 0 var(--danger-500);
+}
+
+/*
+ * Okuyucu duzeni (dikey sekmeler, .kc-reader): Filament baslik listesini
+ * icerik genisliginde birakiyor, yarim genislikte okuma alani ~150px'e
+ * dusuyordu. Liste %40'ta sabit, uzun basliklar kesilmek yerine alt satira iner.
+ */
+.kc-reader .fi-tabs.fi-vertical {
+    flex: 0 0 40%;
+    max-width: 40%;
+}
+
+.kc-reader .fi-tabs.fi-vertical .fi-tabs-item {
+    align-items: flex-start;
+    text-align: start;
+    white-space: normal;
+}
+
+.kc-reader .fi-sc-tabs-tab.fi-active {
+    min-width: 0;
+    margin-inline-start: 1rem;
+}
+
+/*
+ * Adim denemeleri (UI Deneme, D-141): teklif sayfasindaki "Is akisi" yerine
+ * onerilen gosterimler. Filament semasi her parcayi form alani gibi 1.5rem
+ * arayla dizer; tasarlanmis bilesenlerde satirlar sik olmalidir. Kurallar
+ * yalniz kc- sinifli deneme bilesenlerini etkiler.
+ */
+.kc-tight > .fi-sc,
+.kc-track-step > .fi-sc,
+.kc-path-step > .fi-sc,
+.kc-metro-stop > .fi-sc,
+.kc-guide > .fi-sc,
+.kc-todo-row .fi-sc {
+    row-gap: 0.25rem;
+}
+
+.kc-demo-block {
+    margin-top: 1.25rem;
+}
+
+.kc-demo-block > .fi-sc {
+    row-gap: 0.5rem;
+}
+
+.kc-list-section .fi-section-content,
+.kc-mock .fi-section-content {
+    row-gap: 0.5rem;
+}
+
+/* 1 Kargo takibi: daireler bir cizgiyle bagli, gecilen kisim yesil. */
+.kc-track {
+    position: relative;
+    padding-top: 0.25rem;
+}
+
+.kc-track > .fi-grid {
+    column-gap: 0;
+}
+
+.kc-track::before,
+.kc-track::after {
+    content: "";
+    position: absolute;
+    top: calc(0.25rem + 1.5rem - 2px);
+    left: calc(100% / 6);
+    height: 4px;
+    border-radius: 9999px;
+}
+
+.kc-track::before {
+    right: calc(100% / 6);
+    background: var(--gray-200);
+}
+
+.kc-track::after {
+    width: calc(100% / 3);
+    background: var(--success-500);
+}
+
+.kc-track.kc-track-full::after {
+    width: calc(100% * 2 / 3);
+}
+
+.kc-track:where(.dark, .dark *)::before {
+    background: var(--gray-700);
+}
+
+.kc-track-step .fi-sc-component {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+svg.kc-track-dot {
+    position: relative;
+    z-index: 1;
+    width: 3rem;
+    height: 3rem;
+    padding: 0.65rem;
+    border: 3px solid var(--gray-300);
+    border-radius: 9999px;
+    background: #fff;
+    color: var(--gray-400);
+}
+
+svg.kc-track-dot:where(.dark, .dark *) {
+    border-color: var(--gray-600);
+    background: var(--gray-900);
+}
+
+svg.kc-track-dot.kc-done {
+    border-color: var(--success-500);
+    background: var(--success-500);
+    color: #fff;
+}
+
+svg.kc-track-dot.kc-current {
+    border-color: var(--primary-600);
+    background: var(--primary-600);
+    color: #fff;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary-500) 18%, transparent);
+}
+
+svg.kc-track-dot.kc-off {
+    border-color: var(--danger-300);
+    color: var(--danger-500);
+}
+
+/* 2 Satis yolu: asamalar ok bicimli seritte, bulunulan asama dolu. */
+.kc-path > .fi-grid {
+    column-gap: 0.25rem;
+}
+
+.kc-path-step {
+    height: 100%;
+    padding: 0.625rem 1.25rem 0.625rem 1.75rem;
+    background: var(--gray-100);
+    color: var(--gray-500);
+    clip-path: polygon(0 0, calc(100% - 0.875rem) 0, 100% 50%, calc(100% - 0.875rem) 100%, 0 100%, 0.875rem 50%);
+}
+
+.kc-path > .fi-grid > .fi-grid-col:first-child .kc-path-step {
+    padding-inline-start: 1rem;
+    border-radius: 0.5rem 0 0 0.5rem;
+    clip-path: polygon(0 0, calc(100% - 0.875rem) 0, 100% 50%, calc(100% - 0.875rem) 100%, 0 100%);
+}
+
+.kc-path > .fi-grid > .fi-grid-col:last-child .kc-path-step {
+    border-radius: 0 0.5rem 0.5rem 0;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0.875rem 50%);
+}
+
+.kc-path-step .fi-sc-text {
+    color: inherit;
+}
+
+.kc-path-step.kc-done {
+    background: color-mix(in srgb, var(--success-500) 16%, #fff);
+    color: var(--success-700);
+}
+
+.kc-path-step.kc-current {
+    background: var(--primary-600);
+    color: #fff;
+}
+
+.kc-path-step.kc-lost {
+    background: var(--danger-600);
+    color: #fff;
+}
+
+.kc-path-step.kc-off {
+    color: var(--gray-400);
+    text-decoration: line-through;
+}
+
+.kc-path-step:where(.dark, .dark *) {
+    background: var(--gray-800);
+    color: var(--gray-400);
+}
+
+.kc-path-step.kc-done:where(.dark, .dark *) {
+    background: color-mix(in srgb, var(--success-500) 25%, var(--gray-900));
+    color: var(--success-300);
+}
+
+.kc-path-step.kc-current:where(.dark, .dark *) {
+    background: var(--primary-600);
+    color: #fff;
+}
+
+.kc-guide {
+    margin-top: 0.75rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--primary-500) 22%, transparent);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--primary-500) 5%, transparent);
+}
+
+.kc-guide .fi-sc-unordered-list {
+    --cols-sm: 1;
+}
+
+/* 3 Durum karti: buyuk simge ve buyuk durum cumlesi. */
+svg.kc-status-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0.85rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--primary-500) 12%, transparent);
+    color: var(--primary-600);
+}
+
+svg.kc-status-icon.kc-draft {
+    background: color-mix(in srgb, var(--warning-500) 15%, transparent);
+    color: var(--warning-600);
+}
+
+svg.kc-status-icon.kc-won,
+svg.kc-status-icon.kc-project {
+    background: color-mix(in srgb, var(--success-500) 15%, transparent);
+    color: var(--success-600);
+}
+
+svg.kc-status-icon.kc-lost {
+    background: color-mix(in srgb, var(--danger-500) 12%, transparent);
+    color: var(--danger-600);
+}
+
+.kc-status-headline {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    color: var(--gray-950);
+}
+
+.kc-status-headline:where(.dark, .dark *),
+.kc-mock-title:where(.dark, .dark *) {
+    color: #fff;
+}
+
+.kc-status-foot {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.kc-status-foot:where(.dark, .dark *) {
+    border-top-color: var(--gray-800);
+}
+
+/* 4-5 Anlatim ve soru-cevap: okunakli govde metni. */
+.kc-story,
+.kc-story .fi-prose,
+.kc-story p {
+    font-size: 1rem;
+    line-height: 1.7rem;
+}
+
+/* 6 Yapilacaklar: her adim bir satir, siradaki adim vurgulu. */
+.kc-todo-row {
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+}
+
+.kc-todo-row.kc-current {
+    border-color: color-mix(in srgb, var(--primary-500) 25%, transparent);
+    background: color-mix(in srgb, var(--primary-500) 6%, transparent);
+}
+
+svg.kc-todo-mark {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+/* 7 Baslikta bagli is: gercek sayfa basligi olcusunde. */
+.kc-mock-title {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    color: var(--gray-950);
+}
+
+/*
+ * 8 Dikey hat: duraklar soldaki cizgiye dizili, bulunulan durak acik kart.
+ * D-143: teklif ve potansiyel is detay sayfalarindaki "Bu is nerede?"
+ * (App\Filament\Support\DealTrack) de bu kurallari ve .kc-chips / .kc-check
+ * siniflarini kullanir; degistirirken iki yeri birlikte kontrol edin.
+ */
+.kc-metro > .fi-sc {
+    row-gap: 0;
+}
+
+.kc-metro-stop {
+    position: relative;
+    padding: 0 0 1.25rem 2.5rem;
+}
+
+.kc-metro-stop::before {
+    content: "";
+    position: absolute;
+    top: 1.5rem;
+    bottom: 0;
+    left: 0.6875rem;
+    width: 3px;
+    background: var(--gray-200);
+}
+
+.kc-metro-stop.kc-done::before {
+    background: var(--success-500);
+}
+
+.kc-metro-stop.kc-metro-last::before {
+    display: none;
+}
+
+.kc-metro-stop::after {
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    left: 0;
+    box-sizing: border-box;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid var(--gray-300);
+    border-radius: 9999px;
+    background: #fff;
+}
+
+.kc-metro-stop:where(.dark, .dark *)::after {
+    background: var(--gray-900);
+}
+
+.kc-metro-stop.kc-done::after {
+    border-color: var(--success-500);
+    background: var(--success-500);
+}
+
+.kc-metro-stop.kc-current::after {
+    border-color: var(--primary-600);
+    background: var(--primary-600);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary-500) 18%, transparent);
+}
+
+.kc-metro-stop.kc-off::after {
+    border-color: var(--danger-300);
+}
+
+.kc-metro-stop.kc-current > .fi-sc {
+    padding: 1rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--primary-500) 22%, transparent);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--primary-500) 5%, transparent);
+}
+
+/*
+ * 9-12 Dikey hattin diger durak kartlari (D-142). .kc-card: potansiyel is ve
+ * proje duragi da kart (proje yoksa kesik cizgili). .kc-metro-section: durakta
+ * katlanir Section varken nokta basliga hizalanir; .kc-plain bulunulan durakta
+ * ic kartin yerine Section'in kendi cercevesini kullanir (.kc-stop-now).
+ * .kc-chips: ozet etiketler alt satira sarar.
+ */
+.kc-metro-stop.kc-card > .fi-sc {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.75rem;
+    background: #fff;
+}
+
+.kc-metro-stop.kc-card > .fi-sc:where(.dark, .dark *) {
+    border-color: var(--gray-800);
+    background: var(--gray-900);
+}
+
+.kc-metro-stop.kc-card.kc-todo > .fi-sc,
+.kc-metro-stop.kc-card.kc-off > .fi-sc {
+    border-style: dashed;
+    background: transparent;
+}
+
+.kc-metro-stop.kc-current.kc-plain > .fi-sc {
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.kc-metro-stop.kc-metro-section::after {
+    top: 0.85rem;
+}
+
+.kc-metro-stop.kc-metro-section::before {
+    top: 2.35rem;
+}
+
+.kc-stop-now > .fi-section {
+    box-shadow: 0 0 0 2px var(--primary-500);
+}
+
+.kc-chips.fi-sc-flex {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.kc-check.fi-sc-flex {
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Icerik alaninin sol menuye ve sag kenara uzakligi (2rem -> 1.25rem). */
 @media (min-width: 64rem) {
     .fi-main {
@@ -962,3 +1400,181 @@ body:has(#konelsis-chat-root) .fi-main {
  * (App\Filament\Support\TableConventions).
  */
 .kc-row-action-hidden { display: none !important; }
+
+/*
+ * Ust cubuk profil alani (D-145, 30 Eylul 2026, kullanici onayi): avatar, ad,
+ * altinda unvan ve asagi ok; solunda ince ayirici. Dar ekranda (lg altinda)
+ * yalniz avatar kalir. Blade: resources/views/vendor/filament-panels/
+ * components/user-menu.blade.php (Filament kopyasi, yalniz ust cubuk dugmesi).
+ */
+.fi-topbar .fi-user-menu {
+    margin-inline-start: 0.25rem;
+    padding-inline-start: 0.5rem;
+    border-inline-start: 1px solid var(--gray-200);
+}
+
+.fi-topbar .fi-user-menu:where(.dark, .dark *) {
+    border-inline-start-color: var(--gray-700);
+}
+
+/* Filament'in flex kurali yalniz kenar cubugu menusune uygulaniyor; ust cubukta blok kaliyordu. */
+.kc-user-trigger.fi-user-menu-trigger {
+    display: flex;
+    align-items: center;
+    width: auto;
+    column-gap: 0.625rem;
+    padding-block: 0.25rem;
+}
+
+.kc-user-trigger .kc-user-trigger-chevron {
+    flex-shrink: 0;
+    color: var(--gray-400);
+}
+
+.kc-user-trigger-text,
+.kc-user-trigger .kc-user-trigger-chevron {
+    display: none;
+}
+
+@media (min-width: 64rem) {
+    .kc-user-trigger-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        min-width: 0;
+        line-height: 1.2;
+        text-align: start;
+    }
+
+    .kc-user-trigger .kc-user-trigger-chevron {
+        display: block;
+        width: 1rem;
+        height: 1rem;
+        margin-inline-start: 0.25rem;
+    }
+}
+
+.kc-user-trigger-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-950);
+    white-space: nowrap;
+}
+
+.kc-user-trigger-title {
+    max-width: 14rem;
+    overflow: hidden;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--gray-500);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.kc-user-trigger-name:where(.dark, .dark *) { color: #fff; }
+.kc-user-trigger-title:where(.dark, .dark *) { color: var(--gray-400); }
+
+/*
+ * Genel bakis (D-146, 30 Eylul 2026 kullanici tasarimi). Duzen Filament
+ * semasidir (Dashboard::content(): 3/4 + 1/4); buradaki kurallar yalniz
+ * tasarimdaki ayrintilar: arama ust cubugun solunda, baslik boyutu, sayi
+ * renkleri, tablo sekmeleri, simge kutucuklari, noktali durum rozeti, duyuru
+ * kutusu ve sosyal medya gun kutucugu.
+ */
+.fi-topbar-end {
+    flex: 1;
+    margin-inline-start: 0;
+}
+
+.fi-topbar-end > .fi-global-search-ctn {
+    flex: 0 1 26rem;
+    min-width: 12rem;
+    margin-inline-end: auto;
+}
+
+/* Yer daralinca once arama kisalir; kisayol dugmeleri alt satira kirilmaz. */
+.fi-topbar-end > :not(.fi-global-search-ctn) {
+    flex-shrink: 0;
+}
+
+/* Baslik ile alt basligi arasi dar. */
+.kc-dash-heading .fi-sc {
+    row-gap: 0.25rem;
+}
+
+.kc-dash-title {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--gray-950);
+}
+
+.kc-dash-title:where(.dark, .dark *) { color: #fff; }
+
+/* Sayi renkleri (D-147): Bugün mavi, Geciken kirmizi, Yaklaşan turuncu. */
+.kc-stat-info .fi-wi-stats-overview-stat-value,
+.kc-stat-info .fi-icon { color: var(--info-600); }
+
+.kc-stat-danger .fi-wi-stats-overview-stat-value,
+.kc-stat-danger .fi-icon { color: var(--danger-600); }
+
+.kc-stat-orange .fi-wi-stats-overview-stat-value,
+.kc-stat-orange .fi-icon { color: var(--orange-500); }
+
+/* Gorevlerim ve islerim: sekmeler (tablo arac cubugu eylemleri). */
+.kc-tab.fi-link {
+    padding-block: 0.375rem;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+}
+
+.kc-tab.kc-tab-active { border-bottom-color: var(--primary-600); }
+
+/* Secili grubun adi sekmede yazili; tabloda ilk grup basligi tekrarlanmaz. */
+.fi-ta:has(.kc-tab-active) tbody > .fi-ta-group-header-row:first-child { display: none; }
+
+/* Baslik sutunundaki simge kendi renginde yumusak bir kutucukta. */
+.kc-tile-icon .fi-icon {
+    box-sizing: content-box;
+    padding: 0.375rem;
+    border-radius: 0.5rem;
+    background-color: color-mix(in oklab, currentColor 14%, transparent);
+}
+
+/* Durum rozeti basinda nokta. */
+.kc-dot-badge .fi-badge::before {
+    content: '';
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 9999px;
+    background-color: currentColor;
+}
+
+/* Avatar ile isim yan yana (tasarimdaki Sorumlu hucresi). */
+.fi-ta:has(.kc-tab) .fi-ta-cell-avatar .fi-ta-image {
+    padding-inline-end: 0.25rem;
+}
+
+.fi-ta:has(.kc-tab) .fi-ta-cell-avatar + .fi-ta-cell {
+    padding-inline-start: 0.25rem;
+}
+
+/* Geciken satirda gun adi da kirmizi. */
+.kc-overdue .fi-ta-text-description { color: var(--danger-600); }
+
+/* Kart tablosunda (Split) sol simge basligin hizasinda, ustte (Duyurular, D-150). */
+.fi-ta-record .fi-ta-split.kc-split-top {
+    align-items: flex-start;
+}
+
+/* Sosyal medya: gun ve ay kutucugu, sagindan ince cizgi. */
+.kc-date-tile {
+    min-width: 2.5rem;
+    padding-inline-end: 0.75rem;
+    border-inline-end: 1px solid var(--gray-200);
+    text-align: center;
+    line-height: 1.1;
+}
+
+.kc-date-tile:where(.dark, .dark *) { border-inline-end-color: var(--gray-700); }

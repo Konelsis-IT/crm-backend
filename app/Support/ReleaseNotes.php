@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Query\Platform\FeatureReleaseQueries;
+use App\Services\Platform\FeatureRegistry;
 use Illuminate\Support\Carbon;
 
 /**
@@ -17,8 +19,12 @@ use Illuminate\Support\Carbon;
  * Yayin tarihi gelmemis surumler gizlidir (kullanici karari): ileri tarihli
  * bir surum yazilabilir, panelde ancak o gun gelince gorunur.
  *
- * Yeni surum: listenin BASINA yeni bir kayit eklenir; gruplar asagidaki
- * sabitlerle anahtarlanir (etiket ve simge ReleaseNotesSchema'da).
+ * Surum numarasi git commit'iyle ve ozellik surumleriyle aynidir (D-151 /
+ * D-152; 1.1 - 1.10 eski numaralama). Canlida yayin kaydi varsa notlar yayin
+ * surumune kadar gorunur (`konelsis:release`). Yeni madde
+ * Feature::NEXT_RELEASE numarali kayda yazilir; kayit yoksa listenin BASINA
+ * acilir. Gruplar asagidaki sabitlerle anahtarlanir (etiket ve simge
+ * ReleaseNotesSchema'da).
  */
 final class ReleaseNotes
 {
@@ -38,6 +44,47 @@ final class ReleaseNotes
     public static function all(): array
     {
         return [
+            [
+                'version' => '2.4',
+                'date' => '03.10.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Personel kartında Personel Hareketleri sekmesi: kimin, ne zaman, hangi kayıtta ne yaptığı.',
+                        'Onaylarda vekalet: onay yetkisini belirli bir süre için başka bir personele devretme.',
+                        'Dokümanda hukuki tutma (belgeyi değişikliğe ve silinmeye karşı kilitleme) ve teslim tutanakları.',
+                        'İş alımda Sözleşmeler.',
+                        'Proje kataloglarında proje bileşenleri, odak beklentileri ve onay kapısı şablonları.',
+                        'Personel kartında haftalık kontrol sekmesi ve dikkat kartı; Analizler altında İş raporları (analiz panosu ve süre raporu).',
+                        'Sosyal medyada Akış sekmesi ve depolama kutusu, Plan ve Analiz sekmeleri, blog yazma ve yönetici hesabı.',
+                        'Sohbette grup açma ve mesajdan talep açma.',
+                        'Zilin yanında Tüm bildirimler tablosu; masaüstü uyarıları: bildirim sesi ve Windows bildirimi.',
+                        'Üst çubukta Hızlı işlemler; listelerde ve detay sayfalarında Excel ve PDF indirme.',
+                        'Sağ üst menüde Sürüm notları penceresi; tam yetkili kişiler için UI Deneme kataloğu.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '2.3',
+                'date' => '03.10.2026',
+                'groups' => [
+                    self::IMPROVEMENTS => [
+                        'Teklif ve potansiyel iş sayfalarındaki "İş akışı" adımları yerine "Bu iş nerede?" bölümü geldi: potansiyel iş, teklifler ve proje alt alta; bulunduğunuz kayıt "Buradasınız" ile işaretli ve durumu tek cümleyle yazıyor (ör. "Müşterinin cevabı bekleniyor · 50 gündür"). Diğer kayıtların özet bilgileri etiketlerle görünüyor, "Potansiyel işe git" / "Projeye git" düğmeleri var. Proje henüz yoksa ne gerektiği ve "Projeye dönüştür" orada. Potansiyel işin teklif tablosu alttaki "Teklifler" sekmesinde.',
+                        'Genel bakış yeni düzende: sayfa solda geniş, sağda dar iki sütun. Başlığın yanında Bugün (mavi), Geciken (kırmızı) ve Yaklaşan (turuncu) iş sayıları. Altında "Görevlerim ve işlerim": yalnız size ait işler, Geciken / Bugün / Yarın sekmeleri; her işte proje, durum, tarih ve sorumlu (fotoğrafıyla), satıra tıklayınca iş açılıyor. Sağda turuncu "Duyuru gönder", yaklaşan tarihler (her biri kart, kalan gün renkli: 3 gün ve altı kırmızı, 4–6 gün turuncu), son 3 duyuru ("Tümünü gör" tüm bildirimlere gider) ve yaklaşan sosyal medya paylaşımları (gün kutucuğu, platform işareti, "Bugün 12:00 / Yarın 10:00 / 3 gün sonra"; geciken paylaşım kırmızı çizgiyle).',
+                        'Arama kutusu üst çubuğun soluna geçti ve genişledi; içinde "Taraf, proje, potansiyel iş ara…" yazıyor.',
+                        'Raporlar\'da "Tümü" sekmesi yalnız üst yönetimde (Yönetim kurulu başkanı, İdari müdür), "Ekibim" sekmesi yalnız altında personel olanlarda görünüyor. Herkes kendi raporlarını, amirler ekiplerinin raporlarını görür; başka personelin ya da başka departmanın raporu listede de detay sayfasında da açılmaz.',
+                        'Genel bakışın bölümleri, teklif ve potansiyel iş sayfalarındaki "Bu iş nerede?" bölümü ve Teklifler listesinin durum sekmeleri gerektiğinde tek tek kapatılabiliyor.',
+                        'Sağ üstteki profil alanında artık fotoğraf ya da baş harflerin yanında adınız ve altında unvanınız (pozisyonunuz) yazıyor; yanında aşağı ok var, tıklayınca menü açılıyor. Dar ekranda yalnız fotoğraf kalıyor.',
+                        '"Bildirim gönder" artık "Duyuru gönder" (Genel bakıştaki düğme ve sağ üst menü). Gönderilen duyuru herkesin bildirim ziline düşüyor ve sayfa yenilenmeden Genel bakıştaki Duyurular bölümünde görünüyor.',
+                        'Düğme renkleri amaca göre: Kaydet, Oluştur, Gönder ve onay düğmeleri yeşil; İptal, Vazgeç, Kapat ve Geri çek kırmızı (gül tonu); Sil ve Reddet kırmızı; Düzenle turuncu; Yeni ve Ekle zümrüt yeşili; Görüntüle, İleri, Gönder ve İncelemeye gönder mavi. Renkli düğmelerin yazısı her zaman beyaz; açık renkler okunaklı koyu tonda.',
+                        'Genel bakıştaki "Bugün ve yarın yapılacak işlerim" alt başlığı kaldırıldı.',
+                        'Genel bakıştaki duyurular kısa görünüyor: başlık ve metnin ilk birkaç satırı. Duyuruya tıklayınca tamamı pencerede açılıyor; bağlantısı varsa pencerede "Bağlantıyı aç" düğmesi var.',
+                        'Yeni özellikler sürüm sürüm açılıyor: her özellik geldiği sürümü taşıyor ve o sürüm yayınlanınca görünür oluyor. Sağ üstteki menüde kullanılan sürüm yazıyor.',
+                    ],
+                    self::FIXES => [
+                        'Potansiyel iş düzenleme sayfasında Teklif adımına gelince teklifler iki kez görünüyordu; artık yalnız alttaki "Teklifler" sekmesinde. Teklif adımında seçili teklifin özeti duruyor.',
+                    ],
+                ],
+            ],
             [
                 'version' => '1.10',
                 'date' => '22.09.2026',
@@ -332,12 +379,35 @@ final class ReleaseNotes
     }
 
     /**
-     * Yalniz yayin tarihi gelmis surumler (bugun dahil).
+     * Gosterilen surumler. Canlida yayin kaydi varsa (D-151 / D-152) o surume
+     * kadar olanlar; yoksa (yerel ortam, ilk yayindan once) yayin tarihi
+     * gelmis olanlar (bugun dahil).
      *
      * @return list<array{version: string, date: string, groups: array<string, list<string>>}>
      */
     public static function published(): array
     {
+        $released = app(FeatureRegistry::class)->publishedVersion();
+
+        if ($released !== null) {
+            // Gosterilen tarih surumun canlida yayinlandigi gundur (D-153).
+            $dates = app(FeatureReleaseQueries::class)->publishedDates();
+
+            return array_values(array_map(
+                static function (array $release) use ($dates): array {
+                    if (isset($dates[$release['version']])) {
+                        $release['date'] = DisplayTime::format($dates[$release['version']], 'd.m.Y');
+                    }
+
+                    return $release;
+                },
+                array_filter(
+                    self::all(),
+                    static fn (array $release): bool => version_compare($release['version'], $released, '<='),
+                ),
+            ));
+        }
+
         $today = Carbon::now()->startOfDay();
 
         return array_values(array_filter(

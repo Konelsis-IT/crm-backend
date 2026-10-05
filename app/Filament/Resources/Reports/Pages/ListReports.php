@@ -41,6 +41,10 @@ class ListReports extends ListRecords
     }
 
     /**
+     * D-147 (30 Eylul 2026 kullanici karari): "Ekibim" yalniz altinda
+     * personel olanlarda (ekip muduru) ve ust yonetimde, "Tümü" yalniz ust
+     * yonetimde (Yonetim kurulu baskani, Idari mudur) gorunur.
+     *
      * @return array<string, Tab>
      */
     public function getTabs(): array
@@ -48,6 +52,7 @@ class ListReports extends ListRecords
         $queries = app(ReportQueries::class);
         $user = auth()->user();
         $personnelId = (int) auth()->id();
+        $seesAll = $user instanceof Personnel && $queries->seesAllReports($user);
 
         return [
             'mine' => Tab::make(__('report.tabs.mine'))
@@ -58,12 +63,16 @@ class ListReports extends ListRecords
                 ->badge(fn (): ?string => ($count = $queries->reviewInboxCount($personnelId)) > 0 ? (string) $count : null)
                 ->badgeColor('warning')
                 ->modifyQueryUsing(fn (Builder $query): Builder => $queries->applyReviewInbox($query, $personnelId)),
-            'team' => Tab::make(__('report.tabs.team'))
-                ->icon(Heroicon::OutlinedUserGroup)
-                ->modifyQueryUsing(fn (Builder $query): Builder => $queries->applyTeam($query, $personnelId)),
-            'all' => Tab::make(__('report.tabs.all'))
-                ->icon(Heroicon::OutlinedRectangleStack)
-                ->modifyQueryUsing(fn (Builder $query): Builder => $queries->applyVisible($query, $user instanceof Personnel ? $user : null)),
+            ...($seesAll || $queries->hasTeam($personnelId) ? [
+                'team' => Tab::make(__('report.tabs.team'))
+                    ->icon(Heroicon::OutlinedUserGroup)
+                    ->modifyQueryUsing(fn (Builder $query): Builder => $queries->applyTeam($query, $personnelId)),
+            ] : []),
+            ...($seesAll ? [
+                'all' => Tab::make(__('report.tabs.all'))
+                    ->icon(Heroicon::OutlinedRectangleStack)
+                    ->modifyQueryUsing(fn (Builder $query): Builder => $queries->applyVisible($query, $user)),
+            ] : []),
         ];
     }
 

@@ -61,7 +61,7 @@ return [
 
     'help' => [
         'forward' => 'Rapor seçtiğiniz yöneticiye iletilir; yeniden karar bekler ve ona bildirim gider. Önceki karar geçmişte kalır.',
-        'list' => 'Raporlarım: yazdığım raporlar. İnceleme kutum: bana gönderilen raporlar. Ekibim: astlarımın ve departmanımın raporları.',
+        'list' => 'Raporlarım: yazdığım raporlar. İnceleme kutum: bana gönderilen raporlar. Ekibim (yalnız altında personel olanlarda): altımdaki personelin raporları. Başka personelin raporu görünmez.',
         'report' => 'Önce rapor taslağını seçin; taslak, doldurulacak alanları ve raporun görünümünü belirler.',
         'title' => 'Boş bırakılırsa taslak adı, ilgili kayıt ve dönemden otomatik oluşturulur.',
         'answers' => 'Bu alanlar seçtiğiniz taslağa özeldir.',

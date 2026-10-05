@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\StageTemplateVersions\Pages;
 
 use App\Exceptions\StaleRecordException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\StageTemplateVersions\StageTemplateVersionResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Project\StageTemplateVersionService;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditStageTemplateVersion extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = StageTemplateVersionResource::class;
 
     protected function getHeaderActions(): array

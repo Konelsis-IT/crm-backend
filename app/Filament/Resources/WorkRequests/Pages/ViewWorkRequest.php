@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Filament\Support\ActionColors;
 use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
 use App\Filament\Support\FormState;
@@ -215,7 +216,7 @@ class ViewWorkRequest extends ViewRecord
             Action::make('complete')
                 ->label(__('work_request.actions.complete'))
                 ->icon(Heroicon::OutlinedCheckCircle)
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->modalDescription(fn (): string => $this->getRecord()->needsApproval() && SchemaReadiness::hasBatch('B11D')
                     ? __('work_request.help.complete_with_approval', ['approver' => $this->getRecord()->approver?->full_name ?? '-'])
                     : __('work_request.help.complete'))
@@ -328,7 +329,7 @@ class ViewWorkRequest extends ViewRecord
             Action::make('cancel')
                 ->label(__('work_request.actions.cancel'))
                 ->icon(Heroicon::OutlinedNoSymbol)
-                ->color('gray')
+                ->color(ActionColors::CANCEL)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => Gate::allows('cancel', $this->getRecord()))
                 ->schema([

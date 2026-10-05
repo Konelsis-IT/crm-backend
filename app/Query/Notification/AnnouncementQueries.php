@@ -16,4 +16,10 @@ final class AnnouncementQueries
             ->with('sender')
             ->orderByDesc('sent_at');
     }
+
+    /** Genel bakis duyuru kartlari (D-144 / D-150): en yeni $limit duyuru. */
+    public function recent(int $limit): Builder
+    {
+        return $this->latest()->limit(max(1, $limit));
+    }
 }

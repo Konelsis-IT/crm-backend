@@ -11,9 +11,11 @@ use App\Exceptions\Notification\NoRecipientsException;
 use App\Exceptions\Notification\NotificationScopeNotAllowedException;
 use App\Models\Notification\Announcement;
 use App\Models\Personnel\Personnel;
+use App\Models\Scopes\HideSystemAccountScope;
 use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
+use App\Services\Authorization\SystemAccount;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Filament\Actions\Action;
@@ -37,6 +39,7 @@ final class AnnouncementService extends AbstractService
         private readonly ActorContext $actor,
         private readonly AudienceResolver $audiences,
         private readonly PanelNotifier $notifier,
+        private readonly SystemAccount $systemAccount,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
@@ -46,8 +49,14 @@ final class AnnouncementService extends AbstractService
      */
     public function send(array $data): Announcement
     {
+        // Personel degistirmede (D-120) kayit gizli sistem hesabinin adina yazilir;
+        // hesap secilen personelin sorgularindan duser, bu yuzden kapsam disinda
+        // okunur (30 Eylul 2026: "herkes dedim ama bildirim dusmedi" - gonderim
+        // "oturum acmis personel gerekir" hatasiyla duruyordu).
         $senderId = $this->actor->personnelId();
-        $sender = $senderId !== null ? Personnel::query()->find($senderId) : null;
+        $sender = $senderId !== null
+            ? Personnel::query()->withoutGlobalScope(HideSystemAccountScope::class)->find($senderId)
+            : null;
 
         if (! $sender instanceof Personnel) {
             throw ActorRequiredException::make();
@@ -100,10 +109,13 @@ final class AnnouncementService extends AbstractService
                     ->markAsRead();
             }
 
+            // Gizli hesabin adi arayuzde hic gorunmez (D-120): gonderen "Sistem".
+            $senderName = $this->systemAccount->is($sender) ? __('activity.system') : (string) $sender->full_name;
+
             $this->notifier->send(
                 $recipients,
                 $title,
-                __('announcement.notifications.body', ['sender' => $sender->full_name, 'body' => $body]),
+                __('announcement.notifications.body', ['sender' => $senderName, 'body' => $body]),
                 $priority->getIcon(),
                 $priority->getColor(),
                 $actions,

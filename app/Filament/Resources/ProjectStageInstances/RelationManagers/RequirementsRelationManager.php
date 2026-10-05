@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ProjectStageInstances\RelationManagers;
 
 use App\Enums\Project\Applicability;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectStageRequirement;
@@ -112,7 +113,7 @@ class RequirementsRelationManager extends RelationManager
                     }),
                 Action::make('add_evidence')
                     ->label(__('project_stage_requirement.actions.add_evidence'))
-                    ->color('primary')
+                    ->color(ActionColors::CREATE)
                     ->icon(Heroicon::OutlinedPaperClip)
                     ->requiresConfirmation()
                     ->schema([

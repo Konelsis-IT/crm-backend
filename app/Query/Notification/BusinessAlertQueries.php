@@ -28,6 +28,22 @@ final class BusinessAlertQueries
         return $query;
     }
 
+    /**
+     * Genel bakis kartlari (D-146): en yakin son tarih ustte; $limit verilirse
+     * yalniz o kadar ("Tümünü gör" ile hepsi).
+     */
+    public function upcomingForPanel(int $personnelId, bool $seesAll, ?int $limit = null): Builder
+    {
+        $query = $this->openForPanel($personnelId, $seesAll)->reorder()->orderBy('due_at')->orderBy('id');
+
+        return $limit !== null ? $query->limit($limit) : $query;
+    }
+
+    public function openCountForPanel(int $personnelId, bool $seesAll): int
+    {
+        return $this->openForPanel($personnelId, $seesAll)->reorder()->count();
+    }
+
     /** Tarama icin: acik son tarih uyarilari. */
     public function openDeadlineAlerts(): Collection
     {

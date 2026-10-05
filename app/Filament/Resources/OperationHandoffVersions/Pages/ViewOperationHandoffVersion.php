@@ -7,6 +7,7 @@ namespace App\Filament\Resources\OperationHandoffVersions\Pages;
 use App\Enums\Acquisition\ReviewDecision;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\OperationHandoffVersions\OperationHandoffVersionResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use Filament\Actions\Action;
@@ -29,7 +30,7 @@ class ViewOperationHandoffVersion extends ViewRecord
             EditAction::make(),
             Action::make('submit')
                 ->label(__('operation_handoff_version.actions.submit'))
-                ->color('primary')
+                ->color(ActionColors::SEND)
                 ->icon(Heroicon::OutlinedPaperAirplane)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => $this->getRecord()->status === \App\Enums\Acquisition\HandoffVersionStatus::Draft)
@@ -44,7 +45,7 @@ class ViewOperationHandoffVersion extends ViewRecord
                 }),
             Action::make('review')
                 ->label(__('operation_handoff_version.actions.review'))
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedCheckBadge)
                 ->requiresConfirmation()
                 ->schema(fn (Schema $schema): Schema => $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([

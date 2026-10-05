@@ -7,6 +7,7 @@ namespace App\Filament\Resources\ApprovalPolicyVersions\Pages;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ApprovalPolicies\ApprovalPolicyResource;
 use App\Filament\Resources\ApprovalPolicyVersions\ApprovalPolicyVersionResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Approval\ApprovalPolicyVersion;
@@ -68,7 +69,7 @@ class ViewApprovalPolicyVersion extends ViewRecord
             EditAction::make()->visible(fn (): bool => $this->getRecord()->isDraft()),
             Action::make('publish')
                 ->label(__('approval_policy_version.actions.publish'))
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->requiresConfirmation()
                 ->modalDescription(__('approval_policy_version.help.publish'))

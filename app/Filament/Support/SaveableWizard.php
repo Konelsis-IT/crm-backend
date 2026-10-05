@@ -54,7 +54,7 @@ class SaveableWizard extends Wizard
             $actions[] = Action::make(self::saveActionName($stepId))
                 ->label(__('app.actions.save'))
                 ->icon(Heroicon::OutlinedCheck)
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->action($method)
                 ->button();
         }

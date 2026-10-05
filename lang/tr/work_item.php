@@ -107,6 +107,28 @@ return [
         'empty' => 'Bugün ve yarın için işiniz yok',
     ],
 
+    'dashboard' => [
+        'heading' => 'Görevlerim ve işlerim',
+        'empty' => 'Geciken, bugün ya da yarın için iş yok',
+        'tabs' => [
+            'overdue' => 'Geciken (:count)',
+            'today' => 'Bugün (:count)',
+            'tomorrow' => 'Yarın (:count)',
+        ],
+        'columns' => [
+            'title' => 'Başlık',
+            'project' => 'Proje',
+            'status' => 'Durum',
+            'date' => 'Tarih',
+            'owner' => 'Sorumlu',
+        ],
+        'stats' => [
+            'today' => 'Bugün',
+            'overdue' => 'Geciken',
+            'upcoming' => 'Yaklaşan',
+        ],
+    ],
+
     'table' => [
         'date' => 'Tarih',
         'item' => 'İş',

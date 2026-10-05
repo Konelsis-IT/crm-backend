@@ -19,6 +19,7 @@ use App\Filament\Resources\BusinessCases\RelationManagers\ContractsRelationManag
 use App\Filament\Resources\BusinessCases\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OperationHandoffsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OpportunityRelationManager;
+use App\Filament\Resources\BusinessCases\RelationManagers\ProposalsRelationManager;
 use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\TenderNoticesRelationManager;
 use App\Filament\Support\BusinessCaseWizard;
@@ -166,8 +167,11 @@ class BusinessCaseResource extends Resource
 
     public static function getRelations(): array
     {
-        // Teklifler zincir sihirbazinin 2. adimindadir (BusinessCaseWizard::proposalTableStep).
+        // Tekliflerin tam tablosu (secili yap, duzenle) ilk sekmede (D-143): detay
+        // sayfasinda artik "Is akisi" sihirbazi yok; kisa ozetleri "Bu is nerede?"
+        // hattinda. Duzenleme sihirbazi ayni tabloyu 2. adimda kullanmaya devam eder.
         return [
+            ProposalsRelationManager::class,
             // Gorusme notlari (B41, D-137): bu is ve teklifleri hakkindaki gorusmeler.
             MeetingNotesRelationManager::class,
             OpportunityRelationManager::class,

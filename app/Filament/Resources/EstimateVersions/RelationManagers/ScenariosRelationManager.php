@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\PricingScenario;
@@ -130,7 +131,7 @@ class ScenariosRelationManager extends RelationManager
                     }),
                 Action::make('select')
                     ->label(__('pricing_scenario.actions.select'))
-                    ->color('success')
+                    ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->requiresConfirmation()
                     ->visible(fn (PricingScenario $record): bool => ! $record->is_selected)

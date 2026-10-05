@@ -13,14 +13,20 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 
-/** Tum bildirimler: Tumu / Okunmamis sekmeleri, "Tumunu okundu isaretle". */
+/**
+ * Tum bildirimler: Tumu / Okunmamis sekmeleri, "Tumunu okundu isaretle".
+ * D-149: gizli sistem hesabinda butun personelin bildirimleri; sekme sayisi
+ * herkesinkini sayar, "Tumunu okundu isaretle" yalniz kisisel gorunumde.
+ */
 class ListNotifications extends ListRecords
 {
     protected static string $resource = NotificationResource::class;
 
     public function getSubheading(): ?string
     {
-        return __('notification_inbox.help');
+        return NotificationResource::seesAll()
+            ? __('notification_inbox.help_all')
+            : __('notification_inbox.help');
     }
 
     protected function getHeaderActions(): array
@@ -30,7 +36,8 @@ class ListNotifications extends ListRecords
                 ->label(__('notification_inbox.actions.mark_all_read'))
                 ->icon(Heroicon::OutlinedCheckCircle)
                 ->color('gray')
-                ->visible(fn (): bool => app(NotificationInboxQueries::class)->unreadCount(NotificationResource::owner()) > 0)
+                ->visible(fn (): bool => ! NotificationResource::seesAll()
+                    && app(NotificationInboxQueries::class)->unreadCount(NotificationResource::owner()) > 0)
                 ->action(fn () => app(NotificationInboxService::class)->markAllRead(NotificationResource::owner())),
         ];
     }
@@ -40,7 +47,7 @@ class ListNotifications extends ListRecords
      */
     public function getTabs(): array
     {
-        $unread = app(NotificationInboxQueries::class)->unreadCount(NotificationResource::owner());
+        $unread = app(NotificationInboxQueries::class)->visibleUnreadCount(NotificationResource::owner());
 
         return [
             'all' => Tab::make(__('notification_inbox.tabs.all'))

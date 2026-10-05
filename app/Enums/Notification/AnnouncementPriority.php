@@ -35,4 +35,17 @@ enum AnnouncementPriority: string implements HasColor, HasIcon, HasLabel
             self::Urgent => Heroicon::OutlinedExclamationTriangle,
         };
     }
+
+    /**
+     * Liste rengi (D-139, D-144): Normal gri, Önemli sarı, Acil kırmızı;
+     * kırmızı yalnız acile ayrılır. Rozet rengi getColor()'da kalır.
+     */
+    public function listTone(): string
+    {
+        return match ($this) {
+            self::Normal => 'gray',
+            self::Important => 'warning',
+            self::Urgent => 'danger',
+        };
+    }
 }

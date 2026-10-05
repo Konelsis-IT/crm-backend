@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Reports\Pages;
 use App\Exceptions\AbstractException;
 use App\Filament\Exports\ReportExporter;
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ExportActions;
 use App\Models\Report\Report;
@@ -45,7 +46,7 @@ class ViewReport extends ViewRecord
             Action::make('submit')
                 ->label(__('report.actions.submit'))
                 ->icon(Heroicon::OutlinedPaperAirplane)
-                ->color('primary')
+                ->color(ActionColors::SEND)
                 ->requiresConfirmation()
                 ->modalDescription(__('report.help.submit'))
                 ->visible(fn (): bool => Gate::allows('submit', $this->getRecord()))
@@ -53,7 +54,7 @@ class ViewReport extends ViewRecord
             Action::make('withdraw')
                 ->label(__('report.actions.withdraw'))
                 ->icon(Heroicon::OutlinedArrowUturnLeft)
-                ->color('gray')
+                ->color(ActionColors::CANCEL)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => Gate::allows('withdraw', $this->getRecord()))
                 ->action(fn () => $this->run(fn (ReportService $service) => $service->withdraw($this->getRecord()), 'withdrawn')),
@@ -87,7 +88,7 @@ class ViewReport extends ViewRecord
             Action::make('approve')
                 ->label(__('report.actions.approve'))
                 ->icon(Heroicon::OutlinedCheckCircle)
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->visible(fn (): bool => Gate::allows('review', $this->getRecord()))
                 ->schema([
                     Textarea::make('comment')->label(__('report.fields.review_comment'))->rows(3)->maxLength(2000),

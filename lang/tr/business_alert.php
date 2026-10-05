@@ -55,5 +55,9 @@ return [
         'description' => 'Sorumlusu olduğunuz açık uyarılar; kritikler üstte.',
         'description_all' => 'Tüm açık uyarılar; kritikler üstte.',
         'empty' => 'Açık uyarı yok.',
+        'days_left' => ':count gün kaldı',
+        'days_over' => ':count gün geçti',
+        'show_all' => 'Tümünü gör',
+        'show_less' => 'Daha az göster',
     ],
 ];

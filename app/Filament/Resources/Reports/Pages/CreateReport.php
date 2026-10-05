@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Reports\Pages;
 
 use App\Enums\Report\ReportSubjectKind;
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Personnel\Personnel;
@@ -25,6 +26,8 @@ use Illuminate\Validation\ValidationException;
  */
 class CreateReport extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ReportResource::class;
 
     public const QUERY_TEMPLATE = 'taslak';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Personnel\Pages;
 
 use App\Exceptions\Personnel\EmailAlreadyInUseException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Services\Personnel\PersonnelService;
 use Filament\Resources\Pages\CreateRecord;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class CreatePersonnelRecord extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = PersonnelResource::class;
 
     protected function handleRecordCreation(array $data): Model

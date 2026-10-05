@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Approval;
 
 use App\Filament\Resources\ApprovalRequests\ApprovalRequestResource;
+use App\Filament\Support\ActionColors;
 use App\Models\Approval\ApprovalRequest;
 use App\Models\Approval\ApprovalRequestStep;
 use App\Models\Personnel\Personnel;
@@ -182,7 +183,7 @@ final class ApprovalNotifier
             Action::make('approve')
                 ->label(__('approval_request.actions.approve'))
                 ->button()
-                ->color('success')
+                ->color(ActionColors::SAVE)
                 ->url($approveUrl)
                 ->markAsRead(),
             Action::make('reject')

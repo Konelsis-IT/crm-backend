@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProjectStageInstances\RelationManagers;
 
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\RowDetail;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
@@ -80,7 +81,7 @@ class EvidenceRelationManager extends RelationManager
                 RowDetail::action(),
                 Action::make('accept')
                     ->label(__('stage_evidence.actions.accept'))
-                    ->color('success')
+                    ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedCheckCircle)
                     ->requiresConfirmation()
                     ->visible(fn (StageEvidence $record): bool => $record->accepted_at === null)

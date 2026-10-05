@@ -170,6 +170,22 @@ final class ReportQueries
         return app(ExecutiveDirectory::class)->isExecutive($personnel);
     }
 
+    /**
+     * Butun raporlari goren (D-147, 30 Eylul 2026 kullanici karari): yalniz ust
+     * yonetim (Yonetim kurulu baskani, Idari mudur). Rol ya da izin sirket
+     * geneli rapor gorunurlugu vermez.
+     */
+    public function seesAllReports(Personnel $personnel): bool
+    {
+        return $personnel->isActive() && $this->isExecutive($personnel);
+    }
+
+    /** Altinda personel var mi (Raporlar > Ekibim sekmesi, D-147). */
+    public function hasTeam(int $personnelId): bool
+    {
+        return $this->teamPersonnelIds($personnelId) !== [];
+    }
+
     /** Kisi bu personelin dogrudan amiri ya da departman yoneticisi mi? */
     public function managesPersonnel(int $managerId, int $personnelId): bool
     {
@@ -281,9 +297,11 @@ final class ReportQueries
     }
 
     /**
-     * Gorebildigim raporlar: yetkili herkes icin tumu (gizliler ayri izinle),
-     * digerleri icin yazdigim, inceledigim, ekibimin ve hakkimda yazilan
-     * gizli olmayan raporlar ile ekibim hakkindaki gizli raporlar.
+     * Gorebildigim raporlar (D-147, 30 Eylul 2026 kullanici karari): ust
+     * yonetim hepsini; digerleri yalniz yazdigim, inceledigim, hakkimda yazilan
+     * gizli olmayan, ekibimin (altimdaki personelin) gizli olmayan raporlari ve
+     * ekibim hakkindaki gizli raporlar. Baska personelin ve baska departmanin
+     * raporu rol ya da izinle gorulmez.
      */
     public function applyVisible(Builder $query, ?Personnel $viewer): Builder
     {
@@ -293,16 +311,8 @@ final class ReportQueries
 
         $id = (int) $viewer->getKey();
 
-        if ($this->hasFullAccess($viewer) || $this->isAuditor($viewer) || $this->permits($viewer, 'view')) {
-            if ($this->hasFullAccess($viewer) || $this->permits($viewer, 'viewConfidential')) {
-                return $query;
-            }
-
-            return $query->where(function (Builder $inner) use ($id): void {
-                $inner->where('is_confidential', false)
-                    ->orWhere('author_personnel_id', $id)
-                    ->orWhere('reviewer_personnel_id', $id);
-            });
+        if ($this->seesAllReports($viewer)) {
+            return $query;
         }
 
         $team = $this->teamPersonnelIds($id);

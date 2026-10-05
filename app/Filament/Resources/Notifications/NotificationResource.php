@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Notifications;
 
 use App\Filament\Resources\Notifications\Pages\ListNotifications;
+use App\Filament\Support\RecordLinks;
 use App\Models\Notification\PanelNotification;
 use App\Models\Personnel\Personnel;
 use App\Query\Notification\NotificationInboxQueries;
+use App\Query\Personnel\PersonnelQueries;
 use App\Services\Notification\NotificationInboxService;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
@@ -19,6 +21,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +32,10 @@ use Illuminate\Database\Eloquent\Collection;
  * gorunenlerin hepsi, eskiler dahil, tablo halinde. Sol menude yoktur;
  * yalniz bildirim panelindeki dugmeyle acilir. Herkes yalniz kendi
  * bildirimlerini gorur.
+ *
+ * D-149 (30 Eylul 2026 kullanici istegi): gizli sistem hesabi kendi
+ * oturumunda butun personelin bildirimlerini gorur; "Alici" sutunu ve
+ * suzgeci yalniz orada vardir. Isaretleme yalniz kisinin kendi bildiriminde.
  */
 class NotificationResource extends Resource
 {
@@ -62,8 +69,25 @@ class NotificationResource extends Resource
     {
         $user = auth()->user();
 
+        // D-149: gizli sistem hesabi kendi oturumunda butun personelin bildirimlerini gorur.
         return app(NotificationInboxQueries::class)
-            ->applyRecipient(parent::getEloquentQuery(), $user instanceof Personnel ? $user : null);
+            ->applyVisible(parent::getEloquentQuery(), $user instanceof Personnel ? $user : null);
+    }
+
+    /** Tablo butun personelin bildirimlerini mi gosteriyor (yalniz gizli sistem hesabi). */
+    public static function seesAll(): bool
+    {
+        $user = auth()->user();
+
+        return app(NotificationInboxQueries::class)->seesAll($user instanceof Personnel ? $user : null);
+    }
+
+    /** Okundu / okunmadi isaretlemesi yalniz kisinin kendi bildiriminde. */
+    public static function ownsRecord(PanelNotification $record): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof Personnel && $record->isFor($user);
     }
 
     public static function table(Table $table): Table
@@ -77,6 +101,13 @@ class NotificationResource extends Resource
                         : __('notification_inbox.status.read'))
                     ->badge()
                     ->color(fn (PanelNotification $record): string => $record->read_at === null ? 'primary' : 'gray'),
+                TextColumn::make('recipient')
+                    ->label(__('notification_inbox.fields.recipient'))
+                    ->state(fn (PanelNotification $record): ?string => $record->recipient()?->full_name)
+                    ->icon(RecordLinks::PERSONNEL_ICON)
+                    ->url(fn (PanelNotification $record): ?string => ($recipient = $record->recipient()) !== null ? RecordLinks::detailUrl($recipient, checkRecord: false) : null)
+                    ->placeholder('-')
+                    ->visible(fn (): bool => self::seesAll()),
                 TextColumn::make('title')
                     ->label(__('notification_inbox.fields.title'))
                     ->state(fn (PanelNotification $record): string => $record->title())
@@ -102,6 +133,13 @@ class NotificationResource extends Resource
                     ->nullable()
                     ->trueLabel(__('notification_inbox.status.read'))
                     ->falseLabel(__('notification_inbox.status.unread')),
+                SelectFilter::make('recipient')
+                    ->label(__('notification_inbox.filters.recipient'))
+                    ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                    ->searchable()
+                    ->query(fn (Builder $query, array $data): Builder => app(NotificationInboxQueries::class)
+                        ->applyRecipientId($query, filled($data['value'] ?? null) ? (int) $data['value'] : null))
+                    ->visible(fn (): bool => self::seesAll()),
             ])
             ->recordActions([
                 Action::make('open')
@@ -117,13 +155,13 @@ class NotificationResource extends Resource
                     ->label(__('notification_inbox.actions.mark_read'))
                     ->icon(Heroicon::OutlinedEnvelopeOpen)
                     ->color('gray')
-                    ->visible(fn (PanelNotification $record): bool => $record->read_at === null)
+                    ->visible(fn (PanelNotification $record): bool => $record->read_at === null && self::ownsRecord($record))
                     ->action(fn (PanelNotification $record) => app(NotificationInboxService::class)->markRead(self::owner(), [$record])),
                 Action::make('markUnread')
                     ->label(__('notification_inbox.actions.mark_unread'))
                     ->icon(Heroicon::OutlinedEnvelope)
                     ->color('gray')
-                    ->visible(fn (PanelNotification $record): bool => $record->read_at !== null)
+                    ->visible(fn (PanelNotification $record): bool => $record->read_at !== null && self::ownsRecord($record))
                     ->action(fn (PanelNotification $record) => app(NotificationInboxService::class)->markUnread(self::owner(), [$record])),
             ])
             ->recordAction('open')
@@ -140,12 +178,14 @@ class NotificationResource extends Resource
                         ->icon(Heroicon::OutlinedEnvelope)
                         ->deselectRecordsAfterCompletion()
                         ->action(fn (Collection $records) => app(NotificationInboxService::class)->markUnread(self::owner(), $records)),
-                ]),
+                ])
+                    // Butun personelin tablosunda toplu isaretleme yok (baskasinin bildirimi degismez).
+                    ->visible(fn (): bool => ! self::seesAll()),
             ])
             ->defaultSort('created_at', 'desc')
             ->paginated([25, 50, 100])
             ->emptyStateIcon(Heroicon::OutlinedBellSlash)
-            ->emptyStateHeading(__('notification_inbox.empty'));
+            ->emptyStateHeading(fn (): string => self::seesAll() ? __('notification_inbox.empty_all') : __('notification_inbox.empty'));
     }
 
     public static function getPages(): array

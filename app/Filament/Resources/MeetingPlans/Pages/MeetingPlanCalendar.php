@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MeetingPlans\Pages;
 
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\MeetingPlanAppConfig;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
@@ -41,6 +42,7 @@ class MeetingPlanCalendar extends Page
             Action::make('create')
                 ->label(__('meeting_plan.actions.create'))
                 ->icon(Heroicon::OutlinedPlus)
+                ->color(ActionColors::CREATE)
                 ->visible(fn (): bool => MeetingPlanResource::canCreate())
                 ->url(MeetingPlanResource::getUrl('create')),
         ];

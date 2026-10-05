@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WorkRequests\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\WorkRequest\WorkRequestService;
@@ -15,6 +16,8 @@ use Illuminate\Validation\ValidationException;
 /** Talep eden, talep henuz kabul edilmemisken duzenler (WorkRequestPolicy::update). */
 class EditWorkRequest extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = WorkRequestResource::class;
 
     protected function handleRecordUpdate(Model $record, array $data): Model

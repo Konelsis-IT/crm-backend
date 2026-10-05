@@ -6,6 +6,7 @@ namespace App\Filament\Resources\StageTemplates\RelationManagers;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\StageTemplateVersions\StageTemplateVersionResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\StageTemplateVersion;
@@ -106,7 +107,7 @@ class VersionsRelationManager extends RelationManager
                     }),
                 Action::make('publish')
                     ->label(__('stage_template_version.actions.publish'))
-                    ->color('success')
+                    ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedRocketLaunch)
                     ->requiresConfirmation()
                     ->visible(fn (StageTemplateVersion $record): bool => $record->status === \App\Enums\Project\StageTemplateVersionStatus::Draft)

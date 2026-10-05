@@ -150,12 +150,35 @@ Every table in this project — resource lists, relation managers (including gro
 
 `tools/safe-verify.php` fails when `TableConventions::register()` is missing from the provider, when a file under `app/Filament` overrides `modifyUngroupedRecordActionsUsing()`, or when a table sets `->recordUrl(null)` without a row action.
 
+### Button colour standard (user decision, 2026-09-30, D-148)
+
+Button colours follow the button's purpose: "kaydet butonu yeşil, iptal gibi butonlar kırmızı … Düzenle turuncu … farklı tipte farklı amaçlı butonlar için farklı tonlar". The palette lives in `App\Filament\Support\ActionColors` and is applied centrally by `ActionColors::register()` (called from `AppServiceProvider::configureFilamentDefaults()`); every panel registers the extra tones with `...ActionColors::panelColors()`.
+
+| Purpose | Constant | Colour |
+|---|---|---|
+| Kaydet, Oluştur (form submit), Gönder, every modal confirm, Onayla / Yayınla / Seç / Tamamla | `ActionColors::SAVE` (`success`) | green |
+| Yeni, "… Oluştur" header buttons, Ekle | `ActionColors::CREATE` (`emerald`) | emerald |
+| Düzenle | `ActionColors::EDIT` (`orange`) | orange |
+| İptal, Vazgeç, Kapat, Geri çek, "… iptal et" | `ActionColors::CANCEL` (`rose`) | rose red |
+| Sil, Reddet | `ActionColors::DELETE` (`danger`) | red |
+| Görüntüle, wizard İleri | `ActionColors::VIEW` (`info`) | blue |
+| Gönder / İlet / İncelemeye gönder (workflow forward) | `ActionColors::SEND` (`info`) | blue |
+| Secondary work (download, preview, list / calendar switch, mark read) | `ActionColors::NEUTRAL` (`gray`) | gray |
+
+- Modal footers are automatic: the confirm button turns `SAVE`, except destructive and warning actions (`danger`, `warning`) which keep their colour, and cancel-type actions (`CANCEL`) whose confirm turns `DELETE` so the two footer buttons never share a colour; the modal's own İptal / Kapat is `CANCEL`.
+- Filament's built-in actions get their colour through `defaultColor` (EditAction orange, CreateAction emerald, ViewAction blue, DeleteAction red), so an explicit `->color()` in code still wins; use that only for a real exception.
+- Every `CreateRecord` / `EditRecord` page uses `App\Filament\Concerns\HasColoredFormActions` (Filament builds the page's Kaydet / Oluştur / İptal inside the page and sets İptal gray explicitly). Other pages with their own form buttons colour them with `ActionColors::save()` / `ActionColors::cancel()`.
+- A new custom action takes the constant that matches its purpose; never write a save/confirm button in red or primary, and never leave a cancel-type button gray.
+- Filled (solid) buttons always carry white text (user decision 2026-09-30, D-149: "Butonların içindeki yazı beyaz olmalıydı"). Filament picks a button's shade by contrast but only tries 600 / 500, so light palettes (orange, emerald, green, warning) fell back to a pale background with dark text. `App\Filament\Support\WhiteTextButtonComponent` (bound over Filament's `ButtonComponent` in `AppServiceProvider::register()`) also tries 700 and 800 and takes the first shade that carries light text. Do not fix button contrast by overriding a global colour palette (badges and icons would change) or with CSS; outlined buttons and gray (white-background) buttons keep Filament's own styling.
+
+`tools/safe-verify.php` fails when `ActionColors::register()` is missing from the provider, when the provider does not bind `WhiteTextButtonComponent`, when a panel registers colours without `ActionColors::panelColors()`, or when a create/edit page lacks `HasColoredFormActions`.
+
 ### Feature switches (user decision, 2026-09-25, D-128)
 
 Every developed feature can be switched on or off, and the switch lives **only in the database** (`features.is_active`, batch B39). There is no settings screen, no `.env` variable and no config file for it; the user flips the value in the database.
 
 - The catalog is `App\Enums\Platform\Feature`. The code is dotted and carries the hierarchy (`acquisition.proposals` belongs to `acquisition`); a disabled parent disables its children. Each case has a Turkish name, a description of what disappears when it is off, its decision reference, and `models()` — record types that belong only to that feature.
-- `FeatureRegistry` syncs the catalog into the table on the first request: missing rows are inserted with `defaultActive()`, name/description/parent/order are refreshed, and the application never writes `is_active` on an existing row or deletes a row. Until B39 is applied every feature is on except `tools.release_notes`.
+- `FeatureRegistry` syncs the catalog into the table on the first request: missing rows are inserted with `defaultActive()`, name/description/version/parent/order are refreshed, and the application never writes `is_active` on an existing row or deletes a row. The single exception is a release: `konelsis:release` opens the features of the version it publishes (D-153, see below). Until B39 is applied every feature is on except `tools.release_notes`.
 - Read a switch only through `FeatureFlags::enabled(Feature::X)`; never pass a string.
 - **Every new user-visible feature is registered in the catalog in the same change** and gated wherever it appears: resource/page `canAccess()`, widget `canView()`, relation manager `canViewForRecord()` when it does not go through a policy, user-menu and topbar `visible()`, render hooks and script data, and its JSON/file routes (`->middleware(RequireFeature::for(Feature::X))`). Record types that belong to one feature only go into `models()`; `Gate::before` then denies them everywhere (resource, relation tabs, links, file endpoints). Shared record types (personnel, party, org unit, position) never go into `models()`.
 - Granularity follows the user's list: tabs and parts of a screen are separate features when the user names them (social media tabs, feed boxes, executive profile, blog; request thread; chat groups and request-from-chat; control matrix parts on the personnel card; analysis dashboard vs duration report; Excel vs PDF; alert sound vs Windows notification).
@@ -164,6 +187,32 @@ Every developed feature can be switched on or off, and the switch lives **only i
 - New features default to on. Only a feature the user explicitly wants hidden starts off (today: release notes).
 - Release notes keep being written in `App\Support\ReleaseNotes` for every change even while the window is hidden.
 - `tools/safe-verify.php` fails on a string passed to `FeatureFlags::enabled()`, on `config/features.php`, on a resource/page/widget not tied to a feature (neither `Feature::` nor a delegated `X::canAccess()`), and when the `Gate::before` hook is missing.
+
+### Feature versions and releases (user decisions, 2026-10-02 / 2026-10-03, D-151, D-152)
+
+The user's standing rule (2026-10-03): "Her geliştirme bekletilebiliyorsa versiyonlanacak ve sırası gelen güncellemeyle açılacak. Kodla gidenler kodla gidecek."
+
+Code always goes to production directly from one branch; there are no release branches, tags or release-bound database packages. Changes to existing screens go live with the code. Only *new* features are held back, by version.
+
+**For every development, decide first: can it be held back?**
+
+- **Holdable** — a capability that can be switched off on its own without breaking anything: a new screen, page, tab, section, widget, button or action, report, export, notification type, scheduled job or other background work. Register it as a `Feature` case with version `Feature::NEXT_RELEASE` (the upcoming update) and gate it everywhere it appears (see the feature switch rules above, background work included). It stays invisible in production until that version is published, and then opens on its own.
+- **Goes with the code** — a change to how an existing screen looks or behaves, a bug fix, a permission or business-rule change, a refactor, styling, infrastructure. No feature and no version; it is live as soon as the code is deployed. Do not wrap such a change in a switch just to delay it, because keeping the old behaviour as well needs an explicit user decision.
+- When it is unclear, choose holdable if the new part can be switched off cleanly. At handoff, always list every change of the task as "bekletilebilir (sürüm X)" or "kodla gider", so the user knows what opens with which update.
+
+**Version mechanics**
+
+- `Feature::NEXT_RELEASE` (a constant on the enum) is the update currently in development. New holdable features and new release-note items use this number. When the user says a version was published in production, raise it by one step (2.4 → 2.5) in the same change. No feature may carry a higher version (safe-verify). Git commit names follow the same numbers (`v2.3`).
+- Every `Feature` case carries the version it ships in: the fourth element of its `definition()` row (`[ad, açıklama, karar, sürüm]`), read with `Feature::version()`. The application writes it to `features.version` (B42); nobody edits it in the database.
+- A feature's version is the version in which production users first see the capability. A switch added later for an older screen that is already live keeps the older version; otherwise the switch would hide something already live. A feature that is kept closed in production (`is_active = 0` there) has not been seen yet, so it carries the version of the update that will open it, never its old commit version (D-153, 2026-10-03: the 31 features closed in production moved to 2.4). When the user reports production's closed list, move those features to `Feature::NEXT_RELEASE` (or to the later update the user names) and mirror the list in `database/seeders/data/features.php`.
+- Release notes (`App\Support\ReleaseNotes`) use the same numbers. New items go into the `Feature::NEXT_RELEASE` entry, which is opened at the top of the list when missing. In production the notes are visible up to the published version; entries 1.1–1.10 are the old numbering and stay as history.
+- Production keeps the published version in `feature_releases` (latest row). A feature is visible only when its switch is on **and** neither its own version nor a parent's is above the published version (`FeatureRegistry::enabled()`; its `models()` are denied through `Gate::before` as well). Without a release row (local environment, or production before its first release) there is no version filter.
+- Publishing is `php artisan konelsis:release <version>` (one row, recorded in Personel Hareketleri as "Sistem"); without an argument the command only prints the status table; going back to an older version needs `--geri-al`. Agents never publish: the user or DevOps runs it in production; the local environment stays without release rows.
+- Publishing opens the update (D-153): every feature whose version lies after the previously published version and up to the new one is switched on (`is_active = 1`, `PlatformFeatureService::openReleased()`, listed in the command output and the activity record). On the very first release only the features of exactly that version are opened, so older features kept closed in production stay closed. A rollback opens nothing. The user therefore never has to flip `is_active` by hand to open an update; switching a released feature off again is still a database edit.
+- `database/seeders/data/features.php` mirrors production's switches (31 closed as of 2026-10-03). `konelsis:features:export` writes the *local* states, which are all on during development, so do not run it to refresh this file.
+- Gate background work too: scheduled commands, reminders and notification senders of a feature check `FeatureFlags::enabled()` before doing anything (the four existing scheduled commands do).
+- `FeatureSeeder` applies `database/seeders/data/features.php` only to features inserted in that run; it never changes an existing production switch.
+- `tools/safe-verify.php` fails when a `Feature` case has no version in its definition row, when a version is above `Feature::NEXT_RELEASE` (or the constant is missing), or when the B42 signature is missing from `SchemaReadiness`.
 
 ## Plugin and dependency boundary
 

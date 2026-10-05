@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ApprovalPolicies\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\ApprovalPolicies\ApprovalPolicyResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Approval\ApprovalPolicyService;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CreateApprovalPolicy extends CreateRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = ApprovalPolicyResource::class;
 
     protected function handleRecordCreation(array $data): Model

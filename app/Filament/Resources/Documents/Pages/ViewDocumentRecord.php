@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Documents\Pages;
 
 use App\Filament\Exports\DocumentExporter;
 use App\Filament\Resources\Documents\DocumentResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DocumentWorkspace;
 use App\Filament\Support\ExportActions;
 use App\Filament\Support\FileLinks;
@@ -44,6 +45,7 @@ class ViewDocumentRecord extends ViewRecord
                 Action::make('edit_details')
                     ->label(__('document.actions.edit_details'))
                     ->icon(Heroicon::OutlinedPencilSquare)
+                    ->color(ActionColors::EDIT)
                     ->link()
                     ->url(DocumentResource::getUrl('edit', ['record' => $document])),
             ]),

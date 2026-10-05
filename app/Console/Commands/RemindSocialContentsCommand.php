@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\Platform\Feature;
 use App\Infrastructure\Media\ChunkedUploadStore;
 use App\Services\Audit\ActorContext;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\SocialMedia\SocialReminderScanner;
 use Illuminate\Console\Command;
@@ -35,6 +37,15 @@ final class RemindSocialContentsCommand extends Command
     {
         if (! SchemaReadiness::hasBatch('B31')) {
             $this->info('B31 uygulanmadi; atlandi.');
+
+            return self::SUCCESS;
+        }
+
+        // Ozellik kapaliysa (ya da surumu canlida yayinlanmadiysa, D-151) hatirlatma
+        // gitmez; yarim kalmis yukleme temizligi yine yapilir.
+        if (! FeatureFlags::enabled(Feature::SocialMedia)) {
+            $this->info('Sosyal medya ozelligi kapali; hatirlatma atlandi.');
+            $this->purgeStaleUploads();
 
             return self::SUCCESS;
         }

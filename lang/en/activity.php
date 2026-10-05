@@ -59,6 +59,8 @@ return [
         'dosya' => 'File',
         'mesaj' => 'Message',
         'surum' => 'Version',
+        'onceki_surum' => 'Previous version',
+        'acilan_ozellikler' => 'Features opened',
         'sira' => 'Order',
         'aciklama' => 'Caption',
         'paylasim_baglantilari' => 'Publication links',
@@ -115,6 +117,7 @@ return [
     ],
 
     'subjects' => [
+        'feature_release' => 'Release',
         'work_request' => 'Request',
         'report' => 'Report',
         'report_item' => 'Report work item',
@@ -260,6 +263,7 @@ return [
     ],
 
     'actions' => [
+        'feature_release.created' => 'Version published to production',
         'work_request.approval_requested' => 'Request sent for approval',
         'work_request.approval_approved' => 'Request approved',
         'work_request.approval_rejected' => 'Request approval rejected',

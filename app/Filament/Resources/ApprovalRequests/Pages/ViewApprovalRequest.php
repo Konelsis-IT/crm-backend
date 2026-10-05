@@ -7,6 +7,7 @@ namespace App\Filament\Resources\ApprovalRequests\Pages;
 use App\Enums\Approval\ApprovalDecisionKind;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ApprovalRequests\ApprovalRequestResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Approval\ApprovalRequest;
 use App\Query\Approval\ApprovalQueries;
@@ -143,7 +144,7 @@ class ViewApprovalRequest extends ViewRecord
             Action::make('cancel')
                 ->label(__('approval_request.actions.cancel'))
                 ->icon(Heroicon::OutlinedNoSymbol)
-                ->color('gray')
+                ->color(ActionColors::CANCEL)
                 ->requiresConfirmation()
                 ->visible(fn (): bool => Gate::allows('cancel', $this->getRecord()))
                 ->schema([

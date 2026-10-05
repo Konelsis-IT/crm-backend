@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WorkItems\Pages;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\WorkItems\WorkItemActions;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Support\DomainNotifications;
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class EditWorkItem extends EditRecord
 {
+    use HasColoredFormActions;
+
     protected static string $resource = WorkItemResource::class;
 
     protected function getHeaderActions(): array

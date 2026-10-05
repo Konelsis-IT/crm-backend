@@ -6,10 +6,13 @@ return [
     'singular' => 'Bildirim',
     'plural' => 'Tüm bildirimler',
     'help' => 'Size gönderilen bütün bildirimler; eskiler de dahil. Satıra tıklayınca bildirimin ilgili sayfası açılır ve bildirim okundu olur.',
+    'help_all' => 'Bütün personele gönderilen bildirimler; eskiler de dahil. "Alıcı" sütunu bildirimin kime gittiğini gösterir, süzgeçten kişi seçilebilir. Satıra tıklayınca bildirimin ilgili sayfası açılır; başkasının bildirimi okundu olmaz.',
     'open_all' => 'Tüm bildirimleri gör',
     'empty' => 'Henüz bildiriminiz yok',
+    'empty_all' => 'Henüz bildirim yok',
     'fields' => [
         'status' => 'Durum',
+        'recipient' => 'Alıcı',
         'title' => 'Başlık',
         'body' => 'İçerik',
         'created_at' => 'Tarih',
@@ -20,6 +23,7 @@ return [
     ],
     'filters' => [
         'read' => 'Okunma durumu',
+        'recipient' => 'Alıcı',
     ],
     'tabs' => [
         'all' => 'Tümü',

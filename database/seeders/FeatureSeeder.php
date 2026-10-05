@@ -20,8 +20,11 @@ use Illuminate\Database\Seeder;
  *   3. Canlida B39 uygulandiktan sonra DBA bu seeder'i calistirir:
  *      `php artisan db:seed --class=FeatureSeeder` (sema korumasi izni ile).
  *
- * Tekrar calistirilabilir: eksik satir eklenir, tanimlar tazelenir, dosyada
- * yazan durum uygulanir; dosyada olmayan ozellik varsayilan durumunda kalir.
+ * Tekrar calistirilabilir: eksik satir eklenir, tanimlar tazelenir.
+ * D-151 (2 Ekim 2026): dosyadaki durum YALNIZ bu calismada yeni eklenen
+ * ozelliklere uygulanir (ilk kurulumda hepsine). Canlida acilip kapatilmis
+ * mevcut ozelliklere dokunulmaz; yeni ozellikler zaten surumleri
+ * yayinlanana kadar gorunmez (`konelsis:release`).
  * Seeder calistirilmasa da uygulama ilk istekte satirlari varsayilan
  * durumlariyla (surum notlari kapali, digerleri acik) kendisi yazar.
  */
@@ -39,6 +42,7 @@ class FeatureSeeder extends Seeder
         $features = app(PlatformFeatureService::class);
 
         $rows = $queries->all();
+        $existing = array_flip(array_map('strval', $rows->keys()->all()));
 
         if ($features->outOfSync($rows)) {
             $features->syncCatalog($rows);
@@ -49,6 +53,15 @@ class FeatureSeeder extends Seeder
 
         if (! is_array($states) || $states === []) {
             $this->command?->info('Ozellik katalogu yazildi; veri dosyasi yok, varsayilan durumlar gecerli.');
+
+            return;
+        }
+
+        // Yalniz bu calismada eklenen ozellikler (D-151); mevcut satirin durumu canlida kalir.
+        $states = array_diff_key($states, $existing);
+
+        if ($states === []) {
+            $this->command?->info('Ozellik katalogu yazildi; yeni ozellik yok, canlidaki acik / kapali durumlar korundu.');
 
             return;
         }

@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Parties\RelationManagers;
 
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\BusinessCases\Pages\CreateBusinessCase;
+use App\Filament\Support\ActionColors;
 use App\Models\Acquisition\BusinessCase;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -54,6 +55,7 @@ class BusinessCasesRelationManager extends RelationManager
                 Action::make('create_business_case')
                     ->label(__('business_case.actions.create'))
                     ->icon(Heroicon::OutlinedPlus)
+                    ->color(ActionColors::CREATE)
                     ->visible(fn (): bool => auth()->user()?->can('create', BusinessCase::class) ?? false)
                     ->url(fn (): string => BusinessCaseResource::getUrl('create', [CreateBusinessCase::QUERY_PARTY => (int) $party->getKey()])),
             ])

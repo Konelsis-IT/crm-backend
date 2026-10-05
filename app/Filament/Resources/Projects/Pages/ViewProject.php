@@ -21,6 +21,7 @@ use App\Filament\Resources\Projects\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\RisksRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\StageInstancesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\WorkstreamsRelationManager;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ExportActions;
 use App\Filament\Support\ProjectWizard;
@@ -169,6 +170,7 @@ class ViewProject extends ViewRecord
         return Action::make('edit_details')
             ->label(__('project.actions.edit_details'))
             ->icon(Heroicon::OutlinedPencilSquare)
+            ->color(ActionColors::EDIT)
             ->link()
             ->url(fn (): string => $this->editUrl(ProjectWizard::STEP_IDENTITY));
     }

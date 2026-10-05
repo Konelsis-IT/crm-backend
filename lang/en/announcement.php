@@ -5,7 +5,7 @@ return [
     'plural' => 'Announcements',
 
     'actions' => [
-        'send' => 'Send notification',
+        'send' => 'Send announcement',
         'submit' => 'Send',
         'open' => 'Open',
         'read' => 'Read',
@@ -28,8 +28,8 @@ return [
     ],
 
     'help' => [
-        'send' => 'Everyone in the selected audience receives it in their notification bell. Only audiences you are allowed to notify are listed.',
-        'action_url' => 'You may add an in-app page link; it appears as an "Open" button in the notification.',
+        'send' => 'The announcement reaches the notification bell of everyone in the selected audience and appears under Announcements on the overview. Only audiences you are allowed to notify are listed.',
+        'action_url' => 'You may add an in-app page link; it appears as "Open" in the bell notification and as "Open link" under Announcements.',
     ],
 
     'audiences' => [
@@ -45,12 +45,14 @@ return [
     ],
 
     'messages' => [
-        'sent' => 'The notification was sent to :count people.',
+        'sent' => 'The announcement was sent to :count people.',
     ],
 
     'widget' => [
         'heading' => 'Announcements',
-        'description' => 'Sent notifications and announcements; newest first.',
+        'description' => 'Sent announcements; newest first.',
         'empty' => 'No announcements yet.',
+        'open_link' => 'Open link',
+        'show_all' => 'See all',
     ],
 ];
