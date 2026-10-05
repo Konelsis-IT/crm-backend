@@ -55,7 +55,7 @@ final class ReleaseNotes
                         'İş alımda Sözleşmeler.',
                         'Proje kataloglarında proje bileşenleri, odak beklentileri ve onay kapısı şablonları.',
                         'Personel kartında haftalık kontrol sekmesi ve dikkat kartı; Analizler altında İş raporları (analiz panosu ve süre raporu).',
-                        'Sosyal medyada Akış sekmesi ve depolama kutusu, Plan ve Analiz sekmeleri, blog yazma ve yönetici hesabı.',
+                        'Sosyal medyada Akış sekmesindeki depolama kutusu, Plan ve Analiz sekmeleri, blog yazma ve yönetici hesabı.',
                         'Sohbette grup açma ve mesajdan talep açma.',
                         'Zilin yanında Tüm bildirimler tablosu; masaüstü uyarıları: bildirim sesi ve Windows bildirimi.',
                         'Üst çubukta Hızlı işlemler; listelerde ve detay sayfalarında Excel ve PDF indirme.',
@@ -67,6 +67,9 @@ final class ReleaseNotes
                 'version' => '2.3',
                 'date' => '03.10.2026',
                 'groups' => [
+                    self::FEATURES => [
+                        'Sosyal medyada Akış sekmesi: içerik kartları ve onay bekleyen paylaşımlar.',
+                    ],
                     self::IMPROVEMENTS => [
                         'Teklif ve potansiyel iş sayfalarındaki "İş akışı" adımları yerine "Bu iş nerede?" bölümü geldi: potansiyel iş, teklifler ve proje alt alta; bulunduğunuz kayıt "Buradasınız" ile işaretli ve durumu tek cümleyle yazıyor (ör. "Müşterinin cevabı bekleniyor · 50 gündür"). Diğer kayıtların özet bilgileri etiketlerle görünüyor, "Potansiyel işe git" / "Projeye git" düğmeleri var. Proje henüz yoksa ne gerektiği ve "Projeye dönüştür" orada. Potansiyel işin teklif tablosu alttaki "Teklifler" sekmesinde.',
                         'Genel bakış yeni düzende: sayfa solda geniş, sağda dar iki sütun. Başlığın yanında Bugün (mavi), Geciken (kırmızı) ve Yaklaşan (turuncu) iş sayıları. Altında "Görevlerim ve işlerim": yalnız size ait işler, Geciken / Bugün / Yarın sekmeleri; her işte proje, durum, tarih ve sorumlu (fotoğrafıyla), satıra tıklayınca iş açılıyor. Sağda turuncu "Duyuru gönder", yaklaşan tarihler (her biri kart, kalan gün renkli: 3 gün ve altı kırmızı, 4–6 gün turuncu), son 3 duyuru ("Tümünü gör" tüm bildirimlere gider) ve yaklaşan sosyal medya paylaşımları (gün kutucuğu, platform işareti, "Bugün 12:00 / Yarın 10:00 / 3 gün sonra"; geciken paylaşım kırmızı çizgiyle).',

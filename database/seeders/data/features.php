@@ -5,6 +5,8 @@
 // Uretim: php artisan konelsis:features:export (30.09.2026 16:16, yerel veritabani).
 // 3 Ekim 2026 (D-153): canlidaki durum kullanicinin listesinden islendi; 31 ozellik
 // canlida kapali ve surumu 2.4 (sira gelen guncellemeyle acilir).
+// 5 Ekim 2026 (D-154): Akis sekmesi (social_media.feed) canlida acildi, surumu 2.3;
+// canlida kapali ozellik sayisi 30.
 // Elle de duzenlenebilir; katalogda olmayan kod atlanir.
 
 return [
@@ -65,7 +67,7 @@ return [
     'work.analysis.dashboard' => false, // İş raporları: Analiz panosu
     'work.analysis.duration' => false, // İş raporları: Süre raporu
     'social_media' => true, // Sosyal medya
-    'social_media.feed' => false, // Sosyal medya: Akış sekmesi
+    'social_media.feed' => true, // Sosyal medya: Akış sekmesi
     'social_media.feed.watch' => true, // Sosyal medya: Akış > Rakipler ve kurumlar kutusu
     'social_media.feed.storage' => false, // Sosyal medya: Akış > Depolama kutusu
     'social_media.plan' => false, // Sosyal medya: Plan sekmesi

@@ -352,7 +352,7 @@ enum Feature: string
             self::DurationReport => ['İş raporları: Süre raporu', 'Analizler > İş raporları > Süre raporu.', 'D-116', '2.4'],
 
             self::SocialMedia => ['Sosyal medya', 'Sosyal Medya ekranı ve genel bakıştaki yaklaşan içerikler kutusu. Alt özellikler (sekmeler ve parçalar) de kapanır.', 'D-106', '1.5'],
-            self::SocialFeed => ['Sosyal medya: Akış sekmesi', 'Akış sekmesi (içerik kartları, onay bekleyenler). Kapalıysa ekran ilk açık sekmeyle açılır.', 'D-106', '2.4'],
+            self::SocialFeed => ['Sosyal medya: Akış sekmesi', 'Akış sekmesi (içerik kartları, onay bekleyenler). Kapalıysa ekran ilk açık sekmeyle açılır.', 'D-106 / D-154', '2.3'],
             self::SocialWatchBox => ['Sosyal medya: Akış > Rakipler ve kurumlar kutusu', 'Akış sekmesinin yanındaki rakip ve kurum hesapları kutusu (rakip analiz).', 'D-106', '1.5'],
             self::SocialStorageBox => ['Sosyal medya: Akış > Depolama kutusu', 'Akış sekmesinin yanındaki disk / depolama durumu kutusu (donanım kontrolü).', 'D-106', '2.4'],
             self::SocialPlan => ['Sosyal medya: Plan sekmesi', 'Plan sekmesi (takvim ve ajanda).', 'D-106', '2.4'],
