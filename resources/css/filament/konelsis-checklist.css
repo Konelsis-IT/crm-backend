@@ -1,0 +1,234 @@
+/*
+ * Konelsis - teklif oncesi kontrol listesi tahtasi ve Kaydet / Ileri ozeti
+ * (D-157, 5 Ekim 2026; kullanici: "Checklist listesi anlamsiz buyuk",
+ * "istedigim tasarim Filament ile olmadiginda React ile yapabilirsin").
+ *
+ * - .kc-cl*  React tahtasi (resources/js/acquisition/checklist-board.js)
+ * - .kc-sum* Kaydet / Ileri penceresindeki ozet (ChecklistSchema::summaryHtml)
+ *
+ * Yalniz potansiyel is olustur / duzenle sayfalarinda yuklenir
+ * (filament.acquisition.checklist-scripts). Kalp gostergesi (.kc-heat) liste ve
+ * detay sayfalarinda da gerektigi icin konelsis.css'tedir.
+ */
+
+.kc-cl,
+.kc-sum {
+    --kc-cl-line: var(--gray-200);
+    --kc-cl-soft: var(--gray-50);
+    --kc-cl-surface: #fff;
+    --kc-cl-muted: var(--gray-500);
+    --kc-cl-ink: var(--gray-950);
+    --kc-cl-good: #15803d;
+    --kc-cl-good-bg: #dcfce7;
+    --kc-cl-bad: #b91c1c;
+    --kc-cl-bad-bg: #fee2e2;
+    --kc-cl-chip: #b45309;
+    --kc-cl-chip-bg: #fef3c7;
+    color: var(--kc-cl-ink);
+    font-size: 0.875rem;
+}
+
+.kc-cl:where(.dark, .dark *),
+.kc-sum:where(.dark, .dark *) {
+    --kc-cl-line: var(--gray-700);
+    --kc-cl-soft: color-mix(in oklab, var(--gray-800) 55%, transparent);
+    --kc-cl-surface: var(--gray-900);
+    --kc-cl-muted: var(--gray-400);
+    --kc-cl-ink: var(--gray-100);
+    --kc-cl-good: #86efac;
+    --kc-cl-good-bg: #052e16;
+    --kc-cl-bad: #fca5a5;
+    --kc-cl-bad-bg: #450a0a;
+    --kc-cl-chip: #fcd34d;
+    --kc-cl-chip-bg: #3b2a08;
+}
+
+/* ---- Tahta ---------------------------------------------------------- */
+
+.kc-cl { display: grid; gap: 0.875rem; }
+.kc-cl-empty { margin: 0; color: var(--kc-cl-muted); }
+
+.kc-cl-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 2rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--kc-cl-line);
+    border-radius: 0.75rem;
+    background: var(--kc-cl-soft);
+}
+
+.kc-cl-facts { display: grid; gap: 0.15rem; font-size: 0.8125rem; color: var(--kc-cl-muted); }
+.kc-cl-facts b { color: var(--kc-cl-ink); font-weight: 600; }
+.kc-cl-legend { font-size: 0.75rem; }
+
+.kc-cl-template { border: 1px solid var(--kc-cl-line); border-radius: 0.75rem; overflow: hidden; background: var(--kc-cl-surface); }
+.kc-cl-template > h4 {
+    margin: 0;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background: var(--kc-cl-soft);
+    border-bottom: 1px solid var(--kc-cl-line);
+}
+
+/* Maddeler sutun sutun akar (1, 2, 3 ilk sutunda): okuma sirasi numarayla ayni. */
+.kc-cl-items { columns: 22rem; column-gap: 0; column-rule: 1px solid var(--kc-cl-line); margin-top: -1px; }
+
+.kc-cl-item {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.5rem 0.875rem 0.625rem;
+    border-top: 1px solid var(--kc-cl-line);
+    break-inside: avoid;
+}
+
+.kc-cl-item.is-optional .kc-cl-title { color: var(--kc-cl-muted); }
+.kc-cl-item-head { display: flex; align-items: center; gap: 0.5rem; min-height: 1.75rem; }
+.kc-cl-no { min-width: 1.25rem; font-weight: 700; color: var(--kc-cl-muted); font-variant-numeric: tabular-nums; }
+.kc-cl-title { flex: 1; font-weight: 600; line-height: 1.25; }
+.kc-cl-weight {
+    flex: none;
+    padding: 0.0625rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--kc-cl-chip);
+    background: var(--kc-cl-chip-bg);
+    font-variant-numeric: tabular-nums;
+}
+.kc-cl-weight.is-off { color: var(--kc-cl-muted); background: transparent; border: 1px dashed var(--kc-cl-line); font-weight: 600; }
+.kc-cl-score { flex: none; font-size: 0.6875rem; color: var(--kc-cl-muted); font-variant-numeric: tabular-nums; }
+
+.kc-cl-q { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; padding-inline-start: 0.25rem; }
+.kc-cl-q-no { font-size: 0.6875rem; color: var(--kc-cl-muted); font-variant-numeric: tabular-nums; }
+.kc-cl-q-text { font-size: 0.8125rem; line-height: 1.3; }
+.kc-cl-q-neg { margin-inline-start: 0.3rem; color: var(--kc-cl-muted); cursor: help; }
+
+/* Kontrol matrisindeki hucrenin aynisi: tiklandikca – -> ✓ -> ✗. */
+.kc-cl-cell {
+    display: inline-grid;
+    place-items: center;
+    width: 1.625rem;
+    height: 1.625rem;
+    padding: 0;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    background: var(--kc-cl-surface);
+    color: var(--kc-cl-muted);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.08s ease, background-color 0.12s ease, border-color 0.12s ease;
+}
+.kc-cl-cell:where(.dark, .dark *) { border-color: var(--gray-600); }
+.kc-cl-cell:hover:not(:disabled) { border-color: var(--primary-500); }
+.kc-cl-cell:active:not(:disabled) { transform: scale(0.9); }
+.kc-cl-cell:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+.kc-cl-cell[data-tone="good"] { color: var(--kc-cl-good); background: var(--kc-cl-good-bg); border-color: transparent; }
+.kc-cl-cell[data-tone="bad"] { color: var(--kc-cl-bad); background: var(--kc-cl-bad-bg); border-color: transparent; }
+.kc-cl-cell:disabled { cursor: default; opacity: 0.8; }
+/* Salt okunur tahta (potansiyel is detayi, D-158): renkler soluk degil. */
+.kc-cl.is-readonly .kc-cl-cell:disabled { opacity: 1; }
+
+/* Madde belgesi: kucuk dugme, yuklu belge baglantisi, bekleyen yukleme. */
+.kc-cl-doc { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; padding-inline-start: 2rem; margin-top: 0.15rem; font-size: 0.75rem; }
+.kc-cl-doc svg { width: 0.875rem; height: 0.875rem; flex: none; }
+.kc-cl-doc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--kc-cl-line);
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--kc-cl-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.kc-cl-doc-btn:hover { color: var(--primary-600); border-color: var(--primary-400); }
+.kc-cl-doc-btn.is-quiet { border-color: transparent; padding-inline: 0.25rem; text-decoration: underline; }
+.kc-cl-doc-link { display: inline-flex; align-items: center; gap: 0.25rem; max-width: 16rem; color: var(--primary-600); text-decoration: none; }
+.kc-cl-doc-link:where(.dark, .dark *) { color: var(--primary-400); }
+.kc-cl-doc-link span, .kc-cl-doc-pending span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kc-cl-doc-link:hover { text-decoration: underline; }
+.kc-cl-doc-pending { display: inline-flex; align-items: center; gap: 0.25rem; max-width: 16rem; color: var(--kc-cl-good); }
+.kc-cl-doc-progress { color: var(--kc-cl-muted); font-variant-numeric: tabular-nums; }
+/* Salt okunur tahtada belgesiz madde (D-159): satir durur, tasarim kaymaz. */
+.kc-cl-doc-none { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--kc-cl-muted); }
+.kc-cl-doc-req, .kc-cl-doc-error { color: var(--kc-cl-bad); font-weight: 600; }
+.kc-cl-file { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .kc-cl-cell { transition: none; }
+}
+
+/* ---- Kaydet / Ileri ozeti -------------------------------------------- */
+
+.kc-sum { display: grid; gap: 1rem; }
+.kc-sum h4 { margin: 0 0 0.375rem; font-size: 0.8125rem; font-weight: 600; }
+
+.kc-sum-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 2rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--kc-cl-line);
+    border-radius: 0.75rem;
+    background: var(--kc-cl-soft);
+}
+
+.kc-sum-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1rem; margin: 0; font-size: 0.8125rem; }
+.kc-sum-facts dt { color: var(--kc-cl-muted); }
+.kc-sum-facts dd { margin: 0; font-weight: 600; }
+
+.kc-sum-state { display: inline-flex; padding: 0.0625rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+.kc-sum-state.is-ready { color: var(--kc-cl-good); background: var(--kc-cl-good-bg); }
+.kc-sum-state.is-open { color: var(--kc-cl-chip); background: var(--kc-cl-chip-bg); }
+
+/* Tesvik satiri mavi: ana renk (kirmizi) hata gibi okunuyordu. */
+.kc-sum-nudge {
+    margin: 0;
+    padding: 0.625rem 0.875rem;
+    border-inline-start: 3px solid #3b82f6;
+    border-radius: 0 0.5rem 0.5rem 0;
+    background: color-mix(in oklab, #3b82f6 9%, transparent);
+    line-height: 1.45;
+}
+
+.kc-sum-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.kc-sum-table th { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--kc-cl-line); color: var(--kc-cl-muted); font-size: 0.75rem; font-weight: 600; text-align: start; }
+.kc-sum-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--kc-cl-line); vertical-align: middle; }
+.kc-sum-table tr:last-child td { border-bottom: 0; }
+.kc-sum-table td.kc-sum-no { width: 1.5rem; color: var(--kc-cl-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kc-sum-table td.kc-sum-weight { width: 5rem; color: var(--kc-cl-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kc-sum-table td.kc-sum-doc { width: 9rem; white-space: nowrap; }
+.kc-sum-table tr.is-optional td { color: var(--kc-cl-muted); }
+
+.kc-sum-marks { display: inline-flex; gap: 0.25rem; }
+.kc-sum-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.3rem;
+    color: var(--kc-cl-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.kc-sum-mark:where(.dark, .dark *) { border-color: var(--gray-600); }
+.kc-sum-mark.is-good { color: var(--kc-cl-good); background: var(--kc-cl-good-bg); border-color: transparent; }
+.kc-sum-mark.is-bad { color: var(--kc-cl-bad); background: var(--kc-cl-bad-bg); border-color: transparent; }
+
+.kc-sum-doc-ok { color: var(--kc-cl-good); font-weight: 600; }
+.kc-sum-doc-new { color: var(--primary-600); font-weight: 600; }
+.kc-sum-doc-missing { color: var(--kc-cl-bad); font-weight: 600; }
+.kc-sum-doc-none { color: var(--kc-cl-muted); }
+
+.kc-sum-missing ul { display: grid; gap: 0.15rem; margin: 0; padding-inline-start: 1.25rem; list-style: disc; font-size: 0.8125rem; }
