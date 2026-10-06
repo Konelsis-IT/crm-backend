@@ -15,7 +15,7 @@ use App\Services\Party\PartyMeetingNoteService;
 use App\Services\Party\PartyRoleService;
 use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Str;
 
 /**
@@ -37,8 +37,14 @@ use Illuminate\Support\Str;
  * Idempotent; MarketMapSeeder ve WeeklyVisitPlanSeeder basinda da calisir, ki
  * o seeder'lar yeniden calistiginda cift kayit olusmasin. Yeni kurulumda
  * tasinacak bir sey yoktur.
+ *
+ * Duzeltme seeder'i; uygulandi. D-165 ile var olan veriyi degistiremez,
+ * yeniden calistirilinca seed korumasi durdurur. Her ayirma
+ * 'split:<normalize yeni ad>', her yeniden adlandirma 'rename:<normalize eski
+ * ad>' anahtariyla bir kez islenir; tasinacak bir sey yoksa ya da zaten
+ * uygulanmissa yalniz arsive duser, eski firma yoksa arsive dusmez.
  */
-class PartySplitSeeder extends Seeder
+class PartySplitSeeder extends ProtectedSeeder
 {
     /**
      * Yeni taraf => eski (yanlis eslenen) taraf ve aktarimin eski tarafa actigi,
@@ -68,29 +74,46 @@ class PartySplitSeeder extends Seeder
             $rows = require database_path('seeders/data/weekly_visit_plans.php');
 
             foreach (self::SPLITS as $name => $split) {
-                $old = $this->find([$split['from'], self::RENAMES[$split['from']] ?? null]);
+                $this->row('split:'.$this->normalize($name), function () use ($name, $split, $rows): Party|bool|null {
+                    $old = $this->find([$split['from'], self::RENAMES[$split['from']] ?? null]);
 
-                if ($old !== null) {
-                    $this->split($old, $name, $split['move_contacts'], array_values(array_filter($rows, fn (array $row): bool => $row['party'] === $name)));
-                }
+                    if ($old === null) {
+                        return null;
+                    }
+
+                    return $this->split($old, $name, $split['move_contacts'], array_values(array_filter($rows, fn (array $row): bool => $row['party'] === $name)));
+                });
             }
         }
 
         foreach (self::RENAMES as $from => $to) {
-            $party = $this->find([$from]);
+            $this->row('rename:'.$this->normalize($from), function () use ($from, $to): Party|bool|null {
+                if ($this->find([$to]) !== null) {
+                    return true;
+                }
 
-            if ($party !== null && $this->find([$to]) === null) {
-                app(PartyService::class)->update($party, ['display_name' => $to, 'organization_profile' => ['legal_name' => $to]]);
+                $party = $this->find([$from]);
+
+                if ($party === null) {
+                    return null;
+                }
+
+                /** @var Party $party */
+                $party = app(PartyService::class)->update($party, ['display_name' => $to, 'organization_profile' => ['legal_name' => $to]]);
                 $this->command?->info("Taraf yeniden adlandirildi: {$from} -> {$to}");
-            }
+
+                return $party;
+            });
         }
     }
 
     /**
+     * Yeni firma (tasindiysa) ya da true (tasinacak bir sey yok) doner (D-165).
+     *
      * @param  list<string>  $moveContacts
      * @param  list<array<string, mixed>>  $rows
      */
-    private function split(Party $old, string $name, array $moveContacts, array $rows): void
+    private function split(Party $old, string $name, array $moveContacts, array $rows): Party|bool
     {
         $texts = [];
         $dates = [];
@@ -117,7 +140,7 @@ class PartySplitSeeder extends Seeder
             ->values();
 
         if ($notes->isEmpty() && $plans->isEmpty()) {
-            return;
+            return true;
         }
 
         $new = $this->find([$name]) ?? $this->createParty($name, (string) ($rows[0]['role'] ?? 'employer'));
@@ -135,6 +158,8 @@ class PartySplitSeeder extends Seeder
         }
 
         $this->command?->info(sprintf('%s -> %s: %d gorusme notu, %d plan tasindi.', $old->display_name, $name, $notes->count(), $plans->count()));
+
+        return $new;
     }
 
     /**

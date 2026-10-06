@@ -13,8 +13,8 @@ use App\Models\Personnel\PersonnelAssignment;
 use App\Models\Personnel\Position;
 use App\Models\Personnel\PositionAssignment;
 use App\Models\Personnel\ReportingRelationship;
-use App\Services\Authorization\PositionRoleSync;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Database\Seeders\Support\SeedPositionRoles;
 use Illuminate\Support\Carbon;
 
 /**
@@ -35,8 +35,14 @@ use Illuminate\Support\Carbon;
  * T.C. kimlik no ve ise giris tarihi hicbir kaynakta yok; gercek kisiler
  * icin uydurulmaz, bos birakilir. Atama tarihi olarak seed'in calistigi
  * gun yazilir (gercek ise giris tarihi degildir).
+ *
+ * D-165: korumali seeder. Her kisi bir satirdir ('personnel:<normalize
+ * e-posta>'); var olan personel benimsenir ve dokunulmaz, islenen satir
+ * arsive duser (canlida silinen / degistirilen personel geri gelmez).
+ * Gorev atamasi, amir ve birim yoneticisi yalniz bu calistirmada acilan
+ * personel icin yazilir. Departman/gorev bulunamazsa satir arsive dusmez.
  */
-class RealPersonnelSeeder extends Seeder
+class RealPersonnelSeeder extends ProtectedSeeder
 {
     public const PASSWORD = 'Konelsis.Giris.2026';
 
@@ -108,49 +114,62 @@ class RealPersonnelSeeder extends Seeder
 
         /** @var array<string, Personnel> $people */
         $people = [];
+        // D-165: yalniz bu calistirmada yeni acilan personel; var olan kayda,
+        // gorev atamasina ve amirine dokunulmaz (canlida son hali kalir).
+        /** @var array<string, true> $created */
+        $created = [];
 
         foreach (self::PEOPLE as $index => $row) {
-            $unit = $units->get($row['unit']);
-            $position = $unit !== null
-                ? Position::query()->where('org_unit_id', $unit->getKey())->where('code', $row['position'])->first()
-                : null;
+            $key = 'personnel:'.(string) Personnel::normalizeEmail($row['email']);
 
-            if ($unit === null || $position === null) {
-                $this->command?->warn(sprintf('%s icin departman/gorev bulunamadi, atlandi (once RealOrganizationSeeder).', $row['name']));
+            $this->row($key, function () use ($index, $row, $units, $today, &$people, &$created): ?Personnel {
+                $unit = $units->get($row['unit']);
+                $position = $unit !== null
+                    ? Position::query()->where('org_unit_id', $unit->getKey())->where('code', $row['position'])->first()
+                    : null;
 
-                continue;
-            }
+                if ($unit === null || $position === null) {
+                    $this->command?->warn(sprintf('%s icin departman/gorev bulunamadi, atlandi (once RealOrganizationSeeder).', $row['name']));
 
-            $personnel = $this->seedPersonnel($index, $row, $unit, $position);
-            $people[$row['name']] = $personnel;
+                    return null;
+                }
 
-            $this->seedAssignment($personnel, $unit, $position, $today);
+                $personnel = $this->seedPersonnel($index, $row, $unit, $position);
+                $people[$row['name']] = $personnel;
+
+                if ($personnel->wasRecentlyCreated) {
+                    $created[$row['name']] = true;
+                    $this->seedAssignment($personnel, $unit, $position, $today);
+                }
+
+                return $personnel;
+            });
         }
 
         foreach (self::PEOPLE as $row) {
-            $personnel = $people[$row['name']] ?? null;
-            $manager = $row['manager'] !== null ? ($people[$row['manager']] ?? null) : null;
+            $personnel = isset($created[$row['name']]) ? ($people[$row['name']] ?? null) : null;
+            $manager = $row['manager'] !== null ? $this->managerNamed($row['manager'], $people) : null;
 
             if ($personnel !== null && $manager !== null) {
                 $this->seedReporting($personnel, $manager, $today);
             }
         }
 
+        // D-165: yalniz bu calistirmada acilan yonetici, yoneticisi bos birime
+        // yazilir (saveQuietly olay atmaz; SeedGuard bunu gormez).
         foreach (self::UNIT_MANAGERS as $unitCode => $managerName) {
             $unit = $units->get($unitCode);
-            $manager = $people[$managerName] ?? null;
+            $manager = isset($created[$managerName]) ? ($people[$managerName] ?? null) : null;
 
-            if ($unit !== null && $manager !== null && $unit->manager_personnel_id === null) {
+            // D-165: yalniz seed'in bu calismada actigi birime yonetici yazilir.
+            if ($unit !== null && $manager !== null && $unit->manager_personnel_id === null && $this->ownedBySeed($unit)) {
                 $unit->forceFill(['manager_personnel_id' => $manager->getKey()])->saveQuietly();
             }
         }
 
-        $sync = app(PositionRoleSync::class);
-
-        if ($sync->isReady()) {
-            $result = $sync->syncAll();
-            $this->command?->info(sprintf('Pozisyon rolleri: %d pozisyon, %d personele rol verildi.', $result['positions'], $result['granted']));
-        }
+        // D-165: yalniz seed'in ekledigi pozisyon ve gorevlere rol (syncAll degil).
+        $result = SeedPositionRoles::sync();
+        $this->command?->info(sprintf('Pozisyon rolleri: %d pozisyon, %d personele rol verildi.', $result['positions'], $result['granted']));
 
         $this->command?->info(sprintf('%d gercek personel hazir (gecici parola: %s).', count($people), self::PASSWORD));
         $this->command?->info('Unvan alani bos birakildi; personel kendisi girecek.');
@@ -189,18 +208,31 @@ class RealPersonnelSeeder extends Seeder
             return $personnel;
         }
 
-        // Var olan kaydin parolasi ve durumu korunur; bos alanlar doldurulur.
-        unset($attributes['status']);
+        // D-165: var olan kayit oldugu gibi kalir (bos alani bile doldurulmaz).
+        return $personnel;
+    }
 
-        foreach ($attributes as $key => $value) {
-            if ($value !== null && blank($personnel->getAttribute($key))) {
-                $personnel->setAttribute($key, $value);
+    /**
+     * Amir bu calistirmada islendiyse oradan, satiri arsivdeyse e-postasiyla
+     * veritabanindan bulunur (D-165: arsivdeki kisi yeni personelin amiri
+     * olabilir).
+     *
+     * @param  array<string, Personnel>  $people
+     */
+    private function managerNamed(string $name, array $people): ?Personnel
+    {
+        if (isset($people[$name])) {
+            return $people[$name];
+        }
+
+        foreach (self::PEOPLE as $row) {
+            if ($row['name'] === $name) {
+                /** @var Personnel|null */
+                return Personnel::query()->where('normalized_email', Personnel::normalizeEmail($row['email']))->first();
             }
         }
 
-        $personnel->save();
-
-        return $personnel;
+        return null;
     }
 
     private function seedAssignment(Personnel $personnel, OrgUnit $unit, Position $position, string $validFrom): void

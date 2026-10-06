@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Referans ve baslangic verisi. Her seeder sabit kodlara gore calisir ve
@@ -44,8 +45,32 @@ use Illuminate\Database\Seeder;
  */
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Dolu veritabaninda (canli) her kurulumda calisan yeni seed dosyalari
+     * (D-166, kurulum betigi deploy.sh): bir guncellemeyle gelen yeni veri
+     * aktarimi buraya eklenir, "--class" yazmak gerekmez. Her dosya
+     * ProtectedSeeder'dir; seed arsivi (B45) sayesinde her satir bir kez
+     * islenir, betik tekrar calissa da veri ikinci kez yazilmaz.
+     *
+     * @var list<class-string<Seeder>>
+     */
+    public const DEPLOY_SEEDERS = [];
+
     public function run(): void
     {
+        // D-165 (6 Ekim 2026 kullanici talimati: "canlida son hali neyse o
+        // kalmali, biz sadece ekledigimiz db:seed'ler calisacaklar; her yeni
+        // db:seed isi yeni dosyada olmali"): dolu veritabaninda zincir yeniden
+        // calismaz. Yalniz ozellik katalogu (yeni anahtarlar eklenir, var
+        // olanlarin durumu korunur) yazilir; yeni bir seed isi kendi dosyasiyla
+        // "--class" ile calistirilir.
+        if (DB::table('personnel')->exists()) {
+            $this->command?->info('Veritabani dolu: baslangic zinciri atlandi, canlidaki veri korundu. Ozellik anahtarlari ve bu surumun yeni seed dosyalari calisiyor.');
+            $this->call([FeatureSeeder::class, ...self::DEPLOY_SEEDERS]);
+
+            return;
+        }
+
         $this->call([
             // Kimlik ve referans
             SystemAccountSeeder::class,

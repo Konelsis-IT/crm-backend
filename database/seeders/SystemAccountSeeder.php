@@ -7,7 +7,7 @@ namespace Database\Seeders;
 use App\Enums\Personnel\PersonnelStatus;
 use App\Models\Personnel\Personnel;
 use App\Services\Authorization\RoleResolver;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 
 /**
  * Sistem hesabi (D-91, 16 Eylul 2026 kullanici karari).
@@ -20,8 +20,11 @@ use Illuminate\Database\Seeder;
  * Bu seeder yalniz sirket organizasyon semasinda yer almayan teknik yonetim
  * hesabini uretir; Yonetici ve Gelistirici gercek personel kayitlaridir ve
  * RealPersonnelSeeder tarafindan olusturulur.
+ *
+ * D-165: hesap yoksa eklenir; var olan hesaba dokunulmaz. Islenen satir
+ * seed arsivine duser ve bir daha islenmez.
  */
-class SystemAccountSeeder extends Seeder
+class SystemAccountSeeder extends ProtectedSeeder
 {
     /** Teknik yonetim hesabi (organizasyon semasinda yer almaz). */
     public const ADMIN_EMAIL = 'admin@gmail.com';
@@ -64,21 +67,27 @@ class SystemAccountSeeder extends Seeder
 
     public function run(): void
     {
-        if (Personnel::query()->where('normalized_email', self::ADMIN_EMAIL)->exists()) {
-            return;
-        }
+        $this->row('account:'.self::ADMIN_EMAIL, function (): Personnel {
+            $existing = Personnel::query()->where('normalized_email', self::ADMIN_EMAIL)->first();
 
-        $personnel = new Personnel([
-            'full_name' => 'Sistem Yöneticisi',
-            'email' => self::ADMIN_EMAIL,
-            'password' => self::PASSWORD,
-            'locale' => (string) config('konelsis.organization.default_locale', 'tr'),
-            'timezone' => (string) config('konelsis.organization.default_timezone', 'Europe/Istanbul'),
-            'status' => PersonnelStatus::Active,
-        ]);
-        $personnel->forceFill(['email_verified_at' => now(), 'password_changed_at' => now()]);
-        $personnel->save();
+            if ($existing !== null) {
+                return $existing;
+            }
 
-        $this->command?->info(sprintf('Sistem hesabi %s olusturuldu (parola: %s).', self::ADMIN_EMAIL, self::PASSWORD));
+            $personnel = new Personnel([
+                'full_name' => 'Sistem Yöneticisi',
+                'email' => self::ADMIN_EMAIL,
+                'password' => self::PASSWORD,
+                'locale' => (string) config('konelsis.organization.default_locale', 'tr'),
+                'timezone' => (string) config('konelsis.organization.default_timezone', 'Europe/Istanbul'),
+                'status' => PersonnelStatus::Active,
+            ]);
+            $personnel->forceFill(['email_verified_at' => now(), 'password_changed_at' => now()]);
+            $personnel->save();
+
+            $this->command?->info(sprintf('Sistem hesabi %s olusturuldu (parola: %s).', self::ADMIN_EMAIL, self::PASSWORD));
+
+            return $personnel;
+        });
     }
 }

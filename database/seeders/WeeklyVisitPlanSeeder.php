@@ -18,7 +18,7 @@ use App\Services\Party\PartyMeetingNoteService;
 use App\Services\Party\PartyRoleService;
 use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -45,8 +45,13 @@ use Illuminate\Support\Str;
  * tarihli aktarim plani ikinci kez yazilmaz. Sonunda MeetingNotePersonnelSeeder
  * personeli bos notlara Ersin Ozdemir yazar, MeetingPlanBackfillSeeder var olan
  * notlari plana yansitir. Kalici uretim verisidir; uretimde de calisir.
+ *
+ * D-165: korumali seeder. Her Excel satiri bir satirdir ('visit:<sayfa
+ * hucre>', veri dosyasindaki 'excel' alani). Yalniz eksik firma, tip, kisi,
+ * not ve plan eklenir; var olan kayda dokunulmaz. Islenen satir arsive
+ * duser; canlida silinen / degistirilen not ya da plan geri gelmez.
  */
-class WeeklyVisitPlanSeeder extends Seeder
+class WeeklyVisitPlanSeeder extends ProtectedSeeder
 {
     /** @var array<string, int> */
     private array $totals = ['parties_created' => 0, 'roles' => 0, 'contacts' => 0, 'notes' => 0, 'plans' => 0];
@@ -73,19 +78,30 @@ class WeeklyVisitPlanSeeder extends Seeder
         $rows = require database_path('seeders/data/weekly_visit_plans.php');
 
         foreach ($rows as $row) {
-            $party = $this->seedParty($row);
-            $this->seedRole($party, (string) $row['role']);
-            $contacts = SchemaReadiness::hasBatch('B27') ? $this->seedContacts($party, (array) $row['contacts']) : [];
-            $contactId = $contacts === [] ? null : reset($contacts);
-            $participants = $this->ids((array) $row['participants']);
+            $this->row('visit:'.(string) $row['excel'], function () use ($row): Party {
+                $party = $this->seedParty($row);
 
-            foreach ((array) $row['notes'] as $note) {
-                $this->seedNote($party, $note, $contactId, $participants);
-            }
+                // D-165: canlida zaten var olan firmanin altina (kisi, not, plan)
+                // seed bir sey eklemez.
+                if (! $this->ownedBySeed($party)) {
+                    return $party;
+                }
 
-            if (is_array($row['plan'] ?? null)) {
-                $this->seedPlan($party, $row['plan'], $contactId, $participants);
-            }
+                $this->seedRole($party, (string) $row['role']);
+                $contacts = SchemaReadiness::hasBatch('B27') ? $this->seedContacts($party, (array) $row['contacts']) : [];
+                $contactId = $contacts === [] ? null : reset($contacts);
+                $participants = $this->ids((array) $row['participants']);
+
+                foreach ((array) $row['notes'] as $note) {
+                    $this->seedNote($party, $note, $contactId, $participants);
+                }
+
+                if (is_array($row['plan'] ?? null)) {
+                    $this->seedPlan($party, $row['plan'], $contactId, $participants);
+                }
+
+                return $party;
+            });
         }
 
         $this->command?->info(sprintf(

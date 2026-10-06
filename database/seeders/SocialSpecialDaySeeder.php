@@ -9,7 +9,8 @@ use App\Models\SocialMedia\SocialSpecialDay;
 use App\Services\Audit\ActorContext;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\SocialMedia\SocialSpecialDayService;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Sosyal medya ozel gunleri (B31, D-106): YALNIZ tarihi sabit resmi ulusal
@@ -25,8 +26,11 @@ use Illuminate\Database\Seeder;
  * notu degistirilmis gun yeniden calistirmada ezilmez). Onkosul: B31
  * migration'i uygulanmis olmali; degilse sessizce atlanir. Yalniz yetkili
  * DBA/DevOps sureci calistirir.
+ *
+ * D-165: islenen her gun satiri seed arsivine duser ve bir daha islenmez
+ * (canlida silinen gun geri gelmez).
  */
-class SocialSpecialDaySeeder extends Seeder
+class SocialSpecialDaySeeder extends ProtectedSeeder
 {
     /**
      * ay, gun, ad.
@@ -62,26 +66,30 @@ class SocialSpecialDaySeeder extends Seeder
         $created = 0;
 
         foreach (self::DAYS as [$month, $day, $name]) {
-            $exists = SocialSpecialDay::query()
-                ->where('name', $name)
-                ->where('month', $month)
-                ->where('day', $day)
-                ->exists();
+            $this->row(sprintf('special-day:%02d-%02d|%s', $month, $day, $name), static function () use ($service, $month, $day, $name, &$created): Model {
+                $existing = SocialSpecialDay::query()
+                    ->where('name', $name)
+                    ->where('month', $month)
+                    ->where('day', $day)
+                    ->first();
 
-            if ($exists) {
-                continue;
-            }
+                if ($existing !== null) {
+                    return $existing;
+                }
 
-            $service->create([
-                'name' => $name,
-                'month' => $month,
-                'day' => $day,
-                'year' => null,
-                'profile_id' => null,
-                'note' => null,
-                'status' => ActiveStatus::Active->value,
-            ]);
-            $created++;
+                $specialDay = $service->create([
+                    'name' => $name,
+                    'month' => $month,
+                    'day' => $day,
+                    'year' => null,
+                    'profile_id' => null,
+                    'note' => null,
+                    'status' => ActiveStatus::Active->value,
+                ]);
+                $created++;
+
+                return $specialDay;
+            });
         }
 
         $this->command?->info(sprintf('%d ozel gun eklendi.', $created));

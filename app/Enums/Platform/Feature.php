@@ -76,7 +76,17 @@ enum Feature: string
      * yayinladigini soyleyince bir artirilir (2.4 -> 2.5). Hicbir ozelligin
      * surumu bundan buyuk olamaz (safe-verify).
      */
-    public const NEXT_RELEASE = '2.4';
+    public const NEXT_RELEASE = '2.5';
+
+    /**
+     * Bekleme surumu (D-164, 6 Ekim 2026 kullanici karari: "Ben sana bunlari
+     * ac dedigimi hatirlamiyorum, surum olarak simdilik bu ozellikleri direk 5
+     * surumune ekle. Gunu geldikce hangilerini hangi surume dusurecegini
+     * soyleyecegim."). Bu surumdeki ozellikler hicbir yayinla acilmaz; kullanici
+     * bir ozelligi bir yayina aldiginda surumu o yayinin numarasina cekilir.
+     * NEXT_RELEASE'ten buyuk tek izinli surum budur (safe-verify).
+     */
+    public const PARKED = '5.0';
 
     // Genel bakis (D-146, D-147)
     case Dashboard = 'dashboard';
@@ -310,16 +320,16 @@ enum Feature: string
             self::Competencies => ['Yetkinlikler', 'Ayarlar > Yetkinlikler ekranı ve personel kartındaki yetkinlik sekmesi.', null, '1.0'],
             self::Certifications => ['Sertifikalar', 'Ayarlar > Sertifikalar ekranı ve personel kartındaki sertifika sekmesi.', 'D-60', '1.0'],
             self::Trainings => ['Eğitimler', 'Ayarlar > Eğitimler ekranı ve personel kartındaki eğitim sekmesi.', 'D-60', '1.0'],
-            self::PersonnelActivities => ['Personel Hareketleri', 'Personel kartındaki Personel Hareketleri sekmesi. Hareketler kaydedilmeye devam eder.', 'D-47', '2.4'],
+            self::PersonnelActivities => ['Personel Hareketleri', 'Personel kartındaki Personel Hareketleri sekmesi. Hareketler kaydedilmeye devam eder.', 'D-47', '5.0'],
 
             self::Approvals => ['Onay motoru', 'Onay talepleri: dokümanda "Onaya gönder", Onaylar sekmeleri, onay bildirimleri. Alt özellikler de kapanır.', 'D-76', '1.0'],
             self::ApprovalRequests => ['Onaylar ekranı', 'Üst menüdeki Onaylar listesi (bana gelenler, taleplerim).', 'D-76', '1.0'],
             self::ApprovalPolicies => ['Onay politikaları', 'Ayarlar > Onay Politikaları, sürümleri ve adımları.', 'D-76', '1.0'],
-            self::Delegations => ['Vekaletler', 'İdari > Vekaletler ekranı.', 'D-76', '2.4'],
+            self::Delegations => ['Vekaletler', 'İdari > Vekaletler ekranı.', 'D-76', '5.0'],
 
             self::Documents => ['Doküman yönetimi', 'Dokümanlar ekranı, projedeki Dokümanlar sekmesi, belge indirme. Alt özellikler de kapanır.', 'D-66', '1.0'],
-            self::LegalHolds => ['Hukuki tutmalar', 'Doküman > Hukuki Tutmalar ekranı.', 'D-66', '2.4'],
-            self::Transmittals => ['Teslim tutanakları', 'Doküman > Teslim Tutanakları ekranı.', 'D-66', '2.4'],
+            self::LegalHolds => ['Hukuki tutmalar', 'Doküman > Hukuki Tutmalar ekranı.', 'D-66', '5.0'],
+            self::Transmittals => ['Teslim tutanakları', 'Doküman > Teslim Tutanakları ekranı.', 'D-66', '5.0'],
             self::DocumentTypes => ['Doküman tipleri', 'Ayarlar > Doküman Tipleri ekranı.', 'D-66', '1.0'],
             self::DocumentTemplates => ['Doküman şablonları', 'Ayarlar > Şablonlar ekranı.', 'D-66', '1.0'],
 
@@ -346,10 +356,10 @@ enum Feature: string
             self::SupplyItems => ['Tedarik kalemleri', 'Satın Alma > Tedarik Kalemleri ve projedeki tedarik sekmesi.', 'D-68', '1.0'],
             self::StageGates => ['Proje onay kapıları', 'Proje kartındaki onay kapıları (kanıt, inceleme, muafiyet).', 'D-67', '1.0'],
             self::ProjectCatalogs => ['Proje ayarları', 'Ayarlar altındaki proje tanımları: bileşenler, operasyon grupları, odak beklentileri, onay kapısı şablonları. Alt özellikler de kapanır.', 'D-68', '1.0'],
-            self::ProjectComponents => ['Proje bileşenleri', 'Ayarlar > Proje Bileşenleri ekranı.', 'D-67', '2.4'],
+            self::ProjectComponents => ['Proje bileşenleri', 'Ayarlar > Proje Bileşenleri ekranı.', 'D-67', '5.0'],
             self::OperationGroups => ['Operasyon grupları', 'Ayarlar > Operasyon Grupları ekranı.', 'D-67', '1.0'],
-            self::FocusExpectations => ['Odak beklentileri', 'Ayarlar > Odak Beklentileri ekranı.', 'D-68', '2.4'],
-            self::StageTemplates => ['Onay kapısı şablonları', 'Ayarlar > Onay Kapısı Şablonları, şablon sürümleri ve kapı tanımları.', 'D-67', '2.4'],
+            self::FocusExpectations => ['Odak beklentileri', 'Ayarlar > Odak Beklentileri ekranı.', 'D-68', '5.0'],
+            self::StageTemplates => ['Onay kapısı şablonları', 'Ayarlar > Onay Kapısı Şablonları, şablon sürümleri ve kapı tanımları.', 'D-67', '5.0'],
 
             self::WorkRequests => ['Talepler', 'Talepler ekranı, onaya tabi talepler, talep dosyaları ve kartlardaki talep sekmeleri. Alt özellik (talep yazışması) de kapanır.', 'D-84', '1.0'],
             self::WorkRequestThread => ['Talep yazışması (talep sohbeti)', 'Talep sayfasındaki Yazışma bölümü: cevap yazma ve dosya ekleme. Talebin kendisi etkilenmez.', 'D-108', '1.7'],
@@ -359,41 +369,41 @@ enum Feature: string
             self::WorkItems => ['İşler ekranı', 'Raporlar > İşler listesi ve genel bakıştaki Görevlerim ve işlerim ile sayılar.', 'D-115', '1.9'],
             self::WorkBoard => ['İş panosu', 'İş panosu ekranı, üst çubuktaki İş panosu düğmesi, gün / hafta kapatma.', 'D-115', '1.9'],
             self::ControlMatrix => ['Kontrol matrisi', 'Kontrol matrisi ekranı ve üst çubuktaki düğmesi. Alt özellikler (personel kartındaki parçalar) de kapanır.', 'D-116', '1.9'],
-            self::ControlPersonnelTab => ['Personel kartı: Haftalık kontrol sekmesi', 'Personel kartındaki Haftalık kontrol sekmesi (kontrol matrisi kayıtları).', 'D-116', '2.4'],
-            self::AttentionCard => ['Personel kartı: Dikkat kartı', 'Personel kartındaki Dikkat kartı (son 12 haftanın kontrol matrisi özeti).', 'D-115', '2.4'],
-            self::WorkAnalysis => ['İş raporları', 'Analizler > İş raporları menüsü. Alt özellikler (analiz panosu, süre raporu) de kapanır.', 'D-116', '2.4'],
-            self::AnalysisDashboard => ['İş raporları: Analiz panosu', 'Analizler > İş raporları > Analiz panosu.', 'D-116', '2.4'],
-            self::DurationReport => ['İş raporları: Süre raporu', 'Analizler > İş raporları > Süre raporu.', 'D-116', '2.4'],
+            self::ControlPersonnelTab => ['Personel kartı: Haftalık kontrol sekmesi', 'Personel kartındaki Haftalık kontrol sekmesi (kontrol matrisi kayıtları).', 'D-116', '5.0'],
+            self::AttentionCard => ['Personel kartı: Dikkat kartı', 'Personel kartındaki Dikkat kartı (son 12 haftanın kontrol matrisi özeti).', 'D-115', '5.0'],
+            self::WorkAnalysis => ['İş raporları', 'Analizler > İş raporları menüsü. Alt özellikler (analiz panosu, süre raporu) de kapanır.', 'D-116', '5.0'],
+            self::AnalysisDashboard => ['İş raporları: Analiz panosu', 'Analizler > İş raporları > Analiz panosu.', 'D-116', '5.0'],
+            self::DurationReport => ['İş raporları: Süre raporu', 'Analizler > İş raporları > Süre raporu.', 'D-116', '5.0'],
 
             self::SocialMedia => ['Sosyal medya', 'Sosyal Medya ekranı ve genel bakıştaki yaklaşan içerikler kutusu. Alt özellikler (sekmeler ve parçalar) de kapanır.', 'D-106', '1.5'],
             self::SocialFeed => ['Sosyal medya: Akış sekmesi', 'Akış sekmesi (içerik kartları, onay bekleyenler). Kapalıysa ekran ilk açık sekmeyle açılır.', 'D-106 / D-154', '2.3'],
             self::SocialWatchBox => ['Sosyal medya: Akış > Rakipler ve kurumlar kutusu', 'Akış sekmesinin yanındaki rakip ve kurum hesapları kutusu (rakip analiz).', 'D-106', '1.5'],
-            self::SocialStorageBox => ['Sosyal medya: Akış > Depolama kutusu', 'Akış sekmesinin yanındaki disk / depolama durumu kutusu (donanım kontrolü).', 'D-106', '2.4'],
-            self::SocialPlan => ['Sosyal medya: Plan sekmesi', 'Plan sekmesi (takvim ve ajanda).', 'D-106', '2.4'],
+            self::SocialStorageBox => ['Sosyal medya: Akış > Depolama kutusu', 'Akış sekmesinin yanındaki disk / depolama durumu kutusu (donanım kontrolü).', 'D-106', '5.0'],
+            self::SocialPlan => ['Sosyal medya: Plan sekmesi', 'Plan sekmesi (takvim ve ajanda).', 'D-106', '5.0'],
             self::SocialInsights => ['Sosyal medya: İlham ve Rakipler sekmesi', 'İlham ve Rakipler sekmesi (takip edilen hesaplar, şirket kataloğu).', 'D-106', '1.5'],
-            self::SocialAnalytics => ['Sosyal medya: Analiz sekmesi', 'Analiz sekmesi ve platform istatistikleri girişi.', 'D-106', '2.4'],
-            self::SocialBlog => ['Sosyal medya: Blog yazma', 'İçerik ekleme menüsündeki "Blog" türü. Kapalıyken yeni blog yazısı açılamaz; eski blog yazıları görünmeye devam eder.', 'D-106', '2.4'],
-            self::SocialExecutiveProfiles => ['Sosyal medya: Yönetici hesabı (Hüseyin Güneş)', 'Yönetici hesapları (şu an Hüseyin Güneş Resmi Hesap): hesap seçicide görünmez, bu hesaba içerik açılamaz.', 'D-106', '2.4'],
+            self::SocialAnalytics => ['Sosyal medya: Analiz sekmesi', 'Analiz sekmesi ve platform istatistikleri girişi.', 'D-106', '5.0'],
+            self::SocialBlog => ['Sosyal medya: Blog yazma', 'İçerik ekleme menüsündeki "Blog" türü. Kapalıyken yeni blog yazısı açılamaz; eski blog yazıları görünmeye devam eder.', 'D-106', '5.0'],
+            self::SocialExecutiveProfiles => ['Sosyal medya: Yönetici hesabı (Hüseyin Güneş)', 'Yönetici hesapları (şu an Hüseyin Güneş Resmi Hesap): hesap seçicide görünmez, bu hesaba içerik açılamaz.', 'D-106', '5.0'],
 
             self::Chat => ['Kurum içi sohbet', 'Sağ alttaki sohbet düğmesi ve penceresi. Alt özellikler de kapanır.', 'D-83', '1.0'],
-            self::ChatGroups => ['Sohbet: Grup açma', 'Sohbette "Yeni grup" düğmesi ve grup oluşturma. Var olan gruplar kullanılmaya devam eder.', 'D-83', '2.4'],
-            self::ChatWorkRequests => ['Sohbet: Mesajdan talep açma', 'Sohbet mesajının yanındaki "Talep aç" düğmesi (mesajı talebe dönüştürür).', 'D-84', '2.4'],
+            self::ChatGroups => ['Sohbet: Grup açma', 'Sohbette "Yeni grup" düğmesi ve grup oluşturma. Var olan gruplar kullanılmaya devam eder.', 'D-83', '5.0'],
+            self::ChatWorkRequests => ['Sohbet: Mesajdan talep açma', 'Sohbet mesajının yanındaki "Talep aç" düğmesi (mesajı talebe dönüştürür).', 'D-84', '5.0'],
 
             self::Notifications => ['Bildirimler', 'Filament bildirim zili ve bildirim gönderimi. Alt özellikler de kapanır.', 'D-49', '1.0'],
-            self::NotificationsInbox => ['Tüm bildirimler tablosu', 'Zilin yanındaki "Tüm bildirimleri gör" düğmesi ve tablosu.', 'D-122', '2.4'],
+            self::NotificationsInbox => ['Tüm bildirimler tablosu', 'Zilin yanındaki "Tüm bildirimleri gör" düğmesi ve tablosu.', 'D-122', '5.0'],
             self::Announcements => ['Duyurular', 'Kullanıcı menüsündeki "Duyuru gönder" ve genel bakıştaki duyurular.', 'D-82 / D-148', '1.0'],
             self::BusinessAlerts => ['İş uyarıları', 'Genel bakıştaki uyarılar kutusu ve uyarıyı bildirimden görüldü yapma.', 'D-82', '1.0'],
-            self::DesktopAlerts => ['Masaüstü uyarıları', 'Yeni bildirim ve sohbet mesajı yoklaması. Alt özellikler (ses, Windows bildirimi) de kapanır.', 'D-126', '2.4'],
-            self::AlertSound => ['Bildirim sesi', 'Yeni bildirim ya da sohbet mesajı gelince çalan kısa ses.', 'D-126', '2.4'],
-            self::AlertWindows => ['Windows bildirimi', 'Başka sekmedeyken ya da pencere arkadayken çıkan Windows bildirimi ve kullanıcı menüsündeki "Masaüstü bildirimlerini aç".', 'D-126', '2.4'],
+            self::DesktopAlerts => ['Masaüstü uyarıları', 'Yeni bildirim ve sohbet mesajı yoklaması. Alt özellikler (ses, Windows bildirimi) de kapanır.', 'D-126', '5.0'],
+            self::AlertSound => ['Bildirim sesi', 'Yeni bildirim ya da sohbet mesajı gelince çalan kısa ses.', 'D-126', '5.0'],
+            self::AlertWindows => ['Windows bildirimi', 'Başka sekmedeyken ya da pencere arkadayken çıkan Windows bildirimi ve kullanıcı menüsündeki "Masaüstü bildirimlerini aç".', 'D-126', '5.0'],
 
             self::Tools => ['Genel araçlar', 'Hızlı işlemler, Excel / PDF dışa aktarım, sürüm notları, UI Deneme. Alt özellikler de kapanır.', null, '1.0'],
-            self::QuickActions => ['Hızlı işlemler', 'Üst çubuktaki Hızlı işlemler düğmesi ve kişisel seçim ekranı.', 'D-122', '2.4'],
-            self::Exports => ['Dışa aktarım', 'Excel ve PDF indirme. Alt özellikler de kapanır.', 'D-110', '2.4'],
-            self::ExcelExport => ['Excel indirme', 'Listelerdeki Excel düğmesi ve detay sayfalarındaki "Excel" seçeneği.', 'D-110', '2.4'],
-            self::PdfExport => ['PDF indirme', 'Detay sayfalarındaki "PDF" seçeneği.', 'D-110', '2.4'],
-            self::ReleaseNotes => ['Sürüm notları', 'Kullanıcı menüsündeki sürüm notları penceresi. Notlar kodda yazılmaya devam eder; kapalıyken arayüzde görünmez.', 'D-91', '2.4'],
-            self::UiGallery => ['UI Deneme', 'UI Deneme kataloğu (yalnız tam yetkili kişiler).', 'D-77', '2.4'],
+            self::QuickActions => ['Hızlı işlemler', 'Üst çubuktaki Hızlı işlemler düğmesi ve kişisel seçim ekranı.', 'D-122', '5.0'],
+            self::Exports => ['Dışa aktarım', 'Excel ve PDF indirme. Alt özellikler de kapanır.', 'D-110', '5.0'],
+            self::ExcelExport => ['Excel indirme', 'Listelerdeki Excel düğmesi ve detay sayfalarındaki "Excel" seçeneği.', 'D-110', '5.0'],
+            self::PdfExport => ['PDF indirme', 'Detay sayfalarındaki "PDF" seçeneği.', 'D-110', '5.0'],
+            self::ReleaseNotes => ['Sürüm notları', 'Kullanıcı menüsündeki sürüm notları penceresi. Notlar kodda yazılmaya devam eder; kapalıyken arayüzde görünmez.', 'D-91', '5.0'],
+            self::UiGallery => ['UI Deneme', 'UI Deneme kataloğu (yalnız tam yetkili kişiler).', 'D-77', '5.0'],
         };
     }
 }

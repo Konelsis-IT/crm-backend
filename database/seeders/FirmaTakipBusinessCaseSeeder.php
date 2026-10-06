@@ -11,7 +11,7 @@ use App\Models\Personnel\Personnel;
 use App\Services\Acquisition\BusinessCaseService;
 use App\Services\Audit\ActorContext;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Str;
 
 /**
@@ -44,8 +44,12 @@ use Illuminate\Support\Str;
  * ayni firmada ayni baslikli is dosyasi varsa atlanir; var olan is dosyasina
  * dokunulmaz. Numara sayaci geri alinmadigi icin deneme amacli (geri alinan)
  * calistirma yapilmaz; `plan()` hicbir sey yazmadan ne olusacagini doner.
+ *
+ * D-165: korumali seeder. Her is dosyasi satiri "case:firma|baslik" anahtariyla
+ * bir kez islenir ve seed arsivine duser; var olan is dosyasi benimsenir,
+ * hicbir kayit guncellenmez. Firmasi bulunamayan satir arsive dusmez.
  */
-class FirmaTakipBusinessCaseSeeder extends Seeder
+class FirmaTakipBusinessCaseSeeder extends ProtectedSeeder
 {
     public const LIST_DATE = '21.09.2026';
 
@@ -85,20 +89,43 @@ class FirmaTakipBusinessCaseSeeder extends Seeder
         $plan = $this->plan((int) $ownerId);
         $service = app(BusinessCaseService::class);
         $created = 0;
+        $adopted = 0;
 
         foreach ($plan['cases'] as $case) {
-            if ($case['exists']) {
-                continue;
-            }
+            // D-165: satir bir kez islenir; var olan is dosyasi benimsenir, guncellenmez.
+            $this->row($case['key'], function () use ($case, $service, &$created, &$adopted): ?BusinessCase {
+                /** @var BusinessCase|null $existing */
+                $existing = BusinessCase::query()
+                    ->where('primary_party_id', $case['data']['primary_party_id'])
+                    ->where('title', $case['title'])
+                    ->first();
 
-            $service->create($case['data']);
-            $created++;
+                if ($existing !== null) {
+                    $adopted++;
+
+                    return $existing;
+                }
+
+                // D-165: canlida zaten var olan firmanin altina seed potansiyel is acmaz
+                // (silinen is geri gelmez). Ilk kurulumda firma ayni calismada acilir.
+                $party = Party::query()->find($case['data']['primary_party_id']);
+
+                if ($party === null || ! $this->ownedBySeed($party)) {
+                    return null;
+                }
+
+                /** @var BusinessCase $record */
+                $record = $service->create($case['data']);
+                $created++;
+
+                return $record;
+            });
         }
 
         $this->command?->info(sprintf(
             'Firma takip is dosyalari: %d olusturuldu, %d zaten vardi, %d satir tekrar oldugu icin birlestirildi.',
             $created,
-            count(array_filter($plan['cases'], fn (array $case): bool => $case['exists'])),
+            $adopted,
             $plan['merged'],
         ));
 
@@ -110,7 +137,7 @@ class FirmaTakipBusinessCaseSeeder extends Seeder
     /**
      * Yazmadan: olusacak is dosyalari, eslesmeyen firmalar, birlestirilen satirlar.
      *
-     * @return array{cases: list<array{party: string, row: int|null, title: string, exists: bool, data: array<string, mixed>}>, missing_parties: list<string>, merged: int}
+     * @return array{cases: list<array{key: string, party: string, row: int|null, title: string, exists: bool, data: array<string, mixed>}>, missing_parties: list<string>, merged: int}
      */
     public function plan(int $ownerId): array
     {
@@ -137,6 +164,8 @@ class FirmaTakipBusinessCaseSeeder extends Seeder
 
             foreach ($this->titled($party, $projects, $merged) as [$title, $project]) {
                 $cases[] = [
+                    // D-165 seed arsivi anahtari: listedeki firma adi + is dosyasi basligi.
+                    'key' => 'case:'.$this->normalize((string) $firm['name']).'|'.$this->normalize($title),
                     'party' => (string) $party->display_name,
                     'row' => isset($project['excel_row']) ? (int) $project['excel_row'] : null,
                     'title' => $title,

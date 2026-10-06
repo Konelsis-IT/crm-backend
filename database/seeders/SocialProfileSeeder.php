@@ -11,7 +11,8 @@ use App\Models\SocialMedia\SocialProfile;
 use App\Services\Audit\ActorContext;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\SocialMedia\SocialProfileService;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Sosyal medya hesaplari (B31, D-106): kullanicinin adlandirdigi iki GERCEK
@@ -29,8 +30,11 @@ use Illuminate\Database\Seeder;
  * Yonetici hesabinin sahibi RealPersonnelSeeder'dan sonra bulunabildigi icin
  * zincirde RoleMatrixSeeder'dan sonra calisir. Yalniz yetkili DBA/DevOps sureci
  * calistirir.
+ *
+ * D-165: islenen her hesap satiri seed arsivine duser ve bir daha islenmez
+ * (canlida silinen hesap geri gelmez).
  */
-class SocialProfileSeeder extends Seeder
+class SocialProfileSeeder extends ProtectedSeeder
 {
     /**
      * kod, ad, tur, sahip e-postasi, sira.
@@ -60,20 +64,26 @@ class SocialProfileSeeder extends Seeder
         $created = 0;
 
         foreach (self::PROFILES as [$code, $name, $kind, $ownerEmail, $sortOrder]) {
-            if (SocialProfile::query()->where('code', $code)->exists()) {
-                continue;
-            }
+            $this->row('profile:'.$code, function () use ($service, $code, $name, $kind, $ownerEmail, $sortOrder, &$created): Model {
+                $existing = SocialProfile::query()->where('code', $code)->first();
 
-            $service->create([
-                'code' => $code,
-                'name' => $name,
-                'kind' => $kind->value,
-                'owner_personnel_id' => $this->ownerId($ownerEmail),
-                'bio' => null,
-                'sort_order' => $sortOrder,
-                'status' => ActiveStatus::Active->value,
-            ]);
-            $created++;
+                if ($existing !== null) {
+                    return $existing;
+                }
+
+                $profile = $service->create([
+                    'code' => $code,
+                    'name' => $name,
+                    'kind' => $kind->value,
+                    'owner_personnel_id' => $this->ownerId($ownerEmail),
+                    'bio' => null,
+                    'sort_order' => $sortOrder,
+                    'status' => ActiveStatus::Active->value,
+                ]);
+                $created++;
+
+                return $profile;
+            });
         }
 
         $this->command?->info(sprintf('%d sosyal medya hesabi eklendi.', $created));

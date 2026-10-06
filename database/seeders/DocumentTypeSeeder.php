@@ -12,7 +12,8 @@ use App\Models\Reference\RetentionPolicy;
 use App\Models\Reference\SecurityClassification;
 use App\Services\Audit\ActorContext;
 use App\Services\Document\DocumentTypeService;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Dokuman turleri: referans verisi (16 §4 B24).
@@ -21,8 +22,11 @@ use Illuminate\Database\Seeder;
  * seeder'inin icindeydi. 16 Eylul 2026 kullanici karariyla ornek veriler
  * zincirden cikarildi, turler gercek referans verisi oldugu icin ayri bir
  * seeder'a alindi (D-90); ornek seeder 18 Eylul 2026'da silindi (D-105).
+ *
+ * D-165: yalniz eksik tur eklenir; var olan tur guncellenmez. Islenen her
+ * satir seed arsivine duser ve bir daha islenmez.
  */
-class DocumentTypeSeeder extends Seeder
+class DocumentTypeSeeder extends ProtectedSeeder
 {
     /**
      * kod, ad, disiplin, gizli mi.
@@ -75,21 +79,27 @@ class DocumentTypeSeeder extends Seeder
         $created = 0;
 
         foreach (self::TYPES as [$code, $name, $discipline, $confidential]) {
-            if (DocumentType::query()->where('code', $code)->exists()) {
-                continue;
-            }
+            $this->row('document-type:'.$code, static function () use ($service, $code, $name, $discipline, $confidential, $confidentialId, $internalId, $retentionId, &$created): Model {
+                $existing = DocumentType::query()->where('code', $code)->first();
 
-            $service->create([
-                'code' => $code,
-                'name' => $name,
-                'discipline' => $discipline->value,
-                'numbering_prefix' => $code,
-                'is_controlled' => true,
-                'default_classification_id' => $confidential ? $confidentialId : $internalId,
-                'default_retention_policy_id' => $retentionId,
-                'status' => 'active',
-            ]);
-            $created++;
+                if ($existing !== null) {
+                    return $existing;
+                }
+
+                $type = $service->create([
+                    'code' => $code,
+                    'name' => $name,
+                    'discipline' => $discipline->value,
+                    'numbering_prefix' => $code,
+                    'is_controlled' => true,
+                    'default_classification_id' => $confidential ? $confidentialId : $internalId,
+                    'default_retention_policy_id' => $retentionId,
+                    'status' => 'active',
+                ]);
+                $created++;
+
+                return $type;
+            });
         }
 
         $this->command?->info(sprintf('%d dokuman turu eklendi.', $created));

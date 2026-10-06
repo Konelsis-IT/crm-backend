@@ -21,7 +21,7 @@ use App\Services\Party\PartyMeetingNoteService;
 use App\Services\Party\PartyRoleService;
 use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Str;
 
 /**
@@ -45,10 +45,16 @@ use Illuminate\Support\Str;
  *
  * Idempotent: firma normalized_name ile ('match' doluysa sistemdeki o adla)
  * bulunur; var olan firmada yalniz eksikler eklenir (tip, faaliyet satiri,
- * adres, kisi, kanal, not; bos duran koken). Hicbir kayit silinmez. Kalici
+ * adres, kisi, kanal, not). Hicbir kayit silinmez. Kalici
  * uretim verisidir; uretimde de calisir. Yazmalar servisler uzerinden gider.
+ *
+ * D-165 (korumali seed): her firma satiri 'party:<normalize ad>', her ihale
+ * kaynagi 'tender_source:<kod>' anahtariyla bir kez islenir ve seed arsivine
+ * duser; canlida silinen ya da degistirilen kayit seed ile geri gelmez. Var
+ * olan firma ve kisi guncellenmez (koken ve network doldurma kaldirildi).
+ * B27/B28 eksikken firma satiri arsive dusmez.
  */
-class MarketMapSeeder extends Seeder
+class MarketMapSeeder extends ProtectedSeeder
 {
     /** @var array<string, int> */
     private array $totals = [
@@ -95,25 +101,40 @@ class MarketMapSeeder extends Seeder
             $this->command?->warn('B28 uygulanmamis; network ve gorusme notlari atlandi.');
         }
 
+        $notedOn = (string) $data['noted_on'];
+
         foreach ($data['parties'] as $company) {
-            $party = $this->seedParty($company);
+            $key = 'party:'.$this->normalize(trim((string) $company['name']));
 
-            foreach ((array) $company['roles'] as $role) {
-                $this->seedRole($party, (string) $role);
-            }
+            $this->row($key, function () use ($company, $hasContacts, $hasNetwork, $notedOn): ?Party {
+                $party = $this->seedParty($company);
 
-            $this->seedActivities($party, (array) $company['activities']);
-            $this->seedCity($party, $company['city'] ?? null);
+                // D-165: canlida zaten var olan firmanin altina seed bir sey eklemez.
+                // Ilk kurulumda RealPartySeeder'in ayni calismada actigi firma seed'indir.
+                if (! $this->ownedBySeed($party)) {
+                    return $party;
+                }
 
-            $contacts = [];
+                foreach ((array) $company['roles'] as $role) {
+                    $this->seedRole($party, (string) $role);
+                }
 
-            if ($hasContacts) {
-                $contacts = $this->seedContacts($party, (array) $company['contacts'], $hasNetwork);
-            }
+                $this->seedActivities($party, (array) $company['activities']);
+                $this->seedCity($party, $company['city'] ?? null);
 
-            if ($hasNetwork) {
-                $this->seedNotes($party, (array) $company['notes'], $contacts, (string) $data['noted_on']);
-            }
+                $contacts = [];
+
+                if ($hasContacts) {
+                    $contacts = $this->seedContacts($party, (array) $company['contacts'], $hasNetwork);
+                }
+
+                if ($hasNetwork) {
+                    $this->seedNotes($party, (array) $company['notes'], $contacts, $notedOn);
+                }
+
+                // D-165: kisi/not tablolari eksikse satir arsive dusmez, sonra eksikler eklenir.
+                return $hasContacts && $hasNetwork ? $party : null;
+            });
         }
 
         $this->command?->info(sprintf(
@@ -149,28 +170,36 @@ class MarketMapSeeder extends Seeder
     private function seedTenderSources(array $sources): void
     {
         foreach ($sources as $source) {
-            if (TenderSource::query()->where('code', $source['code'])->exists()) {
-                continue;
-            }
+            $this->row('tender_source:'.$source['code'], function () use ($source): TenderSource {
+                /** @var TenderSource|null $existing */
+                $existing = TenderSource::query()->where('code', $source['code'])->first();
 
-            app(TenderSourceService::class)->create([
-                'code' => $source['code'],
-                'name_tr' => $source['name_tr'],
-                'name_en' => $source['name_en'],
-                'source_type' => $source['source_type'],
-                'base_url' => $source['base_url'],
-                'access_mode' => TenderAccessMode::Manual->value,
-                'scraping_allowed' => false,
-                'status' => ActiveStatus::Active->value,
-            ]);
+                if ($existing !== null) {
+                    return $existing;
+                }
 
-            $this->totals['tender_sources']++;
+                /** @var TenderSource $created */
+                $created = app(TenderSourceService::class)->create([
+                    'code' => $source['code'],
+                    'name_tr' => $source['name_tr'],
+                    'name_en' => $source['name_en'],
+                    'source_type' => $source['source_type'],
+                    'base_url' => $source['base_url'],
+                    'access_mode' => TenderAccessMode::Manual->value,
+                    'scraping_allowed' => false,
+                    'status' => ActiveStatus::Active->value,
+                ]);
+
+                $this->totals['tender_sources']++;
+
+                return $created;
+            });
         }
     }
 
     /**
-     * Firmayi bulur ya da acar. Var olan firmada yalniz bos duran koken doldurulur;
-     * durum degistirilmez.
+     * Firmayi bulur ya da acar. Var olan firma oldugu gibi kalir (D-165:
+     * koken doldurulmaz, durum degistirilmez).
      *
      * @param  array<string, mixed>  $company
      */
@@ -178,7 +207,6 @@ class MarketMapSeeder extends Seeder
     {
         $name = trim((string) $company['name']);
         $lookup = filled($company['match'] ?? null) ? (string) $company['match'] : $name;
-        $origin = filled($company['origin'] ?? null) ? (string) $company['origin'] : null;
 
         /** @var Party|null $party */
         $party = Party::query()
@@ -186,29 +214,24 @@ class MarketMapSeeder extends Seeder
             ->where('normalized_name', $this->normalize($lookup))
             ->first();
 
-        if ($party === null) {
-            /** @var Party $party */
-            $party = app(PartyService::class)->create([
-                'party_kind' => 'organization',
-                'display_name' => $name,
-                'country_code' => 'TR',
-                'status' => (string) ($company['status'] ?? 'prospect'),
-                'origin' => $origin,
-                'is_competitor' => false,
-                'organization_profile' => ['legal_name' => $name],
-            ]);
-
-            $this->totals['parties_created']++;
+        if ($party !== null) {
+            $this->totals['parties_existing']++;
 
             return $party;
         }
 
-        $this->totals['parties_existing']++;
+        /** @var Party $party */
+        $party = app(PartyService::class)->create([
+            'party_kind' => 'organization',
+            'display_name' => $name,
+            'country_code' => 'TR',
+            'status' => (string) ($company['status'] ?? 'prospect'),
+            'origin' => filled($company['origin'] ?? null) ? (string) $company['origin'] : null,
+            'is_competitor' => false,
+            'organization_profile' => ['legal_name' => $name],
+        ]);
 
-        if ($origin !== null && $party->getAttribute('origin') === null) {
-            /** @var Party $party */
-            $party = app(PartyService::class)->update($party, ['origin' => $origin]);
-        }
+        $this->totals['parties_created']++;
 
         return $party;
     }
@@ -327,11 +350,8 @@ class MarketMapSeeder extends Seeder
                 $existing->put($key, $contact);
                 $first = false;
                 $this->totals['contacts']++;
-            } elseif ($hasNetwork && $network !== null && $contact->getAttribute('network_note') === null) {
-                /** @var ContactRelationship $contact */
-                $contact = app(ContactRelationshipService::class)->update($contact, ['network_note' => $network]);
-                $existing->put($key, $contact);
             }
+            // D-165: var olan kisi guncellenmez (network doldurma kaldirildi).
 
             $ids[$key] = (int) $contact->getKey();
 

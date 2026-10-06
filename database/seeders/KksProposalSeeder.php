@@ -26,7 +26,7 @@ use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\TransactionRunner;
 use App\Support\DisplayTime;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -61,8 +61,14 @@ use Illuminate\Support\Str;
  * ayni baslikli teklif varsa satir atlanir. Numara sayaci (potansiyel is
  * sira numarasi) geri alinmadigi icin deneme amacli calistirma yapilmaz;
  * `plan()` hicbir sey yazmadan ne olusacagini doner.
+ *
+ * D-165: korumali seeder. Her teklif satiri "proposal:sayfa|firma|teklif basligi",
+ * her gorusme notu "note:<ilk teklif satiri>|tarih|metin" anahtariyla bir kez
+ * islenir ve seed arsivine duser. Var olan taraf / potansiyel is / teklif / not
+ * benimsenir, guncellenmez: ozet duzeltmesi kaldirildi, "Kaybedildi" yalniz bu
+ * calismada acilan potansiyel ise uygulanir.
  */
-class KksProposalSeeder extends Seeder
+class KksProposalSeeder extends ProtectedSeeder
 {
     public const LIST_DATE = '22.09.2026';
 
@@ -137,26 +143,53 @@ class KksProposalSeeder extends Seeder
         $totals = ['parties' => 0, 'cases' => 0, 'proposals' => 0, 'skipped' => 0, 'lost_cases' => 0];
         $parties = [];
         $cases = [];
+        /** @var array<int, BusinessCase> $createdCases bu calismada acilan potansiyel isler */
+        $createdCases = [];
 
         foreach ($plan['rows'] as $row) {
-            if ($row['proposal_exists']) {
-                $totals['skipped']++;
+            // D-165: satir bir kez islenir; var olan teklif benimsenir, guncellenmez.
+            $this->row($this->rowKey($row), function () use ($row, $owner, $plan, &$parties, &$cases, &$createdCases, &$totals): ?Proposal {
+                // Satir basina tek islem: taraf / potansiyel is / teklif yarim kalmaz.
+                return app(TransactionRunner::class)->run(function () use ($row, $owner, $plan, &$parties, &$cases, &$createdCases, &$totals): ?Proposal {
+                    $party = $parties[$row['party_key']] ??= $this->partyFor($row, $totals);
+                    $caseKey = $party->getKey().'|'.$this->normalize($row['case_title']);
 
-                continue;
-            }
+                    // D-165: canlida zaten var olan firmanin altina seed potansiyel is acmaz.
+                    if (! isset($cases[$caseKey]) && ! $this->ownedBySeed($party) && $this->findCase($party, (string) $row['case_title']) === null) {
+                        $totals['skipped']++;
 
-            // Satir basina tek islem: taraf / potansiyel is / teklif yarim kalmaz.
-            app(TransactionRunner::class)->run(function () use ($row, $owner, $plan, &$parties, &$cases, &$totals): void {
-                $party = $parties[$row['party_key']] ??= $this->partyFor($row, $totals);
-                $caseKey = $party->getKey().'|'.$this->normalize($row['case_title']);
-                $case = $cases[$caseKey] ??= $this->caseFor($party, $row, $plan['case_rows'][$row['party_key'].'|'.$this->normalize($row['case_title'])] ?? [$row], $owner, $totals);
+                        return null;
+                    }
 
-                $this->openProposal($case, $row);
-                $totals['proposals']++;
-            }, 1);
+                    $case = $cases[$caseKey] ??= $this->caseFor($party, $row, $plan['case_rows'][$row['party_key'].'|'.$this->normalize($row['case_title'])] ?? [$row], $owner, $totals, $createdCases);
+
+                    /** @var Proposal|null $existing */
+                    $existing = Proposal::query()->where('business_case_id', $case->getKey())->where('title', $row['proposal_title'])->first();
+
+                    if ($existing !== null) {
+                        $totals['skipped']++;
+
+                        return $existing;
+                    }
+
+                    // D-165: canlida zaten var olan potansiyel isin altina seed teklif eklemez
+                    // (silinen teklif geri gelmez; var olan isin durumu da degismez).
+                    if (! $this->ownedBySeed($case)) {
+                        $totals['skipped']++;
+
+                        return null;
+                    }
+
+                    $proposal = $this->openProposal($case, $row);
+                    $totals['proposals']++;
+
+                    return $proposal;
+                }, 1);
+            });
         }
 
-        foreach ($cases as $case) {
+        // D-165: yalniz bu calismada acilan potansiyel is kapatilir; var olana dokunulmaz.
+        foreach ($createdCases as $case) {
             if ($this->closeIfAllLost($case)) {
                 $totals['lost_cases']++;
             }
@@ -177,9 +210,20 @@ class KksProposalSeeder extends Seeder
             return;
         }
 
-        [$notes, $corrected] = $this->seedMeetingNotes($owner);
+        $notes = $this->seedMeetingNotes($owner);
 
-        $this->command?->info(sprintf('KKS gorusme notlari: %d not olusturuldu; %d teklif ozetinden notlar cikarildi.', $notes, $corrected));
+        $this->command?->info(sprintf('KKS gorusme notlari: %d not olusturuldu.', $notes));
+    }
+
+    /**
+     * D-165 seed arsivi anahtari: sayfa + listedeki firma + teklif basligi
+     * (yalniz veri dosyasindan; plan satiri ya da ham satir).
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function rowKey(array $row): string
+    {
+        return 'proposal:'.$this->normalize((string) $row['sheet']).'|'.$this->normalize(trim((string) $row['firm'])).'|'.$this->normalize($this->proposalTitle($row));
     }
 
     /**
@@ -188,18 +232,16 @@ class KksProposalSeeder extends Seeder
      * gorusme notu olur, potansiyel ise ve satirin teklifine baglanir. Ayni
      * potansiyel isteki ayni metin (I ile J'de ya da ayni isin baska
      * satirlarinda tekrar eden) tek not olur ve butun ilgili tekliflere baglanir.
-     * Tekrar calistirilabilir: ayni potansiyel is + tarih + metin varsa atlanir.
-     * Daha once ozete yazilmis not satirlari ozetten cikarilir.
-     *
-     * @return array{0: int, 1: int}
+     * Tekrar calistirilabilir: ayni potansiyel is + tarih + metin varsa benimsenir.
+     * D-165: ozet duzeltmesi (correctImportedSummary) kaldirildi; var olan
+     * surum ozetine dokunulmaz. Her not bir kez islenip arsive duser.
      */
-    private function seedMeetingNotes(int $ownerId): array
+    private function seedMeetingNotes(int $ownerId): int
     {
         /** @var list<array<string, mixed>> $source */
         $source = require __DIR__.'/data/kks_proposals.php';
         $personnel = $this->personnelNames();
         $groups = [];
-        $corrected = 0;
 
         foreach ($source as $row) {
             $proposal = $this->proposalForRow($row);
@@ -208,13 +250,15 @@ class KksProposalSeeder extends Seeder
                 continue;
             }
 
-            if ($this->cleanSummary($proposal)) {
-                $corrected++;
-            }
-
             foreach ($this->meetingEntries($row) as $entry) {
                 $key = $proposal->business_case_id.'|'.($entry['date'] ?? '-').'|'.$this->fingerprint($entry['text']);
-                $groups[$key] ??= ['case_id' => (int) $proposal->business_case_id, 'entry' => $entry, 'proposal_ids' => []];
+                // D-165 arsiv anahtari: notu ilk getiren teklif satiri + tarih + metin.
+                $groups[$key] ??= [
+                    'archive_key' => 'note:'.$this->rowKey($row).'|'.($entry['date'] ?? '-').'|'.$this->fingerprint($entry['text']),
+                    'case_id' => (int) $proposal->business_case_id,
+                    'entry' => $entry,
+                    'proposal_ids' => [],
+                ];
                 $groups[$key]['proposal_ids'][] = (int) $proposal->getKey();
             }
         }
@@ -223,39 +267,50 @@ class KksProposalSeeder extends Seeder
         $service = app(PartyMeetingNoteService::class);
 
         foreach ($groups as $group) {
-            $entry = $group['entry'];
-            [$personnelId, $text] = $this->splitPersonnel($entry['text'], $personnel);
-            $note = $entry['date'] === null
-                ? $text.' (Listede tarih yok; liste tarihi '.self::LIST_DATE.' yazıldı.)'
-                : $text;
-            $notedOn = Carbon::createFromFormat('d.m.Y', $entry['date'] ?? self::LIST_DATE)->toDateString();
+            $this->row($group['archive_key'], function () use ($group, $personnel, $ownerId, $service, &$created): ?PartyMeetingNote {
+                $entry = $group['entry'];
+                [$personnelId, $text] = $this->splitPersonnel($entry['text'], $personnel);
+                $note = $entry['date'] === null
+                    ? $text.' (Listede tarih yok; liste tarihi '.self::LIST_DATE.' yazıldı.)'
+                    : $text;
+                $notedOn = Carbon::createFromFormat('d.m.Y', $entry['date'] ?? self::LIST_DATE)->toDateString();
 
-            $exists = PartyMeetingNote::query()
-                ->where('business_case_id', $group['case_id'])
-                ->whereDate('noted_on', $notedOn)
-                ->where('note', $note)
-                ->exists();
+                /** @var PartyMeetingNote|null $existing */
+                $existing = PartyMeetingNote::query()
+                    ->where('business_case_id', $group['case_id'])
+                    ->whereDate('noted_on', $notedOn)
+                    ->where('note', $note)
+                    ->first();
 
-            if ($exists) {
-                continue;
-            }
+                if ($existing !== null) {
+                    return $existing;
+                }
 
-            $case = BusinessCase::query()->findOrFail($group['case_id']);
+                $case = BusinessCase::query()->findOrFail($group['case_id']);
 
-            $service->create([
-                'party_id' => $case->primary_party_id,
-                'business_case_id' => $case->getKey(),
-                'proposal_ids' => array_values(array_unique($group['proposal_ids'])),
-                'personnel_id' => $personnelId ?? $ownerId,
-                'noted_on' => $notedOn,
-                'channel' => $this->channel($text)->value,
-                'subject' => Str::limit((string) $case->title, 200, ''),
-                'note' => $note,
-            ]);
-            $created++;
+                // D-165: canlida zaten var olan potansiyel isin altina seed not eklemez.
+                if (! $this->ownedBySeed($case)) {
+                    return null;
+                }
+
+                /** @var PartyMeetingNote $record */
+                $record = $service->create([
+                    'party_id' => $case->primary_party_id,
+                    'business_case_id' => $case->getKey(),
+                    'proposal_ids' => array_values(array_unique($group['proposal_ids'])),
+                    'personnel_id' => $personnelId ?? $ownerId,
+                    'noted_on' => $notedOn,
+                    'channel' => $this->channel($text)->value,
+                    'subject' => Str::limit((string) $case->title, 200, ''),
+                    'note' => $note,
+                ]);
+                $created++;
+
+                return $record;
+            });
         }
 
-        return [$created, $corrected];
+        return $created;
     }
 
     /**
@@ -442,45 +497,6 @@ class KksProposalSeeder extends Seeder
         return $proposal;
     }
 
-    /** Onceki aktarimda ozete yazilan not satirlarini cikarir. */
-    private function cleanSummary(Proposal $proposal): bool
-    {
-        $version = $proposal->currentVersion;
-
-        if ($version === null) {
-            return false;
-        }
-
-        $lines = explode("\n", (string) $version->summary);
-
-        // Not satirlari ve devam satirlari (cok satirli notlar) atilir.
-        $clean = [];
-        $skipping = false;
-
-        foreach ($lines as $line) {
-            if (str_starts_with($line, 'Güncel görüşme notları:') || str_starts_with($line, 'Görüşme notları:')) {
-                $skipping = true;
-
-                continue;
-            }
-
-            if ($skipping && ! preg_match('/^(Kapsam|Proje gücü|Depolama gücü|Proje durumu|Teklif tarihi|Teklif verme tarihi|Listede kırmızı işaretli):/u', $line)) {
-                continue;
-            }
-
-            $skipping = false;
-            $clean[] = $line;
-        }
-
-        if (count($clean) === count($lines)) {
-            return false;
-        }
-
-        app(ProposalVersionService::class)->correctImportedSummary($version, implode("\n", $clean));
-
-        return true;
-    }
-
     /**
      * Yazmadan: her satirin tarafi, potansiyel isi ve teklif basligi.
      *
@@ -630,8 +646,9 @@ class KksProposalSeeder extends Seeder
     /**
      * @param  list<array<string, mixed>>  $caseRows  ayni potansiyel ise dusen satirlar
      * @param  array<string, int>  $totals
+     * @param  array<int, BusinessCase>  $createdCases  bu calismada acilanlar (D-165)
      */
-    private function caseFor(Party $party, array $row, array $caseRows, int $ownerId, array &$totals): BusinessCase
+    private function caseFor(Party $party, array $row, array $caseRows, int $ownerId, array &$totals, array &$createdCases): BusinessCase
     {
         $existing = $this->findCase($party, (string) $row['case_title']);
 
@@ -672,6 +689,7 @@ class KksProposalSeeder extends Seeder
         ]);
 
         $totals['cases']++;
+        $createdCases[(int) $case->getKey()] = $case;
 
         return $case;
     }
@@ -699,7 +717,7 @@ class KksProposalSeeder extends Seeder
     }
 
     /** @param  array<string, mixed>  $row */
-    private function openProposal(BusinessCase $case, array $row): void
+    private function openProposal(BusinessCase $case, array $row): Proposal
     {
         $status = OfferStatus::from((string) $row['offer_status']);
 
@@ -710,7 +728,7 @@ class KksProposalSeeder extends Seeder
         ]);
 
         if ($status === OfferStatus::ToBeSubmitted || $proposal->current_version_id === null) {
-            return;
+            return $proposal;
         }
 
         // Listede tarih yoksa teklif en gec liste tarihinde verilmistir.
@@ -727,9 +745,14 @@ class KksProposalSeeder extends Seeder
                 $target === ProposalVersionStatus::Submitted && $submittedAt instanceof Carbon ? $submittedAt : null,
             );
         }
+
+        return $proposal;
     }
 
-    /** Listedeki butun teklifleri kaybedilen potansiyel is "Kaybedildi" olur. */
+    /**
+     * Listedeki butun teklifleri kaybedilen potansiyel is "Kaybedildi" olur.
+     * D-165: yalniz bu calismada acilan potansiyel is icin cagrilir.
+     */
     private function closeIfAllLost(BusinessCase $case): bool
     {
         $statuses = Proposal::query()->where('business_case_id', $case->getKey())->pluck('offer_status');

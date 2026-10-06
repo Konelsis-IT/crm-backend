@@ -20,14 +20,17 @@ use App\Models\Reference\Organization;
 use App\Models\Reference\RetentionPolicy;
 use App\Models\Reference\SecurityClassification;
 use App\Models\Reference\UnitOfMeasure;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 
 /**
  * Verified public reference data (ISO codes, units, classifications) plus
  * the single organization and its main legal entity. Retention policies are
  * seeded inactive until legal/finance confirm the periods (decision D-38).
+ *
+ * D-165: yalniz eksik satir eklenir; var olan kayit guncellenmez. Islenen
+ * her satir seed arsivine duser ve bir daha islenmez.
  */
-class ReferenceDataSeeder extends Seeder
+class ReferenceDataSeeder extends ProtectedSeeder
 {
     public function run(): void
     {
@@ -106,10 +109,10 @@ class ReferenceDataSeeder extends Seeder
         ];
 
         foreach ($countries as [$code, $iso3, $nameTr, $nameEn, $timezone]) {
-            Country::query()->updateOrCreate(
+            $this->row('country:'.$code, static fn (): Country => Country::query()->firstOrCreate(
                 ['code' => $code],
                 ['iso3_code' => $iso3, 'name_tr' => $nameTr, 'name_en' => $nameEn, 'default_timezone' => $timezone, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 
@@ -162,10 +165,10 @@ class ReferenceDataSeeder extends Seeder
         ];
 
         foreach ($currencies as [$code, $nameTr, $nameEn, $decimals]) {
-            Currency::query()->updateOrCreate(
+            $this->row('currency:'.$code, static fn (): Currency => Currency::query()->firstOrCreate(
                 ['code' => $code],
                 ['name_tr' => $nameTr, 'name_en' => $nameEn, 'decimal_places' => $decimals, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 
@@ -205,22 +208,31 @@ class ReferenceDataSeeder extends Seeder
             [UomDimension::Temperature, 'C', '°C', 'Santigrat derece', 'Degree Celsius', null, null],
         ];
 
-        $ids = [];
-
         foreach ($units as [$dimension, $code, $symbol, $nameTr, $nameEn, $baseCode, $factor]) {
-            $unit = UnitOfMeasure::query()->updateOrCreate(
-                ['dimension' => $dimension, 'code' => $code],
-                [
-                    'symbol' => $symbol,
-                    'name_tr' => $nameTr,
-                    'name_en' => $nameEn,
-                    'base_unit_id' => $baseCode === null ? null : ($ids[$dimension->value.'|'.$baseCode] ?? null),
-                    'to_base_factor' => $factor,
-                    'status' => ActiveStatus::Active,
-                ],
-            );
+            $this->row('uom:'.$dimension->value.'|'.$code, static function () use ($dimension, $code, $symbol, $nameTr, $nameEn, $baseCode, $factor): ?UnitOfMeasure {
+                // D-165: temel birim arsivde olabilir; kimligi veritabanindan okunur.
+                $baseId = null;
 
-            $ids[$dimension->value.'|'.$code] = $unit->id;
+                if ($baseCode !== null) {
+                    $baseId = UnitOfMeasure::query()->where('dimension', $dimension)->where('code', $baseCode)->value('id');
+
+                    if ($baseId === null) {
+                        return null;
+                    }
+                }
+
+                return UnitOfMeasure::query()->firstOrCreate(
+                    ['dimension' => $dimension, 'code' => $code],
+                    [
+                        'symbol' => $symbol,
+                        'name_tr' => $nameTr,
+                        'name_en' => $nameEn,
+                        'base_unit_id' => $baseId,
+                        'to_base_factor' => $factor,
+                        'status' => ActiveStatus::Active,
+                    ],
+                );
+            });
         }
     }
 
@@ -234,10 +246,10 @@ class ReferenceDataSeeder extends Seeder
         ];
 
         foreach ($rows as [$code, $rank, $nameTr, $nameEn, $externalAllowed]) {
-            SecurityClassification::query()->updateOrCreate(
+            $this->row('classification:'.$code->value, static fn (): SecurityClassification => SecurityClassification::query()->firstOrCreate(
                 ['code' => $code],
                 ['rank' => $rank, 'name_tr' => $nameTr, 'name_en' => $nameEn, 'external_analysis_allowed' => $externalAllowed, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 
@@ -263,7 +275,7 @@ class ReferenceDataSeeder extends Seeder
         ];
 
         foreach ($policies as [$code, $nameTr, $nameEn, $days, $trigger, $disposition]) {
-            RetentionPolicy::query()->firstOrCreate(
+            $this->row('retention:'.$code, static fn (): RetentionPolicy => RetentionPolicy::query()->firstOrCreate(
                 ['code' => $code],
                 [
                     'name_tr' => $nameTr,
@@ -274,14 +286,17 @@ class ReferenceDataSeeder extends Seeder
                     'legal_basis' => 'Hukuk/finans doğrulaması bekliyor (D-38).',
                     'status' => ActiveStatus::Inactive,
                 ],
-            );
+            ));
         }
     }
 
     private function seedOrganization(): void
     {
-        $organization = Organization::query()->firstOrCreate(
-            ['code' => (string) config('konelsis.organization.code', 'KONELSIS')],
+        $organizationCode = (string) config('konelsis.organization.code', 'KONELSIS');
+        $legalEntityCode = (string) config('konelsis.legal_entity.code', 'KONELSIS_MAIN');
+
+        $this->row('organization:'.$organizationCode, static fn (): Organization => Organization::query()->firstOrCreate(
+            ['code' => $organizationCode],
             [
                 'name_tr' => (string) config('konelsis.organization.name_tr', 'Konelsis'),
                 'name_en' => (string) config('konelsis.organization.name_en', 'Konelsis'),
@@ -290,40 +305,64 @@ class ReferenceDataSeeder extends Seeder
                 'default_currency_code' => (string) config('konelsis.organization.default_currency', 'TRY'),
                 'status' => ActiveStatus::Active,
             ],
-        );
+        ));
 
-        $legalEntity = LegalEntity::query()->firstOrCreate(
-            ['organization_id' => $organization->id, 'code' => (string) config('konelsis.legal_entity.code', 'KONELSIS_MAIN')],
-            [
-                'legal_name' => (string) config('konelsis.legal_entity.legal_name'),
-                'short_name' => (string) config('konelsis.legal_entity.short_name', 'Konelsis'),
-                'country_code' => (string) config('konelsis.legal_entity.country', 'TR'),
-                'currency_code' => (string) config('konelsis.legal_entity.currency', 'TRY'),
-                'timezone' => (string) config('konelsis.legal_entity.timezone', 'Europe/Istanbul'),
-                'entity_kind' => LegalEntityKind::Parent,
-                'status' => LegalEntityStatus::Active,
-                'valid_from' => now()->toDateString(),
-            ],
-        );
+        // D-165: ust kayit arsivde olabilir; kimlik koddan okunur, yoksa sonra yeniden denenir.
+        $this->row('legal-entity:'.$organizationCode.'|'.$legalEntityCode, static function () use ($organizationCode, $legalEntityCode): ?LegalEntity {
+            $organizationId = Organization::query()->where('code', $organizationCode)->value('id');
 
-        $calendar = BusinessCalendar::query()->firstOrCreate(
-            ['code' => 'TR_OFFICE'],
-            [
-                'name_tr' => 'Türkiye ofis takvimi',
-                'name_en' => 'Türkiye office calendar',
-                'legal_entity_id' => $legalEntity->id,
-                'country_code' => 'TR',
-                'timezone' => 'Europe/Istanbul',
-                'is_default' => true,
-                'status' => ActiveStatus::Active,
-            ],
-        );
+            if ($organizationId === null) {
+                return null;
+            }
 
-        foreach ([1, 2, 3, 4, 5] as $weekday) {
-            BusinessCalendarWeekday::query()->firstOrCreate(
-                ['business_calendar_id' => $calendar->id, 'iso_weekday' => $weekday],
-                ['work_start' => '09:00:00', 'work_end' => '18:00:00'],
+            return LegalEntity::query()->firstOrCreate(
+                ['organization_id' => $organizationId, 'code' => $legalEntityCode],
+                [
+                    'legal_name' => (string) config('konelsis.legal_entity.legal_name'),
+                    'short_name' => (string) config('konelsis.legal_entity.short_name', 'Konelsis'),
+                    'country_code' => (string) config('konelsis.legal_entity.country', 'TR'),
+                    'currency_code' => (string) config('konelsis.legal_entity.currency', 'TRY'),
+                    'timezone' => (string) config('konelsis.legal_entity.timezone', 'Europe/Istanbul'),
+                    'entity_kind' => LegalEntityKind::Parent,
+                    'status' => LegalEntityStatus::Active,
+                    'valid_from' => now()->toDateString(),
+                ],
             );
-        }
+        });
+
+        // Takvim ve hafta ici gunleri tek satirdir (D-165).
+        $this->row('calendar:TR_OFFICE', static function () use ($organizationCode, $legalEntityCode): ?BusinessCalendar {
+            $organizationId = Organization::query()->where('code', $organizationCode)->value('id');
+            $legalEntityId = $organizationId === null ? null : LegalEntity::query()
+                ->where('organization_id', $organizationId)
+                ->where('code', $legalEntityCode)
+                ->value('id');
+
+            if ($legalEntityId === null) {
+                return null;
+            }
+
+            $calendar = BusinessCalendar::query()->firstOrCreate(
+                ['code' => 'TR_OFFICE'],
+                [
+                    'name_tr' => 'Türkiye ofis takvimi',
+                    'name_en' => 'Türkiye office calendar',
+                    'legal_entity_id' => $legalEntityId,
+                    'country_code' => 'TR',
+                    'timezone' => 'Europe/Istanbul',
+                    'is_default' => true,
+                    'status' => ActiveStatus::Active,
+                ],
+            );
+
+            foreach ([1, 2, 3, 4, 5] as $weekday) {
+                BusinessCalendarWeekday::query()->firstOrCreate(
+                    ['business_calendar_id' => $calendar->id, 'iso_weekday' => $weekday],
+                    ['work_start' => '09:00:00', 'work_end' => '18:00:00'],
+                );
+            }
+
+            return $calendar;
+        });
     }
 }

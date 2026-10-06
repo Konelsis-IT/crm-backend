@@ -287,7 +287,26 @@ Code always goes to production directly from one branch; there are no release br
 - `database/seeders/data/features.php` mirrors production's switches (30 closed since 2026-10-05; D-154 opened `social_media.feed` in 2.3). `konelsis:features:export` writes the *local* states, which are all on during development, so do not run it to refresh this file.
 - Gate background work too: scheduled commands, reminders and notification senders of a feature check `FeatureFlags::enabled()` before doing anything (the four existing scheduled commands do).
 - `FeatureSeeder` applies `database/seeders/data/features.php` only to features inserted in that run; it never changes an existing production switch.
-- `tools/safe-verify.php` fails when a `Feature` case has no version in its definition row, when a version is above `Feature::NEXT_RELEASE` (or the constant is missing), or when the B42 signature is missing from `SchemaReadiness`.
+- `tools/safe-verify.php` fails when a `Feature` case has no version in its definition row, when a version is above `Feature::NEXT_RELEASE` (or the constant is missing), or when the B42 signature is missing from `SchemaReadiness`. The only exception is the parking version `Feature::PARKED` (5.0, D-164): features the user does not want opened yet sit there and never open with a release; when the user names a release for one, move its version and its release-note bullet (from the `5.0` entry) to that release.
+
+### Seeders never change existing data (user decision, 2026-10-06, D-165)
+
+The user: "canlida son hali neyse o kalmali. Biz sadece ekledigimiz db:seed'ler calisacaklar; her yeni db:seed isi yeni dosyada olmali." A role given in production was reset by `db:seed`; the rule covers every table (roles and permissions, personnel, parties, potential jobs, proposals, contracts, tenders, meeting plans...).
+- Every seeder except `FeatureSeeder` extends `Database\Seeders\Support\ProtectedSeeder`. While it runs, `SeedGuard` stops any Eloquent update, delete or restore of a record that was not created in the same process: a seeder only inserts what is missing.
+- Each data row is written inside `$this->row('<type>:<natural key>', fn () => ...)`. The key comes from the seed data (code, normalized name, email), never a database id. A processed row is recorded in the per-environment `seed_archive` table (B45) and never processed again, so a record deleted or edited in production never comes back through a seed. The closure returns the written or adopted model; `null` means "not written, retry later".
+- Never write `updateOrCreate`, fill-blank updates of existing rows, `syncPermissions`/`sync` on existing data, deletes or direct `DB::table()->update()` in a seeder.
+- A record the seed did not create in this run (`$this->ownedBySeed($model)` is false) belongs to the live system together with everything under it: the seed adds no contact, channel, note, potential job or proposal under an existing party or case, and sets no manager on an existing unit.
+- Seeders never call `PositionRoleSync::syncAll()`: it re-granted position roles taken away in production. They use `Database\Seeders\Support\SeedPositionRoles::sync()`, which creates roles only for positions the seed created and grants roles only on assignments the seed created.
+- Code counters (`BusinessCodeSequence`) are the only existing rows a seed may advance, because new POTIS/TKLF/PRJ codes need them.
+- A new data import that should run on the next production deploy is registered in `DatabaseSeeder::DEPLOY_SEEDERS`; the user never has to type `--class`.
+
+### Production deploy script (user decision, 2026-10-06, D-166)
+
+- `deploy.sh [version]` at the repository root is the user's single production command. Its steps are: backup to `storage/backups` (keeps 14) → maintenance → `git pull --ff-only` → `composer install --no-dev` → clear caches → migrations → `db:seed` → `filament:assets` / `optimize` / `queue:restart` → optional `konelsis:release` → up. It then prints a step summary and the release notes (`konelsis:notes`).
+- Only the user or DevOps runs it, on the production server. Agents never run it in any environment; it does not relax the migration rule for agents. Keep each step's Turkish explanation line when editing it. Every new deploy-time step goes into this script, never into a manual instruction list.
+- New data, or a correction, goes into a new seeder file that the user runs once with `php artisan db:seed --class=...`. Never edit an existing seeder's rows to change production data. The old correction seeders (`PartySplitSeeder`, `FirmaTakipUpdateSeeder`) are applied history; the guard now stops them.
+- On a database that already has personnel, `DatabaseSeeder` runs only `FeatureSeeder` (new switches added, existing switch states kept) and skips the whole start-up chain. The feature catalog is separate from roles and business data; do not mix the two.
+- Role permissions: `RoleMatrixSeeder` writes the matrix only to roles without any permission (first install or a new position). Later permission additions go into a new seeder that only adds (`givePermissionTo`), never `syncPermissions`.
 
 ## Plugin and dependency boundary
 

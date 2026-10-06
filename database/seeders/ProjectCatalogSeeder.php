@@ -21,7 +21,8 @@ use App\Services\Project\StageNodeService;
 use App\Services\Project\StageRequirementDefinitionService;
 use App\Services\Project\StageTemplateService;
 use App\Services\Project\StageTemplateVersionService;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -29,8 +30,11 @@ use Illuminate\Support\Facades\Schema;
  * gruplari (alti workstream, varsayilan sira), proje bilesenleri, ihale
  * kaynaklari ve 'generic' G0-G7 stage-gate sablonunun yayimli ilk surumu.
  * GES/HES/RES varyantlari sirket verisiyle sonra eklenir (D-20 acik).
+ *
+ * D-165: yalniz eksik kayit eklenir; var olan kayit guncellenmez. Islenen
+ * her satir seed arsivine duser ve bir daha islenmez.
  */
-class ProjectCatalogSeeder extends Seeder
+class ProjectCatalogSeeder extends ProtectedSeeder
 {
     public function run(): void
     {
@@ -90,8 +94,9 @@ class ProjectCatalogSeeder extends Seeder
             }
 
             $order[$groupCode] = ($order[$groupCode] ?? 0) + 1;
+            $sortOrder = $order[$groupCode] * 10;
 
-            FocusExpectation::query()->firstOrCreate(
+            $this->row('focus-expectation:'.$groupCode.'|'.$code, static fn (): FocusExpectation => FocusExpectation::query()->firstOrCreate(
                 ['group_definition_id' => $groupId, 'code' => $code],
                 [
                     'name_tr' => $nameTr,
@@ -101,10 +106,10 @@ class ProjectCatalogSeeder extends Seeder
                     'is_mandatory' => $mandatory,
                     'help_tr' => $helpTr,
                     'help_en' => null,
-                    'sort_order' => $order[$groupCode] * 10,
+                    'sort_order' => $sortOrder,
                     'status' => ActiveStatus::Active,
                 ],
-            );
+            ));
         }
     }
 
@@ -120,10 +125,10 @@ class ProjectCatalogSeeder extends Seeder
         ];
 
         foreach ($groups as [$code, $tr, $en, $order]) {
-            OperationGroupDefinition::query()->firstOrCreate(
+            $this->row('operation-group:'.$code, static fn (): OperationGroupDefinition => OperationGroupDefinition::query()->firstOrCreate(
                 ['code' => $code],
                 ['name_tr' => $tr, 'name_en' => $en, 'default_sort_order' => $order, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 
@@ -146,10 +151,10 @@ class ProjectCatalogSeeder extends Seeder
         ];
 
         foreach ($components as [$code, $tr, $en, $discipline]) {
-            ComponentDefinition::query()->firstOrCreate(
+            $this->row('component:'.$code, static fn (): ComponentDefinition => ComponentDefinition::query()->firstOrCreate(
                 ['code' => $code],
                 ['name_tr' => $tr, 'name_en' => $en, 'discipline' => $discipline, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 
@@ -163,17 +168,28 @@ class ProjectCatalogSeeder extends Seeder
         ];
 
         foreach ($sources as [$code, $tr, $en, $type, $mode]) {
-            TenderSource::query()->firstOrCreate(
+            $this->row('tender-source:'.$code, static fn (): TenderSource => TenderSource::query()->firstOrCreate(
                 ['code' => $code],
                 ['name_tr' => $tr, 'name_en' => $en, 'source_type' => $type, 'access_mode' => $mode, 'scraping_allowed' => false, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 
     private function seedGenericStageTemplate(): void
     {
-        if (StageTemplate::query()->where('code', 'GENERIC-G')->exists()) {
-            return;
+        $this->row('stage-template:GENERIC-G', fn (): Model => $this->writeGenericStageTemplate());
+    }
+
+    /**
+     * Sablon, surum, dugum, gereksinim ve bagimliliklar tek satirdir (D-165);
+     * sablon zaten varsa ona dokunulmaz.
+     */
+    private function writeGenericStageTemplate(): Model
+    {
+        $existing = StageTemplate::query()->where('code', 'GENERIC-G')->first();
+
+        if ($existing !== null) {
+            return $existing;
         }
 
         $admin = SystemAccountSeeder::actor();
@@ -265,5 +281,7 @@ class ProjectCatalogSeeder extends Seeder
         }
 
         app(StageTemplateVersionService::class)->publish($version);
+
+        return $template;
     }
 }

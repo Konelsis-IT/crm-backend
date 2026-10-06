@@ -16,7 +16,7 @@ use App\Models\Document\DocumentRevision;
 use App\Services\Approval\Subjects\WorkRequestSubject;
 use App\Services\Authorization\RoleResolver;
 use App\Services\WorkRequest\WorkRequestService;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
@@ -26,8 +26,12 @@ use Illuminate\Support\Facades\Schema;
  * yonetim rolu tanimlanana kadar) ve onaya tabi talep icin (D-87, B11D)
  * "kayitta belirlenen onay mercii" adimi. Sirket kendi politikalarini
  * Ayarlar > Onay Politikalari ekranindan ekler; mevcut kayit uzerine yazilmaz.
+ *
+ * D-165: politika, surumu ve adimi tek satirdir; yalniz bu calismada eklenen
+ * politika tamamlanir, var olana dokunulmaz. Islenen satir seed arsivine
+ * duser ve bir daha islenmez.
  */
-class ApprovalPolicySeeder extends Seeder
+class ApprovalPolicySeeder extends ProtectedSeeder
 {
     public function run(): void
     {
@@ -63,6 +67,18 @@ class ApprovalPolicySeeder extends Seeder
         ?string $roleCode = RoleResolver::MANAGER,
         bool $makerChecker = true,
     ): void {
+        $this->row('policy:'.$code, static fn (): ApprovalPolicy => self::writePolicy($code, $nameTr, $nameEn, $subjectType, $resolver, $roleCode, $makerChecker));
+    }
+
+    private static function writePolicy(
+        string $code,
+        string $nameTr,
+        string $nameEn,
+        string $subjectType,
+        ResolverType $resolver,
+        ?string $roleCode,
+        bool $makerChecker,
+    ): ApprovalPolicy {
         /** @var ApprovalPolicy $policy */
         $policy = ApprovalPolicy::query()->firstOrCreate(
             ['code' => $code],
@@ -74,8 +90,9 @@ class ApprovalPolicySeeder extends Seeder
             ],
         );
 
-        if ($policy->current_version_id !== null) {
-            return;
+        // D-165: var olan politikaya (surumu olsun olmasin) dokunulmaz.
+        if (! $policy->wasRecentlyCreated || $policy->current_version_id !== null) {
+            return $policy;
         }
 
         /** @var ApprovalPolicyVersion $version */
@@ -90,6 +107,10 @@ class ApprovalPolicySeeder extends Seeder
                 'status' => PolicyVersionStatus::Draft,
             ],
         );
+
+        if (! $version->wasRecentlyCreated) {
+            return $policy;
+        }
 
         ApprovalStep::query()->firstOrCreate(
             ['approval_policy_version_id' => $version->getKey(), 'step_code' => 'APPROVE'],
@@ -115,5 +136,7 @@ class ApprovalPolicySeeder extends Seeder
             'current_version_id' => $version->getKey(),
             'status' => ApprovalPolicyStatus::Active,
         ])->save();
+
+        return $policy;
     }
 }

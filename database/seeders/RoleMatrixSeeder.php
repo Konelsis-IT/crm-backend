@@ -7,9 +7,9 @@ namespace Database\Seeders;
 use App\Models\Authorization\Role;
 use App\Models\Personnel\Personnel;
 use App\Models\Personnel\Position;
-use App\Services\Authorization\PositionRoleSync;
 use App\Services\Authorization\RoleResolver;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Database\Seeders\Support\SeedPositionRoles;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -36,8 +36,13 @@ use Spatie\Permission\PermissionRegistrar;
  *
  * Onkosul: Shield izinleri uretilmis olmali (php artisan shield:generate --all).
  * Izin bulunamazsa o satir sessizce atlanir; seeder izin URETMEZ.
+ *
+ * D-165: korumali seeder. Satirlar: 'role:<ad>' (tam yetkili roller ve
+ * Denetci), 'role-holders:<ad>' (tam yetkili rol sahipleri),
+ * 'position-role:<birim kodu>|<pozisyon kodu>'. Islenen satir arsive duser,
+ * bir daha islenmez; izni ya da sahibi olan role dokunulmaz.
  */
-class RoleMatrixSeeder extends Seeder
+class RoleMatrixSeeder extends ProtectedSeeder
 {
     /** Okuma. */
     private const READ = ['ViewAny', 'View'];
@@ -295,51 +300,113 @@ class RoleMatrixSeeder extends Seeder
             return;
         }
 
-        app(PositionRoleSync::class)->syncAll();
+        // D-165: yalniz seed'in ekledigi pozisyon ve gorevler (syncAll alinan rolu geri veriyordu).
+        SeedPositionRoles::sync();
 
-        $all = Permission::query()->pluck('name')->all();
+        $all =Permission::query()->pluck('name')->all();
+
+        // D-165 (6 Ekim 2026 kullanici talimati: "birine bir yetki verildiyse o
+        // neden bozuluyor? Bozulmamalidir, canlida son hali neyse o kalmalidir"):
+        // matris yalniz HIC izni olmayan role yazilir (ilk kurulum ya da yeni
+        // pozisyon). Izni olan role dokunulmaz; ekrandan verilen / alinan
+        // yetkiler korunur. Rol sahipleri de yalniz rolun hic sahibi yokken
+        // atanir. Sonradan eklenecek izinler yeni bir seeder dosyasinda,
+        // yalniz ekleyerek (givePermissionTo) verilir.
+        $skipped = 0;
 
         // Tam yetkili roller: her izne sahip.
         foreach (SystemAccountSeeder::fullAccess() as $roleName => $emails) {
-            $role = Role::query()->firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
-            $role->syncPermissions($all);
-            $this->assignHolders($role, $emails);
+            $role = $this->row('role:'.$roleName, function () use ($roleName, $all, &$skipped): Role {
+                $role = Role::query()->firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+
+                if ($this->untouched($role)) {
+                    $role->syncPermissions($all);
+                } else {
+                    $skipped++;
+                }
+
+                return $role;
+            });
+
+            // D-165: sahipler yalniz rolun hic sahibi yokken atanir; bulunamayan
+            // kisi varsa satir arsive dusmez, sonraki seed'de yeniden denenir.
+            $this->row('role-holders:'.$roleName, function () use ($role, $roleName, $emails): ?Role {
+                $role ??= Role::query()->where('name', $roleName)->where('guard_name', 'web')->first();
+
+                if ($role === null) {
+                    return null;
+                }
+
+                if ($role->users()->exists()) {
+                    return $role;
+                }
+
+                return $this->assignHolders($role, $emails) ? $role : null;
+            });
         }
 
-        $auditorRole = Role::query()->firstOrCreate(['name' => RoleResolver::AUDITOR, 'guard_name' => 'web']);
-        $auditorRole->syncPermissions($this->permissionNames($this->auditor()));
+        $this->row('role:'.RoleResolver::AUDITOR, function () use (&$skipped): Role {
+            $auditorRole = Role::query()->firstOrCreate(['name' => RoleResolver::AUDITOR, 'guard_name' => 'web']);
+
+            if ($this->untouched($auditorRole)) {
+                $auditorRole->syncPermissions($this->permissionNames($this->auditor()));
+            } else {
+                $skipped++;
+            }
+
+            return $auditorRole;
+        });
 
         // Pozisyon rolleri: departman paketi + ortak alanlar (+ yonetici eki).
         $departments = $this->departments();
         $assigned = 0;
 
         foreach (Position::query()->with(['orgUnit', 'role'])->get() as $position) {
-            $role = $position->role;
-
-            if ($role === null) {
-                continue;
-            }
-
             $unitCode = (string) ($position->orgUnit?->code ?? '');
-            $matrix = $this->common();
+            $key = 'position-role:'.$unitCode.'|'.(string) $position->code;
 
-            foreach ($departments[$unitCode] ?? [] as $subject => $abilities) {
-                $matrix[$subject] = [...($matrix[$subject] ?? []), ...$abilities];
-            }
+            $this->row($key, function () use ($position, $unitCode, $departments, &$assigned, &$skipped): ?Role {
+                $role = $position->role;
 
-            if ((int) $position->managerial_level >= 2) {
-                foreach ($this->managerExtras() as $subject => $abilities) {
+                // Rolu henuz yok: arsive dusmez, sonra yeniden denenir.
+                if ($role === null) {
+                    return null;
+                }
+
+                if (! $this->untouched($role)) {
+                    $skipped++;
+
+                    return $role;
+                }
+
+                $matrix = $this->common();
+
+                foreach ($departments[$unitCode] ?? [] as $subject => $abilities) {
                     $matrix[$subject] = [...($matrix[$subject] ?? []), ...$abilities];
                 }
-            }
 
-            $role->syncPermissions($this->permissionNames($matrix));
-            $assigned++;
+                if ((int) $position->managerial_level >= 2) {
+                    foreach ($this->managerExtras() as $subject => $abilities) {
+                        $matrix[$subject] = [...($matrix[$subject] ?? []), ...$abilities];
+                    }
+                }
+
+                $role->syncPermissions($this->permissionNames($matrix));
+                $assigned++;
+
+                return $role;
+            });
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $this->command?->info(sprintf('%d pozisyon rolunun yetkileri yazildi; Yonetici / Gelistirici / Denetci hazir.', $assigned));
+        $this->command?->info(sprintf('%d pozisyon rolunun yetkileri yazildi; izni olan %d role dokunulmadi.', $assigned, $skipped));
+    }
+
+    /** Rolun hic izni yok mu (ilk kurulum ya da yeni pozisyon rolu). */
+    private function untouched(Role $role): bool
+    {
+        return $role->permissions()->doesntExist();
     }
 
     /**
@@ -369,16 +436,21 @@ class RoleMatrixSeeder extends Seeder
     }
 
     /**
+     * Rol sahiplerini atar; hepsi bulunduysa true doner.
+     *
      * @param  list<string>  $emails
      */
-    private function assignHolders(Role $role, array $emails): void
+    private function assignHolders(Role $role, array $emails): bool
     {
+        $complete = true;
+
         foreach ($emails as $email) {
             $normalized = Personnel::normalizeEmail($email);
             $personnel = Personnel::query()->where('normalized_email', $normalized)->first();
 
             if ($personnel === null) {
                 $this->command?->warn(sprintf('%s bulunamadi; "%s" rolu atanmadi.', $email, $role->name));
+                $complete = false;
 
                 continue;
             }
@@ -386,5 +458,6 @@ class RoleMatrixSeeder extends Seeder
             $personnel->assignRole($role);
         }
 
+        return $complete;
     }
 }

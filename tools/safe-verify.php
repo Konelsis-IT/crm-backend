@@ -542,11 +542,18 @@ if ($featureCases[1] === [] || $unversioned !== []) {
     $failures[] = sprintf('Feature versions: App\Enums\Platform\Feature cases without a release version in definition() [name, description, decision, version]: %s.', $unversioned === [] ? '(catalog not found)' : implode(', ', $unversioned));
 }
 
-// Sira gelen guncelleme (D-152): hicbir ozellik Feature::NEXT_RELEASE'ten buyuk surum tasiyamaz.
+// Sira gelen guncelleme (D-152): hicbir ozellik Feature::NEXT_RELEASE'ten buyuk surum tasiyamaz;
+// tek istisna kullanicinin bekleme surumu Feature::PARKED (D-164).
+$parked = preg_match("/const PARKED = '(\\d+\\.\\d+(?:\\.\\d+)?)';/", $featureSource, $parkedMatch) === 1 ? $parkedMatch[1] : null;
+
 if (preg_match("/const NEXT_RELEASE = '(\\d+\\.\\d+(?:\\.\\d+)?)';/", $featureSource, $nextRelease) !== 1) {
     $failures[] = 'Feature versions: App\Enums\Platform\Feature must declare NEXT_RELEASE (the upcoming release every new holdable feature uses).';
 } else {
     foreach ($versionedFeatures[1] as $index => $case) {
+        if ($parked !== null && $versionedFeatures[2][$index] === $parked) {
+            continue;
+        }
+
         if (version_compare($versionedFeatures[2][$index], $nextRelease[1], '>')) {
             $failures[] = sprintf('Feature versions: Feature::%s has version %s, above NEXT_RELEASE %s.', $case, $versionedFeatures[2][$index], $nextRelease[1]);
         }

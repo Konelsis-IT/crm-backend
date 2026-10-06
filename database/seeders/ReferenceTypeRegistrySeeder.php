@@ -8,13 +8,16 @@ use App\Enums\Activity\ReferenceUsageContext;
 use App\Enums\Activity\RegistryStatus;
 use App\Models\Activity\ReferenceType;
 use App\Models\Activity\ReferenceTypeUsage;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 
 /**
  * Personel Hareketleri kayitlarinda kullanilabilecek kayit turleri.
  * Sonraki moduller kendi turlerini ekler.
+ *
+ * D-165: yalniz eksik tur eklenir; var olan tur guncellenmez. Islenen her
+ * satir seed arsivine duser ve bir daha islenmez.
  */
-class ReferenceTypeRegistrySeeder extends Seeder
+class ReferenceTypeRegistrySeeder extends ProtectedSeeder
 {
     public function run(): void
     {
@@ -164,20 +167,24 @@ class ReferenceTypeRegistrySeeder extends Seeder
         ];
 
         foreach ($entries as [$targetType, $tableName, $labelKey, $domain]) {
-            $referenceType = ReferenceType::query()->updateOrCreate(
-                ['target_type' => $targetType],
-                [
-                    'table_name' => $tableName,
-                    'label_key' => $labelKey,
-                    'owning_domain' => $domain,
-                    'status' => RegistryStatus::Active,
-                ],
-            );
+            $this->row('reference-type:'.$targetType, static function () use ($targetType, $tableName, $labelKey, $domain): ReferenceType {
+                $referenceType = ReferenceType::query()->firstOrCreate(
+                    ['target_type' => $targetType],
+                    [
+                        'table_name' => $tableName,
+                        'label_key' => $labelKey,
+                        'owning_domain' => $domain,
+                        'status' => RegistryStatus::Active,
+                    ],
+                );
 
-            ReferenceTypeUsage::query()->firstOrCreate([
-                'reference_type_id' => $referenceType->id,
-                'usage_context' => ReferenceUsageContext::Activity,
-            ]);
+                ReferenceTypeUsage::query()->firstOrCreate([
+                    'reference_type_id' => $referenceType->id,
+                    'usage_context' => ReferenceUsageContext::Activity,
+                ]);
+
+                return $referenceType;
+            });
         }
     }
 }

@@ -12,7 +12,7 @@ use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\PersonnelTitle;
 use App\Models\Personnel\Position;
 use App\Models\Reference\LegalEntity;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
 
@@ -32,8 +32,11 @@ use Illuminate\Support\Carbon;
  * "Gorev" (Position.title / personnel.job_title) departmana baglidir;
  * "unvan" (personnel_titles, B26) departmandan bagimsiz tekrar eden
  * kademe adidir (Sorumlu, Mudur, Grup Muduru...). Ikisi kasitli ayridir.
+ *
+ * D-165: yalniz eksik kayit eklenir; var olan kayit guncellenmez. Islenen
+ * her satir seed arsivine duser ve bir daha islenmez.
  */
-class RealOrganizationSeeder extends Seeder
+class RealOrganizationSeeder extends ProtectedSeeder
 {
     /**
      * @var list<array{code: string, name: string}>
@@ -122,7 +125,7 @@ class RealOrganizationSeeder extends Seeder
             ->value('id') ?? LegalEntity::query()->value('id');
 
         foreach (self::NEW_DEPARTMENTS as ['code' => $code, 'name' => $name]) {
-            OrgUnit::query()->firstOrCreate(
+            $this->row('org-unit:'.$code, static fn (): OrgUnit => OrgUnit::query()->firstOrCreate(
                 ['code' => $code],
                 [
                     'legal_entity_id' => $legalEntityId,
@@ -131,15 +134,15 @@ class RealOrganizationSeeder extends Seeder
                     'status' => OrgUnitStatus::Active,
                     'valid_from' => Carbon::now('UTC')->toDateString(),
                 ],
-            );
+            ));
         }
 
         if (Schema::hasTable('personnel_titles')) {
             foreach (self::TITLES as $row) {
-                PersonnelTitle::query()->firstOrCreate(
+                $this->row('title:'.$row['code'], static fn (): PersonnelTitle => PersonnelTitle::query()->firstOrCreate(
                     ['code' => $row['code']],
                     ['name' => $row['name'], 'rank_level' => $row['rank'], 'status' => ActiveStatus::Active],
-                );
+                ));
             }
         } else {
             $this->command?->warn('personnel_titles tablosu yok; B26 migration uygulanmadan unvan katalogu atlandi.');
@@ -157,7 +160,7 @@ class RealOrganizationSeeder extends Seeder
             }
 
             foreach ($rows as $row) {
-                Position::query()->firstOrCreate(
+                $this->row('position:'.$unitCode.'|'.$row['code'], static fn (): Position => Position::query()->firstOrCreate(
                     ['org_unit_id' => $unit->getKey(), 'code' => $row['code']],
                     [
                         'title' => $row['title'],
@@ -166,7 +169,7 @@ class RealOrganizationSeeder extends Seeder
                         'status' => PositionStatus::Active,
                         'valid_from' => '2016-01-01',
                     ],
-                );
+                ));
             }
         }
 

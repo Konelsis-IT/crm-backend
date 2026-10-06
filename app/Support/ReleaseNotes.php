@@ -44,15 +44,17 @@ final class ReleaseNotes
     public static function all(): array
     {
         return [
+            // Bekleme surumu (D-164, Feature::PARKED): bu ozellikler hicbir yayinla
+            // acilmaz; kullanici bir ozelligi bir yayina aldiginda maddesi o
+            // yayinin kaydina tasinir.
             [
-                'version' => '2.4',
-                'date' => '03.10.2026',
+                'version' => '5.0',
+                'date' => '06.10.2026',
                 'groups' => [
                     self::FEATURES => [
                         'Personel kartında Personel Hareketleri sekmesi: kimin, ne zaman, hangi kayıtta ne yaptığı.',
                         'Onaylarda vekalet: onay yetkisini belirli bir süre için başka bir personele devretme.',
                         'Dokümanda hukuki tutma (belgeyi değişikliğe ve silinmeye karşı kilitleme) ve teslim tutanakları.',
-                        'İş alımda Sözleşmeler.',
                         'Proje kataloglarında proje bileşenleri, odak beklentileri ve onay kapısı şablonları.',
                         'Personel kartında haftalık kontrol sekmesi ve dikkat kartı; Analizler altında İş raporları (analiz panosu ve süre raporu).',
                         'Sosyal medyada Akış sekmesindeki depolama kutusu, Plan ve Analiz sekmeleri, blog yazma ve yönetici hesabı.',
@@ -60,6 +62,24 @@ final class ReleaseNotes
                         'Zilin yanında Tüm bildirimler tablosu; masaüstü uyarıları: bildirim sesi ve Windows bildirimi.',
                         'Üst çubukta Hızlı işlemler; listelerde ve detay sayfalarında Excel ve PDF indirme.',
                         'Sağ üst menüde Sürüm notları penceresi; tam yetkili kişiler için UI Deneme kataloğu.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '2.5',
+                'date' => '06.10.2026',
+                'groups' => [
+                    self::IMPROVEMENTS => [
+                        'Güncellemeler canlıdaki verilere dokunmuyor: verdiğiniz rol ve yetkiler, firmalar, kişiler, görüşmeler, potansiyel işler ve teklifler güncelleme sırasında değişmiyor, silinmiyor; sildiğiniz bir kayıt güncellemeyle geri gelmiyor.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '2.4',
+                'date' => '03.10.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'İş alımda Sözleşmeler.',
                         'Potansiyel işte teklif öncesi kontrol listesi: proje tipine göre GES ya da TM listesi. Soruların kutusuna bir tıklayınca ✓ (Evet), bir daha tıklayınca ✗ (Hayır), bir daha tıklayınca – (bilinmiyor) oluyor; her maddenin belgesi yanındaki küçük düğmeyle yükleniyor. Teklif sıcaklığı cevaplardan ve yüklenen belgelerden hesaplanıyor (her maddede üç soru ve belge eşit pay taşıyor) ve atan bir kalple gösteriliyor; belgesi olmayan maddede "Belge eklenmedi" yazıyor. Çağrı mektubunun geçerlilik süresi bittiyse teklif tipi kendiliğinden Bütçesel oluyor ve bu size söyleniyor.',
                         'Proje durumu (Lisanssız 5.1-C, Lisanssız 5.1-H, Önlisans, Lisans) Sınıflandırma bölümünde seçiliyor. Önlisans ya da Lisans seçilince çağrı mektubu opsiyonel oluyor ve ağırlığı diğer maddelere dağılıyor.',
                         'Potansiyel iş adımında Kaydet ya da İleri\'ye basınca bir özet penceresi açılıyor: hangi soruya ne cevap verildi, teklif sıcaklığı (başarı ihtimali), kaç soru cevaplandı, zorunlu belgeler ve eksikler. Açık soruları doldurursanız sıcaklığın en çok kaça çıkabileceği de yazıyor.',

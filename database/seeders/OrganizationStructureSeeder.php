@@ -11,7 +11,7 @@ use App\Enums\Shared\ActiveStatus;
 use App\Models\Personnel\Competency;
 use App\Models\Personnel\OrgUnit;
 use App\Models\Reference\LegalEntity;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,8 +20,11 @@ use Illuminate\Support\Carbon;
  *
  * Onceki surumde bu birimler departments tablosundaydi; D-62 ile ayni
  * kod/adla org_units'e tasindi (unit_type=department).
+ *
+ * D-165: yalniz eksik birim/yetkinlik eklenir; var olan kayit guncellenmez.
+ * Islenen her satir seed arsivine duser ve bir daha islenmez.
  */
-class OrganizationStructureSeeder extends Seeder
+class OrganizationStructureSeeder extends ProtectedSeeder
 {
     public function run(): void
     {
@@ -43,7 +46,7 @@ class OrganizationStructureSeeder extends Seeder
         ];
 
         foreach ($orgUnits as [$code, $name]) {
-            OrgUnit::query()->firstOrCreate(
+            $this->row('org-unit:'.$code, static fn (): OrgUnit => OrgUnit::query()->firstOrCreate(
                 ['code' => $code],
                 [
                     'legal_entity_id' => $legalEntityId,
@@ -52,7 +55,7 @@ class OrganizationStructureSeeder extends Seeder
                     'status' => OrgUnitStatus::Active,
                     'valid_from' => Carbon::now('UTC')->toDateString(),
                 ],
-            );
+            ));
         }
 
         $competencies = [
@@ -76,10 +79,10 @@ class OrganizationStructureSeeder extends Seeder
         ];
 
         foreach ($competencies as [$code, $name, $category]) {
-            Competency::query()->firstOrCreate(
+            $this->row('competency:'.$code, static fn (): Competency => Competency::query()->firstOrCreate(
                 ['code' => $code],
                 ['name' => $name, 'category' => $category, 'status' => ActiveStatus::Active],
-            );
+            ));
         }
     }
 }

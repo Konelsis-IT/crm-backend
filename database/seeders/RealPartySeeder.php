@@ -16,7 +16,7 @@ use App\Services\Party\PartyMeetingNoteService;
 use App\Services\Party\PartyRoleService;
 use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Str;
 
 /**
@@ -47,11 +47,17 @@ use Illuminate\Support\Str;
  * silinen bilgiler (21 Eylul listesi) sonda FirmaTakipUpdateSeeder ile
  * uygulanir. Bu seeder kalici uretim verisidir ve uretimde de calisir.
  *
+ * D-165 (korumali seed): her firma satiri 'party:<normalize ad>' anahtariyla
+ * bir kez islenir ve seed arsivine duser; canlida silinen ya da degistirilen
+ * firma seed ile geri gelmez. Var olan firma ve kisi guncellenmez (network,
+ * ziyaret onceligi doldurma kaldirildi); yalniz eksik alt kayit eklenir.
+ * B27/B28 eksikken satir arsive dusmez.
+ *
  * Yazmalar servisler uzerinden gider (S-2); party_no, normalized_name,
  * normalized_value ve Personel Hareketleri kaydi uygulama kurallariyla
  * ayni olur.
  */
-class RealPartySeeder extends Seeder
+class RealPartySeeder extends ProtectedSeeder
 {
     /** @var array<string, int> */
     private array $totals = [
@@ -88,21 +94,34 @@ class RealPartySeeder extends Seeder
         }
 
         foreach ($companies as $company) {
-            $party = $this->seedParty($company, $hasNetwork);
+            $key = 'party:'.$this->normalize(trim((string) $company['name']));
 
-            $this->seedRole($party, (string) $company['role']);
-            $this->seedAddress($party, $company['address'] ?? null);
+            $this->row($key, function () use ($company, $hasContacts, $hasNetwork): ?Party {
+                $party = $this->seedParty($company, $hasNetwork);
 
-            $ledger = $this->channelLedger($party);
-            $this->seedChannels($party, $company['channels'] ?? [], $ledger);
+                // D-165: canlida zaten var olan firmanin altina (rol, adres, kanal,
+                // kisi, not) seed bir sey eklemez; silinen alt kayit geri gelmez.
+                if (! $this->ownedBySeed($party)) {
+                    return $party;
+                }
 
-            if ($hasContacts) {
-                $this->seedContacts($party, $company['contacts'] ?? [], $ledger, $hasNetwork);
-            }
+                $this->seedRole($party, (string) $company['role']);
+                $this->seedAddress($party, $company['address'] ?? null);
 
-            if ($hasNetwork) {
-                $this->seedNotes($party, $company['notes'] ?? []);
-            }
+                $ledger = $this->channelLedger($party);
+                $this->seedChannels($party, $company['channels'] ?? [], $ledger);
+
+                if ($hasContacts) {
+                    $this->seedContacts($party, $company['contacts'] ?? [], $ledger, $hasNetwork);
+                }
+
+                if ($hasNetwork) {
+                    $this->seedNotes($party, $company['notes'] ?? []);
+                }
+
+                // D-165: kisi/not tablolari eksikse satir arsive dusmez, sonra eksikler eklenir.
+                return $hasContacts && $hasNetwork ? $party : null;
+            });
         }
 
         $this->command?->info(sprintf(
@@ -135,16 +154,14 @@ class RealPartySeeder extends Seeder
     }
 
     /**
-     * Firmayi normalized_name ile bulur, yoksa olusturur. Var olan firmada
-     * yalniz bos duran network / ziyaret onceligi doldurulur.
+     * Firmayi normalized_name ile bulur, yoksa olusturur. Var olan firma
+     * oldugu gibi kalir (D-165: network / ziyaret onceligi doldurulmaz).
      *
      * @param  array<string, mixed>  $company
      */
     private function seedParty(array $company, bool $hasNetwork): Party
     {
         $name = trim((string) $company['name']);
-        $network = filled($company['network'] ?? null) ? (string) $company['network'] : null;
-        $priority = $hasNetwork ? VisitPriority::tryFromRank($company['priority'] ?? null)?->value : null;
 
         /** @var Party|null $party */
         $party = Party::query()
@@ -152,39 +169,25 @@ class RealPartySeeder extends Seeder
             ->where('normalized_name', $this->normalize($name))
             ->first();
 
-        if ($party === null) {
-            /** @var Party $party */
-            $party = app(PartyService::class)->create([
-                'party_kind' => 'organization',
-                'display_name' => $name,
-                'country_code' => 'TR',
-                'status' => 'prospect',
-                'organization_profile' => ['legal_name' => $name],
-            ] + ($hasNetwork ? ['network_note' => $network, 'visit_priority' => $priority] : []));
-
-            $this->totals['parties_created']++;
+        if ($party !== null) {
+            $this->totals['parties_existing']++;
 
             return $party;
         }
 
-        $this->totals['parties_existing']++;
+        $network = filled($company['network'] ?? null) ? (string) $company['network'] : null;
+        $priority = $hasNetwork ? VisitPriority::tryFromRank($company['priority'] ?? null)?->value : null;
 
-        if ($hasNetwork) {
-            $fill = [];
+        /** @var Party $party */
+        $party = app(PartyService::class)->create([
+            'party_kind' => 'organization',
+            'display_name' => $name,
+            'country_code' => 'TR',
+            'status' => 'prospect',
+            'organization_profile' => ['legal_name' => $name],
+        ] + ($hasNetwork ? ['network_note' => $network, 'visit_priority' => $priority] : []));
 
-            if ($network !== null && $party->getAttribute('network_note') === null) {
-                $fill['network_note'] = $network;
-            }
-
-            if ($priority !== null && $party->getAttribute('visit_priority') === null) {
-                $fill['visit_priority'] = $priority;
-            }
-
-            if ($fill !== []) {
-                /** @var Party $party */
-                $party = app(PartyService::class)->update($party, $fill);
-            }
-        }
+        $this->totals['parties_created']++;
 
         return $party;
     }
@@ -331,13 +334,8 @@ class RealPartySeeder extends Seeder
                 $existing->put($key, $contact);
                 $first = false;
                 $this->totals['contacts']++;
-            } elseif ($hasNetwork && filled($row['network'] ?? null) && $contact->getAttribute('network_note') === null) {
-                // Var olan kiside yalniz bos duran network doldurulur (B28 sonradan
-                // uygulandiginda ikinci calistirma icin).
-                /** @var ContactRelationship $contact */
-                $contact = app(ContactRelationshipService::class)->update($contact, ['network_note' => (string) $row['network']]);
-                $existing->put($key, $contact);
             }
+            // D-165: var olan kisi guncellenmez (network doldurma kaldirildi).
 
             $this->seedChannels($party, $row['channels'] ?? [], $ledger, (int) $contact->getKey());
         }

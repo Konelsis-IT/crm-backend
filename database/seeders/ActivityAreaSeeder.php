@@ -7,7 +7,8 @@ namespace Database\Seeders;
 use App\Models\Party\ActivityArea;
 use App\Services\Party\ActivityAreaService;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Faaliyet alanlarinin ilk listesi (B33, D-107; 21 Eylul 2026 kullanici
@@ -16,8 +17,11 @@ use Illuminate\Database\Seeder;
  * Idempotent: kod ile bulunur; var olan alanin adi, sirasi ve durumu
  * DEGISTIRILMEZ (kullanicinin duzeltmeleri korunur), yalniz eksik alan
  * eklenir. Kalici uretim verisidir; uretimde de calisir.
+ *
+ * D-165: her ana ve alt alan ayri satirdir; islenen satir seed arsivine
+ * duser ve bir daha islenmez (canlida silinen alan geri gelmez).
  */
-class ActivityAreaSeeder extends Seeder
+class ActivityAreaSeeder extends ProtectedSeeder
 {
     /**
      * Ana alan kodu => [ad TR, ad EN, alt alanlar: kod => [ad TR, ad EN]].
@@ -63,32 +67,53 @@ class ActivityAreaSeeder extends Seeder
 
         foreach (self::AREAS as $code => [$tr, $en, $children]) {
             $order += 10;
-            $parent = ActivityArea::query()->where('code', $code)->first();
+            $parentOrder = $order;
 
-            if ($parent === null) {
-                /** @var ActivityArea $parent */
-                $parent = $service->create(['code' => $code, 'name_tr' => $tr, 'name_en' => $en, 'sort_order' => $order, 'status' => 'active']);
+            $this->row('activity-area:'.$code, static function () use ($service, $code, $tr, $en, $parentOrder, &$created): Model {
+                $existing = ActivityArea::query()->where('code', $code)->first();
+
+                if ($existing !== null) {
+                    return $existing;
+                }
+
+                $parent = $service->create(['code' => $code, 'name_tr' => $tr, 'name_en' => $en, 'sort_order' => $parentOrder, 'status' => 'active']);
                 $created++;
-            }
+
+                return $parent;
+            });
 
             $childOrder = 0;
 
             foreach ($children as $childCode => [$childTr, $childEn]) {
                 $childOrder += 10;
+                $sortOrder = $childOrder;
 
-                if (ActivityArea::query()->where('code', $childCode)->exists()) {
-                    continue;
-                }
+                // D-165: alt alan ayri satirdir; ust alan arsivde olabilir, koddan okunur.
+                $this->row('activity-area:'.$childCode, static function () use ($service, $code, $childCode, $childTr, $childEn, $sortOrder, &$created): ?Model {
+                    $existing = ActivityArea::query()->where('code', $childCode)->first();
 
-                $service->create([
-                    'parent_id' => $parent->getKey(),
-                    'code' => $childCode,
-                    'name_tr' => $childTr,
-                    'name_en' => $childEn,
-                    'sort_order' => $childOrder,
-                    'status' => 'active',
-                ]);
-                $created++;
+                    if ($existing !== null) {
+                        return $existing;
+                    }
+
+                    $parentId = ActivityArea::query()->where('code', $code)->value('id');
+
+                    if ($parentId === null) {
+                        return null;
+                    }
+
+                    $child = $service->create([
+                        'parent_id' => $parentId,
+                        'code' => $childCode,
+                        'name_tr' => $childTr,
+                        'name_en' => $childEn,
+                        'sort_order' => $sortOrder,
+                        'status' => 'active',
+                    ]);
+                    $created++;
+
+                    return $child;
+                });
             }
         }
 

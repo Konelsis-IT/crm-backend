@@ -11,7 +11,7 @@ use App\Services\Party\AddressService;
 use App\Services\Party\CommunicationPointService;
 use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
-use Illuminate\Database\Seeder;
+use Database\Seeders\Support\ProtectedSeeder;
 use Illuminate\Support\Str;
 
 /**
@@ -27,8 +27,14 @@ use Illuminate\Support\Str;
  * Sonunda MeetingNotePersonnelSeeder personeli bos yeni notlara Ersin Ozdemir
  * yazar (21 Eylul 2026 kullanici talimati). Idempotent; RealPartySeeder'in
  * sonunda calisir, yeni kurulumda da zarari yoktur.
+ *
+ * Duzeltme seeder'i; uygulandi. D-165 ile var olan veriyi degistiremez,
+ * yeniden calistirilinca seed korumasi durdurur. Her duzeltme sabit
+ * anahtarla (fix:ahlat-address, fix:cengiz-enerji-wrong-website,
+ * fix:egesa-competitor) bir kez islenir; zaten uygulanmissa yalniz arsive
+ * duser, firma yoksa arsive dusmez.
  */
-class FirmaTakipUpdateSeeder extends Seeder
+class FirmaTakipUpdateSeeder extends ProtectedSeeder
 {
     private const AHLAT = 'AHLAT ENERJİ ÜRETİM ANONİM ŞİRKETİ';
 
@@ -44,16 +50,20 @@ class FirmaTakipUpdateSeeder extends Seeder
             return;
         }
 
-        $this->moveAhlatAddress();
-        $this->dropWrongWebsite();
-        $this->markEgesaCompetitor();
+        $this->row('fix:ahlat-address', fn (): ?bool => $this->moveAhlatAddress());
+        $this->row('fix:cengiz-enerji-wrong-website', fn (): ?bool => $this->dropWrongWebsite());
+
+        if (SchemaReadiness::hasBatch('B33')) {
+            $this->row('fix:egesa-competitor', fn (): ?bool => $this->markEgesaCompetitor());
+        }
 
         if (SchemaReadiness::hasBatch('B28')) {
             $this->call(MeetingNotePersonnelSeeder::class);
         }
     }
 
-    private function moveAhlatAddress(): void
+    /** true: islendi (ya da zaten uygulanmis); null: firma/adres yok, sonra yeniden denenir. */
+    private function moveAhlatAddress(): ?bool
     {
         $ahlat = $this->find(self::AHLAT);
         /** @var Address|null $target */
@@ -61,8 +71,12 @@ class FirmaTakipUpdateSeeder extends Seeder
         /** @var Address|null $current */
         $current = $ahlat?->addresses()->orderByDesc('is_primary')->first();
 
-        if ($current === null || $target === null || $current->line1 === $target->line1) {
-            return;
+        if ($current === null || $target === null) {
+            return null;
+        }
+
+        if ($current->line1 === $target->line1) {
+            return true;
         }
 
         app(AddressService::class)->update($current, [
@@ -71,14 +85,16 @@ class FirmaTakipUpdateSeeder extends Seeder
             'city' => $target->city,
         ]);
         $this->command?->info('Ahlat Enerji: adres Egesa\'nin adresiyle guncellendi.');
+
+        return true;
     }
 
-    private function dropWrongWebsite(): void
+    private function dropWrongWebsite(): ?bool
     {
         $party = $this->find(self::CENGIZ_ENERJI);
 
         if ($party === null) {
-            return;
+            return null;
         }
 
         $points = $party->communicationPoints()
@@ -90,18 +106,26 @@ class FirmaTakipUpdateSeeder extends Seeder
             app(CommunicationPointService::class)->delete($point);
             $this->command?->info('Cengiz Enerji: yanlis web sitesi silindi.');
         }
+
+        return true;
     }
 
-    private function markEgesaCompetitor(): void
+    private function markEgesaCompetitor(): ?bool
     {
         $party = $this->find(self::EGESA);
 
-        if ($party === null || ! SchemaReadiness::hasBatch('B33') || $party->is_competitor) {
-            return;
+        if ($party === null) {
+            return null;
+        }
+
+        if ($party->is_competitor) {
+            return true;
         }
 
         app(PartyService::class)->update($party, ['is_competitor' => true]);
         $this->command?->info('Egesa: rakip firma olarak isaretlendi.');
+
+        return true;
     }
 
     private function find(string $name): ?Party
