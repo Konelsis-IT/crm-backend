@@ -109,10 +109,10 @@ class LegalHoldResource extends Resource
                     Textarea::make('reason')
                         ->label(__('legal_hold.fields.reason'))
                         ->required()
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Textarea::make('release_reason')
                         ->label(__('legal_hold.fields.release_reason'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

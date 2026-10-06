@@ -7,6 +7,7 @@ return [
     'actions' => [
         'open' => 'Aç',
         'save' => 'Kaydet',
+        'save_draft' => 'Taslak olarak kaydet',
     ],
 
     'dashboard' => [
@@ -34,6 +35,18 @@ return [
     'fields' => [
         'created_at' => 'Oluşturulma',
         'updated_at' => 'Güncellenme',
+    ],
+
+    // Taslak kaydi (D-155).
+    'values' => [
+        'draft' => 'Taslak',
+        'draft_at' => 'Taslak · :step adımında kaldı',
+        'draft_hint' => 'Taslak kayıt: henüz tamamlanmadı, kaldığı adımdan devam edilir',
+    ],
+
+    'tabs' => [
+        'all' => 'Tümü',
+        'drafts' => 'Taslaklar',
     ],
 
     'errors' => [

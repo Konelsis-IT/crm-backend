@@ -50,11 +50,11 @@ class RisksRelationManager extends RelationManager
                             ->label(__('project_risk.fields.title'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         Textarea::make('description')
                             ->label(__('project_risk.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('category')
                             ->label(__('project_risk.fields.category'))
                             ->options(RiskCategory::class)
@@ -109,7 +109,7 @@ class RisksRelationManager extends RelationManager
                             ->displayFormat('d.m.Y'),
                         Textarea::make('mitigation_plan')
                             ->label(__('project_risk.fields.mitigation_plan'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

@@ -20,6 +20,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 
@@ -39,6 +40,8 @@ class ViewProjectStageInstance extends ViewRecord
                 ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedCheckBadge)
                 ->requiresConfirmation()
+                // Onay penceresi varsayilan dar (md); 4 sutunlu modal olcegi 4xl icindir (D-157).
+                ->modalWidth(Width::FourExtraLarge)
                 ->schema(fn (Schema $schema): Schema => $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([
             Select::make('decision')
                 ->label(__('project_stage_instance.fields.decision'))
@@ -48,13 +51,13 @@ class ViewProjectStageInstance extends ViewRecord
                 ->native(false),
             Textarea::make('conditions')
                 ->label(__('project_stage_instance.fields.conditions'))
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::MODAL_LONG),
             DatePicker::make('condition_due_on')
                 ->label(__('project_stage_instance.fields.condition_due_on'))
                 ->displayFormat('d.m.Y'),
             Textarea::make('comment')
                 ->label(__('project_stage_instance.fields.comment'))
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::MODAL_LONG),
                 ])))
                 ->visible(fn (): bool => in_array($this->getRecord()->status, [\App\Enums\Project\StageInstanceStatus::ReadyForReview, \App\Enums\Project\StageInstanceStatus::ApprovalPending], true))
                 ->action(function (array $data): void {
@@ -77,6 +80,8 @@ class ViewProjectStageInstance extends ViewRecord
                 ->color('warning')
                 ->icon(Heroicon::OutlinedHandRaised)
                 ->requiresConfirmation()
+                // Onay penceresi varsayilan dar (md); 4 sutunlu modal olcegi 4xl icindir (D-157).
+                ->modalWidth(Width::FourExtraLarge)
                 ->schema(fn (Schema $schema): Schema => $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([
             Select::make('project_stage_requirement_id')
                 ->label(__('project_stage_instance.fields.requirement'))
@@ -86,7 +91,7 @@ class ViewProjectStageInstance extends ViewRecord
             Textarea::make('reason')
                 ->label(__('project_stage_instance.fields.reason'))
                 ->required()
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::MODAL_LONG),
             DatePicker::make('remediation_due_on')
                 ->label(__('project_stage_instance.fields.remediation_due_on'))
                 ->required()

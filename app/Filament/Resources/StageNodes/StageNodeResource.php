@@ -90,7 +90,7 @@ class StageNodeResource extends Resource
                             ->native(false),
                         Textarea::make('description')
                             ->label(__('stage_node.fields.description'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

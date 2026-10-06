@@ -40,6 +40,10 @@ use Illuminate\Support\ServiceProvider;
  *   analiz panosu ve personel kartindaki Dikkat karti (React). Hepsi
  *   `loadedOnRequest()`: resources/views/filament/work/app.blade.php ve
  *   attention-card.blade.php stili, filament.work.scripts betikleri yukler.
+ * - konelsis-checklist.css ve checklist-board.js (D-157): potansiyel is
+ *   sihirbazindaki teklif oncesi kontrol listesi tahtasi (React) ve Kaydet /
+ *   Ileri ozeti. `loadedOnRequest()`: filament.acquisition.checklist-scripts
+ *   yalniz potansiyel is olustur / duzenle sayfalarinda yukler.
  *
  * Surum: adres eki (?v=) yayimlanan dosyanin icerik ozetidir (KonelsisCss /
  * KonelsisJs, 21 Eylul 2026); dosya degisince tarayici yenisini indirir.
@@ -76,6 +80,9 @@ final class FilamentAssetsProvider extends ServiceProvider
             Js::make('work-matrix', resource_path('js/work/work-matrix.js'))->loadedOnRequest(),
             Js::make('work-analysis', resource_path('js/work/work-analysis.js'))->loadedOnRequest(),
             Js::make('work-attention', resource_path('js/work/work-attention.js'))->loadedOnRequest(),
+            // Teklif oncesi kontrol listesi tahtasi (D-157): yalniz potansiyel is olustur / duzenle.
+            Css::make('konelsis-checklist', resource_path('css/filament/konelsis-checklist.css'))->loadedOnRequest(),
+            Js::make('checklist-board', resource_path('js/acquisition/checklist-board.js'))->loadedOnRequest(),
             // Masaustu (Windows) bildirimi + bildirim sesi (D-126, kullanici onayi
             // 25 Eylul 2026): her panel sayfasinda; ayarlari AlertFeed verir.
             Js::make('konelsis-alerts', resource_path('js/konelsis-alerts.js')),

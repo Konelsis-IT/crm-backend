@@ -12,6 +12,8 @@ use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Flex;
@@ -20,6 +22,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Number;
@@ -115,33 +118,36 @@ final class ProposalDetail
     }
 
     /**
-     * Guncel surum karti: teklif kartinin yaninda yarim genislikte (22 Eylul
-     * 2026): durum, tutarlar, gecerlilik, kritik rota, hazirlayan, gonderim, ozet.
+     * Surum karti: teklif kartinin yaninda yarim genislikte (22 Eylul 2026):
+     * durum, tutarlar, gecerlilik, kritik rota, hazirlayan, gonderim, ozet.
+     * $version verilmezse guncel surum; verilirse (D-158 surum penceresi) o surum.
      */
-    public function versionCard(Proposal $proposal): Component
+    public function versionCard(Proposal $proposal, ?ProposalVersion $version = null, string $prefix = 'version'): Component
     {
-        $version = $proposal->currentVersion;
+        $current = $version === null || (int) $version->getKey() === (int) $proposal->current_version_id;
+        $version ??= $proposal->currentVersion;
+        $heading = $current ? __('proposal.sections.current_version') : __('proposal.sections.version', ['no' => $version?->version_no]);
 
         if ($version === null) {
-            return Section::make(__('proposal.sections.current_version'))
+            return Section::make($heading)
                 ->icon(Heroicon::OutlinedDocumentDuplicate)
                 ->compact()
                 ->components([Text::make(__('proposal.steps.no_version'))->color('gray')]);
         }
 
-        $entry = static fn (string $name, string $label, string $state, Heroicon $icon, string $color = 'gray'): TextEntry => TextEntry::make('version_'.$name)
+        $entry = static fn (string $name, string $label, string $state, Heroicon $icon, string $color = 'gray'): TextEntry => TextEntry::make($prefix.'_'.$name)
             ->label($label)
             ->state($state)
             ->icon($icon)
             ->iconColor($color);
 
-        return Section::make(__('proposal.sections.current_version'))
+        return Section::make($heading)
             ->icon(Heroicon::OutlinedDocumentDuplicate)
             ->compact()
             ->components([
                 Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])
                     ->components([
-                        TextEntry::make('version_status')
+                        TextEntry::make($prefix.'_status')
                             ->label(__('proposal_version.fields.status'))
                             ->state($version->status?->getLabel() ?? '-')
                             ->badge()
@@ -152,10 +158,86 @@ final class ProposalDetail
                         $entry('is_critical_route', __('proposal_version.fields.is_critical_route'), $version->is_critical_route ? __('export.values.yes') : __('export.values.no'), Heroicon::OutlinedExclamationTriangle, 'warning'),
                         $entry('preparer', __('proposal_version.fields.preparer'), (string) ($version->preparer?->full_name ?? '-'), Heroicon::OutlinedUser),
                         $entry('submitted_at', __('proposal_version.fields.submitted_at'), $version->submitted_at?->timezone(DisplayTime::zone())->format('d.m.Y H:i') ?? '-', Heroicon::OutlinedPaperAirplane),
+                        $entry('created_at', __('proposal_version.fields.created_at'), $version->created_at?->timezone(DisplayTime::zone())->format('d.m.Y H:i') ?? '-', Heroicon::OutlinedClock),
                         $entry('summary', __('proposal_version.fields.summary'), filled($version->summary) ? (string) $version->summary : '-', Heroicon::OutlinedDocumentText)
                             ->columnSpanFull(),
                     ]),
             ]);
+    }
+
+    /**
+     * "Surumler" dugmesi (D-158, 5 Ekim 2026 kullanici talimati: "proposal-versions
+     * kismini ortadan kaldirabiliriz ... surumler arasi gecis dropdown action buton
+     * ile ... hangisini secersek aktif teklif disinda bir modal icerisinde teklifin
+     * o surume gore ilgili tum bilgileri kart / schema yapilariyla ... compact
+     * gostersin, belgeler okunsun / indirilebilsin; modal kapatildiginda aktif
+     * teklif bilgisi sabit kalsin").
+     *
+     * Her surum bir menu satiridir (en yenisi ustte); guncel surum sayfada
+     * oldugu icin pasiftir. Secilen surum pencerede: surum karti, proje kapsami
+     * ve belgeler; salt okunur.
+     */
+    public function versionsAction(Proposal $proposal): ?ActionGroup
+    {
+        $versions = $proposal->versions()->orderByDesc('version_no')->get();
+
+        if ($versions->isEmpty()) {
+            return null;
+        }
+
+        $actions = [];
+
+        foreach ($versions as $version) {
+            /** @var ProposalVersion $version */
+            $isCurrent = (int) $version->getKey() === (int) $proposal->current_version_id;
+            $date = $version->created_at?->timezone(DisplayTime::zone())->format('d.m.Y') ?? '-';
+            $status = (string) ($version->status?->getLabel() ?? '-');
+
+            $actions[] = Action::make('version_'.$version->getKey())
+                ->label(__($isCurrent ? 'proposal.versions.current' : 'proposal.versions.item', ['no' => $version->version_no, 'status' => $status, 'date' => $date]))
+                ->icon($isCurrent ? Heroicon::OutlinedCheckCircle : Heroicon::OutlinedDocumentDuplicate)
+                ->color($isCurrent ? 'success' : 'gray')
+                ->disabled($isCurrent)
+                ->modalHeading(__('proposal.sections.version', ['no' => $version->version_no]).' · '.$proposal->proposal_no)
+                ->modalDescription(__('proposal.versions.modal_description', ['status' => $status, 'date' => $date]))
+                ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                ->modalWidth(Width::SixExtraLarge)
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel(__('proposal.versions.close'))
+                ->schema(fn (): array => $this->versionModalComponents($proposal, $version));
+        }
+
+        return ActionGroup::make($actions)
+            ->label(__('proposal.versions.button'))
+            ->icon(Heroicon::OutlinedDocumentDuplicate)
+            ->color(ActionColors::VIEW)
+            // "Surum 1 · Yerini aldi · 05.10.2026" kesilmeden sigsin.
+            ->dropdownWidth(Width::Small)
+            ->button();
+    }
+
+    /**
+     * Surum penceresinin icerigi: surum karti, kapsam ve belgeler (salt okunur).
+     *
+     * @return list<Component>
+     */
+    private function versionModalComponents(Proposal $proposal, ProposalVersion $version): array
+    {
+        $version->loadMissing([
+            'preparer',
+            'scopes.scopeDocument.revisions.files.fileObject',
+            'scopes.scopeDocumentRevision.files.fileObject',
+            'documents.documentRevision.document',
+            'documents.documentRevision.files.fileObject',
+        ]);
+
+        $prefix = 'v'.$version->getKey();
+
+        return array_values(array_filter([
+            $this->versionCard($proposal, $version, $prefix.'_version'),
+            SchemaReadiness::hasBatch('B43') ? app(ProposalScopeSchema::class)->recordCard($version, $prefix.'_scope') : null,
+            app(ProposalFilesSchema::class)->versionCard($version, $prefix.'_document'),
+        ]));
     }
 
     private static function versionLine(ProposalVersion $version): string

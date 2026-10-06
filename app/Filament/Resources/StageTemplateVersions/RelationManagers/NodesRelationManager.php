@@ -69,7 +69,7 @@ class NodesRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('description')
                             ->label(__('stage_node.fields.description'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

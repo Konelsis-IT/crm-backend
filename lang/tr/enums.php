@@ -434,8 +434,20 @@ return [
         'res' => 'RES',
         'tm' => 'TM',
         'hes' => 'HES',
-        'bes' => 'BES',
-        'enh_eih' => 'ENH/EIH',
+        'bes' => 'BESS',
+        'enh_eih' => 'ENH/EİH',
+    ],
+    // D-155: potansiyel isin "Proje durumu" ve teklif oncesi kontrol listesi cevaplari.
+    'license_status' => [
+        'unlicensed_5_1_c' => 'Lisanssız 5.1-C',
+        'unlicensed_5_1_h' => 'Lisanssız 5.1-H',
+        'pre_license' => 'Önlisans',
+        'license' => 'Lisans',
+    ],
+    'checklist_answer' => [
+        'yes' => 'Evet',
+        'no' => 'Hayır',
+        'unknown' => 'Bilinmiyor',
     ],
     'lifecycle_segment' => [
         'acquisition' => 'İş Alım',
@@ -595,6 +607,7 @@ return [
         'references' => 'Referanslar belgesi',
         'catalog' => 'Genel katalog',
         'scope_list' => 'Kapsam listesi',
+        'deviation_list' => 'Deviasyon listesi',
     ],
     'compliance_state' => [
         'comply' => 'Uygun',

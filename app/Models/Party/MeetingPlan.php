@@ -10,10 +10,12 @@ use App\Enums\Party\MeetingPlanStatus;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Personnel\Personnel;
 use App\Policies\MeetingPlanPolicy;
+use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -24,6 +26,9 @@ use Illuminate\Support\Carbon;
  * Gorusme plani (B34, D-109): kim, ne zaman, hangi tarafla gorusecek /
  * gorustu. Gorusme notlari buraya yansir (meeting_note_id); notun tarihli
  * sonraki adimi planli satirdir (follow_up_note_id).
+ *
+ * B44 (D-156): plan silinmez, arsive alinir (archived_at); arsivli plan
+ * takvimde, listede (varsayilan) ve hatirlatmalarda yer almaz (notArchived).
  */
 #[Table('meeting_plans')]
 #[Fillable([
@@ -46,7 +51,19 @@ class MeetingPlan extends Model
             'status' => MeetingPlanStatus::class,
             'source' => MeetingPlanSource::class,
             'completed_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->getAttribute('archived_at') !== null;
+    }
+
+    /** Arsivde olmayan planlar (B44 uygulanmadiysa suzgec yok). */
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return SchemaReadiness::hasBatch('B44') ? $query->whereNull($query->qualifyColumn('archived_at')) : $query;
     }
 
     public function party(): BelongsTo

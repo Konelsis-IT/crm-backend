@@ -434,8 +434,19 @@ return [
         'res' => 'RES',
         'tm' => 'TM',
         'hes' => 'HES',
-        'bes' => 'BES',
+        'bes' => 'BESS',
         'enh_eih' => 'ENH/EIH',
+    ],
+    'license_status' => [
+        'unlicensed_5_1_c' => 'Unlicensed 5.1-C',
+        'unlicensed_5_1_h' => 'Unlicensed 5.1-H',
+        'pre_license' => 'Pre-licence',
+        'license' => 'Licence',
+    ],
+    'checklist_answer' => [
+        'yes' => 'Yes',
+        'no' => 'No',
+        'unknown' => 'Unknown',
     ],
     'lifecycle_segment' => [
         'acquisition' => 'Acquisition',
@@ -595,6 +606,7 @@ return [
         'references' => 'References document',
         'catalog' => 'General catalogue',
         'scope_list' => 'Scope list',
+        'deviation_list' => 'Deviation list',
     ],
     'compliance_state' => [
         'comply' => 'Comply',

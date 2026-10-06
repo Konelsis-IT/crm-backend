@@ -66,7 +66,7 @@ class OpportunityRelationManager extends RelationManager
                             ->maxLength(32),
                         Textarea::make('competitor_note')
                             ->label(__('opportunity.fields.competitor_note'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

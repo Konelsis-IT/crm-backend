@@ -78,7 +78,7 @@ class DelayEventsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('delay_event.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Toggle::make('is_excusable')
                             ->label(__('delay_event.fields.is_excusable')),
                         Select::make('evidence_document_revision_id')

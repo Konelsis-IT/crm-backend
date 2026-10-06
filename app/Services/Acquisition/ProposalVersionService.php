@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Acquisition;
 
 use App\Enums\Acquisition\AcquisitionStage;
+use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\ProposalStatus;
 use App\Enums\Acquisition\ProposalVersionStatus;
 use App\Enums\Acquisition\SubmissionChannel;
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * changeStatus: approved'da version_hash kilitlenir ve onceki
  * approved/submitted surumler superseded olur; submitted'da gonderim
  * kaniti/kanali yazilir ve business case 'submitted' asamasina tasinir.
+ * revise (B43, D-155): teklif duzenlemedeki degisiklik yeni guncel surum acar.
  */
 final class ProposalVersionService extends AbstractService
 {
@@ -98,6 +100,54 @@ final class ProposalVersionService extends AbstractService
     }
 
     /**
+     * Teklif duzenlemedeki gercek degisiklik yeni surumdur (B43, D-155; 5 Ekim
+     * 2026 kullanici karari: "Teklif duzenle dedigimizde herhangi bir degisiklik
+     * yaptiysak, zaten bu yeni versiyondur"). Yeni surum taslak acilir ve teklifin
+     * guncel surumu olur; onceki guncel surum "superseded" olur — taslak ya da
+     * incelemedeki surum icin de (normal gecis tablosunun disinda, yalniz bu
+     * yolda). Teklif kokunun surume bagli durumu (inceleme / onay / gonderim)
+     * taslaga doner; muzakere ve sonuc durumlari korunur.
+     *
+     * @param  array<string, mixed>  $data  surum alanlari
+     */
+    public function revise(Proposal $proposal, array $data): ProposalVersion
+    {
+        return $this->transactions->run(function () use ($proposal, $data): ProposalVersion {
+            /** @var Proposal $locked */
+            $locked = Proposal::query()->lockForUpdate()->findOrFail($proposal->getKey());
+            /** @var ProposalVersion|null $previous */
+            $previous = $locked->current_version_id === null ? null : ProposalVersion::query()->lockForUpdate()->find($locked->current_version_id);
+
+            /** @var ProposalVersion $version */
+            $version = $this->create([
+                ...$data,
+                'proposal_id' => $locked->getKey(),
+                'locale' => $data['locale'] ?? $previous?->locale,
+                'currency_code' => $data['currency_code'] ?? $previous?->currency_code,
+            ]);
+
+            if ($previous !== null && ! in_array($previous->status, [ProposalVersionStatus::Superseded, ProposalVersionStatus::Withdrawn], true)) {
+                $from = $previous->status;
+                $previous->forceFill(['status' => ProposalVersionStatus::Superseded])->save();
+                $this->recordActivity($previous, 'superseded', [
+                    'durum' => ['onceki' => $from->value, 'yeni' => ProposalVersionStatus::Superseded->value],
+                    'yeni_surum' => $version->version_no,
+                ]);
+            }
+
+            $attributes = ['current_version_id' => $version->getKey()];
+
+            if (in_array($locked->status, [ProposalStatus::InReview, ProposalStatus::Approved, ProposalStatus::Submitted], true)) {
+                $attributes['status'] = ProposalStatus::Draft;
+            }
+
+            $locked->forceFill($attributes)->save();
+
+            return $version;
+        });
+    }
+
+    /**
      * $submittedAt: gonderim tarihi bilinen eski teklifler icin (liste
      * aktarimi); verilmezse simdiki an yazilir.
      */
@@ -161,6 +211,12 @@ final class ProposalVersionService extends AbstractService
             ]);
 
             $this->syncBusinessCaseStage($proposal, $target);
+
+            // D-161: musteriye gonderilen teklifin "Teklif durumu" Verilen olur
+            // (yalniz Verilecek / bos ise; Onaylandi ve Kacan firsat korunur).
+            if ($target === ProposalVersionStatus::Submitted) {
+                app(ProposalService::class)->syncOfferStatus([$proposal], OfferStatus::Submitted, [OfferStatus::ToBeSubmitted]);
+            }
 
             return $version;
         });

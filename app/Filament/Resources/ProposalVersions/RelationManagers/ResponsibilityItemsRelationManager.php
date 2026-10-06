@@ -60,7 +60,7 @@ class ResponsibilityItemsRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('note')
                             ->label(__('responsibility_matrix_item.fields.note'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         TextInput::make('sort_order')
                             ->label(__('responsibility_matrix_item.fields.sort_order'))
                             ->numeric()

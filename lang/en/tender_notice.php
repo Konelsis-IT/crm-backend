@@ -11,6 +11,8 @@ return [
         'publication' => 'Publication and status',
         'summary' => 'Summary',
         'main' => 'Notice details',
+        'header' => 'Tender card',
+        'details' => 'Tender details',
     ],
 
     'fields' => [
@@ -28,6 +30,19 @@ return [
         'summary' => 'Summary',
         'tender_source' => 'Tender source',
         'title' => 'Title',
+        'continue_to_case' => 'Create a potential job from this tender after saving',
+    ],
+
+    'help' => [
+        'no_case' => 'No potential job',
+        'case_after_save' => 'The tender is saved without a potential job. The potential job is opened from this tender with the tender preselected.',
+        'no_case_yet' => 'No potential job has been opened from this tender yet.',
+        'proposal_after_case' => 'The proposal is prepared after a potential job is opened from the tender.',
+        'project_after_case' => 'The project opens when the proposal is won.',
+    ],
+
+    'steps' => [
+        'no_case' => 'No potential job yet',
     ],
 
     'relation' => [
@@ -47,11 +62,15 @@ return [
         'waive' => 'Grant waiver',
         'add_evidence' => 'Add evidence',
         'accept' => 'Accept',
+        'open' => 'Open tender',
+        'create_case' => 'Create a potential job from this tender',
     ],
 
     'messages' => [
         'status_changed' => 'Status updated.',
         'done' => 'Done.',
+        'created' => 'Tender saved.',
+        'draft_saved' => 'Tender saved as a draft.',
     ],
 
     'validation' => [

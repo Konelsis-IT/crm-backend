@@ -12,10 +12,14 @@ use Filament\Navigation\NavigationGroup as FilamentNavigationGroup;
 use App\Filament\Pages\Work\ControlMatrix;
 use App\Filament\Pages\Work\WorkAnalysis;
 use App\Filament\Pages\Work\WorkBoard;
+use App\Filament\Resources\BusinessCases\Pages\CreateBusinessCase;
+use App\Filament\Resources\BusinessCases\Pages\EditBusinessCase;
+use App\Filament\Resources\BusinessCases\Pages\ViewBusinessCase;
 use App\Filament\Resources\MeetingPlans\Pages\MeetingPlanCalendar;
 use App\Filament\Resources\Personnel\Pages\ViewPersonnelRecord;
 use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\StatusColors;
 use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatController;
@@ -105,6 +109,8 @@ class AdminPanelProvider extends PanelProvider
                 // "Duyuru gonder", "Yaklasan"; warning sariya kaciyor), zumrut
                 // yesili ("Yeni"), gul kirmizisi (Iptal / Kapat).
                 ...ActionColors::panelColors(),
+                // Durum renkleri (D-161): her durumun kendi rengi.
+                ...StatusColors::panelColors(),
             ])
             // Icerik alani tam genislik (17 Eylul 2026 kullanici karari): Filament
             // varsayilani 7xl (1280px) icerigi ortalayip genis ekranda kenarlarda
@@ -495,6 +501,13 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.work.scripts', ['screens' => ['work-attention']]),
                 scopes: ViewPersonnelRecord::class,
+            )
+            // Teklif oncesi kontrol listesi tahtasi (D-157, React): potansiyel is
+            // sihirbazi; D-158 ile detay sayfasindaki salt okunur hali.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.acquisition.checklist-scripts'),
+                scopes: [CreateBusinessCase::class, EditBusinessCase::class, ViewBusinessCase::class],
             )
             ->middleware([
                 EncryptCookies::class,

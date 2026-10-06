@@ -88,7 +88,7 @@ class DelayEventResource extends Resource
                         Textarea::make('description')
                             ->label(__('delay_event.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Toggle::make('is_excusable')
                             ->label(__('delay_event.fields.is_excusable')),
                         Select::make('status')

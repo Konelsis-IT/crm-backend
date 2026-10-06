@@ -83,7 +83,7 @@ class ReviewsRelationManager extends RelationManager
                         ->required(),
                     Textarea::make('comment')
                         ->label(__('document_review.fields.comment'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

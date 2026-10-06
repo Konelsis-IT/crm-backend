@@ -51,11 +51,11 @@ class ChangesRelationManager extends RelationManager
                             ->label(__('project_change.fields.title'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         Textarea::make('description')
                             ->label(__('project_change.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('change_type')
                             ->label(__('project_change.fields.change_type'))
                             ->options(ChangeType::class)

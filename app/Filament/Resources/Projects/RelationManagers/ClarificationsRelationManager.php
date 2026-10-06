@@ -48,11 +48,11 @@ class ClarificationsRelationManager extends RelationManager
                             ->label(__('commercial_clarification.fields.title'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         Textarea::make('description')
                             ->label(__('commercial_clarification.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('clarification_type')
                             ->label(__('commercial_clarification.fields.clarification_type'))
                             ->options(ClarificationType::class)
@@ -83,7 +83,7 @@ class ClarificationsRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('response')
                             ->label(__('commercial_clarification.fields.response'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

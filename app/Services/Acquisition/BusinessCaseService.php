@@ -9,12 +9,16 @@ use App\Enums\Acquisition\BusinessCodeKind;
 use App\Enums\Acquisition\BusinessCodeStatus;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\LifecycleSegment;
+use App\Enums\Acquisition\OfferStatus;
+use App\Enums\Acquisition\OfferType;
 use App\Enums\Acquisition\OpportunityStage;
+use App\Enums\Platform\Feature;
 use App\Enums\Reference\ClassificationCode;
 use App\Exceptions\InvalidTransitionException;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\BusinessCode;
 use App\Models\Acquisition\Opportunity;
+use App\Models\Acquisition\Proposal;
 use App\Models\Reference\LegalEntity;
 use App\Models\Reference\SecurityClassification;
 use App\Services\AbstractService;
@@ -22,9 +26,11 @@ use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Numbering\AllocateBusinessNumber;
 use App\Services\Numbering\YearlyCodeAllocator;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
+use App\Support\Acquisition\ChecklistTemplates;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -45,6 +51,15 @@ use Illuminate\Support\Carbon;
  * dosyasi verisinden ayrilir ve ayni transaction'da BusinessCaseScopeService
  * ile kapsam satirlarina islenir; grup uygulanmadiysa hic dokunulmaz.
  * `offer_type` duz fillable kolondur.
+ *
+ * B43 (D-155): kapsam tutarlari teklife tasindi; potansiyel iste yalniz proje
+ * tipi secimi kalir (`scopes` artik gelmez, tip satirlari tutarsiz yazilir).
+ * Teklif oncesi kontrol listesi (`checklist`: cevaplar + ana madde belgeleri)
+ * ve genel belgeler (`case_document_files`) ayni transaction'da islenir;
+ * ardindan teklif sicakligi (heat_score) yeniden hesaplanir ve GES 1.3
+ * "Gecerlilik suresi devam ediyor mu?" Hayir ise teklif tipi Butcesel olur.
+ * `license_status`, `is_draft`, `draft_step` duz kolondur; grup uygulanmadiysa
+ * hicbiri yazilmaz.
  */
 final class BusinessCaseService extends AbstractService
 {
@@ -73,6 +88,7 @@ final class BusinessCaseService extends AbstractService
     {
         return $this->transactions->run(function () use ($data): Model {
             [$data, $scopeTypes, $scopeRows, $syncScopes] = $this->extractScopes($data);
+            [$data, $checklist] = $this->extractChecklist($data);
             $sequenceNo = $this->allocator->handle();
 
             /** @var BusinessCase $case */
@@ -102,6 +118,8 @@ final class BusinessCaseService extends AbstractService
             if ($syncScopes) {
                 app(BusinessCaseScopeService::class)->sync($case, $scopeTypes, $scopeRows);
             }
+
+            $this->applyChecklist($case, $checklist, $syncScopes);
 
             return $case;
         });
@@ -156,6 +174,7 @@ final class BusinessCaseService extends AbstractService
 
         return $this->transactions->run(function () use ($record, $data): Model {
             [$data, $scopeTypes, $scopeRows, $syncScopes] = $this->extractScopes($data);
+            [$data, $checklist] = $this->extractChecklist($data);
 
             /** @var BusinessCase $case */
             $case = parent::update($record, $data);
@@ -164,7 +183,55 @@ final class BusinessCaseService extends AbstractService
                 app(BusinessCaseScopeService::class)->sync($case, $scopeTypes, $scopeRows);
             }
 
+            $this->applyChecklist($case, $checklist, $syncScopes);
+
             return $case;
+        });
+    }
+
+    /**
+     * Kontrol listesinden teklif sicakligi ve GES 1.3 kurali (B43, D-155):
+     * potansiyel isin proje tiplerinin baktigi listelerin kayitli cevaplariyla
+     * heat_score yeniden hesaplanir; 1.3 "Hayir" ise teklif tipi Butcesel olur
+     * (hareket kaydiyla). Teklif tipi degistiyse true doner.
+     */
+    public function refreshChecklistState(BusinessCase $case): bool
+    {
+        if (! SchemaReadiness::hasBatch('B43')) {
+            return false;
+        }
+
+        return $this->transactions->run(function () use ($case): bool {
+            /** @var BusinessCase $locked */
+            $locked = $this->lockForUpdate($case);
+            $templates = ChecklistTemplates::forScopeTypes($locked->scopes()->pluck('scope_type')->all());
+            $answers = app(BusinessCaseChecklistAnswerService::class)->answersFor($locked);
+            // Lisansli projede Cagri mektubu opsiyonel, payi diger maddelere dagilir (D-157);
+            // maddenin belgesi de sorulari gibi bir paydir (D-159).
+            $license = $locked->license_status;
+            $documents = app(BusinessCaseDocumentService::class)->itemPresence($locked);
+            $attributes = ['heat_score' => ChecklistTemplates::heat($templates, $answers, $license, $documents)];
+            $budgetary = in_array(ChecklistTemplates::GES, $templates, true)
+                && ChecklistTemplates::forcesBudgetary($answers, $license)
+                && $locked->offer_type !== OfferType::Budgetary;
+
+            if ($budgetary) {
+                $attributes['offer_type'] = OfferType::Budgetary;
+            }
+
+            $locked->forceFill($attributes);
+
+            if ($locked->isDirty()) {
+                $locked->save();
+            }
+
+            if ($budgetary) {
+                $this->recordActivity($locked, 'offer_type_budgetary', ['kural' => 'GES 1.3', 'teklif_tipi' => OfferType::Budgetary->value]);
+            }
+
+            $case->setRawAttributes($locked->getAttributes(), true);
+
+            return $budgetary;
         });
     }
 
@@ -213,6 +280,11 @@ final class BusinessCaseService extends AbstractService
                 'asama' => ['onceki' => $from->value, 'yeni' => $target->value],
                 'gerekce' => $reasonCode,
             ]);
+
+            // D-161: kaybedilen potansiyel isin teklifleri "Kacan firsat" olur.
+            if ($target === AcquisitionStage::Lost) {
+                app(ProposalService::class)->syncOfferStatus(Proposal::query()->where('business_case_id', $case->getKey())->get(), OfferStatus::Lost);
+            }
 
             return $case;
         });
@@ -276,7 +348,62 @@ final class BusinessCaseService extends AbstractService
             unset($data['offer_type']);
         }
 
+        // B43: tutarlar teklif kapsamidir; potansiyel iste yalniz tip satiri kalir.
+        if (SchemaReadiness::hasBatch('B43')) {
+            $rows = [];
+        }
+
         return [$data, $types, $rows, $present && $ready];
+    }
+
+    /**
+     * Kontrol listesi ve belge anahtarlarini ayirir (B43). Grup uygulanmadiysa
+     * B43 kolonlari da cikarilir; heat_score hicbir zaman formdan yazilmaz.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: array<string, mixed>, 1: array{checklist: array<string, mixed>|null, files: mixed, names: mixed}|null}
+     */
+    private function extractChecklist(array $data): array
+    {
+        $payload = [
+            'checklist' => is_array($data['checklist'] ?? null) ? $data['checklist'] : null,
+            'files' => $data['case_document_files'] ?? null,
+            'names' => $data['case_document_files_name'] ?? null,
+        ];
+        unset($data['checklist'], $data['case_document_files'], $data['case_document_files_name'], $data['heat_score']);
+
+        if (! SchemaReadiness::hasBatch('B43')) {
+            unset($data['license_status'], $data['is_draft'], $data['draft_step']);
+
+            return [$data, null];
+        }
+
+        if ($payload['checklist'] === null && blank($payload['files'])) {
+            return [$data, null];
+        }
+
+        return [$data, $payload];
+    }
+
+    /**
+     * Cevaplar ve belgeler; ardindan sicaklik. Proje tipi degistiyse (liste
+     * degisebilir) kontrol listesi acikken cevap gelmese de sicaklik tazelenir.
+     *
+     * @param  array{checklist: array<string, mixed>|null, files: mixed, names: mixed}|null  $payload
+     */
+    private function applyChecklist(BusinessCase $case, ?array $payload, bool $scopesChanged): void
+    {
+        if ($payload !== null) {
+            if ($payload['checklist'] !== null) {
+                app(BusinessCaseChecklistAnswerService::class)->sync($case, $payload['checklist']);
+            }
+
+            app(BusinessCaseDocumentService::class)->syncFromForm($case, $payload['checklist'] ?? [], $payload['files'], $payload['names']);
+        }
+
+        if (($payload['checklist'] ?? null) !== null || ($scopesChanged && FeatureFlags::enabled(Feature::BusinessCaseChecklist))) {
+            $this->refreshChecklistState($case);
+        }
     }
 
     private function defaultLegalEntityId(): int

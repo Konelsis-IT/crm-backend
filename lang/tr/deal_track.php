@@ -31,6 +31,12 @@ return [
     'check_sent' => 'Teklif müşteriye gönderildi',
     'check_won' => 'Teklif kazanıldı',
     'handoff' => 'Operasyona devir: :status',
+    // D-155: zincir ihaleyle baslar.
+    'tender' => 'İhale',
+    'go_tender' => 'İhaleye git',
+    'tender_now' => 'İhale durumu: :status',
+    'case_none' => 'Potansiyel iş · henüz yok',
+    'case_none_help' => 'İhale değerlendirilip devam kararı verilince bu ihaleden potansiyel iş açılır; ihale seçili gelir.',
     'chips' => [
         'customer' => 'Müşteri',
         'stage' => 'Durum',
@@ -51,6 +57,10 @@ return [
         'planned' => 'Planlanan',
         'site' => 'Şantiye',
         'handoff' => 'Operasyona devir',
+        'source' => 'İhale kaynağı',
+        'issuer' => 'İlanı veren',
+        'published' => 'Yayım tarihi',
+        'draft' => 'Taslak',
     ],
     'state' => [
         'draft' => ['headline' => 'Teklif hazırlanıyor', 'detail' => 'henüz müşteriye gönderilmedi.'],

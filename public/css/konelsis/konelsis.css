@@ -1578,3 +1578,132 @@ body:has(#konelsis-chat-root) .fi-main {
 }
 
 .kc-date-tile:where(.dark, .dark *) { border-inline-end-color: var(--gray-700); }
+
+/*
+ * Ihale -> Potansiyel is -> Teklif zinciri (B43, D-155; 5 Ekim 2026 kullanici
+ * onayi: kalp atisi animasyonu kucuk CSS + PHP'de kucuk HTML). Kontrol listesi
+ * tahtasi ve Kaydet / Ileri ozeti konelsis-checklist.css'te (D-157, React).
+ */
+
+/* Sihirbaz alt satiri: "Taslak olarak kaydet" ile "Kaydet" ayni kutuda yan yana. */
+.kc-wizard-save { display: flex; align-items: center; gap: 0.75rem; }
+
+/* Teklif sicakligi (D-157 yenilemesi): kalp seviyeyle renk degistirir ve
+   hizlanir ("lub-dub" atisi), parlamasi da atisla buyur; serit maviden kirmiziya
+   doluluk oranina kadar gorunur; buyuk gosterimde (--lg) yaninda ayni hizda
+   akan EKG cizgisi vardir. Renkler sabit: Filament paletinde turuncu yok. */
+.kc-heat { --kc-heat-color: #a1a1aa; --kc-heat-beat: 1.6s; display: inline-flex; align-items: center; gap: 0.75rem; min-width: 11rem; }
+.kc-heat--cold { --kc-heat-color: #3b82f6; --kc-heat-beat: 1.9s; }
+.kc-heat--warm { --kc-heat-color: #f59e0b; --kc-heat-beat: 1.3s; }
+.kc-heat--hot { --kc-heat-color: #f97316; --kc-heat-beat: 0.95s; }
+.kc-heat--burning { --kc-heat-color: #e11d48; --kc-heat-beat: 0.7s; }
+.kc-heat__heart {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    color: var(--kc-heat-color);
+    transform-origin: center;
+    animation: kc-heartbeat var(--kc-heat-beat) ease-in-out infinite;
+    filter: drop-shadow(0 0 0.3rem color-mix(in oklab, var(--kc-heat-color) 50%, transparent));
+}
+.kc-heat--none .kc-heat__heart { animation: none; filter: none; }
+.kc-heat__heart svg { width: 100%; height: 100%; }
+.kc-heat__body { display: grid; gap: 0.35rem; flex: 1; min-width: 8rem; }
+.kc-heat__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; }
+.kc-heat__value { font-size: 1.25rem; font-weight: 700; line-height: 1; color: var(--kc-heat-color); font-variant-numeric: tabular-nums; }
+.kc-heat__label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; color: var(--gray-500); }
+.kc-heat__bar { position: relative; height: 0.375rem; border-radius: 9999px; overflow: hidden; background: linear-gradient(90deg, #3b82f6, #f59e0b, #f97316, #e11d48); }
+.kc-heat__rest { position: absolute; inset-block: 0; inset-inline-end: 0; inset-inline-start: var(--kc-heat-pct, 0%); background: var(--gray-200); transition: inset-inline-start 0.4s ease; }
+.kc-heat__rest:where(.dark, .dark *) { background: var(--gray-700); }
+
+/* Buyuk: kontrol listesi tahtasi, Kaydet / Ileri ozeti, potansiyel is karti. */
+.kc-heat--lg { gap: 1rem; min-width: 18rem; }
+.kc-heat--lg .kc-heat__heart { width: 3rem; height: 3rem; }
+.kc-heat--lg .kc-heat__value { font-size: 1.75rem; }
+.kc-heat--lg .kc-heat__body { min-width: 9rem; }
+.kc-heat__ecg { width: 7.5rem; height: 2rem; flex-shrink: 0; overflow: visible; }
+.kc-heat__ecg polyline { fill: none; stroke: var(--kc-heat-color); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.kc-heat__ecg-base { opacity: 0.18; }
+.kc-heat__ecg-trace { stroke-dasharray: 60 240; stroke-dashoffset: 300; animation: kc-ecg var(--kc-heat-beat) linear infinite; filter: drop-shadow(0 0 0.15rem var(--kc-heat-color)); }
+.kc-heat--none .kc-heat__ecg-trace { animation: none; stroke-dasharray: none; opacity: 0.35; }
+
+/* Listede kucuk: yalniz kalp ve yuzde. */
+.kc-heat--sm { min-width: 0; gap: 0.35rem; }
+.kc-heat--sm .kc-heat__heart { width: 1.1rem; height: 1.1rem; }
+.kc-heat--sm .kc-heat__value { font-size: 0.875rem; }
+
+@keyframes kc-heartbeat {
+    0%, 100% { transform: scale(1); }
+    12% { transform: scale(1.2); }
+    24% { transform: scale(0.98); }
+    36% { transform: scale(1.12); }
+    60% { transform: scale(1); }
+}
+
+@keyframes kc-ecg {
+    from { stroke-dashoffset: 300; }
+    to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kc-heat__heart, .kc-heat__ecg-trace { animation: none; }
+}
+
+/* Teklif belgeleri: kucuk yukleme kutulari yan yana (4-6 tane). */
+.kc-doc-grid .filepond--drop-label { min-height: 3.25rem; font-size: 0.75rem; }
+.kc-doc-grid .filepond--root { margin-bottom: 0; }
+
+/*
+ * Durum dugmesi (D-161): durum kendi renginde baslikta dugme. Detay
+ * sayfasinda sabit (tiklanmaz) ama soluk degil; duzenleme sayfasinda tiklanir.
+ */
+.fi-btn.kc-status-fixed.kc-status-fixed:is(.fi-disabled, [disabled]) {
+    opacity: 1;
+    cursor: default;
+}
+
+/*
+ * Taslak satiri (D-162): taslak kayit listede amber serit ve acik amber
+ * zeminle ayrilir; basligin altindaki "Taslak · ... adiminda kaldi" amber.
+ */
+.fi-ta-row.kc-draft-row {
+    background-color: color-mix(in oklab, var(--warning-50) 85%, transparent);
+}
+
+.fi-ta-row.kc-draft-row > td:first-child {
+    box-shadow: inset 3px 0 0 var(--warning-500);
+}
+
+.fi-ta-row.kc-draft-row.fi-clickable:hover {
+    background-color: var(--warning-100);
+}
+
+.fi-ta-row.kc-draft-row:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--warning-500) 10%, transparent);
+}
+
+.fi-ta-row.kc-draft-row.fi-clickable:where(.dark, .dark *):hover {
+    background-color: color-mix(in oklab, var(--warning-500) 16%, transparent);
+}
+
+.kc-draft-row .fi-ta-text-description {
+    color: var(--warning-700);
+    font-weight: 500;
+}
+
+.kc-draft-row .fi-ta-text-description:where(.dark, .dark *) {
+    color: var(--warning-400);
+}
+
+/* Durum secicisi (D-161): secilmemis secenek de kendi renginde; secilince dolu. */
+.kc-status-picker input:not(:checked) + label.fi-btn.fi-color {
+    color: var(--color-700);
+    background-color: color-mix(in oklab, var(--color-50) 70%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-500) 55%, transparent);
+}
+
+.kc-status-picker input:not(:checked) + label.fi-btn.fi-color:where(.dark, .dark *) {
+    color: var(--color-300);
+    background-color: color-mix(in oklab, var(--color-500) 12%, transparent);
+}

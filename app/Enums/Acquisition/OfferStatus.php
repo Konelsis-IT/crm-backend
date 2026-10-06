@@ -23,9 +23,10 @@ enum OfferStatus: string implements HasColor, HasLabel
 
     public function getColor(): string
     {
+        // D-161: "Verilen" teklif surumunun "Gonderildi" rengiyle ayni.
         return match ($this) {
-            self::ToBeSubmitted => 'gray',
-            self::Submitted => 'info',
+            self::ToBeSubmitted => 'slate',
+            self::Submitted => 'violet',
             self::Approved => 'success',
             self::Lost => 'danger',
         };

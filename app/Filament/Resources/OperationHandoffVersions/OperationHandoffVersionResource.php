@@ -74,7 +74,7 @@ class OperationHandoffVersionResource extends Resource
                             ->native(false),
                         Textarea::make('decision_reason')
                             ->label(__('operation_handoff_version.fields.decision_reason'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

@@ -75,6 +75,11 @@ return [
         'download_only' => 'Yalnız indirme',
     ],
 
+    // Belge satiri (DocumentLine, D-155): "dosya.xlsx · Rev 02".
+    'short' => [
+        'revision' => 'Rev :code',
+    ],
+
     'actions' => [
         'download_current' => 'Güncel dosyayı indir',
         'preview_current' => 'Güncel dosyayı önizle',

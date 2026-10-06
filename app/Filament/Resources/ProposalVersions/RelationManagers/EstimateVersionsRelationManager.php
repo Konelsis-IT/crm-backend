@@ -63,7 +63,7 @@ class EstimateVersionsRelationManager extends RelationManager
                             ->maxValue(100),
                         Textarea::make('notes')
                             ->label(__('estimate_version.fields.notes'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

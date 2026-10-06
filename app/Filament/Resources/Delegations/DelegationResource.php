@@ -144,7 +144,7 @@ class DelegationResource extends Resource
                         ->label(__('delegation.fields.reason'))
                         ->required()
                         ->rows(2)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

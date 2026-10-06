@@ -60,10 +60,10 @@ class DeviationsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('deviation.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Textarea::make('justification')
                             ->label(__('deviation.fields.justification'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('status')
                             ->label(__('deviation.fields.status'))
                             ->options(DeviationStatus::class)

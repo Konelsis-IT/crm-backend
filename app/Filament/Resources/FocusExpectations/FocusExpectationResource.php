@@ -114,7 +114,7 @@ class FocusExpectationResource extends Resource
                         ->default(0),
                     Textarea::make('help_tr')
                         ->label(__('focus_expectation.fields.help_tr'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Select::make('status')
                         ->label(__('focus_expectation.fields.status'))
                         ->options(ActiveStatus::class)

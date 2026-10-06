@@ -90,6 +90,12 @@ class ProposalVersion extends Model
         return $this->hasMany(ProposalDocument::class, 'proposal_version_id');
     }
 
+    /** Bu surumun proje kapsamlari (B43, D-155). */
+    public function scopes(): HasMany
+    {
+        return $this->hasMany(ProposalVersionScope::class, 'proposal_version_id');
+    }
+
     public function complianceItems(): HasMany
     {
         return $this->hasMany(ComplianceItem::class, 'proposal_version_id');

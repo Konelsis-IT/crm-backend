@@ -59,7 +59,7 @@ class ObligationsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('contract_obligation.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('responsible_party_id')
                             ->label(__('contract_obligation.fields.responsible_party'))
                             ->relationship('responsibleParty', 'display_name')

@@ -8,6 +8,7 @@ use App\Enums\Party\MeetingChannel;
 use App\Enums\Party\MeetingPlanSource;
 use App\Enums\Party\MeetingPlanStatus;
 use App\Exceptions\InvalidTransitionException;
+use App\Exceptions\RecordArchivedException;
 use App\Models\Party\MeetingPlan;
 use App\Models\Party\MeetingPlanParticipant;
 use App\Models\Party\PartyMeetingNote;
@@ -16,6 +17,7 @@ use App\Services\Audit\ActorContext;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
 use BackedEnum;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -34,6 +36,11 @@ use Illuminate\Support\Str;
  * Planli gorusmenin sonucu girilince (complete) Gorusme notlarina not
  * yazilir ve plan o nota baglanir; ayni not ikinci bir satir uretmez.
  * Gerceklesmis satir bu servisle duzenlenmez (not uzerinden guncellenir).
+ *
+ * Arsiv (B44, D-156): plan silinmez, archive() ile arsive alinir. Sonuc notu
+ * olan plan notuyla birlikte arsivlenir (PartyMeetingNoteService::archive);
+ * not arsivlenince ondan dogan satirlar ayni anla arsivlenir (archiveForNote)
+ * ve birlikte geri doner (restoreForNote). Arsivdeki plan uzerinde islem yapilmaz.
  */
 final class MeetingPlanService extends AbstractService
 {
@@ -82,9 +89,7 @@ final class MeetingPlanService extends AbstractService
             /** @var MeetingPlan $plan */
             $plan = $this->lockForUpdate($record);
 
-            if (! $plan->isPlanned()) {
-                throw InvalidTransitionException::make();
-            }
+            $this->assertActionable($plan);
 
             /** @var MeetingPlan $plan */
             $plan = parent::update($plan, $data);
@@ -107,9 +112,7 @@ final class MeetingPlanService extends AbstractService
             /** @var MeetingPlan $plan */
             $plan = $this->lockForUpdate($record);
 
-            if (! $plan->isPlanned()) {
-                throw InvalidTransitionException::make();
-            }
+            $this->assertActionable($plan);
 
             app(PartyMeetingNoteService::class)->create([
                 'party_id' => $plan->party_id,
@@ -136,9 +139,7 @@ final class MeetingPlanService extends AbstractService
             /** @var MeetingPlan $plan */
             $plan = $this->lockForUpdate($record);
 
-            if (! $plan->isPlanned()) {
-                throw InvalidTransitionException::make();
-            }
+            $this->assertActionable($plan);
 
             $reason = trim((string) $reason);
             $plan->fill([
@@ -182,9 +183,7 @@ final class MeetingPlanService extends AbstractService
             /** @var MeetingPlan $plan */
             $plan = $this->lockForUpdate($record);
 
-            if (! $plan->isPlanned()) {
-                throw InvalidTransitionException::make();
-            }
+            $this->assertActionable($plan);
 
             $plan->fill(['planned_on' => $plannedOn]);
             $changes = $this->saveWithoutVersion($plan);
@@ -194,6 +193,112 @@ final class MeetingPlanService extends AbstractService
             }
 
             return $plan;
+        });
+    }
+
+    /**
+     * Plani arsive alir (B44, D-156). Sonuc notu olan plan notuyla birlikte
+     * arsivlenir (not arsive alinir, plan onun anini tasir); notsuz plan
+     * (planli, gerceklesmedi, aktarim) tek basina. Yalniz archived_at yazilir;
+     * kimin arsivledigi hareket kaydindadir (meeting_plan.archived).
+     */
+    public function archive(Model|int|string $record): MeetingPlan
+    {
+        if (! SchemaReadiness::hasBatch('B44')) {
+            throw InvalidTransitionException::make();
+        }
+
+        return $this->transactions->run(function () use ($record): MeetingPlan {
+            /** @var MeetingPlan $plan */
+            $plan = $this->lockForUpdate($record);
+
+            if ($plan->isArchived()) {
+                throw InvalidTransitionException::make();
+            }
+
+            $note = $plan->meetingNote;
+
+            if ($note instanceof PartyMeetingNote && ! $note->isArchived()) {
+                app(PartyMeetingNoteService::class)->archive($note);
+
+                return $plan->refresh();
+            }
+
+            $this->markArchived($plan, Carbon::now('UTC'));
+
+            return $plan;
+        });
+    }
+
+    /** Arsivdeki plani geri alir; notuyla birlikte arsivlendiyse not da geri gelir. */
+    public function restore(Model|int|string $record): MeetingPlan
+    {
+        return $this->transactions->run(function () use ($record): MeetingPlan {
+            /** @var MeetingPlan $plan */
+            $plan = $this->lockForUpdate($record);
+
+            if (! $plan->isArchived()) {
+                throw InvalidTransitionException::make();
+            }
+
+            $note = $plan->meetingNote;
+
+            if ($note instanceof PartyMeetingNote && $note->isArchived()) {
+                app(PartyMeetingNoteService::class)->restore($note);
+
+                return $plan->refresh();
+            }
+
+            $this->markRestored($plan);
+
+            return $plan;
+        });
+    }
+
+    /**
+     * Not arsive alinirken: nottan dogan satirlar (gerceklesti satiri ve
+     * gerceklesmemis sonraki adim) notun arsiv aniyla arsivlenir.
+     */
+    public function archiveForNote(PartyMeetingNote $note, Carbon $at): void
+    {
+        if (! SchemaReadiness::hasBatch('B34') || ! SchemaReadiness::hasBatch('B44')) {
+            return;
+        }
+
+        $this->transactions->run(function () use ($note, $at): void {
+            $rows = MeetingPlan::query()
+                ->notArchived()
+                ->where(fn (Builder $query): Builder => $query
+                    ->where('meeting_note_id', $note->getKey())
+                    ->orWhere(fn (Builder $follow): Builder => $follow
+                        ->where('follow_up_note_id', $note->getKey())
+                        ->where('status', '!=', MeetingPlanStatus::Done->value)))
+                ->get();
+
+            foreach ($rows as $plan) {
+                $this->markArchived($plan, $at, (int) $note->getKey());
+            }
+        });
+    }
+
+    /** Not arsivden cikarken: onunla ayni anda arsivlenen satirlar geri doner. */
+    public function restoreForNote(PartyMeetingNote $note, Carbon $archivedAt): void
+    {
+        if (! SchemaReadiness::hasBatch('B34') || ! SchemaReadiness::hasBatch('B44')) {
+            return;
+        }
+
+        $this->transactions->run(function () use ($note, $archivedAt): void {
+            $rows = MeetingPlan::query()
+                ->where(fn (Builder $query): Builder => $query
+                    ->where('meeting_note_id', $note->getKey())
+                    ->orWhere('follow_up_note_id', $note->getKey()))
+                ->where('archived_at', $archivedAt)
+                ->get();
+
+            foreach ($rows as $plan) {
+                $this->markRestored($plan);
+            }
         });
     }
 
@@ -374,6 +479,33 @@ final class MeetingPlanService extends AbstractService
         if ($changes !== []) {
             $this->recordActivity($follow, 'updated', $changes);
         }
+    }
+
+    /** Islem yapilabilir plan: arsivde degil ve planli. */
+    private function assertActionable(MeetingPlan $plan): void
+    {
+        if ($plan->isArchived()) {
+            throw RecordArchivedException::make();
+        }
+
+        if (! $plan->isPlanned()) {
+            throw InvalidTransitionException::make();
+        }
+    }
+
+    /** Not ile birlikte arsivlenen satir hareket kaydinda notu gosterir. */
+    private function markArchived(MeetingPlan $plan, Carbon $at, ?int $withNoteId = null): void
+    {
+        $plan->forceFill(['archived_at' => $at]);
+        $this->saveWithoutVersion($plan);
+        $this->recordActivity($plan, 'archived', array_filter(['party_meeting_note_id' => $withNoteId]));
+    }
+
+    private function markRestored(MeetingPlan $plan): void
+    {
+        $plan->forceFill(['archived_at' => null]);
+        $this->saveWithoutVersion($plan);
+        $this->recordActivity($plan, 'restored');
     }
 
     /** Sonuc notu silinen plan yeniden planliya doner. */

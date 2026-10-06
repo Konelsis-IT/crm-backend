@@ -9,6 +9,7 @@ use App\Enums\Acquisition\BusinessCodeKind;
 use App\Enums\Acquisition\BusinessCriticality;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\BusinessSourceKind;
+use App\Enums\Acquisition\LicenseStatus;
 use App\Enums\Acquisition\LifecycleSegment;
 use App\Enums\Acquisition\OfferType;
 use App\Models\Acquisition\BusinessCaseScope;
@@ -44,6 +45,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'currency_code', 'project_type_code', 'source_kind', 'criticality', 'lifecycle_segment', 'acquisition_stage',
     'outcome', 'outcome_reason_code', 'outcome_at', 'owner_employee_id', 'proposal_owner_employee_id',
     'estimated_value', 'classification_id', 'offer_type',
+    // B43 (D-155): proje durumu, teklif sicakligi, taslak.
+    'license_status', 'heat_score', 'is_draft', 'draft_step',
 ])]
 #[UsePolicy(BusinessCasePolicy::class)]
 class BusinessCase extends Model
@@ -60,6 +63,9 @@ class BusinessCase extends Model
             'source_kind' => BusinessSourceKind::class,
             'criticality' => BusinessCriticality::class,
             'offer_type' => OfferType::class,
+            'license_status' => LicenseStatus::class,
+            'heat_score' => 'integer',
+            'is_draft' => 'boolean',
             'lifecycle_segment' => LifecycleSegment::class,
             'acquisition_stage' => AcquisitionStage::class,
             'outcome' => BusinessOutcome::class,
@@ -158,6 +164,18 @@ class BusinessCase extends Model
     public function tenderNotices(): HasMany
     {
         return $this->hasMany(TenderNotice::class, 'business_case_id');
+    }
+
+    /** Teklif oncesi kontrol listesi cevaplari (B43, D-155). */
+    public function checklistAnswers(): HasMany
+    {
+        return $this->hasMany(BusinessCaseChecklistAnswer::class, 'business_case_id');
+    }
+
+    /** Potansiyel isin belgeleri; kontrol listesi maddesine ait olanlar madde kodu tasir (B43). */
+    public function caseDocuments(): HasMany
+    {
+        return $this->hasMany(BusinessCaseDocument::class, 'business_case_id')->orderBy('sort_order')->orderBy('id');
     }
 
     public function proposals(): HasMany

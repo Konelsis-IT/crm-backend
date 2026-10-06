@@ -43,6 +43,14 @@ class DocumentTypeSeeder extends Seeder
         ['TKM', 'Teklif Mektubu', DocumentDiscipline::Commercial, true],
         ['REF', 'Referanslar Belgesi', DocumentDiscipline::Commercial, false],
         ['KAT', 'Genel Katalog', DocumentDiscipline::Commercial, false],
+        // B43 (D-155, 5 Ekim 2026): potansiyel is belgeleri (kontrol listesi maddeleri
+        // ve genel) ile teklifte yuklenen sartname uygunlugu, deviasyon listesi,
+        // marka listesi ve sorumluluk matrisi.
+        ['PIB', 'Potansiyel İş Belgesi', DocumentDiscipline::Commercial, false],
+        ['SUY', 'Şartname Uygunluğu', DocumentDiscipline::Commercial, false],
+        ['DEV', 'Deviasyon Listesi', DocumentDiscipline::Commercial, false],
+        ['MRK', 'Marka Listesi', DocumentDiscipline::Commercial, false],
+        ['SRM', 'Sorumluluk Matrisi', DocumentDiscipline::Commercial, false],
     ];
 
     public function run(): void

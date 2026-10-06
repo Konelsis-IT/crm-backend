@@ -752,7 +752,9 @@ final class WorkItemQueries
                 ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('title', 'like', $like)->orWhere('request_no', 'like', $like)))
                 ->orderByDesc('id')->limit(20)->get()
                 ->map(fn (WorkRequest $request): array => ['id' => (int) $request->getKey(), 'no' => $request->request_no, 'label' => (string) $request->title, 'project_id' => $request->project_id !== null ? (int) $request->project_id : null]),
+            // Aramada arsivdeki plan cikmaz (D-156); var olan baglanti dogrulamasi arsive bakmaz.
             WorkItemLinkKind::MeetingPlan => MeetingPlan::query()
+                ->when($onlyId === null, fn (Builder $q) => $q->notArchived())
                 ->with('party:id,display_name')
                 ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('subject', 'like', $like)->orWhereHas('party', fn (Builder $p) => $p->where('display_name', 'like', $like))))
                 ->orderByDesc('planned_on')->limit(20)->get()

@@ -12,6 +12,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\ProposalVersion;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Acquisition\ProposalVersionService;
+use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -81,7 +82,7 @@ class VersionsRelationManager extends RelationManager
                             ->label(__('proposal_version.fields.is_critical_route')),
                         Textarea::make('summary')
                             ->label(__('proposal_version.fields.summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
@@ -119,8 +120,11 @@ class VersionsRelationManager extends RelationManager
                     ->dateTime('d.m.Y H:i')
                     ->placeholder('-'),
             ])
+            // B43 (D-155): ayri "yeni surum" yapisi yok; teklif duzenlemedeki degisiklik
+            // yeni surumdur. Surum alanlari da yalniz "Teklif duzenle" ile degisir.
             ->headerActions([
                 CreateAction::make()
+                    ->visible(fn (): bool => ! SchemaReadiness::hasBatch('B43'))
                     ->using(function (array $data): Model {
                         $data['proposal_id'] = $this->getOwnerRecord()->getKey();
 
@@ -139,6 +143,7 @@ class VersionsRelationManager extends RelationManager
                     ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                     ->url(fn (ProposalVersion $record): string => ProposalVersionResource::getUrl('view', ['record' => $record])),
                 EditAction::make()
+                    ->visible(fn (): bool => ! SchemaReadiness::hasBatch('B43'))
                     ->using(function (ProposalVersion $record, array $data): Model {
                         try {
                             return app(ProposalVersionService::class)->update($record, $data);

@@ -53,7 +53,7 @@ final class ProjectConversionForm
                         ->default((string) ($case?->title ?? $proposal->title))
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Select::make('project_manager_employee_id')
                         ->label(__('project.fields.project_manager'))
                         ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
@@ -68,6 +68,12 @@ final class ProjectConversionForm
                         ->label(__('project.fields.planned_finish_on'))
                         ->displayFormat('d.m.Y')
                         ->afterOrEqual('planned_start_on'),
+                    // Aciklama ilk bolumde yarim genislik (D-157: modal kokunde tam satir kaliyordu).
+                    Textarea::make('comment')
+                        ->label(__('project.fields.comment'))
+                        ->maxLength(500)
+                        ->columnSpan(FieldGrid::LONG)
+                        ->columnStart(1),
                 ])),
             Section::make(__('project.sections.site'))
                 ->columns(FieldGrid::COLUMNS)
@@ -76,12 +82,9 @@ final class ProjectConversionForm
                     TextInput::make('site_address_line1')
                         ->label(__('project.fields.site_address_line1'))
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     ...TurkiyeAddressFields::make('site_city', 'site_district', __('project.fields.site_city'), __('project.fields.site_district')),
                 ])),
-            Textarea::make('comment')
-                ->label(__('project.fields.comment'))
-                ->maxLength(500),
         ];
     }
 }

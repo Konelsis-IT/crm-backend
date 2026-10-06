@@ -82,7 +82,7 @@ class DependenciesRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('waiver_reason')
                             ->label(__('workstream_dependency.fields.waiver_reason'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

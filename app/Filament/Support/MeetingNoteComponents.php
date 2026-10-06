@@ -11,13 +11,14 @@ use App\Models\Party\Party;
 use App\Models\Party\PartyMeetingNote;
 use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Acquisition\ProposalQueries;
+use App\Query\Party\MeetingNoteQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Services\Party\PartyMeetingNoteService;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -26,14 +27,19 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
+use Livewire\Component as LivewireComponent;
 
 /**
  * Gorusme notu formu ve tablosu (B28, D-98; B41, D-137): taraf kartindaki,
@@ -59,6 +65,162 @@ final class MeetingNoteComponents
     public static function dealLinksEnabled(): bool
     {
         return SchemaReadiness::hasBatch('B41') && FeatureFlags::enabled(Feature::DealMeetingNotes);
+    }
+
+    /** Arsiv (B44, D-156) bu ortamda var mi. */
+    public static function archiveEnabled(): bool
+    {
+        return SchemaReadiness::hasBatch('B44');
+    }
+
+    /**
+     * Arsive al (D-156: "Projede silme islemi yok dedik ama arsive alinabilmeli"):
+     * not ve ondan dogan gorusme plani satirlari birlikte arsivlenir (yalniz
+     * archived_at). Tabloda, gorusme plani sayfasinda ayni eylem.
+     *
+     * @param  (Closure(Model): ?PartyMeetingNote)|null  $note  kayittan notu bulur (gorusme plani sayfasi)
+     */
+    public static function archiveAction(string $name = 'archive_note', ?Closure $note = null): Action
+    {
+        $resolve = $note ?? static fn (Model $record): ?PartyMeetingNote => $record instanceof PartyMeetingNote ? $record : null;
+
+        return Action::make($name)
+            ->label(__('party_meeting_note.actions.archive'))
+            ->icon(Heroicon::OutlinedArchiveBox)
+            ->color(ActionColors::DELETE)
+            ->requiresConfirmation()
+            ->modalHeading(__('party_meeting_note.actions.archive'))
+            ->modalSubmitActionLabel(__('party_meeting_note.actions.archive'))
+            ->modalDescription(__('party_meeting_note.help.archive'))
+            ->modalIcon(Heroicon::OutlinedArchiveBox)
+            ->visible(function (Model $record) use ($resolve): bool {
+                $target = $resolve($record);
+
+                return self::archiveEnabled() && $target instanceof PartyMeetingNote && ! $target->isArchived() && Gate::allows('archive', $target);
+            })
+            ->action(function (Model $record, LivewireComponent $livewire) use ($resolve): void {
+                $target = $resolve($record);
+
+                if (! $target instanceof PartyMeetingNote) {
+                    return;
+                }
+
+                try {
+                    app(PartyMeetingNoteService::class)->archive($target);
+                    DomainNotifications::success(__('party_meeting_note.messages.archived'));
+                    self::refreshPage($livewire);
+                } catch (AbstractException $exception) {
+                    DomainNotifications::failure($exception);
+                }
+            });
+    }
+
+    /**
+     * Arsivden cikar: not ve onunla birlikte arsivlenen plan satirlari geri doner.
+     *
+     * @param  (Closure(Model): ?PartyMeetingNote)|null  $note
+     */
+    public static function restoreAction(string $name = 'restore_note', ?Closure $note = null): Action
+    {
+        $resolve = $note ?? static fn (Model $record): ?PartyMeetingNote => $record instanceof PartyMeetingNote ? $record : null;
+
+        return Action::make($name)
+            ->label(__('party_meeting_note.actions.restore'))
+            ->icon(Heroicon::OutlinedArrowUturnLeft)
+            ->color(ActionColors::NEUTRAL)
+            ->requiresConfirmation()
+            ->modalHeading(__('party_meeting_note.actions.restore'))
+            ->modalDescription(__('party_meeting_note.help.restore'))
+            ->visible(function (Model $record) use ($resolve): bool {
+                $target = $resolve($record);
+
+                return self::archiveEnabled() && $target instanceof PartyMeetingNote && $target->isArchived() && Gate::allows('archive', $target);
+            })
+            ->action(function (Model $record, LivewireComponent $livewire) use ($resolve): void {
+                $target = $resolve($record);
+
+                if (! $target instanceof PartyMeetingNote) {
+                    return;
+                }
+
+                try {
+                    app(PartyMeetingNoteService::class)->restore($target);
+                    DomainNotifications::success(__('party_meeting_note.messages.restored'));
+                    self::refreshPage($livewire);
+                } catch (AbstractException $exception) {
+                    DomainNotifications::failure($exception);
+                }
+            });
+    }
+
+    /**
+     * Notu duzenle (D-156): gorusme plani sayfasinda sonucu girilmis gorusmenin
+     * notu, Gorusme notlari sekmesindeki formla ayni pencerede duzenlenir.
+     *
+     * @param  Closure(Model): ?PartyMeetingNote  $note
+     */
+    public static function editNoteAction(Closure $note, string $name = 'edit_note'): Action
+    {
+        $links = self::dealLinksEnabled();
+
+        return Action::make($name)
+            ->label(__('party_meeting_note.actions.edit'))
+            ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
+            ->color(ActionColors::EDIT)
+            ->modalHeading(__('party_meeting_note.actions.edit'))
+            ->modalSubmitActionLabel(__('app.actions.save'))
+            ->modalWidth('6xl')
+            ->visible(function (Model $record) use ($note): bool {
+                $target = $note($record);
+
+                return $target instanceof PartyMeetingNote && ! $target->isArchived() && Gate::allows('update', $target);
+            })
+            ->fillForm(function (Model $record) use ($note, $links): array {
+                $target = $note($record);
+
+                if (! $target instanceof PartyMeetingNote) {
+                    return [];
+                }
+
+                return [
+                    ...$target->attributesToArray(),
+                    'noted_on' => $target->noted_on?->toDateString(),
+                    'next_action_on' => $target->next_action_on?->toDateString(),
+                    ...($links ? ['proposal_ids' => $target->proposals->modelKeys()] : []),
+                ];
+            })
+            ->schema(function (Schema $schema, Model $record) use ($note): Schema {
+                $target = $note($record);
+
+                return $schema->columns(1)->components(self::form(
+                    self::CONTEXT_PARTY,
+                    fn (): ?Party => $target?->party,
+                    fn (Get $get): ?int => filled($get('business_case_id')) ? (int) $get('business_case_id') : null,
+                ));
+            })
+            ->action(function (Model $record, array $data, LivewireComponent $livewire) use ($note): void {
+                $target = $note($record);
+
+                if (! $target instanceof PartyMeetingNote) {
+                    return;
+                }
+
+                try {
+                    app(PartyMeetingNoteService::class)->update($target, $data);
+                    DomainNotifications::success(__('party_meeting_note.messages.updated'));
+                    self::refreshPage($livewire);
+                } catch (AbstractException $exception) {
+                    DomainNotifications::failure($exception);
+                }
+            });
+    }
+
+    /** Ayrinti sayfasinda kart yeniden yuklenir; tabloda satir kendiliginden yenilenir. */
+    private static function refreshPage(LivewireComponent $livewire): void
+    {
+        if ($livewire instanceof ViewRecord) {
+            $livewire->redirect($livewire::getResource()::getUrl('view', ['record' => $livewire->getRecord()]), navigate: true);
+        }
     }
 
     /**
@@ -127,7 +289,7 @@ final class MeetingNoteComponents
                         ->label(__('party_meeting_note.fields.note'))
                         ->required()
                         ->rows(4)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     // Sonraki adim hatirlatmasi (B34, D-109): tarih verilirse adim Gorusme
                     // planina duser, 1 gun once ve gunun sabahi zil bildirimi gider.
                     DatePicker::make('next_action_on')
@@ -201,6 +363,13 @@ final class MeetingNoteComponents
                     ->label(__('party_meeting_note.fields.next_action_on'))
                     ->date('d.m.Y')
                     ->placeholder('-'),
+                // Arsiv bilgisi (B44): "Arsivlenenler" suzgecinde dolu gelir.
+                TextColumn::make('archived_at')
+                    ->label(__('party_meeting_note.fields.archived_at'))
+                    ->dateTime('d.m.Y H:i')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->visible(fn (): bool => self::archiveEnabled()),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -214,8 +383,24 @@ final class MeetingNoteComponents
                         }
                     }),
             ])
+            ->filters([
+                // Arsiv (B44, D-156): varsayilan yalniz aktif notlar.
+                SelectFilter::make('archive')
+                    ->label(__('party_meeting_note.filters.archive'))
+                    ->options([
+                        'active' => __('party_meeting_note.filters.archive_active'),
+                        'archived' => __('party_meeting_note.filters.archive_archived'),
+                        'all' => __('party_meeting_note.filters.archive_all'),
+                    ])
+                    ->default('active')
+                    ->selectablePlaceholder(false)
+                    ->native(false)
+                    ->visible(fn (): bool => self::archiveEnabled())
+                    ->query(fn (Builder $query, array $data): Builder => app(MeetingNoteQueries::class)->archiveScope($query, (string) ($data['value'] ?? 'active'))),
+            ])
             ->recordActions([
                 EditAction::make()
+                    ->visible(fn (PartyMeetingNote $record): bool => ! $record->isArchived())
                     ->mutateRecordDataUsing(function (array $data, PartyMeetingNote $record) use ($links): array {
                         if ($links) {
                             $data['proposal_ids'] = $record->proposals->modelKeys();
@@ -232,16 +417,9 @@ final class MeetingNoteComponents
                             throw new Halt;
                         }
                     }),
-                DeleteAction::make()
-                    ->using(function (PartyMeetingNote $record): bool {
-                        try {
-                            return app(PartyMeetingNoteService::class)->delete($record);
-                        } catch (AbstractException $exception) {
-                            DomainNotifications::failure($exception);
-
-                            return false;
-                        }
-                    }),
+                // Silme yok, arsiv var (D-156).
+                self::archiveAction(),
+                self::restoreAction(),
             ])
             ->toolbarActions([])
             ->defaultSort('noted_on', 'desc')

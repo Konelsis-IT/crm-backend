@@ -8,13 +8,11 @@ use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\BusinessCriticality;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\OfferType;
-use App\Exceptions\AbstractException;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\BusinessCases\Pages\CreateBusinessCase;
 use App\Filament\Resources\BusinessCases\Pages\EditBusinessCase;
 use App\Filament\Resources\BusinessCases\Pages\ListBusinessCases;
 use App\Filament\Resources\BusinessCases\Pages\ViewBusinessCase;
-use App\Filament\Resources\BusinessCases\RelationManagers\ActivitiesRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\ContractsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\OperationHandoffsRelationManager;
@@ -23,19 +21,16 @@ use App\Filament\Resources\BusinessCases\RelationManagers\ProposalsRelationManag
 use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\BusinessCases\RelationManagers\TenderNoticesRelationManager;
 use App\Filament\Support\BusinessCaseWizard;
-use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ChecklistSchema;
+use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\BusinessCase;
-use App\Services\Acquisition\BusinessCaseService;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
-use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Textarea;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -45,6 +40,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 class BusinessCaseResource extends Resource
@@ -102,8 +98,22 @@ class BusinessCaseResource extends Resource
                 TextColumn::make('title')
                     ->label(__('business_case.fields.title'))
                     ->limit(50)
+                    // B43: taslagin kaldigi adim basligin altinda; D-162: kalem simgesi
+                    // ve amber satir (taslak oldugu ilk bakista anlasilir).
+                    ->description(fn (BusinessCase $record): ?string => DraftSupport::titleDescription($record))
+                    ->icon(fn (BusinessCase $record): ?Heroicon => DraftSupport::titleIcon($record))
+                    ->iconColor('warning')
+                    ->tooltip(fn (BusinessCase $record): ?string => DraftSupport::titleTooltip($record))
                     ->searchable()
                     ->sortable(),
+                // Teklif sicakligi (B43, D-155): kalp ve yuzde.
+                TextColumn::make('heat_score')
+                    ->label(__('checklist.heat'))
+                    ->formatStateUsing(fn (mixed $state): HtmlString => ChecklistSchema::heatHtml(is_numeric($state) ? (int) $state : null, small: true))
+                    ->html()
+                    ->placeholder('-')
+                    ->sortable()
+                    ->visible(fn (): bool => ChecklistSchema::enabled()),
                 // Taraf tablosundaki ad sutunuyla ayni kisalik (28 Eylul 2026 kullanici istegi);
                 // uzun adin tamami ipucunda.
                 TextColumn::make('primaryParty.display_name')
@@ -154,14 +164,17 @@ class BusinessCaseResource extends Resource
                     ->options(OfferType::class)
                     ->visible($b29),
             ])
+            // Durum yalniz duzenleme sayfasindaki durum dugmesiyle degisir (D-161).
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                ActionGroup::make(self::statusActions())
-                    ->label(__('business_case.actions.change_status'))
-                    ->icon(Heroicon::OutlinedArrowPath),
             ])
             ->toolbarActions([])
+            ->recordClasses(fn (BusinessCase $record): ?string => DraftSupport::rowClass($record))
+            // Taslak satira tiklayinca kaldigi adimdan duzenleme acilir (B43).
+            ->recordUrl(fn (BusinessCase $record): string => DraftSupport::enabled() && (bool) $record->getAttribute('is_draft') && Gate::allows('update', $record)
+                ? self::getUrl('edit', ['record' => $record, 'step' => app(BusinessCaseWizard::class)->resumeStepId($record)])
+                : self::getUrl('view', ['record' => $record]))
             ->defaultSort('sequence_no', 'desc');
     }
 
@@ -170,12 +183,13 @@ class BusinessCaseResource extends Resource
         // Tekliflerin tam tablosu (secili yap, duzenle) ilk sekmede (D-143): detay
         // sayfasinda artik "Is akisi" sihirbazi yok; kisa ozetleri "Bu is nerede?"
         // hattinda. Duzenleme sihirbazi ayni tabloyu 2. adimda kullanmaya devam eder.
+        // D-155 (5 Ekim 2026 kullanici karari): Aktiviteler sekmesi kaldirildi,
+        // gorusme notlari yeterli. Kayitlar veritabaninda kalir.
         return [
             ProposalsRelationManager::class,
             // Gorusme notlari (B41, D-137): bu is ve teklifleri hakkindaki gorusmeler.
             MeetingNotesRelationManager::class,
             OpportunityRelationManager::class,
-            ActivitiesRelationManager::class,
             TenderNoticesRelationManager::class,
             ContractsRelationManager::class,
             OperationHandoffsRelationManager::class,
@@ -191,44 +205,5 @@ class BusinessCaseResource extends Resource
             'view' => ViewBusinessCase::route('/{record}'),
             'edit' => EditBusinessCase::route('/{record}/edit'),
         ];
-    }
-
-    /**
-     * Izin verilen her hedef durum icin ayri islem (docs/planning/14). Tablo
-     * satirinda ve detay sayfasinin basliginda ayni islemler kullanilir.
-     *
-     * @return list<Action>
-     */
-    public static function statusActions(): array
-    {
-        $actions = [];
-
-        foreach (AcquisitionStage::cases() as $target) {
-            if (in_array($target, [AcquisitionStage::HandoverAccepted], true)) {
-                continue;
-            }
-
-            $actions[] = Action::make('status_'.$target->value)
-                ->label(__('business_case.actions.set_status', ['status' => $target->getLabel()]))
-                ->color($target->getColor())
-                ->requiresConfirmation()
-                ->schema([
-                    Textarea::make('reason')
-                        ->label(__('business_case.fields.reason'))
-                        ->maxLength(500),
-                ])
-                ->visible(fn (BusinessCase $record): bool => Gate::allows('update', $record)
-                    && $record->acquisition_stage->canTransitionTo($target))
-                ->action(function (BusinessCase $record, array $data) use ($target): void {
-                    try {
-                        app(BusinessCaseService::class)->changeStage($record, $target, $data['reason'] ?? null);
-                        DomainNotifications::success(__('business_case.messages.status_changed'));
-                    } catch (AbstractException $exception) {
-                        DomainNotifications::failure($exception);
-                    }
-                });
-        }
-
-        return $actions;
     }
 }

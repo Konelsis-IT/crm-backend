@@ -9,8 +9,48 @@ return [
         'res' => 'RES scope',
         'tm' => 'TM scope',
         'hes' => 'HES scope',
-        'bes' => 'BES scope',
+        'bes' => 'BESS scope',
         'enh_eih' => 'ENH/EIH scope',
+    ],
+
+    'labels' => [
+        'tm' => [
+            'total_cost' => 'Total cost',
+            'total_sales' => 'Total sales',
+            'unit_cost' => 'Cost/feeder',
+        ],
+        'bes' => [
+            'power_mwe' => 'MWe',
+            'energy_mwh' => 'MWh',
+            'unit_cost' => 'BESS cost/MWh',
+            'total_cost' => 'Total cost',
+            'unit_sales' => 'BESS sales/MWh',
+            'total_sales' => 'Total sales',
+        ],
+        'hes' => [
+            'total_cost' => 'Cost',
+            'total_sales' => 'Sales',
+            'unit_cost' => 'Cost/generator-turbine',
+        ],
+        'ges' => [
+            'capacity_mwp' => 'MWp',
+            'unit_cost' => 'Solar cost/MWp',
+            'total_cost' => 'Total cost',
+            'unit_sales' => 'Solar sales/MWp',
+            'total_sales' => 'Total sales amount',
+        ],
+        'enh_eih' => [
+            'length_km' => 'Km',
+            'unit_cost' => 'Line cost/km',
+            'total_cost' => 'Total cost',
+            'unit_sales' => 'Line sales/km',
+            'total_sales' => 'Total sales',
+        ],
+        'res' => [
+            'res_material_amount' => 'Respark material',
+            'res_construction_amount' => 'Respark construction',
+            'res_assembly_amount' => 'Respark assembly',
+        ],
     ],
 
     'fields' => [

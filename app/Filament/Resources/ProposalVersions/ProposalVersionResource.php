@@ -62,10 +62,17 @@ class ProposalVersionResource extends Resource
         return __('proposal_version.plural');
     }
 
+    /**
+     * D-158 (5 Ekim 2026 kullanici talimati: "proposal-versions kismini ortadan
+     * kaldirabiliriz, bir teklifin en guncel surumu zaten belli oluyor"): B43 ile
+     * ayri surum sayfalari kapanir; surumler teklif sayfasindaki "Surumler"
+     * penceresinde gorulur. B43 oncesi (madde madde girisli eski ekranlar) acik kalir.
+     */
     public static function canAccess(): bool
     {
         return FeatureFlags::enabled(Feature::Proposals)
             && SchemaReadiness::hasBatch('B16')
+            && ! SchemaReadiness::hasBatch('B43')
             && parent::canAccess();
     }
 
@@ -110,7 +117,7 @@ class ProposalVersionResource extends Resource
                             ->native(false),
                         Textarea::make('summary')
                             ->label(__('proposal_version.fields.summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
@@ -158,6 +165,13 @@ class ProposalVersionResource extends Resource
 
     public static function getRelations(): array
     {
+        // B43 (D-155, kullanici karari): sartname uygunlugu, deviasyon listesi, marka
+        // listesi ve sorumluluk matrisi madde madde girilmez, teklif belgesi olarak
+        // yuklenir; maliyet tahmini proje kapsamindadir. Eski satirlar veritabaninda kalir.
+        if (SchemaReadiness::hasBatch('B43')) {
+            return [DocumentsRelationManager::class];
+        }
+
         return [
             DocumentsRelationManager::class,
             ComplianceItemsRelationManager::class,

@@ -30,6 +30,8 @@ final class PersonnelForm
                 ->icon(Heroicon::OutlinedIdentification)
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
+                    // Avatar 128 px sabit dairedir: kisa hucreye sigar, ad ve iletisim
+                    // alanlari yanina gelir; tam satir yok (D-157).
                     FileUpload::make('photo_path')
                         ->label(__('personnel.fields.photo'))
                         ->image()
@@ -38,7 +40,7 @@ final class PersonnelForm
                         ->disk('public')
                         ->directory('personel-fotograflari')
                         ->maxSize(4096)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::SHORT),
                     TextInput::make('full_name')
                         ->label(__('personnel.fields.full_name'))
                         ->prefixIcon(Heroicon::OutlinedUser)

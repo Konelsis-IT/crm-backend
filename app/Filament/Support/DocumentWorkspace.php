@@ -390,7 +390,7 @@ final class DocumentWorkspace
                             ->default((string) $document->title)
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         Select::make('language')
                             ->label(__('document_revision.fields.language'))
                             ->options(['tr' => 'Türkçe', 'en' => 'English'])
@@ -406,9 +406,11 @@ final class DocumentWorkspace
                         Textarea::make('change_summary')
                             ->label(__('document_revision.fields.change_summary'))
                             ->rows(2)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                     ])),
+                // Icerik alanlari 12 sutunlu olcekle boyutlanir; tam satir yok (D-157).
                 Section::make(__('document_revision.sections.content'))
+                    ->columns(FieldGrid::COLUMNS)
                     ->components(self::revisionContentFields(true)),
             ])
             ->action(function (array $data, LivewireComponent $livewire) use ($document): void {
@@ -546,6 +548,8 @@ final class DocumentWorkspace
     /**
      * Revizyon icerigi alanlari: dosya yukle ya da sistemde yaz. Dokuman
      * olusturma formu, yeni surum modali ve revizyon listesi bunu paylasir.
+     * Genislikler 12 sutunlu olcektedir (tam satir yok, D-157); alanlari alan
+     * bolum FieldGrid::COLUMNS izgarasi kullanir.
      *
      * @return list<Component>
      */
@@ -570,7 +574,9 @@ final class DocumentWorkspace
                 ->live()
                 ->visible($authoring && $forCreate)
                 ->dehydrated(false)
-                ->columnSpanFull(),
+                // Iki simgeli dugme ve aciklamasi WIDE'da (4xl modalda) iki satira sariyordu.
+                ->columnSpan(FieldGrid::HALF)
+                ->columnStart(1),
             FileUpload::make($fileField)
                 ->label(__('document_revision.fields.file'))
                 ->helperText(__('document_revision.help.file'))
@@ -580,7 +586,7 @@ final class DocumentWorkspace
                 ->maxSize(UploadLimits::documentMaxKb())
                 ->visible(fn (Get $get): bool => $forCreate && $isUpload($get))
                 ->required(fn (Get $get): bool => $forCreate && $isUpload($get))
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::LONG),
             RichEditor::make($bodyField)
                 ->label(__('document_revision.fields.body'))
                 ->helperText(__('document_revision.help.body'))
@@ -594,7 +600,9 @@ final class DocumentWorkspace
                 ])
                 ->visible(fn (Get $get, ?Model $record): bool => $forCreate ? $isAuthored($get) : ($authoring && $record instanceof DocumentRevision && $record->isAuthored()))
                 ->required(fn (Get $get, ?Model $record): bool => $forCreate ? $isAuthored($get) : ($authoring && $record instanceof DocumentRevision && $record->isAuthored()))
-                ->columnSpanFull(),
+                // Belgenin yazildigi alan: tam satir degil (D-157) ama arac cubugu sigsin diye 3/4.
+                ->columnSpan(['default' => 1, 'md' => 6, 'xl' => 9])
+                ->columnStart(1),
             Hidden::make('file_original_name'),
         ];
     }

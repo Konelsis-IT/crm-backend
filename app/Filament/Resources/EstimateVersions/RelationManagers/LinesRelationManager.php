@@ -57,7 +57,7 @@ class LinesRelationManager extends RelationManager
                             ->label(__('estimate_line.fields.description'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         TextInput::make('quantity')
                             ->label(__('estimate_line.fields.quantity'))
                             ->numeric()

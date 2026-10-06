@@ -4,6 +4,12 @@ return [
     'label' => 'Potansiyel İş',
     'plural' => 'Potansiyel İşler',
 
+    // Liste sekmeleri (D-162).
+    'tabs' => [
+        'business_development' => 'İş Geliştirme',
+        'in_offer' => 'Teklifte',
+    ],
+
     'sections' => [
         'identity' => 'Müşteri ve başlık',
         'classification' => 'Sınıflandırma',
@@ -18,9 +24,18 @@ return [
         'details' => 'Potansiyel iş ayrıntıları',
         'summary_case' => 'Potansiyel iş özeti',
         'summary_proposal' => 'Teklif özeti',
+        // D-155: ihale adimi ve belgeler.
+        'tender' => 'İhale',
+        'tender_more' => 'Başka ihale bağla ya da yeni ihale aç',
+        'documents' => 'Belgeler',
+        // D-157: formdaki genel belgeler ("ekstra belgeler icinse Ek Belgeler diyelim").
+        'extra_documents' => 'Ek belgeler',
     ],
 
     'wizard' => [
+        'tender' => 'İhale',
+        'tender_description' => 'İhale ilanı (varsa)',
+        'tender_form_description' => 'İlan bilgileri ve yayın',
         'case' => 'Potansiyel iş',
         'case_description' => 'Müşteri, başlık ve iş bilgileri',
         'proposal' => 'Teklif',
@@ -69,12 +84,21 @@ return [
         'proposal_letter_file' => 'Teklif mektubu',
         'attach_references' => 'Referanslar belgesini ekle',
         'attach_catalog' => 'Genel kataloğu ekle',
+        'tender_mode' => 'İhale',
+        'tender_notice' => 'İhale ilanı',
+        'case_documents' => 'Belge yükle',
+        'case_documents_current' => 'Yüklü belgeler',
+        'case_document' => 'Ek belge',
     ],
 
     'values' => [
         'yes' => 'Evet',
         'no' => 'Hayır',
         'none' => 'Seçilmedi',
+        'tender_none' => 'İhale yok',
+        'tender_keep' => 'Değişiklik yok',
+        'tender_existing' => 'Mevcut ihaleyi bağla',
+        'tender_new' => 'Yeni ihale aç',
     ],
 
     'relation' => [
@@ -98,14 +122,31 @@ return [
         'create' => 'Potansiyel iş oluştur',
     ],
 
+    // D-161: durum dugmesi (detayda sabit, duzenlemede degistirilir).
+    'status' => [
+        'fixed' => 'Durum düzenleme ekranından değiştirilir',
+        'change' => 'Durumu değiştirmek için tıklayın',
+        'no_targets' => 'Bu durumdan elle geçiş yok',
+        'modal_heading' => 'Durumu değiştir',
+        'modal_description' => 'Şu anki durum: :status. Yeni durum hemen kaydedilir; formdaki diğer alanlar ve teklif sürümleri etkilenmez.',
+        'target' => 'Yeni durum',
+    ],
+
     'messages' => [
         'status_changed' => 'Durum güncellendi.',
         'done' => 'İşlem tamamlandı.',
         'created' => 'Potansiyel iş oluşturuldu: :code',
+        'draft_saved' => 'Potansiyel iş taslak olarak kaydedildi: :code',
     ],
 
     'help' => [
         'edit_intro' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı üç adımı kullanır. İlk adımdaki alanlar "Kaydet" ile kaydedilir; teklifler alttaki "Teklifler" sekmesinde yönetilir, projeye dönüşüm anında uygulanır.',
+        'edit_intro_chain' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı dört adımı kullanır: İhale → Potansiyel iş → Teklif → Proje. Potansiyel iş adımındaki alanlar "Kaydet" ile kaydedilir; teklif oluşturma ve düzenleme kendi adımlı ekranında açılır.',
+        'tender_existing' => 'Henüz bir potansiyel işe bağlanmamış ihaleler listelenir.',
+        'no_tender' => 'Bu potansiyel iş bir ihaleye bağlı değil.',
+        'case_documents' => 'Kontrol listesine girmeyen diğer belgeler (birden çok dosya seçilebilir). Madde belgeleri kontrol listesinde kendi maddesinin yanından yüklenir. Belgeler Dokümanlar\'da saklanır.',
+        'scope_types_first' => 'Proje kapsamı için önce potansiyel işte proje tipi seçilmelidir.',
+        'scope_types_chain' => 'Seçilen tipe göre teklif öncesi kontrol listesi açılır; proje kapsamı (tutarlar ve kapsam listesi) teklif adımında girilir.',
         'proposal_step' => 'İşaretliyse potansiyel işle birlikte ilk teklif (kendi TKLF numarasıyla) ve taslak ilk sürümü açılır; potansiyel iş "Teklif hazırlanıyor" durumuna geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
         'proposal_title' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
         'proposal_table' => 'Bu potansiyel işin teklifleri sayfanın altındaki "Teklifler" sekmesinde: yeni teklif, seçili yapma ve düzenleme oradan. Sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir; sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',

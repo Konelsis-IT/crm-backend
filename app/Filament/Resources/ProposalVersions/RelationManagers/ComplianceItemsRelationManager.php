@@ -57,7 +57,7 @@ class ComplianceItemsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('compliance_item.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('compliance_state')
                             ->label(__('compliance_item.fields.compliance_state'))
                             ->options(ComplianceState::class)
@@ -66,7 +66,7 @@ class ComplianceItemsRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('note')
                             ->label(__('compliance_item.fields.note'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         TextInput::make('sort_order')
                             ->label(__('compliance_item.fields.sort_order'))
                             ->numeric()

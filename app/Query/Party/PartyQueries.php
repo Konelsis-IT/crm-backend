@@ -10,6 +10,7 @@ use App\Models\Party\Party;
 use App\Models\Party\PartyRole;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 /**
  * Taraf listesi sorgulari (D-95).
@@ -117,6 +118,35 @@ final class PartyQueries
             ->mapWithKeys(fn (ContactRelationship $contact): array => [(int) $contact->getKey() => $contact->displayName()])
             ->sort()
             ->all();
+    }
+
+    /**
+     * Ayni adla kayitli taraf (arsivliler dahil; kucuk harf ve bosluk farki
+     * gozetilmez, PartyService::normalize ile ayni kural). Hizli firma ekleme
+     * cift kaydi onler (D-156).
+     *
+     * @return array{id: int, name: string, archived: bool}|null
+     */
+    public function sameName(string $name): ?array
+    {
+        $normalized = Str::of($name)->lower()->squish()->value();
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        /** @var Party|null $party */
+        $party = Party::query()
+            ->where('normalized_name', $normalized)
+            // MySQL artan siralamada NULL once gelir: aktif kayit onde.
+            ->orderBy('archived_at')
+            ->first(['id', 'display_name', 'archived_at']);
+
+        return $party === null ? null : [
+            'id' => (int) $party->getKey(),
+            'name' => (string) $party->display_name,
+            'archived' => $party->archived_at !== null,
+        ];
     }
 
     /** Tarafin gorunen adi (sihirbaz ozet karti icin); taraf yoksa null. */

@@ -76,10 +76,10 @@ class ActivitiesRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('outcome_summary')
                             ->label(__('bd_activity.fields.outcome_summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Textarea::make('next_action')
                             ->label(__('bd_activity.fields.next_action'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         DatePicker::make('next_action_due_at')
                             ->label(__('bd_activity.fields.next_action_due_at'))
                             ->displayFormat('d.m.Y'),

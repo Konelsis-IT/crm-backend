@@ -94,6 +94,10 @@ final class PermissionSubjects
         'BusinessDevelopmentActivity' => 'BusinessCase',
         'BusinessDevelopmentActivityParticipant' => 'BusinessCase',
         'BusinessCaseScope' => 'BusinessCase',
+        // B43 (D-155): kontrol listesi cevaplari, potansiyel is belgeleri, teklif kapsamlari.
+        'BusinessCaseChecklistAnswer' => 'BusinessCase',
+        'BusinessCaseDocument' => 'BusinessCase',
+        'ProposalVersionScope' => 'Proposal',
         'ProposalDocument' => 'Proposal',
         'ComplianceItem' => 'Proposal',
         'Deviation' => 'Proposal',

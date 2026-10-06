@@ -4,6 +4,11 @@ return [
     'label' => 'Potential job',
     'plural' => 'Potential jobs',
 
+    'tabs' => [
+        'business_development' => 'Business development',
+        'in_offer' => 'In offer',
+    ],
+
     'sections' => [
         'identity' => 'Customer and title',
         'classification' => 'Classification',
@@ -18,9 +23,16 @@ return [
         'details' => 'Business case details',
         'summary_case' => 'Business case summary',
         'summary_proposal' => 'Proposal summary',
+        'tender' => 'Tender',
+        'tender_more' => 'Link another tender or open a new one',
+        'documents' => 'Documents',
+        'extra_documents' => 'Additional documents',
     ],
 
     'wizard' => [
+        'tender' => 'Tender',
+        'tender_description' => 'Tender notice (if any)',
+        'tender_form_description' => 'Notice details and publication',
         'case' => 'Business case',
         'case_description' => 'Customer, title and business details',
         'proposal' => 'Proposal',
@@ -69,12 +81,21 @@ return [
         'proposal_letter_file' => 'Proposal letter',
         'attach_references' => 'Attach the references document',
         'attach_catalog' => 'Attach the general catalogue',
+        'tender_mode' => 'Tender',
+        'tender_notice' => 'Tender notice',
+        'case_documents' => 'Upload documents',
+        'case_documents_current' => 'Uploaded documents',
+        'case_document' => 'Additional document',
     ],
 
     'values' => [
         'yes' => 'Yes',
         'no' => 'No',
         'none' => 'Not selected',
+        'tender_none' => 'No tender',
+        'tender_keep' => 'No change',
+        'tender_existing' => 'Link an existing tender',
+        'tender_new' => 'Open a new tender',
     ],
 
     'relation' => [
@@ -98,13 +119,29 @@ return [
         'create' => 'Create business case',
     ],
 
+    'status' => [
+        'fixed' => 'The status is changed on the edit screen',
+        'change' => 'Click to change the status',
+        'no_targets' => 'No manual change from this status',
+        'modal_heading' => 'Change status',
+        'modal_description' => 'Current status: :status. The new status is saved at once; other form fields and proposal versions are not affected.',
+        'target' => 'New status',
+    ],
+
     'messages' => [
         'status_changed' => 'Status updated.',
         'done' => 'Done.',
         'created' => 'Business case created: :code',
+        'draft_saved' => 'Potential job saved as a draft: :code',
     ],
 
     'help' => [
+        'edit_intro_chain' => 'The edit screen uses the same four steps as the creation wizard: Tender → Potential job → Proposal → Project. Fields in the potential job step are saved with "Save"; creating and editing proposals opens their own stepped screen.',
+        'tender_existing' => 'Lists tenders that are not linked to a potential job yet.',
+        'no_tender' => 'This potential job is not linked to a tender.',
+        'case_documents' => 'Other documents outside the checklist (several files allowed). Item documents are uploaded next to their item in the checklist. Documents are kept in Documents.',
+        'scope_types_first' => 'Choose a project type on the potential job first to enter the project scope.',
+        'scope_types_chain' => 'The pre-offer checklist opens for the selected types; the project scope (amounts and scope list) is entered in the proposal step.',
         'edit_intro' => 'The edit screen uses the same three steps as the creation wizard. Fields in the first step are saved with "Save"; proposals are managed in the "Proposals" tab below and the conversion applies instantly.',
         'proposal_step' => 'When checked, the first proposal (with its TKLF number) and a draft first version are opened together with the business case, which moves to "Preparing proposal". Version details can be changed later from the proposal.',
         'proposal_title' => 'Leave blank to use the business case title.',

@@ -100,6 +100,15 @@ If custom frontend code is genuinely required:
 
 A broad request to build a feature and full repository access are not frontend approval.
 
+React for designs Filament cannot produce (user decision, 2026-10-05, D-157). The user said: "istediğim tasarım Filament ile olmadığında React ile yapabilirsin. Saçma sapan tasarımlar yapma. Gerektiğinde React'e başvur!"
+
+- When a design the user asks for cannot be built well from Filament components, build it in React. Do not ship a weak Filament approximation.
+- Use the project's UMD React runtime (`resources/js/vendor/react`, `ReactRuntime`; no build step, `React.createElement`), as the work board, the control matrix and the pre-offer checklist board do.
+- Keep the state in Filament/Livewire. For example, `App\Filament\Forms\Components\ChecklistBoard` is a Filament field whose Blade view mounts React. It reads its configuration from a `data-config` attribute that Livewire re-renders, and writes with `$wire.$set(path, value, false)`.
+- Register the assets `loadedOnRequest()` and load them only on the pages that need them (a scoped `BODY_END` render hook).
+- In the handoff, name the Filament limitation and the files.
+- Styling for convenience and layout shortcuts still fall under the boundary above.
+
 ### Date input standard (user decision, 2026-09-16)
 
 There is exactly one date input in this project. Every date-related field, on every page, modal, relation manager, wizard step, and repeater row, is:
@@ -120,11 +129,22 @@ The "Oluştur & yeni oluştur" (create & create another) button is disabled syst
 - Do not design flows that depend on creating another record from the same form; the user saves, then opens a new form.
 - `tools/safe-verify.php` fails when any of these appear or when the provider lines are missing.
 
-### Field width standard (user decision, 2026-09-16)
+### Field width standard (user decisions, 2026-09-16 and 2026-10-05, D-157)
 
-Do not default new form/infolist fields to a full-width row just because that is the easiest thing to write. `FieldGrid::fields()` already sizes every field by content (`FieldGrid::SHORT`/`NORMAL`/`WIDE`/`HALF`/`FULL`); only reach for `->columnSpanFull()` when the field genuinely needs the whole row (a textarea, an upload, a repeater, a long free-text field). A short field (a code, a date, a two-option select, an amount) belongs at `SHORT`/`NORMAL`, never `FULL`, so several of them share a row instead of stacking one per line.
+The user's rule of 2026-10-05: "Hiçbir düzenleme/oluşturma ekranında schema boyutu olarak tüm satır alan olarak seçilmemeli ... Compact olmalı, gerektiği kadar bir alan olmalıdır. Tüm satır doldurulmuş anlamsız böyle satırı full dolduran bir yapı hiç olmayacak projede."
 
-- Before writing `->columnSpanFull()` on a `TextInput`/`Select`/`Toggle`/short field, check whether it could sit at `FieldGrid::SHORT`, `NORMAL`, `WIDE`, or `HALF` next to its neighbours instead. Only genuinely wide content (textarea, rich text, file upload, repeater, a field that must stand alone) gets `FULL`.
+No input field on any create/edit screen (page, wizard step, modal, relation manager form) spans the whole row. Every field takes only the width its content needs.
+
+- `FieldGrid::fields()` sizes fields by content:
+  - `SHORT`: code, date, number, currency, toggle.
+  - `NORMAL`: single select.
+  - `WIDE`: name, title, address line, multi-select.
+  - Long content (textarea, rich text, file upload, tags, key-value): `LONG` in a 12-col section (half a row at `xl`), `HALF_LONG` in a `HALF_COLUMNS` section (4/6), `MODAL_LONG` in a `MODAL_COLUMNS` modal (half).
+- Never write `->columnSpanFull()`, `->columnSpan(FieldGrid::FULL)` or a `'full'` span on an input field, not even inside a ternary. `tools/safe-verify.php` ("Compact fields") fails on it.
+- `FULL` is only for layout containers (Section, Grid, Group, Repeater, embedded tables) and for option lists whose options are laid out in `->columns(...)` (CheckboxList / Radio / ToggleButtons).
+- A field in a one-column parent fills the row whatever span it has. Give the parent a grid: `FieldGrid::COLUMNS` on pages, `FieldGrid::MODAL_COLUMNS` (with `FieldGrid::modal([...])`) in modals.
+- Empty space beside a compact field is intended. The user asked for it ("yanları boş kalsın") rather than a stretched field. Use `->columnStart(1)` when a field should begin its own row.
+- A short field (a code, a date, a two-option select, an amount) belongs at `SHORT`/`NORMAL`, so several of them share a row instead of stacking one per line.
 - Two `Section`s can sit side by side (`w-1/2` each) by giving both `->columnSpan(FieldGrid::HALF)` and putting the parent `Step`/`Schema` on `FieldGrid::COLUMNS` (a `->columns(1)` parent makes any child `columnSpan` a no-op — every child fills the single column regardless of the span you gave it).
 - A `Section` set to `FieldGrid::HALF` must also get its own inner grid narrowed, or its fields collapse into unreadably thin columns. Tailwind breakpoints react to the viewport, not to how wide the section actually renders (there is no container query here): a half-width section whose own grid still claims the full `FieldGrid::COLUMNS` (`xl` 12) sizes a `SHORT` field at `2/12` of the *page*, not of the section it is actually in, so at `xl` it renders at roughly `2/12` of half the page — a few dozen pixels, with the label text wrapping one letter per line. Give that section `FieldGrid::HALF_COLUMNS` instead (`FieldGrid::group($fields, ['my_group' => [..., 'columnSpan' => FieldGrid::HALF, 'columns' => FieldGrid::HALF_COLUMNS]])`) so its own fields size themselves against the space it actually has.
 - After changing a shared layout like this, verify what actually renders — a schema built in a scratch script only proves the `columnSpan`/`columns` values are correct, not that the page looks right. Open the page in the browser preview at a desktop width (`xl` breakpoint, e.g. 1440px) and confirm nothing is visually cramped or wrapped before calling the change done.
@@ -136,7 +156,61 @@ Users never type technical keys. Catalog tables keep their `code` column (and do
 
 ### Yearly business codes (user decision, 2026-09-28, D-132)
 
-The acquisition chain is shown as Potansiyel iş → Teklif → Proje ("İş dosyası" is no longer a UI term; tables and classes keep the `business_case` names). Codes are `PREFIX-YYYY-NNNN` with the year taken automatically from the institution day: potential job `POTIS`, each proposal its own `TKLF` (`proposals.proposal_no`), project `PRJ`; every prefix restarts at 0001 each year. Allocate them only through `App\Services\Numbering\YearlyCodeAllocator::next()` inside the writing transaction (row-locked counter in `business_code_sequences`, gapless, rolled back with the transaction), and issue business codes through `BusinessCaseService::issueCode()`; read a case's current code with `BusinessCase::caseCode()`. Never build or type these codes by hand. Wherever a proposal is listed or shown, also show the POTIS code of its potential job so the link is visible. Before B40 is applied the legacy `TKLF-n` / `PRJ-n` numbering keeps running.
+The acquisition chain is shown as Potansiyel iş → Teklif → Proje (since D-155: İhale → Potansiyel iş → Teklif → Proje; "İş dosyası" is no longer a UI term; tables and classes keep the `business_case` names). Codes are `PREFIX-YYYY-NNNN` with the year taken automatically from the institution day: potential job `POTIS`, each proposal its own `TKLF` (`proposals.proposal_no`), project `PRJ`; every prefix restarts at 0001 each year. Allocate them only through `App\Services\Numbering\YearlyCodeAllocator::next()` inside the writing transaction (row-locked counter in `business_code_sequences`, gapless, rolled back with the transaction), and issue business codes through `BusinessCaseService::issueCode()`; read a case's current code with `BusinessCase::caseCode()`. Never build or type these codes by hand. Wherever a proposal is listed or shown, also show the POTIS code of its potential job so the link is visible. Before B40 is applied the legacy `TKLF-n` / `PRJ-n` numbering keeps running.
+
+### Acquisition chain screens (user decision, 2026-10-05, D-155)
+
+- The chain is İhale → Potansiyel iş → Teklif → Proje. The create and edit pages of tenders, potential jobs and proposals are one four-step `SaveableWizard` built by `App\Filament\Support\BusinessCaseWizard` (`createSteps`, `proposalCreateSteps`, `proposalEditSteps`, `tenderSteps`). Each page opens on its own record's step; the other steps show summary cards and links. Do not add separate single-page create or edit forms for these records.
+- A tender is created without a potential job. A potential job is opened from it (`?ihale=ID`, tender preselected and locked) or links or creates a tender in its first step.
+- Project scope amounts live on the proposal version (`proposal_version_scopes`, `ProposalVersionScopeService`); the potential job keeps only the project types. The margin is computed from the scope and is never an input.
+- A proposal edit never changes a non-draft version in place. A real change in fields, scope or documents creates a new version through `AcquisitionIntakeService::reviseProposal()`; documents are carried over and a re-upload becomes a new revision of the same document. There is no "new version" button.
+- Proposal versions have no pages of their own (D-158, B43): `ProposalVersionResource` is closed and the Sürümler tab is gone.
+  - The proposal page always shows the current version.
+  - Its "Sürümler" dropdown (`ProposalDetail::versionsAction`) opens an older version read-only in a modal: version card, scope card, documents with download links.
+- Never show a document twice (D-158).
+  - A new version links the same revision of every unchanged document. It never creates a new document.
+  - The proposal Dokümanlar tab lists only the current version's documents.
+  - Uploads there go through `AcquisitionIntakeService::uploadProposalDocument()`: a new revision or a new document, plus a new proposal version.
+  - There is no manual revision picking, editing or deleting of proposal document rows.
+- The potential job view shows the checklist as the same React board in read-only mode (`ChecklistBoardEntry`). That board is the only place the offer heat appears on the page.
+- Spec compliance, deviation, brand and responsibility lists are uploaded documents until KonelsisAI arrives. Do not bring back item-by-item entry without the user's approval.
+- Pre-offer checklist definitions live only in `App\Support\Acquisition\ChecklistTemplates`: questions, weights, rule 1.3 → Bütçesel, and the call-letter document being required unless the project is licensed. Change them there, not in screens.
+- Heat (D-159) = Σ item weight × (favourable questions + uploaded item document) / (questions + 1). An item's document weighs the same as each of its three questions.
+  - Always pass the document presence: `heat($templates, $answers, $license, $documents)`, `BusinessCaseDocumentService::itemPresence()`.
+  - The React board applies the same rule.
+  - An item without a document shows "Belge eklenmedi" on the read-only board.
+- In a licensed project (Önlisans / Lisans), the call-letter item is optional (D-157):
+  - It does not count toward the heat. Its 35% is shared by the other items in proportion (`weights()`, `displayWeights()`).
+  - Rule 1.3 does not apply.
+  - Always pass the licence status to `heat()` / `forcesBudgetary()`.
+- Question texts are under `checklist.questions.{template}.q1_1`. A dotted key ("1.1") would turn into a nested path in the translator.
+- The checklist screen is the React board `ChecklistBoard` (D-157):
+  - Clicking a cell cycles – → ✓ → ✗ → –, like the control matrix. "–" means unknown and is stored as null.
+  - The colour shows whether the answer is favourable.
+  - The heart, the share of answered questions and the reachable heat update live.
+  - Each item has a small document button that uploads through Livewire. On save it becomes a document, or a new revision of the existing one.
+- Proje durumu is a dropdown in Sınıflandırma, at Teklif tipi width, on its own row.
+- Ek belgeler sits under Sınıflandırma.
+- In the potential job step, "Kaydet" and "İleri" both open the summary modal (`ConfirmsChecklist::checklistSummaryAction`, `ChecklistSchema::summaryHtml`). It shows:
+  - each question's answer;
+  - the heat (chance of success);
+  - answered questions and required documents;
+  - the state for moving to the proposal;
+  - a nudge to fill the open items.
+- "İleri" is intercepted by `SaveableWizard::guardNextOnSteps()`.
+- Tender, potential job and proposal saves can be drafts (`DraftSupport`, `is_draft` + `draft_step`). Clicking a draft row resumes at the saved step (`BusinessCaseWizard::resumeStepId`).
+- "Düzenle" always opens the step of the record it was pressed on (D-160): potential job edit → Potansiyel iş step, tender → İhale, proposal → Teklif. Never jump to the most advanced step of the chain.
+- Until B43 is applied, the old three-step screens run. Gate every B43 element with `SchemaReadiness::hasBatch('B43')` (`BusinessCaseWizard::b43()`).
+
+### No delete, archive instead (user decision, 2026-10-05, D-156)
+
+The user's rule: "Projede silme işlemi yok dedik ama arşive alınabilmeli. Arşiv kısmı olacak. Arayüzde defaultta görülmese de olur, filtre ile arşivdekileri göster seçilir."
+
+- The interface never offers hard delete for business records, meaning records with their own list, history or links (parties, meeting notes, meeting plans, and any record the user names). A record that must be taken out of use is archived with one nullable `archived_at` column and nothing else (user, 2026-10-05: "archived_at ekle bitsin iş bu kadar basit"): no archive table, no archived-by or reason column, no extra index, so do not use `KonelsisMigration::auditArchived()` for new archives. Who archived it lives in Personel Hareketleri. Archiving is a plain confirmation (`requiresConfirmation()`), with no reason field. Parties keep their older D-99 columns; do not copy them. The service gets `archive()` and `restore()` methods, each recording `{subject}.archived` / `{subject}.restored` in Personel Hareketleri. Archived records cannot be changed (`RecordArchivedException`) until they are restored.
+- Child detail rows edited inside their parent (address and contact lines, estimate or version items, links) keep the delete they have today. Do not convert them unless the user asks.
+- Archived records are hidden by default and shown through a filter, not a separate menu. The table gets the "Arşiv" `SelectFilter` with Aktif (default) / Arşivlenenler / Tümü, backed by a query-class `archiveScope()`. Every other read that would surface them (calendars, reminders, counts, "son görüşme" style summaries, link searches) excludes them through the model's `notArchived()` scope. A dedicated archive tab is added only when the user asks for one, as with archived proposals later.
+- Reference implementations: parties (S3, D-99: `PartyService::archive/restore`, `PartyQueries::archiveScope`), meeting notes and meeting plans (B44: `PartyMeetingNoteService`, `MeetingPlanService`, `MeetingNoteComponents::archiveAction()`). When a record has mirrored or derived rows, archive them together and restore them together; meeting plans that come from a note carry the note's archive time.
+- Existing `delete()` service methods may stay for import corrections (seeders), but no Filament action calls them.
 
 ### Table interaction standard (user decision, 2026-09-25, D-125)
 

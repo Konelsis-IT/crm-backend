@@ -153,7 +153,7 @@ final class ProjectWizard
                 ->directory('document-uploads-tmp')
                 ->storeFileNamesIn('cover_original_name')
                 ->maxSize(8192)
-                ->columnSpan($isEdit ? FieldGrid::FULL : FieldGrid::HALF),
+                ->columnSpan($isEdit ? FieldGrid::LONG : FieldGrid::HALF),
             Hidden::make('cover_original_name'),
             TextInput::make('cover_caption')
                 ->label(__('project.fields.cover_caption'))
@@ -171,7 +171,9 @@ final class ProjectWizard
             ->icon(Heroicon::OutlinedCamera)
             ->completedIcon(Heroicon::OutlinedCamera)
             ->formWrapper(! $isEdit)
-            ->schema($photoComponents);
+            // Tam satir alan yok (D-157): kapak ve aciklamasi izgarada, foto tablosu tam satir.
+            ->columns(FieldGrid::COLUMNS)
+            ->schema(FieldGrid::fields($photoComponents));
 
         return [
             Step::make(__('project.wizard.identity'))
@@ -215,7 +217,7 @@ final class ProjectWizard
                 ->label(__('project.fields.name'))
                 ->required()
                 ->maxLength(255)
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::WIDE),
             Select::make('customer_party_id')
                 ->label(__('project.fields.customer_party'))
                 ->relationship('customerParty', 'display_name')
@@ -250,7 +252,7 @@ final class ProjectWizard
             Textarea::make('description')
                 ->label(__('project.fields.description'))
                 ->rows(4)
-                ->columnSpan($isEdit ? FieldGrid::FULL : FieldGrid::HALF),
+                ->columnSpan($isEdit ? FieldGrid::LONG : FieldGrid::HALF),
             // Olusturmada kapak gorseli aciklamanin yanindadir (yarim / yarim; kullanici karari 10 Eylul 2026).
             ...($isEdit ? [] : $photoComponents),
             Hidden::make('row_version')->hiddenOn('create'),
@@ -356,11 +358,11 @@ final class ProjectWizard
                 ->label(__('project.fields.site_address_line1'))
                 ->helperText(__('project.help.site_address'))
                 ->maxLength(255)
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::WIDE),
             TextInput::make('site_address_line2')
                 ->label(__('project.fields.site_address_line2'))
                 ->maxLength(255)
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::WIDE),
             Select::make('site_country_code')
                 ->label(__('project.fields.site_country'))
                 ->options(fn (): array => app(ReferenceOptions::class)->countries())
@@ -394,7 +396,7 @@ final class ProjectWizard
                 ->native(false),
             Textarea::make('site_note')
                 ->label(__('project.fields.site_note'))
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::LONG),
         ];
     }
 

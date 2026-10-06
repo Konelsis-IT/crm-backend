@@ -24,18 +24,22 @@ enum AcquisitionStage: string implements HasColor, HasLabel
     case Lost = 'lost';
     case Cancelled = 'cancelled';
 
+    /**
+     * Her durumun kendi rengi (D-161, 6 Ekim 2026 kullanici talimati); ek tonlar
+     * App\Filament\Support\StatusColors ile panele kayitlidir.
+     */
     public function getColor(): string
     {
         return match ($this) {
-            self::BusinessDevelopment => 'gray',
-            self::OfferPreparation => 'info',
-            self::OfferReview => 'info',
-            self::Submitted => 'primary',
-            self::Negotiation => 'warning',
+            self::BusinessDevelopment => 'slate',
+            self::OfferPreparation => 'sky',
+            self::OfferReview => 'indigo',
+            self::Submitted => 'violet',
+            self::Negotiation => 'amber',
             self::Won => 'success',
-            self::HandoverPreparing => 'info',
-            self::HandoverReview => 'info',
-            self::HandoverAccepted => 'success',
+            self::HandoverPreparing => 'teal',
+            self::HandoverReview => 'cyan',
+            self::HandoverAccepted => 'emerald',
             self::Lost => 'danger',
             self::Cancelled => 'gray',
         };

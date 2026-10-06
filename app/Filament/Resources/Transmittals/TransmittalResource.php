@@ -72,7 +72,7 @@ class TransmittalResource extends Resource
                         ->label(__('transmittal.fields.recipient_description'))
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Select::make('project_id')
                         ->label(__('transmittal.fields.project'))
                         ->relationship('project', 'name')

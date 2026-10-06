@@ -26,6 +26,7 @@ return [
     'record_not_found' => 'Kayıt bulunamadı.',
     'model_not_resolved' => 'Servisin çalışacağı model belirlenemedi: :service',
     'duplicate_record' => 'Bu kayıt zaten var.',
+    'record_archived' => 'Bu kayıt arşivde. Değiştirmek için önce arşivden çıkarın.',
 
     'personnel' => [
         'email_already_in_use' => 'Bu e-posta adresi zaten kullanılıyor: :email',

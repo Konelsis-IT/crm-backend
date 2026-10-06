@@ -96,7 +96,7 @@ class ContractVersionResource extends Resource
                             ->displayFormat('d.m.Y'),
                         Textarea::make('summary')
                             ->label(__('contract_version.fields.summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

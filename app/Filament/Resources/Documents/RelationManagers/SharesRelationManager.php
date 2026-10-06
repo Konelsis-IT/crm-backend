@@ -55,7 +55,7 @@ class SharesRelationManager extends RelationManager
                         ->label(__('document_share.fields.label'))
                         ->helperText(__('document_share.help.label'))
                         ->maxLength(120)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Toggle::make('allow_download')
                         ->label(__('document_share.fields.allow_download'))
                         ->default(true),

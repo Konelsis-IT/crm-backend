@@ -38,7 +38,7 @@ final class DocumentForm
                         ->helperText(__('document.help.title'))
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Select::make('document_type_id')
                         ->label(__('document.fields.document_type'))
                         ->helperText(__('document.help.document_type'))
@@ -57,7 +57,7 @@ final class DocumentForm
                         ->label(__('document.fields.description'))
                         ->helperText(__('document.help.description'))
                         ->rows(3)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                 ])),
             Section::make(__('document.sections.ownership'))
                 ->description(__('document.help.ownership'))
@@ -142,7 +142,7 @@ final class DocumentForm
                         ->label(__('document_revision.fields.change_summary'))
                         ->helperText(__('document.help.first_revision_note'))
                         ->rows(2)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                 ])),
             Hidden::make('row_version')->hiddenOn('create'),
         ]);

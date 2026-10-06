@@ -40,7 +40,7 @@ class ReviewsRelationManager extends RelationManager
                 ->components(FieldGrid::fields([
                         Textarea::make('comment')
                             ->label(__('department_handoff_review.fields.comment'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

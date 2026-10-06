@@ -113,7 +113,7 @@ class VersionsRelationManager extends RelationManager
                     ->color(ActionColors::SAVE)
                     ->icon(Heroicon::OutlinedCheckBadge)
                     ->requiresConfirmation()
-                    ->schema([
+                    ->schema(fn (Schema $schema): Schema => $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([
                 Select::make('decision')
                     ->label(__('department_handoff_version.fields.decision'))
                     ->options(ReviewDecision::class)
@@ -122,8 +122,8 @@ class VersionsRelationManager extends RelationManager
                     ->native(false),
                 Textarea::make('comment')
                     ->label(__('department_handoff_version.fields.comment'))
-                    ->columnSpanFull(),
-                    ])
+                    ->columnSpan(FieldGrid::MODAL_LONG),
+                    ])))
                     ->visible(fn (DepartmentHandoffVersion $record): bool => $record->status === \App\Enums\Acquisition\HandoffVersionStatus::Submitted)
                     ->action(function (DepartmentHandoffVersion $record, array $data): void {
                         try {

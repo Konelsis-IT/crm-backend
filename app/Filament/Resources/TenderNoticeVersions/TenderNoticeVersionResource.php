@@ -66,7 +66,7 @@ class TenderNoticeVersionResource extends Resource
                 ->components(FieldGrid::fields([
                         Textarea::make('summary')
                             ->label(__('tender_notice_version.fields.summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

@@ -84,10 +84,10 @@ class EstimateVersionResource extends Resource
                             ->maxValue(100),
                         KeyValue::make('exchange_rate_snapshot')
                             ->label(__('estimate_version.fields.exchange_rate_snapshot'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Textarea::make('notes')
                             ->label(__('estimate_version.fields.notes'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

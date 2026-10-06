@@ -1,11 +1,12 @@
 <?php
 
 return [
-    'label' => 'Sapma',
-    'plural' => 'Sapmalar',
+    // D-155: "Sapmalar" adi "Deviasyon listesi" oldu.
+    'label' => 'Deviasyon maddesi',
+    'plural' => 'Deviasyon listesi',
 
     'sections' => [
-        'main' => 'Sapma bilgileri',
+        'main' => 'Deviasyon bilgileri',
     ],
 
     'fields' => [
@@ -20,8 +21,8 @@ return [
     ],
 
     'relation' => [
-        'title' => 'Sapmalar',
-        'empty' => 'Henüz sapma yok.',
+        'title' => 'Deviasyon listesi',
+        'empty' => 'Henüz deviasyon maddesi yok.',
     ],
 
     'actions' => [

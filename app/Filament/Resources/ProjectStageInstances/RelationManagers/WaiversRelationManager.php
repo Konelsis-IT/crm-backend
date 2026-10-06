@@ -40,7 +40,7 @@ class WaiversRelationManager extends RelationManager
                 ->components(FieldGrid::fields([
                         Textarea::make('reason')
                             ->label(__('stage_waiver.fields.reason'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

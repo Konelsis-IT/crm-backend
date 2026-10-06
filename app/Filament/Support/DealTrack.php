@@ -12,10 +12,13 @@ use App\Enums\Acquisition\ProposalStatus;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Resources\TenderNotices\TenderNoticeResource;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Proposal;
+use App\Models\Acquisition\TenderNotice;
 use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Project\ProjectCatalogQueries;
+use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\Actions;
@@ -41,6 +44,9 @@ use Illuminate\Support\Number;
  * etiketin ustune gelince ne oldugu yazar). Proje yoksa acilis kosullari ve
  * yetki varsa gercek "Projeye donustur". Duz yesil: var olan kayit, kirmizi:
  * bu sayfa, gri: henuz yok. Stiller konelsis.css (kc-metro, D-141/D-143).
+ *
+ * B43 (D-155): zincir ihaleyle baslar. Ihale sayfasinda ilk durak "Buradasiniz"
+ * ihale; potansiyel is ve teklif sayfalarinda bagli ihaleler en ustte durur.
  */
 final class DealTrack
 {
@@ -66,6 +72,7 @@ final class DealTrack
         }
 
         return $this->section([
+            ...$this->tenderStops($case),
             $this->caseStop($case),
             $this->proposalHere($proposal, $case),
             $this->projectStop($case, $proposal),
@@ -77,10 +84,98 @@ final class DealTrack
         $case->loadMissing(self::RELATIONS);
 
         return $this->section([
+            ...$this->tenderStops($case),
             $this->caseHere($case),
             $this->proposalsStop($case),
             $this->projectStop($case, null),
         ]);
+    }
+
+    /**
+     * Ihale sayfasi (B43, D-155: zincir Ihale -> Potansiyel is -> Teklif ->
+     * Proje): "Buradasiniz" bu ihale; potansiyel is yoksa ihaleden acma yolu.
+     */
+    public function forTender(TenderNotice $notice): Component
+    {
+        $case = $notice->businessCase;
+
+        if ($case === null) {
+            return $this->section([
+                $this->tenderHere($notice),
+                $this->noCaseStop($notice),
+            ]);
+        }
+
+        $case->loadMissing(self::RELATIONS);
+
+        return $this->section([
+            $this->tenderHere($notice),
+            $this->caseStop($case),
+            $this->proposalsStop($case),
+            $this->projectStop($case, null),
+        ]);
+    }
+
+    /**
+     * Potansiyel is / teklif sayfasinda bagli ihaleler (B43); ihale yoksa durak
+     * gosterilmez (her is ihaleden gelmez).
+     *
+     * @return list<Component>
+     */
+    private function tenderStops(BusinessCase $case): array
+    {
+        if (! SchemaReadiness::hasBatch('B43')) {
+            return [];
+        }
+
+        $case->loadMissing(['tenderNotices.source', 'tenderNotices.issuerParty']);
+
+        return $case->tenderNotices->sortByDesc('captured_at')->values()->map(fn (TenderNotice $notice): Component => Group::make([
+            Flex::make([
+                Text::make(__('deal_track.tender').' · '.trim((filled($notice->external_notice_id) ? $notice->external_notice_id.' · ' : '').$notice->title))->weight(FontWeight::Bold),
+                ...($this->canView($notice) ? [Actions::make([$this->link('track_tender_'.$notice->getKey(), __('deal_track.go_tender'), TenderNoticeResource::getUrl('view', ['record' => $notice]))])->grow(false)] : []),
+            ]),
+            $this->chips([
+                [__('deal_track.chips.stage'), (string) ($notice->status?->getLabel() ?? ''), Heroicon::OutlinedFlag, $notice->status?->getColor()],
+                [__('deal_track.chips.source'), (string) ($notice->source?->name_tr ?? ''), Heroicon::OutlinedGlobeAlt, null],
+                [__('deal_track.chips.issuer'), (string) ($notice->issuerParty?->display_name ?? ''), Heroicon::OutlinedBuildingOffice2, null],
+            ]),
+        ])->extraAttributes(['class' => 'kc-metro-stop kc-done']))->all();
+    }
+
+    /** Ihale sayfasinda "Buradasiniz" karti: durum cumlesi ve ozet etiketler. */
+    private function tenderHere(TenderNotice $notice): Component
+    {
+        $version = $notice->currentVersion;
+
+        return Group::make([
+            $this->hereTitle(__('deal_track.tender').(filled($notice->external_notice_id) ? ' · '.$notice->external_notice_id : '')),
+            Text::make(__('deal_track.tender_now', ['status' => (string) ($notice->status?->getLabel() ?? '-')])),
+            $this->chips([
+                [__('deal_track.chips.source'), (string) ($notice->source?->name_tr ?? ''), Heroicon::OutlinedGlobeAlt, null],
+                [__('deal_track.chips.issuer'), (string) ($notice->issuerParty?->display_name ?? ''), Heroicon::OutlinedBuildingOffice2, null],
+                [__('deal_track.chips.published'), $version?->published_on?->format('d.m.Y') ?? '', Heroicon::OutlinedCalendarDays, null],
+                (bool) $notice->getAttribute('is_draft') ? [__('deal_track.chips.draft'), (string) __('app.values.draft'), Heroicon::OutlinedPencilSquare, 'gray'] : null,
+            ]),
+        ])->extraAttributes(['class' => 'kc-metro-stop kc-current']);
+    }
+
+    /** Ihalenin potansiyel isi yoksa: gri durak ve "Bu ihaleden potansiyel is olustur". */
+    private function noCaseStop(TenderNotice $notice): Component
+    {
+        $canCreate = Gate::allows('create', BusinessCase::class);
+
+        return Group::make([
+            Text::make(__('deal_track.case_none'))->weight(FontWeight::Bold)->color('gray'),
+            Text::make(__('deal_track.case_none_help'))->color('gray'),
+            ...($canCreate ? [Actions::make([
+                Action::make('track_create_case')
+                    ->label(__('tender_notice.actions.create_case'))
+                    ->icon(Heroicon::OutlinedBriefcase)
+                    ->color('gray')
+                    ->url(BusinessCaseResource::getUrl('create', [BusinessCaseWizard::QUERY_TENDER => $notice->getKey()])),
+            ])] : []),
+        ])->extraAttributes(['class' => 'kc-metro-stop kc-metro-last kc-todo']);
     }
 
     /** @param  list<Component>  $stops */
@@ -103,7 +198,7 @@ final class DealTrack
                 [__('deal_track.chips.customer'), (string) ($case->primaryParty?->display_name ?? ''), Heroicon::OutlinedBuildingOffice2, null],
                 [__('deal_track.chips.stage'), (string) $case->acquisition_stage->getLabel(), Heroicon::OutlinedFlag, $case->acquisition_stage->getColor()],
                 [__('deal_track.chips.type'), $this->projectType($case), Heroicon::OutlinedCube, null],
-                [__('deal_track.chips.scopes'), $this->scopes($case), Heroicon::OutlinedSquares2x2, null],
+                ...$this->scopeChips($case),
                 [__('deal_track.chips.value'), $this->money($case->estimated_value, $case->currency_code), Heroicon::OutlinedBanknotes, null],
                 [__('deal_track.chips.proposals'), __('deal_track.proposal_count', ['count' => $case->proposals->count()]), Heroicon::OutlinedClipboardDocumentList, null],
                 [__('deal_track.chips.owner'), (string) ($case->owner?->full_name ?? ''), Heroicon::OutlinedUserCircle, null],
@@ -385,12 +480,27 @@ final class DealTrack
         return (string) (app(ProjectCatalogQueries::class)->componentDefinitionOptions()[$code] ?? $code);
     }
 
-    private function scopes(BusinessCase $case): string
+    /**
+     * Proje tipleri: her tip kendi simgesi ve rengiyle ayri rozet (D-163; once
+     * "GES + TM" tek rozetti).
+     *
+     * @return list<array{0: string, 1: string, 2: Heroicon, 3: ?string}>
+     */
+    private function scopeChips(BusinessCase $case): array
     {
         return $case->scopes
-            ->map(static fn ($scope): string => $scope->scope_type instanceof ProjectScopeType ? (string) $scope->scope_type->getLabel() : (string) $scope->scope_type)
-            ->filter()
-            ->implode(' + ');
+            ->map(static function ($scope): array {
+                $type = $scope->scope_type instanceof ProjectScopeType ? $scope->scope_type : ProjectScopeType::tryFrom((string) $scope->scope_type);
+
+                return [
+                    (string) __('deal_track.chips.scopes'),
+                    (string) ($type?->getLabel() ?? $scope->scope_type),
+                    $type?->getIcon() ?? Heroicon::OutlinedSquares2x2,
+                    $type?->getColor(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function money(mixed $amount, ?string $currency): string

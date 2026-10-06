@@ -31,6 +31,11 @@ return [
     'check_sent' => 'Proposal sent to the customer',
     'check_won' => 'Proposal won',
     'handoff' => 'Operations handoff: :status',
+    'tender' => 'Tender',
+    'go_tender' => 'Go to tender',
+    'tender_now' => 'Tender status: :status',
+    'case_none' => 'Potential job · not yet',
+    'case_none_help' => 'Once the tender is assessed and pursued, a potential job is opened from it with the tender preselected.',
     'chips' => [
         'customer' => 'Customer',
         'stage' => 'Status',
@@ -51,6 +56,10 @@ return [
         'planned' => 'Planned',
         'site' => 'Site',
         'handoff' => 'Operations handoff',
+        'source' => 'Tender source',
+        'issuer' => 'Issuer',
+        'published' => 'Published on',
+        'draft' => 'Draft',
     ],
     'state' => [
         'draft' => ['headline' => 'Proposal in preparation', 'detail' => 'not sent to the customer yet.'],

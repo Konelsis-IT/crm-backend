@@ -91,7 +91,7 @@ class ProjectSupplyItemResource extends Resource
                         ->disabledOn('edit')
                         ->dehydratedWhenHidden(false)
                         ->native(false)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::NORMAL),
                     Select::make('item_kind')
                         ->label(__('project_supply_item.fields.item_kind'))
                         ->options(SupplyItemKind::class)
@@ -106,10 +106,10 @@ class ProjectSupplyItemResource extends Resource
                         ->label(__('project_supply_item.fields.name'))
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Textarea::make('specification')
                         ->label(__('project_supply_item.fields.specification'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Select::make('workstream_id')
                         ->label(__('project_supply_item.fields.workstream'))
                         ->options(fn (Get $get): array => app(ProjectCatalogQueries::class)->workstreamOptions((int) ($get('project_id') ?? 0)))
@@ -177,7 +177,7 @@ class ProjectSupplyItemResource extends Resource
                         ->displayFormat('d.m.Y'),
                     Textarea::make('note')
                         ->label(__('project_supply_item.fields.note'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

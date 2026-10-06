@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Party;
 
+use App\Exceptions\InvalidTransitionException;
 use App\Exceptions\Party\MeetingNoteProposalMismatchException;
+use App\Exceptions\RecordArchivedException;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Proposal;
 use App\Models\Party\PartyMeetingNote;
@@ -25,6 +27,11 @@ use Illuminate\Support\Carbon;
  * tarihli sonraki adimi planli satir olarak yansir; hatirlatma bu satir
  * uzerinden gider. Not bir planin sonucu olarak yaziliyorsa
  * (PLAN_CONTEXT) yeni satir acilmaz, o plan nota baglanir.
+ *
+ * Arsiv (B44, D-156: "Projede silme islemi yok ... arsive alinabilmeli"):
+ * not silinmez, archive() ile arsive alinir; ondan dogan plan satirlari ayni
+ * anla arsivlenir (MeetingPlanService::archiveForNote). restore() ikisini
+ * birlikte geri alir. Arsivdeki not duzenlenemez.
  */
 final class PartyMeetingNoteService extends AbstractService
 {
@@ -77,6 +84,12 @@ final class PartyMeetingNoteService extends AbstractService
         return $this->transactions->run(function () use ($record, $data): Model {
             /** @var PartyMeetingNote $current */
             $current = $this->show($record);
+
+            if ($current->isArchived()) {
+                throw RecordArchivedException::make();
+            }
+
+            unset($data['archived_at']);
             $data['party_id'] ??= $current->party_id;
 
             if (! array_key_exists('business_case_id', $data) && array_key_exists('proposal_ids', $data)) {
@@ -157,6 +170,10 @@ final class PartyMeetingNoteService extends AbstractService
         $note->proposals()->sync(array_fill_keys($proposalIds, ['created_by_personnel_id' => $actor]));
     }
 
+    /**
+     * Arayuzde silme yoktur (D-156); bu yol yalniz aktarim duzeltmelerinde
+     * (seeder) kullanilir.
+     */
     public function delete(Model|int|string $record): bool
     {
         return $this->transactions->run(function () use ($record): bool {
@@ -166,6 +183,62 @@ final class PartyMeetingNoteService extends AbstractService
             app(MeetingPlanService::class)->detachNote($note);
 
             return parent::delete($note);
+        });
+    }
+
+    /**
+     * Notu arsive alir (B44, D-156). Ondan dogan gorusme plani satirlari
+     * (gerceklesti satiri ve gerceklesmemis sonraki adim) ayni anla arsivlenir;
+     * boylece takvimde, listede ve hatirlatmalarda gorunmez. Yalniz archived_at
+     * yazilir; kimin arsivledigi hareket kaydindadir (party_meeting_note.archived).
+     */
+    public function archive(Model|int|string $record): PartyMeetingNote
+    {
+        if (! SchemaReadiness::hasBatch('B44')) {
+            throw InvalidTransitionException::make();
+        }
+
+        return $this->transactions->run(function () use ($record): PartyMeetingNote {
+            /** @var PartyMeetingNote $note */
+            $note = $this->lockForUpdate($record);
+
+            if ($note->isArchived()) {
+                throw InvalidTransitionException::make();
+            }
+
+            $at = Carbon::now('UTC');
+
+            $note->forceFill(['archived_at' => $at]);
+            $this->saveWithoutVersion($note);
+            $this->recordActivity($note, 'archived');
+
+            app(MeetingPlanService::class)->archiveForNote($note, $at);
+
+            return $note;
+        });
+    }
+
+    /** Arsivdeki notu ve onunla birlikte arsivlenen plan satirlarini geri alir. */
+    public function restore(Model|int|string $record): PartyMeetingNote
+    {
+        return $this->transactions->run(function () use ($record): PartyMeetingNote {
+            /** @var PartyMeetingNote $note */
+            $note = $this->lockForUpdate($record);
+
+            if (! $note->isArchived()) {
+                throw InvalidTransitionException::make();
+            }
+
+            /** @var Carbon $archivedAt */
+            $archivedAt = $note->archived_at;
+
+            $note->forceFill(['archived_at' => null]);
+            $this->saveWithoutVersion($note);
+            $this->recordActivity($note, 'restored');
+
+            app(MeetingPlanService::class)->restoreForNote($note, $archivedAt);
+
+            return $note;
         });
     }
 }

@@ -68,7 +68,7 @@ class MilestonesRelationManager extends RelationManager
                             ->minValue(0),
                         Textarea::make('description')
                             ->label(__('contract_milestone.fields.description'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

@@ -7,6 +7,11 @@ namespace App\Filament\Resources\MeetingPlans;
 use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
 use App\Enums\Party\MeetingChannel;
+use App\Enums\Party\PartyKind;
+use App\Enums\Party\PartyRoleCode;
+use App\Enums\Party\PartyRoleStatus;
+use App\Enums\Party\PartyStatus;
+use App\Exceptions\AbstractException;
 use App\Enums\Party\MeetingPlanSource;
 use App\Enums\Party\MeetingPlanStatus;
 use App\Filament\NavigationGroup;
@@ -16,14 +21,22 @@ use App\Filament\Resources\MeetingPlans\Pages\ListMeetingPlans;
 use App\Filament\Resources\MeetingPlans\Pages\MeetingPlanCalendar;
 use App\Filament\Resources\MeetingPlans\Pages\ViewMeetingPlan;
 use App\Filament\Resources\Parties\PartyResource;
+use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\FormState;
+use App\Filament\Support\MeetingNoteComponents;
 use App\Models\Party\MeetingPlan;
+use App\Models\Party\Party;
 use App\Models\Personnel\Personnel;
 use App\Query\Party\MeetingPlanQueries;
 use App\Query\Party\PartyQueries;
 use App\Query\Personnel\PersonnelQueries;
+use App\Query\Reference\ReferenceOptions;
+use App\Services\Party\PartyService;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -38,12 +51,14 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
 /**
@@ -107,6 +122,18 @@ class MeetingPlanResource extends Resource
                         ->options(fn (): array => app(PartyQueries::class)->searchOptions(''))
                         ->live()
                         ->afterStateUpdated(fn (Set $set) => $set('contact_relationship_id', null))
+                        // Firma listede yoksa (D-156, 5 Ekim 2026 kullanici talebi): "Firma ekle"
+                        // penceresiyle eklenir ve alanda secili gelir.
+                        ->createOptionForm(fn (): array => self::quickPartyFields())
+                        ->createOptionUsing(fn (array $data): int => self::createQuickParty($data))
+                        ->createOptionAction(fn (Action $action): Action => $action
+                            ->label(__('meeting_plan.quick_party.action'))
+                            ->tooltip(__('meeting_plan.quick_party.action'))
+                            ->modalHeading(__('meeting_plan.quick_party.heading'))
+                            ->modalDescription(__('meeting_plan.quick_party.description'))
+                            ->modalSubmitActionLabel(__('meeting_plan.quick_party.submit'))
+                            ->modalWidth('2xl')
+                            ->visible(fn (): bool => FeatureFlags::enabled(Feature::MeetingPlanQuickParty) && Gate::allows('create', Party::class)))
                         ->native(false)
                         ->columnSpan(FieldGrid::HALF),
                     Select::make('contact_relationship_id')
@@ -156,10 +183,76 @@ class MeetingPlanResource extends Resource
                         ->helperText(__('meeting_plan.help.note'))
                         ->rows(3)
                         ->maxLength(5000)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
+    }
+
+    /**
+     * "Firma ekle" penceresi: ad, taraf tipi ve ulke. Ayni adla kayitli firma
+     * varsa (arsivdekiler dahil) eklenmez, kullaniciya hangisi oldugu soylenir.
+     *
+     * @return list<\Filament\Schemas\Components\Component>
+     */
+    private static function quickPartyFields(): array
+    {
+        return [
+            Grid::make(['default' => 1, 'md' => 2])->components([
+                TextInput::make('display_name')
+                    ->label(__('meeting_plan.quick_party.name'))
+                    ->required()
+                    ->maxLength(255)
+                    ->rules([fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                        $same = app(PartyQueries::class)->sameName((string) $value);
+
+                        if ($same !== null) {
+                            $fail(__($same['archived'] ? 'meeting_plan.quick_party.exists_archived' : 'meeting_plan.quick_party.exists', ['name' => $same['name']]));
+                        }
+                    }])
+                    ->columnSpan(['default' => 1, 'md' => 1]),
+                Select::make('role_code')
+                    ->label(__('party_role.fields.role_code'))
+                    ->options(PartyRoleCode::availableOptions())
+                    ->default(PartyRoleCode::Customer->value)
+                    ->required()
+                    ->native(false),
+                Select::make('country_code')
+                    ->label(__('party.fields.country'))
+                    ->options(fn (): array => app(ReferenceOptions::class)->countries())
+                    ->default((string) config('konelsis.legal_entity.country', 'TR'))
+                    ->searchable()
+                    ->required()
+                    ->native(false),
+            ]),
+        ];
+    }
+
+    /** Yeni firma: kurum, "Aday" durumunda, secilen taraf tipiyle (PartyService). */
+    private static function createQuickParty(array $data): int
+    {
+        try {
+            /** @var Party $party */
+            $party = app(PartyService::class)->create([
+                'party_kind' => PartyKind::Organization->value,
+                'display_name' => (string) ($data['display_name'] ?? ''),
+                'country_code' => FormState::value($data['country_code'] ?? null) ?? 'TR',
+                'status' => PartyStatus::Prospect->value,
+                'organization_profile' => [],
+                'party_roles' => [[
+                    'role_code' => FormState::value($data['role_code'] ?? null) ?? PartyRoleCode::Customer->value,
+                    'status' => PartyRoleStatus::Active->value,
+                ]],
+            ]);
+        } catch (AbstractException $exception) {
+            DomainNotifications::failure($exception);
+
+            throw new Halt;
+        }
+
+        DomainNotifications::success(__('meeting_plan.quick_party.created', ['name' => $party->display_name]));
+
+        return (int) $party->getKey();
     }
 
     public static function infolist(Schema $schema): Schema
@@ -171,11 +264,16 @@ class MeetingPlanResource extends Resource
                     ->columns(['default' => 1, 'md' => 2])
                     ->components([
                         TextEntry::make('planned_on')->label(__('meeting_plan.fields.planned_on'))->date('d.m.Y l'),
+                        // Arsivdeki gorusme (B44, D-156): arsive alinma ani.
+                        TextEntry::make('archived_at')
+                            ->label(__('meeting_plan.fields.archived_at'))
+                            ->dateTime('d.m.Y H:i')
+                            ->visible(fn (MeetingPlan $record): bool => $record->isArchived()),
                         TextEntry::make('status')
                             ->label(__('meeting_plan.fields.status'))
                             ->state(fn (MeetingPlan $record): string => self::statusLabel($record))
                             ->badge()
-                            ->color(fn (MeetingPlan $record): string => $record->isOverdue(MeetingPlanQueries::today()) ? 'danger' : ($record->status?->getColor() ?? 'gray')),
+                            ->color(fn (MeetingPlan $record): string => self::statusColor($record)),
                         TextEntry::make('party.display_name')
                             ->label(__('meeting_plan.fields.party'))
                             ->icon(Heroicon::OutlinedBuildingOffice)
@@ -245,7 +343,9 @@ class MeetingPlanResource extends Resource
                     ->label(__('meeting_plan.fields.status'))
                     ->state(fn (MeetingPlan $record): string => self::statusLabel($record))
                     ->badge()
-                    ->color(fn (MeetingPlan $record): string => $record->isOverdue(MeetingPlanQueries::today()) ? 'danger' : ($record->status?->getColor() ?? 'gray')),
+                    ->color(fn (MeetingPlan $record): string => self::statusColor($record))
+                    // Tarihi gecmis, sonucu girilmemis gorusme (D-156): ne yapilacagi ipucunda.
+                    ->tooltip(fn (MeetingPlan $record): ?string => ! $record->isArchived() && $record->isOverdue(MeetingPlanQueries::today()) ? __('meeting_plan.help.past') : null),
                 TextColumn::make('party.display_name')
                     ->label(__('meeting_plan.fields.party'))
                     ->searchable()
@@ -276,6 +376,19 @@ class MeetingPlanResource extends Resource
             ])
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['party', 'contact', 'personnel', 'participants']))
             ->filters([
+                // Arsiv (B44, D-156): varsayilan yalniz aktif gorusmeler.
+                SelectFilter::make('archive')
+                    ->label(__('meeting_plan.filters.archive'))
+                    ->options([
+                        'active' => __('meeting_plan.filters.archive_active'),
+                        'archived' => __('meeting_plan.filters.archive_archived'),
+                        'all' => __('meeting_plan.filters.archive_all'),
+                    ])
+                    ->default('active')
+                    ->selectablePlaceholder(false)
+                    ->native(false)
+                    ->visible(fn (): bool => MeetingNoteComponents::archiveEnabled())
+                    ->query(fn (Builder $query, array $data): Builder => app(MeetingPlanQueries::class)->archiveScope($query, (string) ($data['value'] ?? 'active'))),
                 SelectFilter::make('personnel')
                     ->label(__('meeting_plan.filters.personnel'))
                     ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
@@ -298,20 +411,44 @@ class MeetingPlanResource extends Resource
                     ->columns(2)
                     ->query(fn (Builder $query, array $data): Builder => app(MeetingPlanQueries::class)->between($query, $data['from'] ?? null, $data['until'] ?? null)),
             ])
+            // D-156: listeden de "Gerceklesti" (sonucu gir) / "Gerceklesmedi" secilir;
+            // gerceklesen gorusmenin notu duzenlenir; silme yerine arsiv.
             ->recordActions([
                 ViewAction::make(),
                 MeetingPlanActions::complete(),
-                EditAction::make()->visible(fn (MeetingPlan $record): bool => $record->status === MeetingPlanStatus::Planned && (auth()->user()?->can('update', $record) ?? false)),
+                MeetingPlanActions::cancel(),
+                EditAction::make()->visible(fn (MeetingPlan $record): bool => $record->status === MeetingPlanStatus::Planned && ! $record->isArchived() && (auth()->user()?->can('update', $record) ?? false)),
+                MeetingPlanActions::editNote(),
+                MeetingPlanActions::archive(),
+                MeetingPlanActions::restore(),
             ])
             ->toolbarActions([])
             ->defaultSort('planned_on');
     }
 
+    /**
+     * Durum etiketi. Tarihi gecmis ama sonucu girilmemis planli gorusme
+     * "Gecmis" yazar (D-156; once "Gecikti" idi): gerceklestiyse sonucu girilir,
+     * gerceklesmediyse "Gerceklesmedi" secilir. Arsivdeki gorusme "Arsivde".
+     */
     public static function statusLabel(MeetingPlan $record): string
     {
+        if ($record->isArchived()) {
+            return __('meeting_plan.values.archived');
+        }
+
         return $record->isOverdue(MeetingPlanQueries::today())
             ? __('meeting_plan.values.overdue')
             : (string) ($record->status?->getLabel() ?? '-');
+    }
+
+    public static function statusColor(MeetingPlan $record): string
+    {
+        if ($record->isArchived()) {
+            return 'gray';
+        }
+
+        return $record->isOverdue(MeetingPlanQueries::today()) ? 'danger' : ($record->status?->getColor() ?? 'gray');
     }
 
     public static function getPages(): array

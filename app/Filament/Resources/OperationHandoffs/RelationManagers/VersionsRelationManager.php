@@ -154,7 +154,7 @@ class VersionsRelationManager extends RelationManager
                     ->native(false),
                 Textarea::make('comment')
                     ->label(__('operation_handoff_version.fields.comment'))
-                    ->columnSpanFull(),
+                    ->columnSpan(FieldGrid::MODAL_LONG),
                 TextInput::make('project_name')
                     ->label(__('operation_handoff_version.fields.project_name'))
                     ->maxLength(255),

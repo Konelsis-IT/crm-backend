@@ -45,7 +45,7 @@ final class WorkItemForm
                 ->label(__('work_item.fields.title'))
                 ->required()
                 ->maxLength(200)
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::WIDE),
             Select::make('personnel_id')
                 ->label(__('work_item.fields.personnel'))
                 ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
@@ -86,6 +86,8 @@ final class WorkItemForm
                 ->options(fn (Get $get): array => app(WorkCategoryCatalog::class)->optionsFor(self::unitCodeOf($get('personnel_id'))))
                 ->placeholder('–')
                 ->native(false),
+            // Bes durum dugmesi (simgeli) yan yana ~620 px tutar: xl'de 8/12 tek
+            // satira sigar, yanina Kritik gelir; tam satir yok (D-157).
             ToggleButtons::make('status')
                 ->label(__('work_item.fields.status'))
                 ->options(WorkItemStatus::class)
@@ -93,7 +95,7 @@ final class WorkItemForm
                 ->inline()
                 ->live()
                 ->required()
-                ->columnSpan(FieldGrid::FULL),
+                ->columnSpan(['default' => 1, 'md' => 6, 'xl' => 8]),
             Toggle::make('is_critical')
                 ->label(__('work_item.fields.is_critical'))
                 ->inline(false),
@@ -196,7 +198,7 @@ final class WorkItemForm
                 ->label(__('work_item.fields.note'))
                 ->rows(3)
                 ->maxLength(2000)
-                ->columnSpanFull(),
+                ->columnSpan(FieldGrid::LONG),
             Hidden::make('row_version'),
         ], [
             'main' => [

@@ -12,9 +12,11 @@ use App\Models\Party\ContactRelationship;
 use App\Models\Party\Party;
 use App\Models\Personnel\Personnel;
 use App\Policies\PartyMeetingNotePolicy;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -25,6 +27,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  *
  * B41 (D-137): not bir potansiyel ise ve o isin bir ya da birden fazla
  * teklifine baglanabilir; potansiyel is ve teklif sayfalarinda listelenir.
+ *
+ * B44 (D-156): not silinmez, arsive alinir (archived_at); arsivli not
+ * listelerde varsayilan olarak gorunmez (notArchived), "Arsiv" suzgeciyle bulunur.
  */
 #[Table('party_meeting_notes')]
 #[Fillable([
@@ -45,7 +50,19 @@ class PartyMeetingNote extends Model
             'noted_on' => 'date',
             'channel' => MeetingChannel::class,
             'next_action_on' => 'date',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->getAttribute('archived_at') !== null;
+    }
+
+    /** Arsivde olmayan notlar (B44 uygulanmadiysa suzgec yok). */
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return SchemaReadiness::hasBatch('B44') ? $query->whereNull($query->qualifyColumn('archived_at')) : $query;
     }
 
     public function party(): BelongsTo

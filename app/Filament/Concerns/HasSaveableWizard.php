@@ -12,7 +12,8 @@ use Filament\Schemas\Components\Component;
  * Filament HasWizard'in aynisi; sihirbaz SaveableWizard'dir ve alt satirda
  * adimlara ait "Kaydet" dugmeleri bulunur (22 Eylul 2026 kullanici karari:
  * surekli ileri gitme zorunlulugu yok). Sayfa getStepSaveMethods() ile hangi
- * adimda hangi yontemin calisacagini soyler.
+ * adimda hangi yontemin calisacagini soyler; getStepDraftMethods() (B43,
+ * D-155) "Taslak olarak kaydet" dugmelerini verir.
  */
 trait HasSaveableWizard
 {
@@ -27,7 +28,20 @@ trait HasSaveableWizard
             ->alpineSubmitHandler("\$wire.{$this->getSubmitFormLivewireMethodName()}()")
             ->skippable($this->hasSkippableSteps())
             ->contained(false)
-            ->saveOnSteps($this->getStepSaveMethods());
+            ->saveOnSteps($this->getStepSaveMethods())
+            ->draftOnSteps($this->getStepDraftMethods())
+            ->guardNextOnSteps($this->getStepNextGuards());
+    }
+
+    /**
+     * Adim kimligi => "Ileri"den once calisan sayfa yontemi (D-157); yontem
+     * sihirbaz anahtarini alir, true donerse gecis durur (or. ozet penceresi).
+     *
+     * @return array<string, string>
+     */
+    protected function getStepNextGuards(): array
+    {
+        return [];
     }
 
     /**
@@ -36,4 +50,14 @@ trait HasSaveableWizard
      * @return array<string, string>
      */
     abstract protected function getStepSaveMethods(): array;
+
+    /**
+     * Adim kimligi => "Taslak olarak kaydet"in calistiracagi sayfa yontemi.
+     *
+     * @return array<string, string>
+     */
+    protected function getStepDraftMethods(): array
+    {
+        return [];
+    }
 }

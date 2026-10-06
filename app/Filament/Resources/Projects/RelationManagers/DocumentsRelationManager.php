@@ -78,7 +78,7 @@ class DocumentsRelationManager extends RelationManager
                         ->label(__('document.fields.title'))
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Select::make('document_type_id')
                         ->label(__('document.fields.document_type'))
                         ->relationship(
@@ -108,7 +108,7 @@ class DocumentsRelationManager extends RelationManager
                         ->native(false),
                     Textarea::make('description')
                         ->label(__('document.fields.description'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     FileUpload::make('file')
                         ->label(__('document_revision.fields.file'))
                         ->helperText(__('document_revision.help.file'))
@@ -117,7 +117,7 @@ class DocumentsRelationManager extends RelationManager
                         ->storeFileNamesIn('file_original_name')
                         ->maxSize(UploadLimits::documentMaxKb())
                         ->required()
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('file_original_name'),
                 ])),
         ]);

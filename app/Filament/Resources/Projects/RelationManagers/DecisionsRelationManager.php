@@ -46,11 +46,11 @@ class DecisionsRelationManager extends RelationManager
                             ->label(__('project_decision.fields.title'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         Textarea::make('description')
                             ->label(__('project_decision.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('decision_scope')
                             ->label(__('project_decision.fields.decision_scope'))
                             ->options(DecisionScope::class)

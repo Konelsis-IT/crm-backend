@@ -18,6 +18,7 @@ use App\Filament\Resources\Proposals\RelationManagers\MeetingNotesRelationManage
 use App\Filament\Resources\Proposals\RelationManagers\VersionsRelationManager;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\RecordLinks;
 use App\Models\Acquisition\Proposal;
@@ -39,6 +40,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
 class ProposalResource extends Resource
@@ -115,7 +117,7 @@ class ProposalResource extends Resource
         $b29 = fn (): bool => SchemaReadiness::hasBatch('B29');
 
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with('businessCase.codes'))
+            ->modifyQueryUsing(fn ($query) => $query->with(['businessCase.codes', ...($b29() ? ['businessCase.scopes'] : [])]))
             ->columns([
                 TextColumn::make('proposal_no')
                     ->label(__('proposal.fields.proposal_no'))
@@ -133,6 +135,11 @@ class ProposalResource extends Resource
                 TextColumn::make('title')
                     ->label(__('proposal.fields.title'))
                     ->limit(40)
+                    // B43: taslak teklif basligin altinda yazar; D-162: simge ve amber satir.
+                    ->description(fn (Proposal $record): ?string => DraftSupport::titleDescription($record))
+                    ->icon(fn (Proposal $record): ?Heroicon => DraftSupport::titleIcon($record))
+                    ->iconColor('warning')
+                    ->tooltip(fn (Proposal $record): ?string => DraftSupport::titleTooltip($record))
                     ->searchable(),
                 TextColumn::make('businessCase.title')
                     ->label(__('proposal.fields.business_case'))
@@ -142,6 +149,13 @@ class ProposalResource extends Resource
                     ->badge(),
                 TextColumn::make('offer_status')
                     ->label(__('proposal.fields.offer_status'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->visible($b29),
+                // Proje tipi potansiyel iste secilir; Potansiyel Isler listesindeki
+                // sutunun aynisi: tipin rengi ve simgesiyle rozet (D-163).
+                TextColumn::make('businessCase.scopes.scope_type')
+                    ->label(__('business_case.fields.scope_types'))
                     ->badge()
                     ->placeholder('-')
                     ->visible($b29),
@@ -182,14 +196,20 @@ class ProposalResource extends Resource
                     }),
             ])
             ->toolbarActions([])
+            ->recordClasses(fn (Proposal $record): ?string => DraftSupport::rowClass($record))
+            // Taslak teklife tiklayinca teklif adimindan duzenleme acilir (B43).
+            ->recordUrl(fn (Proposal $record): string => DraftSupport::enabled() && (bool) $record->getAttribute('is_draft') && Gate::allows('update', $record)
+                ? self::getUrl('edit', ['record' => $record])
+                : self::getUrl('view', ['record' => $record]))
             ->defaultSort('proposal_no', 'desc');
     }
 
     public static function getRelations(): array
     {
         // Surumler, dokumanlar ve raporlar teklif sayfasinin alt listelerindedir (22 Eylul 2026).
+        // D-158: B43 ile surumler sekme degil, sayfanin "Surumler" penceresidir.
         return [
-            VersionsRelationManager::class,
+            ...(SchemaReadiness::hasBatch('B43') ? [] : [VersionsRelationManager::class]),
             // Gorusme notlari (B41, D-137): bu teklifin konusuldugu gorusmeler.
             MeetingNotesRelationManager::class,
             DocumentsRelationManager::class,

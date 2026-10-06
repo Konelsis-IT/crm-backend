@@ -78,12 +78,12 @@ final class PartyInfolist
                         TextEntry::make('meeting_count')
                             ->label(__('party.fields.meeting_count'))
                             ->icon(Heroicon::OutlinedChatBubbleLeftRight)
-                            ->state(fn (Party $party): int => $party->meetingNotes->count())
+                            ->state(fn (Party $party): int => $party->meetingNotes->whereNull('archived_at')->count())
                             ->visible($meetings),
                         TextEntry::make('last_meeting')
                             ->label(__('party.fields.last_meeting'))
                             ->icon(Heroicon::OutlinedCalendarDays)
-                            ->state(fn (Party $party): ?string => $party->meetingNotes->max('noted_on')?->format('d.m.Y'))
+                            ->state(fn (Party $party): ?string => $party->meetingNotes->whereNull('archived_at')->max('noted_on')?->format('d.m.Y'))
                             ->placeholder('-')
                             ->visible($meetings),
                         TextEntry::make('created_at')

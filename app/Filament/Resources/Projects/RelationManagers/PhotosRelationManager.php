@@ -61,7 +61,7 @@ class PhotosRelationManager extends RelationManager
                     TextInput::make('caption')
                         ->label(__('project_photo.fields.caption'))
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     DatePicker::make('taken_on')
                         ->label(__('project_photo.fields.taken_on'))
                         ->displayFormat('d.m.Y'),
@@ -128,7 +128,7 @@ class PhotosRelationManager extends RelationManager
                             ->storeFileNamesIn('file_original_names')
                             ->maxSize(8192)
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::MODAL_LONG),
                         Hidden::make('file_original_names'),
                         TextInput::make('caption')
                             ->label(__('project_photo.fields.caption'))

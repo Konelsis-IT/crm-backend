@@ -78,7 +78,7 @@ class AnnualReviewsRelationManager extends RelationManager
                             ->displayFormat('d.m.Y'),
                         Textarea::make('summary')
                             ->label(__('party_annual_review.fields.summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

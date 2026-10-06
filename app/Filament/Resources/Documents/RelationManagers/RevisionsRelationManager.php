@@ -67,7 +67,7 @@ class RevisionsRelationManager extends RelationManager
                         ->required()
                         ->maxLength(255)
                         ->default(fn (): string => (string) $this->getOwnerRecord()->title)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Select::make('language')
                         ->label(__('document_revision.fields.language'))
                         ->options(['tr' => 'Türkçe', 'en' => 'English'])
@@ -89,15 +89,18 @@ class RevisionsRelationManager extends RelationManager
                     Textarea::make('change_summary')
                         ->label(__('document_revision.fields.change_summary'))
                         ->rows(2)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
+            // Icerik alanlari 12 sutunlu olcekle boyutlanir; tam satir yok (D-157).
             Section::make(__('document_revision.sections.content'))
+                ->columns(FieldGrid::COLUMNS)
                 ->components([
                     ...DocumentWorkspace::revisionContentFields(true),
                 ])
                 ->visibleOn('create'),
             Section::make(__('document_revision.sections.content'))
+                ->columns(FieldGrid::COLUMNS)
                 ->components([
                     ...DocumentWorkspace::revisionContentFields(false),
                 ])

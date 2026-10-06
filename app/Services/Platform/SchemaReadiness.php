@@ -72,6 +72,8 @@ final class SchemaReadiness
         'B40' => 'business_code_sequences',            // Yillik kodlar POTIS / TKLF / PRJ (D-132)
         'B41' => 'party_meeting_note_proposals',       // Gorusme notu - potansiyel is / teklif baglantisi (D-137)
         'B42' => 'feature_releases',                   // Ozellik surumleri ve yayin kaydi (D-151; grubun son tablosu)
+        'B43' => 'proposal_version_scopes',            // Ihale -> potansiyel is -> teklif zinciri, kontrol listesi, teklif kapsamlari (D-155)
+        'B44' => 'meeting_plans.archived_at',          // Gorusme notu ve plan arsivi (D-156; grubun son degisikligi)
     ];
 
     /** @var array<string, bool> */

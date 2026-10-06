@@ -46,7 +46,7 @@ class VersionsRelationManager extends RelationManager
                 ->components(FieldGrid::fields([
                         Textarea::make('summary')
                             ->label(__('tender_notice_version.fields.summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         DatePicker::make('published_on')
                             ->label(__('tender_notice_version.fields.published_on'))
                             ->displayFormat('d.m.Y'),

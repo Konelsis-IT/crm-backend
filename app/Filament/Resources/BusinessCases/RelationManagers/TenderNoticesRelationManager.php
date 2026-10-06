@@ -76,7 +76,7 @@ class TenderNoticesRelationManager extends RelationManager
                         Textarea::make('summary')
                             ->label(__('tender_notice.fields.summary'))
                             ->hiddenOn('edit')
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         DatePicker::make('published_on')
                             ->label(__('tender_notice.fields.published_on'))
                             ->displayFormat('d.m.Y')

@@ -25,6 +25,14 @@ return [
         'total_price' => 'Total price',
         'validity_until' => 'Valid until',
         'version_no' => 'Version no',
+        'scope_total_cost' => 'Scope total cost',
+        'scope_total_sales' => 'Scope total sales',
+    ],
+
+    'help' => [
+        'margin_from_scope' => 'Calculated from the total cost and total sales in the project scope.',
+        'margin_from_scope_empty' => 'Calculated once total cost and sales are entered in the scope',
+        'total_price_from_scope' => 'Leave blank to use the total sales of the project scope.',
     ],
 
     'relation' => [

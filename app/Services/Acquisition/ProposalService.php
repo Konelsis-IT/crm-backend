@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services\Acquisition;
 
 use App\Enums\Acquisition\BusinessCodeKind;
+use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\ProposalStatus;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Proposal;
 use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Numbering\YearlyCodeAllocator;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Illuminate\Database\Eloquent\Model;
@@ -87,6 +89,38 @@ final class ProposalService extends AbstractService
         unset($data['proposal_no'], $data['business_case_id'], $data['current_version_id'], $data['status'], $data['is_selected']);
 
         return parent::update($record, $data);
+    }
+
+    /**
+     * Teklifin ticari durumunu (Teklif durumu: Verilecek / Verilen / Kacan
+     * firsat) is akisiyla esler (D-161, 6 Ekim 2026: iki durum alani birbirine
+     * baglandi). $onlyFrom verilirse yalniz o durumlardaki teklifler degisir.
+     * B29 uygulanmadiysa hicbir sey yapilmaz.
+     *
+     * @param  iterable<Proposal>  $proposals
+     * @param  list<OfferStatus>|null  $onlyFrom  null: hedeften farkli her durum
+     */
+    public function syncOfferStatus(iterable $proposals, OfferStatus $target, ?array $onlyFrom = null): void
+    {
+        if (! SchemaReadiness::hasBatch('B29')) {
+            return;
+        }
+
+        $this->transactions->run(function () use ($proposals, $target, $onlyFrom): void {
+            foreach ($proposals as $proposal) {
+                $current = $proposal->offer_status;
+
+                if ($current === $target || ($onlyFrom !== null && $current !== null && ! in_array($current, $onlyFrom, true))) {
+                    continue;
+                }
+
+                $proposal->forceFill(['offer_status' => $target]);
+                $this->saveWithoutVersion($proposal);
+                $this->recordActivity($proposal, 'offer_status_synced', [
+                    'teklif_durumu' => ['onceki' => $current?->value, 'yeni' => $target->value],
+                ]);
+            }
+        });
     }
 
     /** Business case icin secili teklifi bu yapar (tek secili guard). */

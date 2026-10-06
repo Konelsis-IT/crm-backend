@@ -588,7 +588,7 @@ class PartyResource extends Resource
                     ->required()
                     ->maxLength(100)
                     ->rows(3)
-                    ->columnSpanFull(),
+                    ->columnSpan(FieldGrid::MODAL_LONG),
             ])))
             ->action(function (Party $record, array $data, Component $livewire): void {
                 try {

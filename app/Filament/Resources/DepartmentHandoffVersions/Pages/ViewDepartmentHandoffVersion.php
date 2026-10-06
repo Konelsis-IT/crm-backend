@@ -9,11 +9,13 @@ use App\Exceptions\AbstractException;
 use App\Filament\Resources\DepartmentHandoffVersions\DepartmentHandoffVersionResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\FieldGrid;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
 class ViewDepartmentHandoffVersion extends ViewRecord
@@ -44,7 +46,7 @@ class ViewDepartmentHandoffVersion extends ViewRecord
                 ->color(ActionColors::SAVE)
                 ->icon(Heroicon::OutlinedCheckBadge)
                 ->requiresConfirmation()
-                ->schema([
+                ->schema(fn (Schema $schema): Schema => $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([
             Select::make('decision')
                 ->label(__('department_handoff_version.fields.decision'))
                 ->options(ReviewDecision::class)
@@ -53,8 +55,8 @@ class ViewDepartmentHandoffVersion extends ViewRecord
                 ->native(false),
             Textarea::make('comment')
                 ->label(__('department_handoff_version.fields.comment'))
-                ->columnSpanFull(),
-                ])
+                ->columnSpan(FieldGrid::MODAL_LONG),
+                ])))
                 ->visible(fn (): bool => $this->getRecord()->status === \App\Enums\Acquisition\HandoffVersionStatus::Submitted)
                 ->action(function (array $data): void {
                     $record = $this->getRecord();

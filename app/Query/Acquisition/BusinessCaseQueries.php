@@ -4,14 +4,57 @@ declare(strict_types=1);
 
 namespace App\Query\Acquisition;
 
+use App\Enums\Acquisition\AcquisitionStage;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Party\PartyMeetingNote;
 use App\Services\Platform\SchemaReadiness;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 /** Is dosyasi okuma sorgulari. */
 final class BusinessCaseQueries
 {
+    /**
+     * Liste sekmelerinin durumlari (D-162): "Teklifte" teklif hazirligindan
+     * pazarliga kadar olan durumlar.
+     *
+     * @var list<AcquisitionStage>
+     */
+    public const OFFER_STAGES = [
+        AcquisitionStage::OfferPreparation,
+        AcquisitionStage::OfferReview,
+        AcquisitionStage::Submitted,
+        AcquisitionStage::Negotiation,
+    ];
+
+    /**
+     * Durum sekmesi sorgusu. Taslaklar kendi sekmesinde oldugu icin durum
+     * sekmelerine girmez ($excludeDrafts; taslak ozelligi kapaliysa girer).
+     *
+     * @param  list<AcquisitionStage>  $stages
+     */
+    public function withStages(Builder $query, array $stages, bool $excludeDrafts): Builder
+    {
+        $model = $query->getModel();
+
+        $query->whereIn($model->qualifyColumn('acquisition_stage'), array_map(static fn (AcquisitionStage $stage): string => $stage->value, $stages));
+
+        return $excludeDrafts ? $query->where($model->qualifyColumn('is_draft'), false) : $query;
+    }
+
+    /**
+     * @param  list<AcquisitionStage>  $stages
+     */
+    public function stageCount(array $stages, bool $excludeDrafts): int
+    {
+        return $this->withStages(BusinessCase::query(), $stages, $excludeDrafts)->count();
+    }
+
+    public function total(): int
+    {
+        return BusinessCase::query()->count();
+    }
+
     /**
      * Teklif olusturmadaki is dosyasi ozet karti icin kayit (22 Eylul 2026
      * kullanici karari): musteri, sorumlular ve kapsamlar (kapsam listesi
@@ -41,7 +84,7 @@ final class BusinessCaseQueries
             return null;
         }
 
-        $value = PartyMeetingNote::query()->where('business_case_id', $businessCaseId)->max('noted_on');
+        $value = PartyMeetingNote::query()->notArchived()->where('business_case_id', $businessCaseId)->max('noted_on');
 
         return $value === null ? null : Carbon::parse($value);
     }

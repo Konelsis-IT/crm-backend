@@ -8,7 +8,9 @@ use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Platform\Feature;
 use App\Filament\Exports\ProposalExporter;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Support\DraftSupport;
 use App\Filament\Support\ExportActions;
+use App\Models\Acquisition\Proposal;
 use App\Query\Acquisition\ProposalQueries;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
@@ -41,9 +43,10 @@ class ListProposals extends ListRecords
      */
     public function getTabs(): array
     {
-        // Durum sekmeleri kendi ozellik anahtariyla kapanabilir (D-147).
+        // Durum sekmeleri kendi ozellik anahtariyla kapanabilir (D-147); taslak
+        // sekmesi (B43, D-155) taslak ozelligiyle gelir.
         if (! SchemaReadiness::hasBatch('B29') || ! FeatureFlags::enabled(Feature::ProposalStatusTabs)) {
-            return [];
+            return DraftSupport::tabs(Proposal::class);
         }
 
         $queries = app(ProposalQueries::class);
@@ -62,6 +65,10 @@ class ListProposals extends ListRecords
                 ->badge($this->counts[$status->value] ?? 0)
                 ->badgeColor($status->getColor())
                 ->modifyQueryUsing(fn (Builder $query): Builder => $queries->withOfferStatus($query, $status));
+        }
+
+        if (DraftSupport::enabled()) {
+            $tabs['drafts'] = DraftSupport::draftTab(Proposal::class);
         }
 
         return $tabs;

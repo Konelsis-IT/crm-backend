@@ -25,6 +25,15 @@ return [
         'total_price' => 'Toplam fiyat',
         'validity_until' => 'Geçerlilik',
         'version_no' => 'Sürüm no',
+        'scope_total_cost' => 'Kapsam toplam maliyeti',
+        'scope_total_sales' => 'Kapsam toplam satışı',
+    ],
+
+    // D-155: marj kapsamdan hesaplanir.
+    'help' => [
+        'margin_from_scope' => 'Proje kapsamındaki toplam maliyet ve toplam satıştan hesaplanır.',
+        'margin_from_scope_empty' => 'Kapsamda toplam maliyet ve satış girilince hesaplanır',
+        'total_price_from_scope' => 'Boş bırakılırsa proje kapsamının toplam satışı yazılır.',
     ],
 
     'relation' => [

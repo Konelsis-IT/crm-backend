@@ -75,6 +75,10 @@ return [
         'download_only' => 'Download only',
     ],
 
+    'short' => [
+        'revision' => 'Rev :code',
+    ],
+
     'actions' => [
         'download_current' => 'Download current file',
         'preview_current' => 'Preview current file',

@@ -107,7 +107,7 @@ class TeamMembersRelationManager extends RelationManager
                         ->native(false),
                     Textarea::make('note')
                         ->label(__('project_team_member.fields.note'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

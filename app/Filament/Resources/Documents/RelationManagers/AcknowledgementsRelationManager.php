@@ -75,7 +75,7 @@ class AcknowledgementsRelationManager extends RelationManager
                         ->required(),
                     Textarea::make('comment')
                         ->label(__('document_acknowledgement.fields.comment'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

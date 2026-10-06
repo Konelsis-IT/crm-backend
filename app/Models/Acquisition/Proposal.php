@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 #[Fillable([
     'business_case_id', 'proposal_no', 'title', 'owner_employee_id', 'current_version_id', 'status', 'is_selected',
     'offer_status',
+    // B43 (D-155): taslak ve kaldigi adim.
+    'is_draft', 'draft_step',
 ])]
 #[UsePolicy(ProposalPolicy::class)]
 class Proposal extends Model
@@ -41,6 +43,7 @@ class Proposal extends Model
             'status' => ProposalStatus::class,
             'offer_status' => OfferStatus::class,
             'is_selected' => 'boolean',
+            'is_draft' => 'boolean',
         ];
     }
 

@@ -50,6 +50,7 @@ final class MeetingReminderScanner
         $tomorrow = $today->copy()->addDay();
 
         $plans = MeetingPlan::query()
+            ->notArchived()
             ->where('status', MeetingPlanStatus::Planned->value)
             ->whereIn('planned_on', [$today->toDateString(), $tomorrow->toDateString()])
             ->with(['party', 'contact', 'personnel', 'participants'])

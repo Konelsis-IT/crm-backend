@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums\Platform;
 
 use App\Models\Acquisition\BusinessCase;
+use App\Models\Acquisition\BusinessCaseChecklistAnswer;
 use App\Models\Acquisition\Contract;
 use App\Models\Acquisition\OperationHandoff;
 use App\Models\Acquisition\Proposal;
@@ -114,13 +115,18 @@ enum Feature: string
     case Associations = 'acquisition.associations';
     case BusinessCases = 'acquisition.business_cases';
     case DealMeetingNotes = 'acquisition.business_cases.meeting_notes';
+    case BusinessCaseChecklist = 'acquisition.business_cases.checklist';
+    case BusinessCaseDocuments = 'acquisition.business_cases.documents';
+    case BusinessCaseStageTabs = 'acquisition.business_cases.stage_tabs';
     case DealTrack = 'acquisition.deal_track';
+    case AcquisitionDrafts = 'acquisition.drafts';
     case Proposals = 'acquisition.proposals';
     case ProposalStatusTabs = 'acquisition.proposals.status_tabs';
     case Contracts = 'acquisition.contracts';
     case OperationHandoffs = 'acquisition.operation_handoffs';
     case Tenders = 'acquisition.tenders';
     case MeetingPlans = 'acquisition.meeting_plans';
+    case MeetingPlanQuickParty = 'acquisition.meeting_plans.quick_party';
     case ActivityAreas = 'acquisition.activity_areas';
 
     // Projeler
@@ -257,6 +263,9 @@ enum Feature: string
             self::Transmittals => [Transmittal::class],
             self::DocumentTemplates => [DocumentTemplate::class],
             self::BusinessCases => [BusinessCase::class],
+            // Madde belgeleri de business_case_documents satiridir; Belgeler kapaliyken
+            // kontrol listesi belgeleri reddedilmesin diye o kayit turu yazilmaz.
+            self::BusinessCaseChecklist => [BusinessCaseChecklistAnswer::class],
             self::Proposals => [Proposal::class],
             self::Contracts => [Contract::class],
             self::OperationHandoffs => [OperationHandoff::class],
@@ -319,13 +328,18 @@ enum Feature: string
             self::Associations => ['Dernekler', 'İş Alım > Dernekler ekranı.', 'D-107', '1.7'],
             self::BusinessCases => ['Potansiyel işler', 'İş Alım > Potansiyel İşler, sihirbaz ve diğer kartlardaki potansiyel iş sekmeleri.', 'D-101', '1.0'],
             self::DealMeetingNotes => ['Potansiyel iş ve teklif görüşme notları', 'Potansiyel iş ve teklif sayfalarındaki Görüşme notları sekmesi; taraf görüşme notunda potansiyel iş ve teklif seçimi.', 'D-137', '2.2'],
+            self::BusinessCaseChecklist => ['Potansiyel iş: Teklif öncesi kontrol listesi', 'Potansiyel iş sihirbazındaki GES / TM kontrol listesi, proje durumu (lisans), madde belgeleri, kaydederken eksikler penceresi, teklif sıcaklığı ve 1.3 kuralı (çağrı mektubunun geçerliliği bittiyse teklif tipi Bütçesel). Kapanınca potansiyel iş kontrol listesiz açılır; kayıtlı cevaplar silinmez.', 'D-155', '2.4'],
+            self::BusinessCaseDocuments => ['Potansiyel iş: Belgeler', 'Potansiyel iş sihirbazındaki belge yükleme alanı ve potansiyel iş sayfasındaki Belgeler kartı. Yüklenen belgeler Dokümanlar\'da kalır.', 'D-155', '2.4'],
+            self::BusinessCaseStageTabs => ['Potansiyel işler: Durum sekmeleri', 'Potansiyel İşler listesindeki Tümü / İş Geliştirme / Teklifte / Taslaklar sekmeleri; taslaklar yalnız kendi sekmesinde görünür. Kapanınca liste Tümü / Taslaklar sekmeleriyle gelir.', 'D-162', '2.4'],
             self::DealTrack => ['Bu iş nerede?', 'Teklif ve potansiyel iş sayfalarındaki "Bu iş nerede?" bölümü (potansiyel iş → teklif → proje hattı, özet etiketler, Projeye dönüştür durağı). Sayfanın kartları ve sekmeleri etkilenmez.', 'D-143', '2.3'],
+            self::AcquisitionDrafts => ['Taslak kaydı: ihale, potansiyel iş, teklif', 'Sihirbaz adımlarındaki "Taslak olarak kaydet", listelerdeki Taslaklar sekmesi ve taslağın kaldığı adımdan açılması. Kapanınca kayıtlar normal kaydedilir.', 'D-155', '2.4'],
             self::Proposals => ['Teklifler', 'İş Alım > Teklifler, teklif sürümleri ve maliyet tahminleri.', 'D-67', '1.0'],
             self::ProposalStatusTabs => ['Teklifler: Durum sekmeleri', 'Teklifler listesindeki Tümü / Verilen Teklifler / Verilecek Teklifler / Kaçan Fırsat sekmeleri. Kapanınca liste sekmesiz gelir.', 'D-136', '2.2'],
             self::Contracts => ['Sözleşmeler', 'İş Alım > Sözleşmeler ve sözleşme sürümleri.', 'D-67', '2.4'],
             self::OperationHandoffs => ['Operasyona devirler', 'Tekliften operasyona devir kayıtları ve sürümleri.', 'D-67', '1.0'],
             self::Tenders => ['İhaleler', 'İhaleler menüsü: ihale ilanları ve ihale kaynakları.', 'D-107', '1.0'],
             self::MeetingPlans => ['Görüşme planı', 'İş Alım > Görüşme Planı, takvimi, hatırlatmaları ve taraf kartındaki görüşme sekmesi.', 'D-109', '1.7'],
+            self::MeetingPlanQuickParty => ['Görüşme planı: Firma ekle', 'Görüşme planlarken firma listede yoksa firma alanının yanındaki "Firma ekle" penceresi; eklenen firma alanda seçili gelir. Kapanınca firma yalnız Taraflar ekranından eklenir.', 'D-156', '2.4'],
             self::ActivityAreas => ['Faaliyet alanları', 'Ayarlar > Faaliyet Alanları ekranı (pazar haritası).', 'D-107', '1.7'],
 
             self::Projects => ['Projeler', 'Projeler ekranı, proje kartı ve alt ekranları (workstream, iş kırılımı, iş paketleri, gecikmeler, departman devirleri). Alt özellikler de kapanır.', 'D-67', '1.0'],

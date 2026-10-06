@@ -49,11 +49,11 @@ class IssuesRelationManager extends RelationManager
                             ->label(__('project_issue.fields.title'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         Textarea::make('description')
                             ->label(__('project_issue.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('severity')
                             ->label(__('project_issue.fields.severity'))
                             ->options(IssueSeverity::class)
@@ -88,7 +88,7 @@ class IssuesRelationManager extends RelationManager
                             ->displayFormat('d.m.Y'),
                         Textarea::make('resolution')
                             ->label(__('project_issue.fields.resolution'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

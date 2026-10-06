@@ -11,6 +11,7 @@ use App\Filament\Resources\TenderNotices\Pages\EditTenderNotice;
 use App\Filament\Resources\TenderNotices\Pages\ListTenderNotices;
 use App\Filament\Resources\TenderNotices\Pages\ViewTenderNotice;
 use App\Filament\Resources\TenderNotices\RelationManagers\VersionsRelationManager;
+use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\TenderNotice;
 use App\Query\Document\DocumentQueries;
@@ -32,6 +33,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Gate;
 
 class TenderNoticeResource extends Resource
 {
@@ -81,12 +83,14 @@ class TenderNoticeResource extends Resource
     {
         return $schema->columns(1)->components([
             ...FieldGrid::group([
+                        // B43 (D-155): ihale potansiyel isten once gelir; sayfalar
+                        // sihirbazdir, bu form yalniz grup uygulanmadan kullanilir.
                         Select::make('business_case_id')
                             ->label(__('tender_notice.fields.business_case'))
                             ->relationship('businessCase', 'title')
                             ->searchable()
                             ->preload()
-                            ->required()
+                            ->required(fn (): bool => ! SchemaReadiness::hasBatch('B43'))
                             ->native(false)
                             ->disabledOn('edit')
                             ->dehydratedWhenHidden(false),
@@ -122,7 +126,7 @@ class TenderNoticeResource extends Resource
                         Textarea::make('summary')
                             ->label(__('tender_notice.fields.summary'))
                             ->hiddenOn('edit')
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         DatePicker::make('published_on')
                             ->label(__('tender_notice.fields.published_on'))
                             ->displayFormat('d.m.Y')
@@ -149,10 +153,17 @@ class TenderNoticeResource extends Resource
                 TextColumn::make('title')
                     ->label(__('tender_notice.fields.title'))
                     ->limit(50)
+                    // B43: taslak ihale basligin altinda yazar; D-162: simge ve amber satir.
+                    ->description(fn (TenderNotice $record): ?string => DraftSupport::titleDescription($record))
+                    ->icon(fn (TenderNotice $record): ?Heroicon => DraftSupport::titleIcon($record))
+                    ->iconColor('warning')
+                    ->tooltip(fn (TenderNotice $record): ?string => DraftSupport::titleTooltip($record))
                     ->searchable()
                     ->sortable(),
+                // B43: ihale potansiyel isten once gelir; isi olmayan ihale "-".
                 TextColumn::make('businessCase.title')
                     ->label(__('tender_notice.fields.business_case'))
+                    ->placeholder(__('tender_notice.help.no_case'))
                     ->limit(30),
                 TextColumn::make('source.name_tr')
                     ->label(__('tender_notice.fields.tender_source')),
@@ -180,6 +191,11 @@ class TenderNoticeResource extends Resource
                 EditAction::make(),
             ])
             ->toolbarActions([])
+            ->recordClasses(fn (TenderNotice $record): ?string => DraftSupport::rowClass($record))
+            // Taslak ihaleye tiklayinca duzenleme acilir (B43).
+            ->recordUrl(fn (TenderNotice $record): string => DraftSupport::enabled() && (bool) $record->getAttribute('is_draft') && Gate::allows('update', $record)
+                ? self::getUrl('edit', ['record' => $record])
+                : self::getUrl('view', ['record' => $record]))
             ->defaultSort('captured_at', 'desc');
     }
 

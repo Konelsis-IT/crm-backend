@@ -60,7 +60,7 @@ class RequirementsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('tender_requirement.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Toggle::make('is_mandatory')
                             ->label(__('tender_requirement.fields.is_mandatory'))
                             ->default(true),

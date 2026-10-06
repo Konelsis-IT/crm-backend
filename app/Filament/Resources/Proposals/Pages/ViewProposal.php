@@ -12,7 +12,10 @@ use App\Filament\Support\DealTrack;
 use App\Services\Platform\FeatureFlags;
 use App\Filament\Support\ExportActions;
 use App\Filament\Support\ProposalDetail;
+use App\Filament\Support\ProposalScopeSchema;
+use App\Filament\Support\StatusButton;
 use App\Models\Acquisition\Proposal;
+use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
@@ -25,6 +28,9 @@ use Filament\Schemas\Schema;
  * "Bu is nerede?" dikey hatti (DealTrack): potansiyel is ozet etiketlerle,
  * "Buradasiniz" bu teklif (durum cumlesi, isin diger teklifleri), proje ya da
  * acilis kosullari. Altta surumler, gorusme notlari, dokumanlar ve raporlar.
+ * D-155: kartlarin altinda guncel surumun proje kapsami ve belgeleri.
+ * D-158: ayri surum sayfasi yok; "Surumler" dugmesi eski surumu pencerede
+ * gosterir, sayfa hep guncel surumdur. Belgeler Dokumanlar sekmesinde (yukleme orada).
  */
 class ViewProposal extends ViewRecord
 {
@@ -47,6 +53,19 @@ class ViewProposal extends ViewRecord
         // "Bu iş nerede?" kendi ozellik anahtariyla kapanabilir (D-147).
         $track = FeatureFlags::enabled(Feature::DealTrack) ? app(DealTrack::class)->forProposal($proposal) : null;
 
+        // B43 (D-155): proje kapsami guncel surumun kartinda. D-158: kart tam
+        // genislikte ve yeni tasarimda; belgeler yalniz Dokumanlar sekmesinde
+        // (ayni belgeler iki yerde gorunmesin), eski surumler "Surumler" penceresinde.
+        $scopeCard = null;
+
+        if (SchemaReadiness::hasBatch('B43')) {
+            $proposal->loadMissing([
+                'currentVersion.scopes.scopeDocument.revisions.files.fileObject',
+                'currentVersion.scopes.scopeDocumentRevision.files.fileObject',
+            ]);
+            $scopeCard = app(ProposalScopeSchema::class)->recordCard($proposal->currentVersion);
+        }
+
         return $schema->columns(1)->components([
             Grid::make(['default' => 1, 'xl' => 2])
                 ->extraAttributes(['class' => 'kc-grid-top'])
@@ -54,6 +73,7 @@ class ViewProposal extends ViewRecord
                     $detail->headerCard($proposal),
                     $detail->versionCard($proposal),
                 ]),
+            ...($scopeCard !== null ? [$scopeCard] : []),
             ...($track !== null ? [$track] : []),
             $this->getRelationManagersContentComponent(),
         ]);
@@ -64,9 +84,14 @@ class ViewProposal extends ViewRecord
         /** @var Proposal $proposal */
         $proposal = $this->getRecord();
         $case = $proposal->businessCase;
+        // D-158: surumler ayri sayfada degil, bu sayfanin "Surumler" penceresinde.
+        $versions = SchemaReadiness::hasBatch('B43') ? app(ProposalDetail::class)->versionsAction($proposal) : null;
 
         return [
+            // Durum: rengiyle sabit dugme; teklif duzenleme ekraninda degistirilir (D-161).
+            StatusButton::proposal(editable: false),
             EditAction::make(),
+            ...($versions !== null ? [$versions] : []),
             ...($case !== null ? [app(BusinessCaseWizard::class)->convertAction($case, proposal: $proposal)] : []),
             ExportActions::record(ProposalExporter::class),
         ];

@@ -48,7 +48,7 @@ class RecoveryActionsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('recovery_action.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('owner_personnel_id')
                             ->label(__('recovery_action.fields.owner'))
                             ->relationship('owner', 'full_name')

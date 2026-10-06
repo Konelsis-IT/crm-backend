@@ -26,6 +26,7 @@ return [
     'record_not_found' => 'Record not found.',
     'model_not_resolved' => 'The model this service works on could not be resolved: :service',
     'duplicate_record' => 'This record already exists.',
+    'record_archived' => 'This record is archived. Restore it from the archive before changing it.',
 
     'personnel' => [
         'email_already_in_use' => 'This e-mail address is already in use: :email',

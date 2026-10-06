@@ -31,6 +31,9 @@ enum ProposalDocumentRole: string implements HasColor, HasLabel
     case Catalog = 'catalog';
     case ScopeList = 'scope_list';
 
+    /* B43 (D-155): Sapmalar belge olarak yuklenir, adi "Deviasyon listesi". */
+    case DeviationList = 'deviation_list';
+
     public function getColor(): string
     {
         return match ($this) {
@@ -50,6 +53,7 @@ enum ProposalDocumentRole: string implements HasColor, HasLabel
             self::References => 'info',
             self::Catalog => 'info',
             self::ScopeList => 'success',
+            self::DeviationList => 'warning',
         };
     }
 }

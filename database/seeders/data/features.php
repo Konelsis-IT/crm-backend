@@ -7,6 +7,9 @@
 // canlida kapali ve surumu 2.4 (sira gelen guncellemeyle acilir).
 // 5 Ekim 2026 (D-154): Akis sekmesi (social_media.feed) canlida acildi, surumu 2.3;
 // canlida kapali ozellik sayisi 30.
+// 5 Ekim 2026 (D-155): kontrol listesi, potansiyel is belgeleri ve taslak kaydi yeni
+// (surum 2.4, acik eklenir; canlida 2.4 yayinlanana kadar surumden dolayi gorunmez).
+// 5 Ekim 2026 (D-156): Gorusme planinda "Firma ekle" yeni (surum 2.4).
 // Elle de duzenlenebilir; katalogda olmayan kod atlanir.
 
 return [
@@ -38,13 +41,17 @@ return [
     'acquisition.associations' => true, // Dernekler
     'acquisition.business_cases' => true, // Potansiyel işler
     'acquisition.business_cases.meeting_notes' => true, // Potansiyel iş ve teklif görüşme notları
+    'acquisition.business_cases.checklist' => true, // Potansiyel iş: Teklif öncesi kontrol listesi (2.4)
+    'acquisition.business_cases.documents' => true, // Potansiyel iş: Belgeler (2.4)
     'acquisition.deal_track' => true, // Bu iş nerede?
+    'acquisition.drafts' => true, // Taslak kaydı: ihale, potansiyel iş, teklif (2.4)
     'acquisition.proposals' => true, // Teklifler
     'acquisition.proposals.status_tabs' => true, // Teklifler: Durum sekmeleri
     'acquisition.contracts' => false, // Sözleşmeler
     'acquisition.operation_handoffs' => true, // Operasyona devirler
     'acquisition.tenders' => true, // İhaleler
     'acquisition.meeting_plans' => true, // Görüşme planı
+    'acquisition.meeting_plans.quick_party' => true, // Görüşme planı: Firma ekle (2.4)
     'acquisition.activity_areas' => true, // Faaliyet alanları
     'projects' => true, // Projeler
     'projects.supply_items' => true, // Tedarik kalemleri

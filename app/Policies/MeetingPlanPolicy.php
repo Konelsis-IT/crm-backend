@@ -13,9 +13,10 @@ use App\Policies\Concerns\ResolvesInterimRoles;
 /**
  * Gorusme plani (B34, D-109). Liste ve takvim izinle acilir; sorumlu ya da
  * katilan personel kendi plani uzerinde sonuc girer, erteler, iptal eder.
- * Gerceklesmis gorusme (done) duzenlenmez: sonucu Taraf > Gorusme
- * notlarindan duzeltilir. Nottan / sonraki adimdan yansiyan satir silinmez,
- * notla birlikte yasar.
+ * Gerceklesmis gorusme (done) duzenlenmez: sonucu notundan duzeltilir
+ * (D-156: gorusme sayfasinda "Notu duzenle"). Nottan / sonraki adimdan
+ * yansiyan satir silinmez, notla birlikte yasar. Arayuzde silme yoktur,
+ * arsiv vardir (archive).
  */
 final class MeetingPlanPolicy
 {
@@ -39,6 +40,7 @@ final class MeetingPlanPolicy
     public function update(Personnel $personnel, MeetingPlan $record): bool
     {
         return $record->status === MeetingPlanStatus::Planned
+            && ! $record->isArchived()
             && ($this->hasFullAccess($personnel) || $this->permits($personnel, 'update') || $this->isInvolved($personnel, $record));
     }
 
@@ -51,6 +53,18 @@ final class MeetingPlanPolicy
     public function cancel(Personnel $personnel, MeetingPlan $record): bool
     {
         return $this->update($personnel, $record);
+    }
+
+    /**
+     * Arsive alma ve arsivden cikarma (B44, D-156): silme yerine. Sorumlu,
+     * katilan ya da yetkili; sonuc notu olan plan notuyla birlikte arsivlenir.
+     */
+    public function archive(Personnel $personnel, MeetingPlan $record): bool
+    {
+        return $this->hasFullAccess($personnel)
+            || $this->permits($personnel, 'update')
+            || $this->permits($personnel, 'delete')
+            || $this->isInvolved($personnel, $record);
     }
 
     public function delete(Personnel $personnel, MeetingPlan $record): bool

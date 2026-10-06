@@ -27,13 +27,20 @@ use Filament\Schemas\Components\Section;
  * Alan izgarasi (D-80, 10 Eylul 2026 kullanici karari): form ve bilgi
  * bolumleri 12 sutunlu izgara kullanir; her alan icerigine gore yer kaplar —
  * kod / tarih / sayi / para birimi gibi kisa alanlar 1/6, secimler 1/4,
- * serbest metin 1/3, uzun metin ve yukleme alanlari tam satir. Boylece
+ * serbest metin 1/3, uzun metin ve yukleme alanlari yarim satir. Boylece
  * "gereginden fazla buyutulmus" alan kalmaz. Acik columnSpan verilen alanlar
  * oldugu gibi kalir; FieldGrid::fields() yalniz geri kalanina genislik atar.
  *
+ * Tam satir alan yok (D-157, 5 Ekim 2026 kullanici kurali: "hicbir
+ * duzenleme/olusturma ekraninda ... tum satir alan olarak secilmemeli ...
+ * Compact olmali, gerektigi kadar bir alan olmalidir"). Uzun icerik LONG
+ * (12 sutunlu bolumde yarim), yarim bolumde HALF_LONG (4/6), modalda
+ * MODAL_LONG (yarim) alir. FULL yalniz yerlesim bilesenleri icindir (Grid,
+ * Group, Repeater, gomulu tablo); alana verilirse tools/safe-verify.php durur.
+ *
  * Dar ekranda (default) her sey tek sutun; orta ekranda (md) 6 sutun.
  * Eylem modallari (4xl) daha dar oldugu icin 4 sutunlu ayri olcek kullanir
- * (MODAL_COLUMNS + modal()): kisa alan 1/4, secim/metin 1/2, uzun metin tam.
+ * (MODAL_COLUMNS + modal()): kisa alan 1/4, secim/metin ve uzun metin 1/2.
  */
 final class FieldGrid
 {
@@ -69,7 +76,16 @@ final class FieldGrid
     /** Yarim satir (kapak gorseli + aciklama gibi ikili yerlesim). */
     public const HALF = ['default' => 1, 'md' => 6, 'xl' => 6];
 
-    /** Tam satir. */
+    /** Uzun icerik (aciklama, not, yukleme, etiket listesi) 12 sutunlu bolumde: xl yarim, md 4/6 (D-157). */
+    public const LONG = ['default' => 1, 'md' => 4, 'xl' => 6];
+
+    /** Uzun icerik yarim genislikteki bolumde (HALF_COLUMNS): 4/6 (D-157). */
+    public const HALF_LONG = ['default' => 1, 'md' => 4, 'xl' => 4];
+
+    /** Uzun icerik eylem modalinda (MODAL_COLUMNS): yarim (D-157). */
+    public const MODAL_LONG = ['default' => 1, 'md' => 2];
+
+    /** Tam satir: YALNIZ yerlesim bilesenleri (Grid, Group, Repeater, gomulu tablo); alanlara verilmez (D-157). */
     public const FULL = ['default' => 'full'];
 
     private const SIZE_SHORT = 'short';
@@ -77,6 +93,8 @@ final class FieldGrid
     private const SIZE_NORMAL = 'normal';
 
     private const SIZE_WIDE = 'wide';
+
+    private const SIZE_LONG = 'long';
 
     private const SIZE_FULL = 'full';
 
@@ -93,11 +111,11 @@ final class FieldGrid
      * @param  array<int, mixed>  $components
      * @return array<int, mixed>
      */
-    public static function fields(array $components, bool $modal = false): array
+    public static function fields(array $components, bool $modal = false, bool $halfSection = false): array
     {
         foreach ($components as $component) {
             if ($component instanceof Component && ! self::hasExplicitSpan($component)) {
-                $component->columnSpan(self::span(self::sizeFor($component), $modal));
+                $component->columnSpan(self::span(self::sizeFor($component), $modal, $halfSection));
             }
         }
 
@@ -180,9 +198,10 @@ final class FieldGrid
                 continue;
             }
 
+            $columns = $group['columns'] ?? self::COLUMNS;
             $section = Section::make($group['label'])
-                ->columns($group['columns'] ?? self::COLUMNS)
-                ->components(self::fields($picked));
+                ->columns($columns)
+                ->components(self::fields($picked, halfSection: $columns === self::HALF_COLUMNS));
 
             if (($group['icon'] ?? null) !== null) {
                 $section->icon($group['icon']);
@@ -230,12 +249,13 @@ final class FieldGrid
     /**
      * @return array<string, int | string>
      */
-    private static function span(string $size, bool $modal): array
+    private static function span(string $size, bool $modal, bool $halfSection = false): array
     {
         if ($modal) {
             return match ($size) {
                 self::SIZE_SHORT => ['default' => 1, 'md' => 1],
                 self::SIZE_NORMAL, self::SIZE_WIDE => ['default' => 1, 'md' => 2],
+                self::SIZE_LONG => self::MODAL_LONG,
                 default => self::FULL,
             };
         }
@@ -244,6 +264,7 @@ final class FieldGrid
             self::SIZE_SHORT => self::SHORT,
             self::SIZE_NORMAL => self::NORMAL,
             self::SIZE_WIDE => self::WIDE,
+            self::SIZE_LONG => $halfSection ? self::HALF_LONG : self::LONG,
             default => self::FULL,
         };
     }
@@ -254,15 +275,19 @@ final class FieldGrid
             return self::SIZE_SHORT;
         }
 
+        // Uzun icerik tam satir degil (D-157); Repeater yerlesimdir, ic alanlari kendi genisligini alir.
         if (
             $component instanceof Textarea
             || $component instanceof RichEditor
             || $component instanceof MarkdownEditor
             || $component instanceof FileUpload
-            || $component instanceof Repeater
             || $component instanceof KeyValue
             || $component instanceof TagsInput
         ) {
+            return self::SIZE_LONG;
+        }
+
+        if ($component instanceof Repeater) {
             return self::SIZE_FULL;
         }
 

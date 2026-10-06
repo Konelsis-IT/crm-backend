@@ -65,7 +65,7 @@ class StageTemplateVersionResource extends Resource
                 ->components(FieldGrid::fields([
                         Textarea::make('change_summary')
                             ->label(__('stage_template_version.fields.change_summary'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

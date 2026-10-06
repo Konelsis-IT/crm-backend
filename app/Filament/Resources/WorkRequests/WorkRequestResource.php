@@ -135,7 +135,7 @@ class WorkRequestResource extends Resource
                             ->native(false)
                             ->visible(fn (Get $get): bool => (bool) $get('on_behalf_of_unit'))
                             ->required(fn (Get $get): bool => (bool) $get('on_behalf_of_unit'))
-                            ->columnSpanFull(),
+                            ->columnSpan(['default' => 1, 'md' => 1]),
                     ]),
                 Section::make(__('work_request.sections.target'))
                     ->description(__('work_request.help.target'))

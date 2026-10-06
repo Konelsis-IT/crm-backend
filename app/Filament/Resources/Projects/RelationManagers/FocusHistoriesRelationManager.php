@@ -39,7 +39,7 @@ class FocusHistoriesRelationManager extends RelationManager
                 ->components(FieldGrid::fields([
                         Textarea::make('reason')
                             ->label(__('project_focus_history.fields.reason'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

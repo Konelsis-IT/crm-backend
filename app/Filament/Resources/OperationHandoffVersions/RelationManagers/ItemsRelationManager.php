@@ -58,7 +58,7 @@ class ItemsRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('handoff_item.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Select::make('document_revision_id')
                             ->label(__('handoff_item.fields.document_revision'))
                             ->relationship('documentRevision', 'title')

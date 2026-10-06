@@ -9,8 +9,50 @@ return [
         'res' => 'RES kapsamı',
         'tm' => 'TM kapsamı',
         'hes' => 'HES kapsamı',
-        'bes' => 'BES kapsamı',
-        'enh_eih' => 'ENH/EIH kapsamı',
+        'bes' => 'BESS kapsamı',
+        'enh_eih' => 'ENH/EİH kapsamı',
+    ],
+
+    // Teklif kapsami alan basliklari (B43, D-155; 5 Ekim 2026 kullanicinin yazdigi
+    // gibi). Tip => alan => baslik.
+    'labels' => [
+        'tm' => [
+            'total_cost' => 'Toplam Maliyet',
+            'total_sales' => 'Toplam Satış',
+            'unit_cost' => 'Maliyet/Fider',
+        ],
+        'bes' => [
+            'power_mwe' => 'MWe',
+            'energy_mwh' => 'MWh',
+            'unit_cost' => 'Bess Maliyet/MWh',
+            'total_cost' => 'Toplam Maliyet',
+            'unit_sales' => 'Bess Satış/MWh',
+            'total_sales' => 'Toplam Satış',
+        ],
+        'hes' => [
+            'total_cost' => 'Maliyet',
+            'total_sales' => 'Satış',
+            'unit_cost' => 'Maliyet/Jeneratör-Türbin',
+        ],
+        'ges' => [
+            'capacity_mwp' => 'MWp',
+            'unit_cost' => 'GES Maliyet/MWp',
+            'total_cost' => 'Toplam Maliyet',
+            'unit_sales' => 'GES Satış/MWp',
+            'total_sales' => 'Toplam Satış Tutarı',
+        ],
+        'enh_eih' => [
+            'length_km' => 'Km',
+            'unit_cost' => 'ENH Maliyet/Km',
+            'total_cost' => 'Toplam Maliyet',
+            'unit_sales' => 'ENH Satış/Km',
+            'total_sales' => 'Toplam Satış',
+        ],
+        'res' => [
+            'res_material_amount' => 'Respark malzeme',
+            'res_construction_amount' => 'Respark inşaat',
+            'res_assembly_amount' => 'Respark montaj',
+        ],
     ],
 
     'fields' => [

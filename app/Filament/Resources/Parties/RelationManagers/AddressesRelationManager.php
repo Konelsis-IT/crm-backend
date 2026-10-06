@@ -66,11 +66,11 @@ class AddressesRelationManager extends RelationManager
                             ->label(__('address.fields.line1'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         TextInput::make('line2')
                             ->label(__('address.fields.line2'))
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         ...TurkiyeAddressFields::make('city', 'district', __('address.fields.city'), __('address.fields.district'), 'country_code', cityRequired: true),
                         TextInput::make('postal_code')
                             ->label(__('address.fields.postal_code'))

@@ -7,6 +7,7 @@ return [
     'actions' => [
         'open' => 'Open',
         'save' => 'Save',
+        'save_draft' => 'Save as draft',
     ],
 
     'dashboard' => [
@@ -34,6 +35,17 @@ return [
     'fields' => [
         'created_at' => 'Created at',
         'updated_at' => 'Updated at',
+    ],
+
+    'values' => [
+        'draft' => 'Draft',
+        'draft_at' => 'Draft · stopped at :step',
+        'draft_hint' => 'Draft record: not finished yet, continues from the step where it stopped',
+    ],
+
+    'tabs' => [
+        'all' => 'All',
+        'drafts' => 'Drafts',
     ],
 
     'errors' => [

@@ -105,7 +105,7 @@ class DocumentTypeResource extends Resource
                     TagsInput::make('allowed_extensions')
                         ->label(__('document_type.fields.allowed_extensions'))
                         ->splitKeys([',', ' '])
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     TextInput::make('max_byte_size')
                         ->label(__('document_type.fields.max_byte_size'))
                         ->numeric()

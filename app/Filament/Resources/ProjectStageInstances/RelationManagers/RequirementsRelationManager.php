@@ -63,7 +63,7 @@ class RequirementsRelationManager extends RelationManager
                             ->displayFormat('d.m.Y'),
                         Textarea::make('outcome_note')
                             ->label(__('project_stage_requirement.fields.outcome_note'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

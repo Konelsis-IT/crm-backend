@@ -90,10 +90,10 @@ class SupplyItemsRelationManager extends RelationManager
                         ->label(__('project_supply_item.fields.name'))
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Textarea::make('specification')
                         ->label(__('project_supply_item.fields.specification'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Select::make('workstream_id')
                         ->label(__('project_supply_item.fields.workstream'))
                         ->relationship(
@@ -174,7 +174,7 @@ class SupplyItemsRelationManager extends RelationManager
                         ->displayFormat('d.m.Y'),
                     Textarea::make('note')
                         ->label(__('project_supply_item.fields.note'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

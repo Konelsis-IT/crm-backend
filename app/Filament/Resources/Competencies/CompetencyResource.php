@@ -86,7 +86,7 @@ class CompetencyResource extends Resource
                     Textarea::make('description')
                         ->label(__('competency.fields.description'))
                         ->rows(2)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);

@@ -149,7 +149,7 @@ class Dashboard extends BaseDashboard
                             ->native(false)
                             ->required(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Department->value)
                             ->visible(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Department->value)
-                            ->columnSpan(FieldGrid::FULL),
+                            ->columnSpan(['default' => 1, 'md' => 2]),
                         Select::make('role_id')
                             ->label(__('announcement.fields.role'))
                             ->options(fn (): array => app(RoleQueries::class)->roleOptions())
@@ -157,7 +157,7 @@ class Dashboard extends BaseDashboard
                             ->native(false)
                             ->required(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Role->value)
                             ->visible(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Role->value)
-                            ->columnSpan(FieldGrid::FULL),
+                            ->columnSpan(['default' => 1, 'md' => 2]),
                         Select::make('audience_ids')
                             ->label(__('announcement.fields.personnel'))
                             ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
@@ -166,12 +166,12 @@ class Dashboard extends BaseDashboard
                             ->native(false)
                             ->required(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Personnel->value)
                             ->visible(fn (Get $get): bool => FormState::value($get('audience_kind')) === AnnouncementAudience::Personnel->value)
-                            ->columnSpan(FieldGrid::FULL),
+                            ->columnSpan(['default' => 1, 'md' => 2]),
                         TextInput::make('title')
                             ->label(__('announcement.fields.title'))
                             ->required()
                             ->maxLength(200)
-                            ->columnSpan(FieldGrid::FULL),
+                            ->columnSpan(['default' => 1, 'md' => 2]),
                         Textarea::make('body')
                             ->label(__('announcement.fields.body'))
                             ->required()
@@ -182,7 +182,7 @@ class Dashboard extends BaseDashboard
                             ->helperText(__('announcement.help.action_url'))
                             ->url()
                             ->maxLength(2000)
-                            ->columnSpan(FieldGrid::FULL),
+                            ->columnSpan(['default' => 1, 'md' => 2]),
                     ])))
                 ->action(function (array $data): void {
                     $kind = (string) ($data['audience_kind'] ?? '');

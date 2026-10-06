@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'business_case_id', 'tender_source_id', 'external_notice_id', 'title', 'issuer_party_id', 'notice_url',
     'captured_at', 'current_version_id', 'status',
+    // B43 (D-155): ihale potansiyel isten once gelir (business_case_id bos olabilir); taslak.
+    'is_draft', 'draft_step',
 ])]
 #[UsePolicy(TenderNoticePolicy::class)]
 class TenderNotice extends Model
@@ -36,6 +38,7 @@ class TenderNotice extends Model
         return [
             'captured_at' => 'datetime',
             'status' => TenderNoticeStatus::class,
+            'is_draft' => 'boolean',
         ];
     }
 

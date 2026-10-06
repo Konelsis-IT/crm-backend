@@ -56,7 +56,7 @@ class VersionsRelationManager extends RelationManager
                         ->label(__('document_template.fields.view_key'))
                         ->required()
                         ->maxLength(128)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::WIDE),
                     Select::make('status')
                         ->label(__('document_template.fields.version_status'))
                         ->options(TemplateVersionStatus::class)
@@ -65,10 +65,10 @@ class VersionsRelationManager extends RelationManager
                         ->native(false),
                     KeyValue::make('layout_config')
                         ->label(__('document_template.fields.layout_config'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                     TagsInput::make('required_field_keys')
                         ->label(__('document_template.fields.required_field_keys'))
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::LONG),
                 ])),
         ]);
     }

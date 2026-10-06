@@ -21,13 +21,14 @@ enum ProposalVersionStatus: string implements HasColor, HasLabel
 
     public function getColor(): string
     {
+        // Her durumun kendi rengi (D-161); potansiyel is durumlariyla uyumlu.
         return match ($this) {
-            self::Draft => 'gray',
-            self::Review => 'info',
+            self::Draft => 'sky',
+            self::Review => 'indigo',
             self::Approved => 'success',
-            self::Submitted => 'primary',
-            self::Superseded => 'warning',
-            self::Withdrawn => 'danger',
+            self::Submitted => 'violet',
+            self::Superseded => 'gray',
+            self::Withdrawn => 'rose',
         };
     }
 

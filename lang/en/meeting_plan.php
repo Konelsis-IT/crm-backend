@@ -27,6 +27,7 @@ return [
         'completed_at' => 'Result entered at',
         'cancel_reason' => 'Why did it not happen?',
         'follow_up_of' => 'Meeting note date',
+        'archived_at' => 'Archived at',
     ],
 
     'help' => [
@@ -35,19 +36,24 @@ return [
         'complete' => 'The result is written to the company\'s meeting notes. If you give a next step date, it appears on the calendar as a new planned meeting and a reminder is sent.',
         'reschedule' => 'The reminder (1 day before and on the morning) is sent again for the new date.',
         'cancel' => 'The meeting is marked as "Did not happen"; your reason is added to the plan note.',
-        'result' => 'This comes from the company\'s meeting notes; correct it there.',
+        'result' => 'This comes from the company\'s meeting notes; use "Edit note" above to correct it.',
+        'past' => 'The date has passed and no result was entered. Choose "Enter result" if the meeting took place, otherwise "Did not happen".',
+        'archive' => 'The meeting is not deleted but archived: it no longer shows on the calendar, the list or in reminders. Find it with the Archive filter on the list and restore it.',
+        'archive_with_note' => 'The result note of this meeting (the company\'s meeting notes) is archived together with it. Find them with the Archive filter and restore them.',
+        'restore' => 'The meeting (and the note archived with it) shows on the calendar and the list again.',
     ],
 
     'values' => [
-        'overdue' => 'Overdue',
+        'overdue' => 'Past',
         'no_personnel' => 'Not assigned',
         'follow_up_subject' => 'Next step',
+        'archived' => 'Archived',
     ],
 
     'tabs' => [
         'upcoming' => 'Upcoming',
         'today' => 'Today',
-        'overdue' => 'Overdue',
+        'overdue' => 'Past',
         'done' => 'Held',
         'cancelled' => 'Not held',
         'all' => 'All',
@@ -58,6 +64,10 @@ return [
         'dates' => 'Date range',
         'from' => 'From',
         'until' => 'Until',
+        'archive' => 'Archive',
+        'archive_active' => 'Active',
+        'archive_archived' => 'Archived',
+        'archive_all' => 'All',
     ],
 
     'actions' => [
@@ -68,12 +78,27 @@ return [
         'complete' => 'Enter result',
         'reschedule' => 'Change date',
         'cancel' => 'Did not happen',
+        'archive' => 'Archive',
+        'restore' => 'Restore from archive',
     ],
 
     'messages' => [
         'completed' => 'The result was saved and written to the company\'s meeting notes.',
         'rescheduled' => 'The meeting date was changed.',
         'cancelled' => 'The meeting was marked as not held.',
+        'archived' => 'The meeting was archived.',
+        'restored' => 'The meeting was restored from the archive.',
+    ],
+
+    'quick_party' => [
+        'action' => 'Add company',
+        'heading' => 'Add company',
+        'description' => 'Add a company that is not in the list; it is selected in this meeting. Complete the other details later on the Parties screen.',
+        'submit' => 'Add',
+        'name' => 'Company name',
+        'exists' => 'A company with this name already exists: :name. Search for it in the company field.',
+        'exists_archived' => 'An archived company has this name: :name. Find it with the Archive filter on the Parties screen and restore it.',
+        'created' => 'Company added: :name',
     ],
 
     'notifications' => [
@@ -98,7 +123,7 @@ return [
         'meeting_all_personnel' => 'All personnel',
         'meeting_personnel_filter' => 'Filter by personnel',
         'meeting_status_planned' => 'Planned',
-        'meeting_status_overdue' => 'Overdue',
+        'meeting_status_overdue' => 'Past',
         'meeting_status_done' => 'Held',
         'meeting_status_cancelled' => 'Not held',
     ],

@@ -68,6 +68,8 @@ class PersonnelProfile extends EditProfile
                 ->description(__('personnel.help.profile_intro'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
+                    // Avatar 128 px sabit dairedir: kisa hucreye sigar, ad ve iletisim
+                    // alanlari yanina gelir; tam satir yok (D-157).
                     FileUpload::make('photo_path')
                         ->label(__('personnel.fields.photo'))
                         ->image()
@@ -76,7 +78,7 @@ class PersonnelProfile extends EditProfile
                         ->disk('public')
                         ->directory('personel-fotograflari')
                         ->maxSize(4096)
-                        ->columnSpanFull(),
+                        ->columnSpan(FieldGrid::SHORT),
                     TextInput::make('full_name')
                         ->label(__('personnel.fields.full_name'))
                         ->prefixIcon(Heroicon::OutlinedUser)

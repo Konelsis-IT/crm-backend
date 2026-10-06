@@ -2,7 +2,7 @@
 
 return [
     'label' => 'Deviation',
-    'plural' => 'Deviations',
+    'plural' => 'Deviation list',
 
     'sections' => [
         'main' => 'Deviation details',
@@ -20,7 +20,7 @@ return [
     ],
 
     'relation' => [
-        'title' => 'Deviations',
+        'title' => 'Deviation list',
         'empty' => 'No deviations yet.',
     ],
 

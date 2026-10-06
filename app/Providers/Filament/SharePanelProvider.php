@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Share\Pages\SharedDocument;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\StatusColors;
 use App\Http\Controllers\Share\SharedRevisionFileController;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -37,8 +38,9 @@ class SharePanelProvider extends PanelProvider
             ->brandName(fn (): string => __('app.name'))
             ->colors([
                 'primary' => Color::Amber,
-                // Dugme tonlari her panelde ayni (D-148).
+                // Dugme tonlari her panelde ayni (D-148); durum renkleri de (D-161).
                 ...ActionColors::panelColors(),
+                ...StatusColors::panelColors(),
             ])
             ->navigation(false)
             ->topNavigation()

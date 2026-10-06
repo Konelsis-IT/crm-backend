@@ -57,7 +57,7 @@ class ExposuresRelationManager extends RelationManager
                         Textarea::make('description')
                             ->label(__('commercial_exposure.fields.description'))
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         TextInput::make('exposure_amount')
                             ->label(__('commercial_exposure.fields.exposure_amount'))
                             ->numeric()

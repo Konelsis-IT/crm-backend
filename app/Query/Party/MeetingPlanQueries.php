@@ -10,6 +10,7 @@ use App\Filament\Resources\Parties\PartyResource;
 use App\Models\Party\MeetingPlan;
 use App\Models\Personnel\Personnel;
 use App\Services\Party\MeetingReminderScanner;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Throwable;
@@ -40,6 +41,7 @@ final class MeetingPlanQueries
         $today = self::today();
 
         $query = MeetingPlan::query()
+            ->notArchived()
             ->with(['party', 'contact', 'personnel', 'participants'])
             ->whereBetween('planned_on', [$first->toDateString(), $last->toDateString()])
             ->orderBy('planned_on')
@@ -99,10 +101,27 @@ final class MeetingPlanQueries
         $counts = [];
 
         foreach (['upcoming', 'today', 'overdue'] as $tab) {
-            $counts[$tab] = $this->tab(MeetingPlan::query(), $tab)->count();
+            $counts[$tab] = $this->tab(MeetingPlan::query()->notArchived(), $tab)->count();
         }
 
         return $counts;
+    }
+
+    /**
+     * Arsiv suzgeci (B44, D-156): active (varsayilan) / archived / all. Grup
+     * uygulanmadiysa suzgec yoktur.
+     */
+    public function archiveScope(Builder $query, string $mode): Builder
+    {
+        if (! SchemaReadiness::hasBatch('B44')) {
+            return $query;
+        }
+
+        return match ($mode) {
+            'archived' => $query->whereNotNull($query->qualifyColumn('archived_at')),
+            'all' => $query,
+            default => $query->whereNull($query->qualifyColumn('archived_at')),
+        };
     }
 
     /** Tarih araligi suzgeci (bos uclar acik). */

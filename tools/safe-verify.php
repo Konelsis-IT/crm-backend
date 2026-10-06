@@ -143,6 +143,15 @@ function dateInputChains(string $source, string $needle = 'DatePicker::make('): 
     $offset = 0;
 
     while (($pos = strpos($source, $needle, $offset)) !== false) {
+        // Ad siniri: "Select::make(" "XSelect::make(" icinde eslesmesin (ad alani "\" serbest).
+        $before = $pos > 0 ? $source[$pos - 1] : ' ';
+
+        if (ctype_alnum($before) || $before === '_') {
+            $offset = $pos + strlen($needle);
+
+            continue;
+        }
+
         $i = $pos;
         $depth = 0;
         $length = strlen($source);
@@ -223,6 +232,146 @@ foreach ([$root.'/app/Filament', $root.'/app/Livewire'] as $uploadDirectory) {
             if (! str_contains($chain, '->maxSize(')) {
                 $field = preg_match('/FileUpload::make\(([^)]*)\)/', $chain, $m) === 1 ? trim($m[1]) : '?';
                 $failures[] = sprintf('Upload limits: %s FileUpload [%s] has no ->maxSize(); the global cap is the 1 GB document limit, so every field states its own (documents: UploadLimits::documentMaxKb()).', relative($root, $file), $field);
+            }
+        }
+    }
+}
+
+// 3d-2. Tam satir alan yok (5 Ekim 2026 kullanici kurali, D-157) ------------------
+// "Hicbir duzenleme/olusturma ekraninda ... tum satir alan olarak secilmemeli ...
+// Compact olmali, gerektigi kadar bir alan olmalidir." Girdi alanlari
+// columnSpanFull() / FieldGrid::FULL / 'full' almaz; uzun icerik FieldGrid::LONG,
+// HALF_LONG ya da MODAL_LONG alir. Secenekleri sutunlara dizilen liste
+// (CheckboxList / Radio / ToggleButtons + ->columns()) ve yerlesim bilesenleri
+// (Section, Grid, Group, Repeater, Text...) bu kuralin disindadir.
+function withoutPhpComments(string $source): string
+{
+    $out = '';
+
+    foreach (token_get_all($source) as $token) {
+        if (is_array($token) && in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+            $out .= str_repeat("\n", substr_count($token[1], "\n"));
+
+            continue;
+        }
+
+        $out .= is_array($token) ? $token[1] : $token;
+    }
+
+    return $out;
+}
+
+/**
+ * Zincirin kendi (derinlik 0) metot cagrilari: [[ad, argumanlar], ...]. Ic ice
+ * bilesenlerin (or. createOptionForm([...]) icindeki alanlar) cagrilari dahil degildir.
+ *
+ * @return list<array{0: string, 1: string}>
+ */
+function topLevelCalls(string $chain): array
+{
+    $calls = [];
+    $length = strlen($chain);
+    $depth = 0;
+    $quote = null;
+    $i = 0;
+
+    while ($i < $length) {
+        $char = $chain[$i];
+
+        if ($quote !== null) {
+            if ($char === chr(92)) {
+                $i += 2;
+
+                continue;
+            }
+
+            if ($char === $quote) {
+                $quote = null;
+            }
+
+            $i++;
+
+            continue;
+        }
+
+        if ($char === "'" || $char === '"') {
+            $quote = $char;
+        } elseif ($char === '(' || $char === '[') {
+            $depth++;
+        } elseif ($char === ')' || $char === ']') {
+            $depth--;
+        } elseif ($depth === 0 && $char === '-' && ($chain[$i + 1] ?? '') === '>' && preg_match('/\G->([A-Za-z_][A-Za-z0-9_]*)\(/', $chain, $m, 0, $i) === 1) {
+            $start = $i + strlen($m[0]);
+            $inner = 0;
+            $innerQuote = null;
+
+            for ($j = $start; $j < $length; $j++) {
+                $c = $chain[$j];
+
+                if ($innerQuote !== null) {
+                    if ($c === chr(92)) {
+                        $j++;
+                    } elseif ($c === $innerQuote) {
+                        $innerQuote = null;
+                    }
+
+                    continue;
+                }
+
+                if ($c === "'" || $c === '"') {
+                    $innerQuote = $c;
+                } elseif ($c === '(' || $c === '[') {
+                    $inner++;
+                } elseif ($c === ')' || $c === ']') {
+                    if ($inner === 0) {
+                        break;
+                    }
+
+                    $inner--;
+                }
+            }
+
+            $calls[] = [$m[1], substr($chain, $start, $j - $start)];
+            $i = $j + 1;
+
+            continue;
+        }
+
+        $i++;
+    }
+
+    return $calls;
+}
+
+$compactFields = ['TextInput', 'Textarea', 'Select', 'FileUpload', 'RichEditor', 'MarkdownEditor', 'TagsInput', 'KeyValue', 'DatePicker', 'TimePicker', 'Toggle', 'Checkbox', 'ColorPicker', 'CheckboxList', 'Radio', 'ToggleButtons'];
+$optionLists = ['CheckboxList', 'Radio', 'ToggleButtons'];
+
+foreach (phpFiles($root.'/app/Filament') as $file) {
+    $source = withoutPhpComments((string) file_get_contents($file));
+
+    foreach ($compactFields as $fieldClass) {
+        foreach (dateInputChains($source, $fieldClass.'::make(') as $chain) {
+            $calls = topLevelCalls($chain);
+            $full = false;
+            $hasColumns = false;
+
+            foreach ($calls as [$method, $arguments]) {
+                $arguments = trim($arguments);
+
+                // Kosullu genislik de sayilir: ->columnSpan($x ? FieldGrid::FULL : FieldGrid::HALF).
+                if ($method === 'columnSpanFull'
+                    || ($method === 'columnSpan' && preg_match('/FieldGrid::FULL\b|[\'"]full[\'"]/', $arguments) === 1)) {
+                    $full = true;
+                }
+
+                if ($method === 'columns') {
+                    $hasColumns = true;
+                }
+            }
+
+            if ($full && ! (in_array($fieldClass, $optionLists, true) && $hasColumns)) {
+                $field = preg_match('/::make\(([^)]*)\)/', $chain, $m) === 1 ? trim($m[1]) : '?';
+                $failures[] = sprintf('Compact fields (D-157): %s %s [%s] spans the full row; use FieldGrid::LONG / HALF_LONG / MODAL_LONG or a narrower width.', relative($root, $file), $fieldClass, $field);
             }
         }
     }

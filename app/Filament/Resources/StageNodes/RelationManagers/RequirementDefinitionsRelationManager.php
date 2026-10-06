@@ -70,7 +70,7 @@ class RequirementDefinitionsRelationManager extends RelationManager
                             ->native(false),
                         Textarea::make('description')
                             ->label(__('stage_requirement_definition.fields.description'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         TextInput::make('sort_order')
                             ->label(__('stage_requirement_definition.fields.sort_order'))
                             ->numeric()

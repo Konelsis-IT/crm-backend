@@ -50,7 +50,7 @@ class BoqItemsRelationManager extends RelationManager
                             ->label(__('boq_item.fields.description'))
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::WIDE),
                         TextInput::make('quantity')
                             ->label(__('boq_item.fields.quantity'))
                             ->numeric()

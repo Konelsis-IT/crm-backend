@@ -21,12 +21,23 @@ return [
         'personnel' => 'Görüşen personel',
         'reason' => 'Gerekçe',
         'subject' => 'Konu',
+        'archived_at' => 'Arşive alınma',
     ],
 
     'help' => [
         'business_case' => 'Görüşme bir potansiyel işle ilgiliyse seçin; not o işin sayfasında da görünür.',
         'proposals' => 'Görüşmede konuşulan teklifler (seçilen potansiyel işin teklifleri); not teklif sayfasında da görünür.',
         'next_action_reminder' => 'Sonraki adım tarihi verilirse bu adım Görüşme planı takvimine planlı görüşme olarak düşer; tarihten 1 gün önce ve o günün sabahı görüşen personele zil bildirimi gider.',
+        // D-156: silme yok, arşiv var.
+        'archive' => 'Not silinmez, arşive alınır: listelerde görünmez, Görüşme planındaki karşılığı da arşive gider. Arşiv süzgeciyle bulunur ve geri alınabilir.',
+        'restore' => 'Not ve Görüşme planındaki karşılığı yeniden görünür.',
+    ],
+
+    'filters' => [
+        'archive' => 'Arşiv',
+        'archive_active' => 'Aktif',
+        'archive_archived' => 'Arşivlenenler',
+        'archive_all' => 'Tümü',
     ],
 
     'relation' => [
@@ -46,11 +57,17 @@ return [
         'waive' => 'Muafiyet ver',
         'add_evidence' => 'Kanıt ekle',
         'accept' => 'Kabul et',
+        'edit' => 'Notu düzenle',
+        'archive' => 'Arşive al',
+        'restore' => 'Arşivden çıkar',
     ],
 
     'messages' => [
         'status_changed' => 'Durum güncellendi.',
         'done' => 'İşlem tamamlandı.',
+        'updated' => 'Görüşme notu güncellendi.',
+        'archived' => 'Görüşme notu arşive alındı.',
+        'restored' => 'Görüşme notu arşivden çıkarıldı.',
     ],
 
     'validation' => [

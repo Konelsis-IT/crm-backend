@@ -101,7 +101,7 @@ class WorkPackageResource extends Resource
                             ->displayFormat('d.m.Y'),
                         Textarea::make('description')
                             ->label(__('work_package.fields.description'))
-                            ->columnSpanFull(),
+                            ->columnSpan(FieldGrid::LONG),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
