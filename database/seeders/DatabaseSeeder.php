@@ -54,24 +54,18 @@ class DatabaseSeeder extends Seeder
      *
      * @var list<class-string<Seeder>>
      */
-    public const DEPLOY_SEEDERS = [];
+    public const DEPLOY_SEEDERS = [
+        // Baslangic zincirinin satirlari yazilmadan arsive isaretlenir (bir kez).
+        ArchiveLegacySeedsSeeder::class,
+    ];
 
-    public function run(): void
-    {
-        // D-165 (6 Ekim 2026 kullanici talimati: "canlida son hali neyse o
-        // kalmali, biz sadece ekledigimiz db:seed'ler calisacaklar; her yeni
-        // db:seed isi yeni dosyada olmali"): dolu veritabaninda zincir yeniden
-        // calismaz. Yalniz ozellik katalogu (yeni anahtarlar eklenir, var
-        // olanlarin durumu korunur) yazilir; yeni bir seed isi kendi dosyasiyla
-        // "--class" ile calistirilir.
-        if (DB::table('personnel')->exists()) {
-            $this->command?->info('Veritabani dolu: baslangic zinciri atlandi, canlidaki veri korundu. Ozellik anahtarlari ve bu surumun yeni seed dosyalari calisiyor.');
-            $this->call([FeatureSeeder::class, ...self::DEPLOY_SEEDERS]);
-
-            return;
-        }
-
-        $this->call([
+    /**
+     * Ilk kurulum zinciri (bos veritabani). ArchiveLegacySeedsSeeder ayni
+     * listeyi canlida yalniz isaretleme kipinde calistirir.
+     *
+     * @var list<class-string<Seeder>>
+     */
+    public const START_CHAIN = [
             // Kimlik ve referans
             SystemAccountSeeder::class,
             ReferenceDataSeeder::class,
@@ -115,9 +109,23 @@ class DatabaseSeeder extends Seeder
             // Sosyal medya (B31, D-106): gercek hesaplar ve resmi ulusal gunler
             SocialProfileSeeder::class,
             SocialSpecialDaySeeder::class,
+    ];
 
-            // Ozellik anahtarlari (B39, D-128): katalog + data/features.php durumlari
-            FeatureSeeder::class,
-        ]);
+    public function run(): void
+    {
+        // D-165 (6 Ekim 2026 kullanici talimati: "canlida son hali neyse o
+        // kalmali, biz sadece ekledigimiz db:seed'ler calisacaklar; her yeni
+        // db:seed isi yeni dosyada olmali"): dolu veritabaninda zincir yeniden
+        // calismaz. Ozellik katalogu (yeni anahtarlar eklenir, var olanlarin
+        // durumu korunur) ve DEPLOY_SEEDERS calisir (D-166, deploy.sh).
+        if (DB::table('personnel')->exists()) {
+            $this->command?->info('Veritabani dolu: baslangic zinciri atlandi, canlidaki veri korundu. Ozellik anahtarlari ve bu surumun yeni seed dosyalari calisiyor.');
+            $this->call([FeatureSeeder::class, ...self::DEPLOY_SEEDERS]);
+
+            return;
+        }
+
+        // Ozellik anahtarlari (B39, D-128): katalog + data/features.php durumlari en sonda.
+        $this->call([...self::START_CHAIN, FeatureSeeder::class]);
     }
 }

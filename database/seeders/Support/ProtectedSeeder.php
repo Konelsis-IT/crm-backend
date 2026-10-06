@@ -22,7 +22,20 @@ use Illuminate\Database\Seeder;
  */
 abstract class ProtectedSeeder extends Seeder
 {
+    /**
+     * Yalniz isaretleme kipi (ArchiveLegacySeedsSeeder): satirlar hic
+     * yazilmaz, her satir "islendi" olarak arsive dusulur.
+     */
+    private static bool $markOnly = false;
+
     private int $archivedRows = 0;
+
+    private int $markedRows = 0;
+
+    public static function markOnly(bool $on): void
+    {
+        self::$markOnly = $on;
+    }
 
     /**
      * @param  array<string, mixed>  $parameters
@@ -35,6 +48,10 @@ abstract class ProtectedSeeder extends Seeder
             $result = parent::__invoke($parameters);
         } finally {
             SeedGuard::leave();
+        }
+
+        if ($this->markedRows > 0) {
+            $this->command?->info(sprintf('%s: %d satir yazilmadan arsive isaretlendi.', class_basename(static::class), $this->markedRows));
         }
 
         if ($this->archivedRows > 0) {
@@ -60,6 +77,14 @@ abstract class ProtectedSeeder extends Seeder
 
         if ($archive->has(static::class, $key)) {
             $this->archivedRows++;
+
+            return null;
+        }
+
+        // Isaretleme kipi: satir yazilmaz, arsivdeymis gibi atlanir ve arsive dusulur.
+        if (self::$markOnly) {
+            $archive->record(static::class, $key, null);
+            $this->markedRows++;
 
             return null;
         }

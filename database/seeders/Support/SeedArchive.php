@@ -26,6 +26,32 @@ final class SeedArchive
     /** @var array<string, array<string, true>> seeder => satir ozeti */
     private array $known = [];
 
+    /**
+     * Ara bellek (isaretleme kipi): islem geri alinsa da satirlar kaybolmasin
+     * diye once burada toplanir, flush() ile yazilir.
+     *
+     * @var list<array<string, mixed>>|null
+     */
+    private ?array $buffer = null;
+
+    public function beginBuffer(): void
+    {
+        $this->buffer = [];
+    }
+
+    /** Ara bellekteki satirlari yazar; yazilan satir sayisini doner. */
+    public function flush(): int
+    {
+        $rows = $this->buffer ?? [];
+        $this->buffer = null;
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            DB::table('seed_archive')->insertOrIgnore($chunk);
+        }
+
+        return count($rows);
+    }
+
     public static function instance(): self
     {
         return self::$instance ??= new self;
@@ -57,14 +83,20 @@ final class SeedArchive
             return;
         }
 
-        DB::table('seed_archive')->insertOrIgnore([
+        $row = [
             'seeder' => $seeder,
             'row_hash' => $hash,
             'row_key' => mb_substr($key, 0, 500),
             'record_type' => $record !== null ? $record->getMorphClass() : null,
             'record_id' => $record !== null && is_numeric($record->getKey()) ? (int) $record->getKey() : null,
             'archived_at' => CarbonImmutable::now('UTC'),
-        ]);
+        ];
+
+        if ($this->buffer !== null) {
+            $this->buffer[] = $row;
+        } else {
+            DB::table('seed_archive')->insertOrIgnore($row);
+        }
 
         $this->known[$seeder][$hash] = true;
     }
