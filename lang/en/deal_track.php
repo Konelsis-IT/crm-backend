@@ -28,7 +28,8 @@ return [
     'project_none_help' => 'Opened with "Convert to project" when the proposal is won; the operations handoff is opened and accepted automatically. Needed:',
     'project_off' => 'Project · will not be opened',
     'project_off_help' => 'The job was lost or cancelled; no project will come out of it.',
-    'check_sent' => 'Proposal sent to the customer',
+    // D-167: employer instead of customer.
+    'check_sent' => 'Proposal sent to the employer',
     'check_won' => 'Proposal won',
     'handoff' => 'Operations handoff: :status',
     'tender' => 'Tender',
@@ -37,7 +38,7 @@ return [
     'case_none' => 'Potential job · not yet',
     'case_none_help' => 'Once the tender is assessed and pursued, a potential job is opened from it with the tender preselected.',
     'chips' => [
-        'customer' => 'Customer',
+        'customer' => 'Employer',
         'stage' => 'Status',
         'type' => 'Project type',
         'scopes' => 'Scope',
@@ -62,8 +63,8 @@ return [
         'draft' => 'Draft',
     ],
     'state' => [
-        'draft' => ['headline' => 'Proposal in preparation', 'detail' => 'not sent to the customer yet.'],
-        'sent' => ['headline' => 'Waiting for the customer', 'detail' => 'sent on :date · :wait.'],
+        'draft' => ['headline' => 'Proposal in preparation', 'detail' => 'not sent to the employer yet.'],
+        'sent' => ['headline' => 'Waiting for the employer', 'detail' => 'sent on :date · :wait.'],
         'won' => ['headline' => 'Proposal won', 'detail' => 'the project is not opened yet; use "Convert to project".'],
         'lost' => ['headline' => 'Proposal lost', 'detail' => 'nothing left to do on this proposal.'],
         'cancelled' => ['headline' => 'Job cancelled', 'detail' => 'nothing left to do on this proposal.'],

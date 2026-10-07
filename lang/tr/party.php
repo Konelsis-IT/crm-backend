@@ -23,7 +23,7 @@ return [
         'restore' => 'Kayıt arşivden çıkar ve listeye geri döner.',
         'channels' => 'Kuruma ait, kişiden bağımsız iletişim bilgileri: e-posta, telefon, web sitesi. Kişilere ait bilgiler "İletişim ve kişiler" listesinden girilir.',
         'network_note' => 'Nereden tanındığı: referans, fuar, tanıdık, internet…',
-        'role_codes' => 'En az bir satır girin; bir taraf aynı anda birden fazla tipte olabilir (örneğin hem müşteri hem tedarikçi). Sonradan Taraf tipi listesinden yönetilir.',
+        'role_codes' => 'En az bir satır girin; bir taraf aynı anda birden fazla tipte olabilir (örneğin hem işveren hem tedarikçi). Sonradan Taraf tipi listesinden yönetilir.',
     ],
 
     'filters' => [

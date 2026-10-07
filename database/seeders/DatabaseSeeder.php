@@ -57,6 +57,8 @@ class DatabaseSeeder extends Seeder
     public const DEPLOY_SEEDERS = [
         // Baslangic zincirinin satirlari yazilmadan arsive isaretlenir (bir kez).
         ArchiveLegacySeedsSeeder::class,
+        // D-167: Mukaddes Tekik ve Haydar Samet Cakmak'in ikinci yoneticisi (Yusuf Gokcan Fil).
+        PersonnelManagerLinksSeeder::class,
     ];
 
     /**

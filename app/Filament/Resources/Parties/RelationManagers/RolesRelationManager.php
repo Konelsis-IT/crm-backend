@@ -48,10 +48,12 @@ class RolesRelationManager extends RelationManager
             Section::make(__('party_role.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
                 ->components(FieldGrid::fields([
+                        // D-167: tek rol Isveren; eski Musteri / Yatirimci satiri
+                        // duzenlenirken kendi kodu listede kalir (tip zaten degistirilemez).
                         Select::make('role_code')
                             ->label(__('party_role.fields.role_code'))
-                            ->options(PartyRoleCode::availableOptions())
-                            ->default(PartyRoleCode::Customer->value)
+                            ->options(fn (?PartyRole $record): array => PartyRoleCode::availableOptions($record?->role_code))
+                            ->default(PartyRoleCode::Employer->value)
                             ->required()
                             ->native(false),
                         Select::make('status')

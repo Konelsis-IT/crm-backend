@@ -567,6 +567,12 @@ return [
         'unit_picker' => 'Departman',
         'limited' => 'Çok sayıda kart var; ilk :n kart gösteriliyor. Süzgeçleri daraltın.',
         'columns_label' => 'Durum sütunları',
+        // Sade gorunum (D-167, work.board.compact)
+        'filter_button' => 'Filtrele',
+        'filters_heading' => 'Filtreler',
+        'filters_reset' => 'Sıfırla',
+        'filters_active' => ':n filtre etkin',
+        'quick_open' => 'Hızlı iş ekle',
 
         // Oneriler
         'tray_title' => 'Sistemden gelen öneriler',

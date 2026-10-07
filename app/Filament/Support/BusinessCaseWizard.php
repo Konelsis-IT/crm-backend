@@ -465,7 +465,10 @@ final class BusinessCaseWizard
                 ->color('warning')
                 ->icon(Heroicon::OutlinedExclamationTriangle)
                 ->visible(fn (Get $get): bool => $whenProposal($get) && $types($get) === []),
-            ...$scope->sections($types, $whenProposal),
+            // D-167: kapsam bolumleri potansiyel is adimindaki gibi yarim genislikte
+            // yan yana (tam satir yok, D-157).
+            Grid::make(['default' => 1, 'xl' => 2])
+                ->components($scope->sections($types, $whenProposal)),
             app(ProposalFilesSchema::class)->section($whenProposal),
         ];
     }
@@ -924,11 +927,12 @@ final class BusinessCaseWizard
                 : null,
         ])) : [];
 
+        // D-167: teklife donusmus iste adimin basligi isin burada oldugunu soyler.
         return Step::make(__('business_case.wizard.proposal'))
             ->id(self::STEP_PROPOSAL)
             ->description($count === 0
                 ? __('business_case.steps.no_proposal')
-                : __('business_case.steps.proposal_summary', ['count' => $count, 'selected' => $selected?->proposal_no ?? '-']))
+                : __('business_case.steps.now_here').' · '.__('business_case.steps.proposal_summary', ['count' => $count, 'selected' => $selected?->proposal_no ?? '-']))
             ->icon(Heroicon::OutlinedClipboardDocumentList)
             ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
             ->formWrapper(false)
@@ -1095,6 +1099,13 @@ final class BusinessCaseWizard
             Text::make($stage->getLabel())->badge()->color($stage->getColor()),
             Text::make($case->outcome?->getLabel() ?? '-')->badge()->color($case->outcome?->getColor() ?? 'gray'),
         ];
+
+        // D-167: Is Gelistirme durumunda tur (sicaklik 0 = Yatirimci projesi, > 0 = Potansiyel is).
+        $kind = $case->developmentKind();
+
+        if ($kind !== null) {
+            $badges[] = Text::make(__('business_case.kinds.'.$kind))->badge()->color($kind === 'potential_job' ? 'amber' : 'slate')->icon(Heroicon::OutlinedSparkles);
+        }
 
         if (self::b29()) {
             $offerType = self::enumCase($case->getAttribute('offer_type'), OfferType::class);

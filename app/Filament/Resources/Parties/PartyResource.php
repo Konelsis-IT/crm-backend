@@ -213,7 +213,8 @@ class PartyResource extends Resource
                             Select::make('role_code')
                                 ->label(__('party_role.fields.role_code'))
                                 ->options(PartyRoleCode::availableOptions())
-                                ->default(PartyRoleCode::Customer->value)
+                                // D-167: Musteri / Yatirimci yerine tek rol Isveren.
+                                ->default(PartyRoleCode::Employer->value)
                                 ->required()
                                 ->distinct()
                                 ->native(false),
@@ -439,9 +440,12 @@ class PartyResource extends Resource
                 TextColumn::make('party_kind')
                     ->label(__('party.fields.party_kind'))
                     ->badge(),
+                // D-167: Musteri / Yatirimci Isveren'e cevrildiginden ayni tip bir
+                // kez gosterilir (kapanmis + acik Isveren satiri tek rozet).
                 TextColumn::make('roles.role_code')
                     ->label(__('party.fields.roles'))
                     ->badge()
+                    ->distinctList()
                     ->placeholder('-'),
                 TextColumn::make('country.name_tr')
                     ->label(__('party.fields.country'))

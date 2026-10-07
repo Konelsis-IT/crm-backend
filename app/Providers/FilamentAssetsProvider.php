@@ -45,6 +45,9 @@ use Illuminate\Support\ServiceProvider;
  *   Ileri ozeti. `loadedOnRequest()`: filament.acquisition.checklist-scripts
  *   yalniz potansiyel is olustur / duzenle sayfalarinda yukler.
  *
+ * - report-copy.js (D-167): raporun bicimli metnini panoya zengin metin + duz
+ *   metin olarak yazar (ReportActions::copy). Her panel sayfasinda (kucuk).
+ *
  * Surum: adres eki (?v=) yayimlanan dosyanin icerik ozetidir (KonelsisCss /
  * KonelsisJs, 21 Eylul 2026); dosya degisince tarayici yenisini indirir.
  *
@@ -86,6 +89,9 @@ final class FilamentAssetsProvider extends ServiceProvider
             // Masaustu (Windows) bildirimi + bildirim sesi (D-126, kullanici onayi
             // 25 Eylul 2026): her panel sayfasinda; ayarlari AlertFeed verir.
             Js::make('konelsis-alerts', resource_path('js/konelsis-alerts.js')),
+            // Raporu bicimli kopyala (D-167, kullanici onayi 6 Ekim 2026): kucuk
+            // yardimci; rapor listesi, rapor detayi ve ileride rapor sekmeleri kullanir.
+            Js::make('report-copy', resource_path('js/report-copy.js')),
         ], 'konelsis');
 
         // Betik ayarlari istek aninda (oturum, dil ve adres hazir): window.filamentData.konelsisAlerts.

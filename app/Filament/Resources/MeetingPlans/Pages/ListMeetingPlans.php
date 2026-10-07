@@ -16,8 +16,9 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Gorusme plani listesi (B34, D-109): sekmeler yaklasan / bugun / geciken /
- * gerceklesen / gerceklesmeyen / tumu; takvim ana sayfadir.
+ * Gorusme plani listesi (B34, D-109): sekmeler yaklasan / bugun / gecmis
+ * (D-156; once "geciken") / gerceklesen / gerceklesmeyen / tumu; takvim ana
+ * sayfadir. Tumu sekmesinde her satirin durumu rozetle gorunur (D-167).
  */
 class ListMeetingPlans extends ListRecords
 {

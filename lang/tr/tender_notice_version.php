@@ -9,7 +9,7 @@ return [
     ],
 
     'fields' => [
-        'capturer' => 'Yakalayan',
+        'capturer' => 'Tespit eden',
         'created_at' => 'Oluşturulma',
         'notice' => 'İlan',
         'published_on' => 'Yayım tarihi',

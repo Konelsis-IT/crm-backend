@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Reports\Pages;
 
 use App\Exceptions\AbstractException;
-use App\Filament\Exports\ReportExporter;
+use App\Filament\Resources\Reports\Concerns\CopiesReportText;
+use App\Filament\Resources\Reports\ReportActions;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
-use App\Filament\Support\ExportActions;
 use App\Models\Report\Report;
 use App\Services\Report\ReportService;
 use Filament\Actions\Action;
@@ -24,9 +24,12 @@ use Illuminate\Support\Facades\Gate;
 /**
  * Rapor karti. Eylemler duruma ve tarafa gore: gonder / geri cek (yazar),
  * onayla / revizyon iste / reddet (inceleyen), duzenle, taslagi sil.
+ * D-167: bicimli rapor metni + Kopyala, rapora ozel PDF / Excel.
  */
 class ViewReport extends ViewRecord
 {
+    use CopiesReportText;
+
     protected static string $resource = ReportResource::class;
 
     public function getTitle(): string
@@ -129,7 +132,8 @@ class ViewReport extends ViewRecord
                         DomainNotifications::failure($exception);
                     }
                 }),
-            ExportActions::record(ReportExporter::class),
+            // Rapora ozel PDF / Excel (D-167): Raporlar arayuzunun kendi anahtarlari.
+            ReportActions::exports(),
         ];
     }
 

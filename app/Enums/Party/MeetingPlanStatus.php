@@ -11,8 +11,9 @@ use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Gorusme plani durumu (B34, D-109). "Geciken" ayri bir durum degildir:
- * tarihi gecmis planli gorusme ekranda geciken olarak gosterilir.
+ * Gorusme plani durumu (B34, D-109). "Gecmis" ayri bir durum degildir:
+ * tarihi gecmis planli gorusme ekranda "Gecmis" olarak gosterilir (D-156,
+ * D-167; once "Geciken" idi).
  */
 enum MeetingPlanStatus: string implements HasColor, HasIcon, HasLabel
 {

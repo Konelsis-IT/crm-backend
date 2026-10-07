@@ -11,6 +11,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Models\Report\Report;
 use App\Models\Report\ReportItem;
 use App\Services\Report\ReportService;
+use App\Services\Report\ReportSuggestions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
@@ -42,9 +43,18 @@ class EditReport extends EditRecord
                 'work_hours' => $item->work_hours,
                 'due_on' => $item->due_on?->format('Y-m-d'),
                 'carried_from_item_id' => $item->carried_from_item_id,
+                // Kaynak kart ve "sonradan eklendi" isareti duzenlemede korunur (B36).
+                'work_item_id' => $item->getAttribute('work_item_id'),
+                'is_late' => (bool) $item->getAttribute('is_late'),
             ])
             ->values()
             ->all();
+
+        // D-167: onerilen kaynaklar formda isaretli anahtar listesi olarak gelir
+        // (kayitta isaretli olanlar + kayittan sonra cikan yeni oneriler).
+        foreach ($report->template()?->sourceFields() ?? [] as $field) {
+            $data['payload'][$field->name] = app(ReportSuggestions::class)->selectedForEdit($field, $report);
+        }
 
         return $data;
     }

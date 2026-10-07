@@ -554,6 +554,12 @@ if (preg_match("/const NEXT_RELEASE = '(\\d+\\.\\d+(?:\\.\\d+)?)';/", $featureSo
             continue;
         }
 
+        // Kullanicinin ileri bir yayina adlandirdigi ozellik (D-167: is panosu 2.6) bekleme
+        // surumunun altinda kaldikca serbesttir.
+        if ($parked !== null && version_compare($versionedFeatures[2][$index], $parked, '<')) {
+            continue;
+        }
+
         if (version_compare($versionedFeatures[2][$index], $nextRelease[1], '>')) {
             $failures[] = sprintf('Feature versions: Feature::%s has version %s, above NEXT_RELEASE %s.', $case, $versionedFeatures[2][$index], $nextRelease[1]);
         }

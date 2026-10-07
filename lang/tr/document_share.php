@@ -21,7 +21,7 @@ return [
     ],
 
     'help' => [
-        'label' => 'Kime/niçin gönderildiği (örn. "Müşteriye gönderildi").',
+        'label' => 'Kime/niçin gönderildiği (örn. "İşverene gönderildi").',
         'expires_at' => 'Boş bırakılırsa bağlantı iptal edilene kadar açık kalır.',
         'relation' => 'Bağlantıyı bilen herkes belgeyi görür; artık gerekmeyen bağlantıyı iptal edin.',
     ],

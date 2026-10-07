@@ -12,7 +12,8 @@ return [
         'clarification_no' => 'Clarification no',
         'clarification_type' => 'Type',
         'created_at' => 'Created at',
-        'customer_contact_party' => 'Customer contact party',
+        // D-167: employer instead of customer.
+        'customer_contact_party' => 'Employer contact party',
         'description' => 'Description',
         'linked_change' => 'Linked change',
         'reason' => 'Reason',

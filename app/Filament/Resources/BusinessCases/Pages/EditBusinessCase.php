@@ -55,6 +55,15 @@ class EditBusinessCase extends EditRecord
 
     public function getSubheading(): ?string
     {
+        /** @var BusinessCase $case */
+        $case = $this->getRecord();
+
+        // D-167 (6 Ekim 2026 kullanici talimati): teklife donusmus is duzenlenirken
+        // isin su anda Teklif adiminda oldugu acikca yazar.
+        if ($case->proposals()->exists()) {
+            return __('business_case.help.edit_now_in_offer');
+        }
+
         return BusinessCaseWizard::b43() ? __('business_case.help.edit_intro_chain') : __('business_case.help.edit_intro');
     }
 

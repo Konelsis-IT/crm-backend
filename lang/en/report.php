@@ -12,6 +12,57 @@ return [
         'metrics' => 'Numeric summary',
         'review' => 'Review',
         'history' => 'History',
+        'text' => 'Report text',
+    ],
+
+    // Formatted report text (D-167): shown on the detail page, copied and printed to PDF.
+    'text' => [
+        'type' => 'Report type',
+        'author' => 'Prepared by',
+        'works' => 'Work',
+        'key_facts' => 'Key facts',
+        'next_step' => 'Next step',
+        'due' => 'Due: :date',
+        'week_no' => 'week :week',
+    ],
+
+    // Daily / weekly report suggestions (D-167): meeting notes and written reports.
+    'sources' => [
+        'help' => 'Records you wrote in this period are suggested; checked ones go into the report. Uncheck the ones you do not want.',
+        'contact' => 'Met: :name',
+        'proposals' => 'Proposal: :list',
+        'project' => 'Project: :name',
+        'none' => 'No records.',
+        'columns' => [
+            'date' => 'Date',
+            'title' => 'Record',
+            'meta' => 'Details',
+            'text' => 'Note / summary',
+            'next' => 'Next step',
+        ],
+    ],
+
+    // Report-specific PDF and Excel (D-167).
+    'pdf' => [
+        'page' => 'Page',
+        'downloaded_by' => 'Downloaded by',
+    ],
+
+    'export' => [
+        'summary_sheet' => 'Report',
+        'lines_sheet' => 'Report lines',
+        'field' => 'Field',
+        'value' => 'Value',
+        'source_count' => ':count records (details on the "Report lines" sheet)',
+        'columns' => [
+            'section' => 'Section',
+            'date' => 'Date',
+            'title' => 'Title',
+            'detail' => 'Details',
+            'status' => 'Status',
+            'hours' => 'Hours',
+            'note' => 'Note',
+        ],
     ],
 
     'fields' => [
@@ -65,13 +116,15 @@ return [
         'report' => 'Choose the report template first; it determines the fields and the layout.',
         'title' => 'Leave empty to generate it from the template name, related record and period.',
         'answers' => 'These fields belong to the selected template.',
-        'board' => 'Work done in the period; each row is a work item shown as a board column by status. Unfinished items of the previous report are carried over.',
+        'board' => 'Work done in the period; each row is a work item. In daily and weekly reports your work board cards are suggested; delete any row you do not want. Other reports carry over the unfinished items of the previous report.',
         'period_week' => 'Pick any day of the week; the period is stored as Monday–Sunday.',
         'period_month' => 'Pick any day of the month; the period is stored as the whole month.',
         'metrics' => 'Numeric indicators of the template; calculated on submission.',
         'submit' => 'A submitted report can be withdrawn until the review starts; the reviewer is notified when the template requires review.',
         'review_comment' => 'A note is required for revision and rejection; the author sees it.',
         'delete' => 'The draft is deleted together with its items. This cannot be undone.',
+        'text' => 'The readable report. Copy pastes it into an e-mail or Word with its formatting; the PDF prints the same text.',
+        'copy' => 'Copy the report text with formatting (e-mail, Word)',
     ],
 
     'tabs' => [
@@ -97,6 +150,7 @@ return [
         'delete' => 'Delete draft',
         'add_item' => 'Add work item',
         'add_measurement' => 'Add measurement',
+        'copy' => 'Copy',
     ],
 
     'values' => [
@@ -131,6 +185,8 @@ return [
         'revision_required' => 'Report returned to the author for revision.',
         'rejected' => 'Report rejected.',
         'deleted' => 'Draft deleted.',
+        'copied' => 'Report text copied; you can paste it into an e-mail or Word.',
+        'copy_failed' => 'The report text could not be copied; the browser did not allow clipboard access.',
     ],
 
     'notifications' => [
@@ -164,21 +220,33 @@ return [
     'templates' => [
         'daily_work' => [
             'name' => 'Daily work report',
-            'description' => 'The day\'s work as a board (planned / in progress / done / blocked), a short summary and tomorrow\'s plan.',
+            'description' => 'The day\'s work, meetings and the reports you wrote are suggested; add a short summary, blockers and tomorrow\'s plan.',
             'fields' => [
                 'summary' => 'Summary of the day',
+                'meetings' => 'Meetings',
+                'written_reports' => 'Reports written',
                 'blockers' => 'Blockers and needs',
                 'tomorrow_plan' => 'Plan for tomorrow',
+            ],
+            'help' => [
+                'meetings' => 'Meeting notes you wrote on this day (party, business case, proposal). Checked ones go into the report; uncheck the ones you do not want.',
+                'written_reports' => 'Reports you wrote on projects, business cases and proposals on this day. Checked ones go into the report.',
             ],
         ],
         'weekly_work' => [
             'name' => 'Weekly work report',
-            'description' => 'The week\'s work board, highlights, blockers and next week\'s plan; reviewed by the line manager.',
+            'description' => 'The week\'s work, meetings and the reports you wrote are suggested; add highlights, blockers and next week\'s plan. Reviewed by the line manager.',
             'fields' => [
                 'summary' => 'Summary of the week',
+                'meetings' => 'Meetings',
+                'written_reports' => 'Reports written',
                 'achievements' => 'Highlights',
                 'blockers' => 'Blockers and needs',
                 'next_week_plan' => 'Plan for next week',
+            ],
+            'help' => [
+                'meetings' => 'Meeting notes you wrote this week (party, business case, proposal). Checked ones go into the report; uncheck the ones you do not want.',
+                'written_reports' => 'Reports you wrote on projects, business cases and proposals this week. Checked ones go into the report.',
             ],
         ],
         'monthly_work' => [

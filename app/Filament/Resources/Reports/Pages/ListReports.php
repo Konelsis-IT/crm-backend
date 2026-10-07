@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Reports\Pages;
 
 use App\Filament\Exports\ReportExporter;
+use App\Filament\Resources\Reports\Concerns\CopiesReportText;
+use App\Filament\Resources\Reports\ReportActions;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\ExportActions;
 use App\Models\Personnel\Personnel;
@@ -17,9 +19,12 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Rapor listesi: Raporlarim / Inceleme kutum / Ekibim / Tumu (gorebildiklerim).
+ * D-167: satirda Kopyala ve rapora ozel PDF / Excel (ReportActions).
  */
 class ListReports extends ListRecords
 {
+    use CopiesReportText;
+
     protected static string $resource = ReportResource::class;
 
     public function getSubheading(): ?string
@@ -35,7 +40,8 @@ class ListReports extends ListRecords
         // "Bugunun raporu" dugmesi kaldirildi (24 Eylul 2026 kullanici istegi):
         // gunluk rapor Is panosundaki "Gunluk rapora donustur" ile uretilir.
         return [
-            ExportActions::table(ReportExporter::class),
+            // D-167: raporlar kendi disa aktarim anahtarlariyla (genel Excel kapali kalir).
+            ExportActions::table(ReportExporter::class, ReportActions::switches()),
             CreateAction::make()->label(__('report.actions.create')),
         ];
     }

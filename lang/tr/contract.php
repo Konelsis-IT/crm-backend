@@ -14,7 +14,8 @@ return [
         'contract_type' => 'Sözleşme türü',
         'created_at' => 'Oluşturulma',
         'current_version' => 'Güncel sürüm',
-        'customer_party' => 'Müşteri',
+        // D-167: müşteri yerine işveren.
+        'customer_party' => 'İşveren',
         'effective_from' => 'Yürürlük başlangıcı',
         'reason' => 'Gerekçe',
         'signed_on' => 'İmza tarihi',

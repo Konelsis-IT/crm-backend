@@ -247,13 +247,9 @@ final class MeetingNoteComponents
                         ->default(MeetingChannel::Phone->value)
                         ->required()
                         ->native(false),
-                    Select::make('contact_relationship_id')
-                        ->label(__('party_meeting_note.fields.contact'))
-                        ->options(fn (): array => ($party()?->contacts ?? collect())
-                            ->mapWithKeys(fn ($contact): array => [$contact->getKey() => $contact->displayName()])
-                            ->all())
-                        ->searchable()
-                        ->native(false),
+                    // Gorusulen kisi listede yoksa "+" ile notun tarafina eklenir ve
+                    // secili gelir (D-167, QuickContact).
+                    QuickContact::select('contact_relationship_id', __('party_meeting_note.fields.contact'), $party),
                     Select::make('personnel_id')
                         ->label(__('party_meeting_note.fields.personnel'))
                         ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())

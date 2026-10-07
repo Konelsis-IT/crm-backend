@@ -17,7 +17,7 @@ return [
 
     'fields' => [
         'business_case' => 'Business case',
-        'captured_at' => 'Captured at',
+        'captured_at' => 'Identified on',
         'created_at' => 'Created at',
         'current_version' => 'Current version',
         'external_notice' => 'External notice ID',

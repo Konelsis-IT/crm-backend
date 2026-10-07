@@ -17,10 +17,11 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Taraf listesi (D-95, 16 Eylul 2026 kullanici istegi): tek tablo yerine
  * taraf tipine gore sekmeler. Bir taraf birden fazla tipe sahip olabilir
- * (ayni firma hem musteri hem tedarikci); bu yuzden sekmeler suzgectir,
+ * (ayni firma hem isveren hem tedarikci); bu yuzden sekmeler suzgectir,
  * ayrik kumeler degildir ve kayit birden fazla sekmede gorunebilir.
  *
- * Sekmede yalniz acik (bitis tarihi olmayan) tipler sayilir.
+ * Sekmede yalniz acik (bitis tarihi olmayan) tipler sayilir. D-167: Musteri ve
+ * Yatirimci sekmesi yok; eski satirlar tek "Isveren" sekmesinde sayilir.
  */
 class ListParties extends ListRecords
 {

@@ -21,11 +21,14 @@ enum LicenseStatus: string implements HasColor, HasLabel
     case Unlicensed51H = 'unlicensed_5_1_h';
     case PreLicense = 'pre_license';
     case License = 'license';
+    // D-167 (6 Ekim 2026 kullanici talimati: "5. olarak YEKA durumu eklenecek"):
+    // YEKA yarismasiyla gelen proje lisansli surec sayilir.
+    case Yeka = 'yeka';
 
-    /** Lisansli surec (onlisans ya da lisans): Cagri mektubu zorunlu degil. */
+    /** Lisansli surec (onlisans, lisans ya da YEKA): Cagri mektubu zorunlu degil. */
     public function isLicensed(): bool
     {
-        return in_array($this, [self::PreLicense, self::License], true);
+        return in_array($this, [self::PreLicense, self::License, self::Yeka], true);
     }
 
     public function getColor(): string
@@ -34,6 +37,7 @@ enum LicenseStatus: string implements HasColor, HasLabel
             self::Unlicensed51C, self::Unlicensed51H => 'info',
             self::PreLicense => 'warning',
             self::License => 'success',
+            self::Yeka => 'violet',
         };
     }
 }

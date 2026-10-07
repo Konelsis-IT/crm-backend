@@ -56,6 +56,26 @@ final class BusinessCaseQueries
     }
 
     /**
+     * Is gelistirme durumundaki kayitlar sicakliga gore (D-167, 6 Ekim 2026
+     * kullanici talimati): sicaklik 0 (ya da bos) ise Yatirimci projesi,
+     * 0'dan buyukse Potansiyel is.
+     */
+    public function withKind(Builder $query, bool $potential, bool $excludeDrafts): Builder
+    {
+        $query = $this->withStages($query, [AcquisitionStage::BusinessDevelopment], $excludeDrafts);
+        $column = $query->getModel()->qualifyColumn('heat_score');
+
+        return $potential
+            ? $query->where($column, '>', 0)
+            : $query->where(fn (Builder $inner): Builder => $inner->whereNull($column)->orWhere($column, 0));
+    }
+
+    public function kindCount(bool $potential, bool $excludeDrafts): int
+    {
+        return $this->withKind(BusinessCase::query(), $potential, $excludeDrafts)->count();
+    }
+
+    /**
      * Teklif olusturmadaki is dosyasi ozet karti icin kayit (22 Eylul 2026
      * kullanici karari): musteri, sorumlular ve kapsamlar (kapsam listesi
      * dokumaninin guncel dosyasiyla) tek seferde yuklenir.

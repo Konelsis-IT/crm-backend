@@ -53,8 +53,8 @@ class ViewProposal extends ViewRecord
         // "Bu iş nerede?" kendi ozellik anahtariyla kapanabilir (D-147).
         $track = FeatureFlags::enabled(Feature::DealTrack) ? app(DealTrack::class)->forProposal($proposal) : null;
 
-        // B43 (D-155): proje kapsami guncel surumun kartinda. D-158: kart tam
-        // genislikte ve yeni tasarimda; belgeler yalniz Dokumanlar sekmesinde
+        // B43 (D-155): proje kapsami guncel surumun kartinda. D-158: yeni tasarim
+        // (D-168: yarim genislik); belgeler yalniz Dokumanlar sekmesinde
         // (ayni belgeler iki yerde gorunmesin), eski surumler "Surumler" penceresinde.
         $scopeCard = null;
 
@@ -73,7 +73,8 @@ class ViewProposal extends ViewRecord
                     $detail->headerCard($proposal),
                     $detail->versionCard($proposal),
                 ]),
-            ...($scopeCard !== null ? [$scopeCard] : []),
+            // D-168: kapsam karti olusturma ekranindaki gibi yarim genislikte (tam satir yok).
+            ...($scopeCard !== null ? [Grid::make(['default' => 1, 'xl' => 2])->components([$scopeCard])] : []),
             ...($track !== null ? [$track] : []),
             $this->getRelationManagersContentComponent(),
         ]);

@@ -18,7 +18,7 @@ return [
 
     'fields' => [
         'business_case' => 'Potansiyel iş',
-        'captured_at' => 'Yakalanma tarihi',
+        'captured_at' => 'Tespit tarihi',
         'created_at' => 'Oluşturulma',
         'current_version' => 'Güncel sürüm',
         'external_notice' => 'Harici ilan no',

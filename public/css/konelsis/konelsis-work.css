@@ -406,6 +406,70 @@ a.kw-stat:hover, a.kw-widget:hover { border-color: var(--kw-line-strong); }
 @keyframes kw-spin { to { transform: rotate(360deg); } }
 .kw-notice { font-size: 12.5px; padding: 8px 10px; border-radius: 8px; background: var(--kw-progress-bg); color: var(--kw-progress); }
 
+/*
+ * Is panosu sade gorunum (D-167, 6 Ekim 2026; anahtar work.board.compact).
+ * Butun kurallar .kw-compact altindadir: anahtar kapaliyken pano koku bu sinifi
+ * almaz ve pano eski gorunumuyle cizilir. Kullanici onayi: 6 Ekim 2026 (is
+ * panosunun React / CSS degisikligi). Suzgecler huni simgeli dugmenin arkasinda,
+ * hizli satir dugmeyle acilir, sutun basliklari durum renginde bant + simge +
+ * sayi rozeti ve pano kendi icinde kayarken ustte sabit kalir.
+ */
+.kw-compact {
+    /* Baslik bandi: beyaz yaziyla okunur koyu tonlar (koyu kipte bir ton koyusu). */
+    --kw-planned-head: #475569;
+    --kw-progress-head: #b45309;
+    --kw-waiting-head: #6d28d9;
+    --kw-done-head: #15803d;
+    --kw-blocked-head: #b91c1c;
+}
+.dark .kw-compact {
+    --kw-planned-head: #334155;
+    --kw-progress-head: #92400e;
+    --kw-waiting-head: #5b21b6;
+    --kw-done-head: #166534;
+    --kw-blocked-head: #991b1b;
+}
+
+/* Arac cubugu: solda Hizli is ekle, sagda kapsam ve Filtrele (huni) */
+.kw-compact .kw-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.kw-compact .kw-toolbar-side { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kw-compact .kw-toolbar-side.end { margin-left: auto; }
+.kw-compact .kw-btn .kw-icon { width: 16px; height: 16px; flex: none; }
+.kw-compact .kw-toggle-btn[aria-expanded="true"] { border-color: var(--kw-accent); background: var(--kw-accent-soft); color: var(--kw-accent-dark); }
+.dark .kw-compact .kw-toggle-btn[aria-expanded="true"] { color: var(--kw-ink); }
+/* Filament tablosundaki suzgec tetikleyicisi gibi: gri simge dugmesi + etkin suzgec rozeti. */
+.kw-compact .kw-icon-btn { font: inherit; position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--kw-muted); cursor: pointer; flex: none; }
+.kw-compact .kw-icon-btn:hover { background: var(--kw-surface-2); color: var(--kw-ink); }
+.kw-compact .kw-icon-btn[aria-expanded="true"] { background: var(--kw-accent-soft); color: var(--kw-accent); }
+.kw-compact .kw-icon-btn .kw-icon { width: 22px; height: 22px; }
+.kw-compact .kw-icon-badge { position: absolute; top: -3px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--kw-accent); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--kw-surface); }
+
+/* Acilan paneller: Hizli is ekle ve Filtreler */
+.kw-compact .kw-quick-panel,
+.kw-compact .kw-filter-panel { border: 1px solid var(--kw-line); border-radius: 10px; background: var(--kw-surface-2); padding: 12px 14px; display: grid; gap: 12px; min-width: 0; }
+.kw-compact .kw-fp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.kw-compact .kw-fp-head h3 { font-size: 14px; font-weight: 700; }
+.kw-compact .kw-fp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 12px; }
+.kw-compact .kw-ff { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.kw-compact .kw-ff-label { font-size: 12px; font-weight: 600; color: var(--kw-muted); }
+.kw-compact .kw-ff .kw-dd { display: flex; width: 100%; min-width: 0; }
+.kw-compact .kw-fp-checks { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: 1px solid var(--kw-line); }
+
+/* Pano kendi icinde kayar; sutun basligi ustte sabit kalir (sticky). */
+.kw-compact .kw-board { max-height: max(420px, calc(100vh - 150px)); overflow: auto; padding-bottom: 4px; }
+/* Esnek sutun: sticky basligin sinirlayicisi sutunun kendisidir (izgara hucresi degil). */
+.kw-compact .kw-col { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 10px; border: 1px solid var(--kw-line); border-radius: 10px; background: var(--kw-surface-2); background: color-mix(in srgb, var(--kw-col-tint, var(--kw-surface-2)) 50%, var(--kw-surface)); }
+.kw-compact .kw-col[data-status="planned"] { --kw-col-main: var(--kw-planned-head); --kw-col-tint: var(--kw-planned-bg); }
+.kw-compact .kw-col[data-status="in_progress"] { --kw-col-main: var(--kw-progress-head); --kw-col-tint: var(--kw-progress-bg); }
+.kw-compact .kw-col[data-status="waiting"] { --kw-col-main: var(--kw-waiting-head); --kw-col-tint: var(--kw-waiting-bg); }
+.kw-compact .kw-col[data-status="done"] { --kw-col-main: var(--kw-done-head); --kw-col-tint: var(--kw-done-bg); }
+.kw-compact .kw-col[data-status="blocked"] { --kw-col-main: var(--kw-blocked-head); --kw-col-tint: var(--kw-blocked-bg); }
+.kw-compact .kw-col-head { position: sticky; top: 0; z-index: 2; flex: none; margin: 0 -8px; padding: 10px 12px; gap: 8px; border-radius: 9px 9px 0 0; background: var(--kw-col-main, var(--kw-planned-head)); color: #fff; font-size: 14.5px; font-weight: 700; letter-spacing: .01em; line-height: 1.25; box-shadow: 0 4px 10px -6px rgba(28, 25, 23, .45); }
+.kw-compact .kw-col-head .kw-col-icon { width: 18px; height: 18px; flex: none; }
+.kw-compact .kw-col-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kw-compact .kw-col-head .kw-n { margin-left: auto; flex: none; min-width: 26px; height: 22px; padding: 0 8px; border-radius: 999px; background: #fff; color: var(--kw-col-main, var(--kw-planned-head)); font-size: 12.5px; font-weight: 800; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kw-compact .kw-col-empty { padding: 14px 0; }
+
 @media (max-width: 900px) {
     .kw-quick { grid-template-columns: 1fr 1fr; }
     .kw-form, .kw-groups { grid-template-columns: 1fr; }

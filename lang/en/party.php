@@ -23,7 +23,7 @@ return [
         'restore' => 'The record leaves the archive and returns to the list.',
         'channels' => 'Company-level contact details independent of a person: email, phone, website. Person details are entered in the contacts list.',
         'network_note' => 'Where the party is known from: referral, fair, acquaintance, internet…',
-        'role_codes' => 'Pick at least one type; a party can hold several at once (customer and supplier, for example).',
+        'role_codes' => 'Pick at least one type; a party can hold several at once (employer and supplier, for example).',
     ],
 
     'filters' => [

@@ -17,6 +17,7 @@ use App\Query\Report\ReportQueries;
 use App\Reports\ReportTemplate;
 use App\Reports\ReportTemplateRegistry;
 use App\Services\Platform\SchemaReadiness;
+use App\Services\Report\ReportSuggestions;
 use App\Support\DisplayTime;
 use Closure;
 use Filament\Forms\Components\DatePicker;
@@ -31,6 +32,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * Rapor formu (D-86): once taslak secilir; taslak, konu alanini, donem
@@ -79,11 +81,19 @@ final class ReportForm
                         ->dehydrated()
                         ->afterStateUpdated(function (Set $set, Get $get) use ($template): void {
                             $current = $template($get);
+                            $periodStart = $current !== null && $current->periodMode()->isCalendarUnit() ? Carbon::today(DisplayTime::zone())->format('Y-m-d') : null;
 
-                            $set('payload', []);
-                            $set('items', []);
-                            $set('period_start', $current !== null && $current->periodMode()->isCalendarUnit() ? Carbon::today(DisplayTime::zone())->format('Y-m-d') : null);
+                            $set('period_start', $periodStart);
                             $set('period_end', null);
+
+                            // D-167: gunluk / haftalik raporda donemin isleri, gorusme
+                            // notlari ve yazilan raporlar oneri olarak (isaretli) gelir.
+                            $prefill = $current !== null
+                                ? app(ReportSuggestions::class)->prefill($current, (int) auth()->id(), $periodStart)
+                                : ['payload' => [], 'items' => null];
+
+                            $set('payload', $prefill['payload']);
+                            $set('items', self::keyedRows($prefill['items'] ?? []));
                         })
                         ->columnSpanFull(),
                     TextInput::make('title')
@@ -100,7 +110,9 @@ final class ReportForm
                             default => null,
                         })
                         ->visible(fn (Get $get): bool => $mode($get) !== ReportPeriodMode::None)
-                        ->required(fn (Get $get): bool => $template($get)?->periodRequired() ?? false),
+                        ->required(fn (Get $get): bool => $template($get)?->periodRequired() ?? false)
+                        ->live()
+                        ->afterStateUpdated(fn (Get $get, Set $set, ?Report $record, mixed $state, mixed $old) => self::refreshSuggestions($template($get), $get, $set, $record, $state, $old)),
                     DatePicker::make('period_end')
                         ->label(__('report.fields.period_end'))
                         ->visible(fn (Get $get): bool => $mode($get) === ReportPeriodMode::Range)
@@ -159,6 +171,61 @@ final class ReportForm
         return $selects;
     }
 
+    /**
+     * Donem degisince onerileri yeniler (D-167): kaynak alanlarinda yeni
+     * donemin butun onerileri isaretli gelir; is panosu kalemleri yeni
+     * donemin kartlariyla degisir, elle eklenen satirlar kalir. Ayni donem
+     * icinde gun degisirse (haftalik raporda) secimlere dokunulmaz.
+     */
+    private static function refreshSuggestions(?ReportTemplate $template, Get $get, Set $set, ?Report $record, mixed $state, mixed $old): void
+    {
+        $suggestions = app(ReportSuggestions::class);
+
+        if ($template === null || ! $suggestions->supports($template)) {
+            return;
+        }
+
+        $period = $suggestions->period($template, $state);
+        $previous = $suggestions->period($template, $old);
+
+        if ($period === null || ($previous !== null && $period[0]->equalTo($previous[0]) && $period[1]->equalTo($previous[1]))) {
+            return;
+        }
+
+        $authorId = $record instanceof Report ? (int) $record->author_personnel_id : (int) auth()->id();
+        $prefill = $suggestions->prefill($template, $authorId, $state);
+
+        foreach ($prefill['payload'] as $name => $keys) {
+            $set('payload.'.$name, $keys);
+        }
+
+        if ($suggestions->usesBoard($template)) {
+            $manual = array_filter(
+                is_array($get('items')) ? $get('items') : [],
+                static fn ($row): bool => is_array($row) && blank($row['work_item_id'] ?? null) && blank($row['carried_from_item_id'] ?? null),
+            );
+
+            $set('items', [...self::keyedRows($prefill['items'] ?? []), ...$manual]);
+        }
+    }
+
+    /**
+     * Repeater durumu: her satir kendi anahtariyla (Filament tekrarlayici bicimi).
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, array<string, mixed>>
+     */
+    private static function keyedRows(array $rows): array
+    {
+        $keyed = [];
+
+        foreach ($rows as $row) {
+            $keyed[(string) Str::uuid()] = $row;
+        }
+
+        return $keyed;
+    }
+
     /** Is panosu kalemleri (tablo bicimli tekrarlayici). */
     private static function itemsRepeater(): Repeater
     {
@@ -174,6 +241,9 @@ final class ReportForm
             ->schema([
                 Hidden::make('id'),
                 Hidden::make('carried_from_item_id'),
+                // Is panosundan gelen kalemin kaynak karti (B36; D-167 Rapor yaz onerisi).
+                Hidden::make('work_item_id'),
+                Hidden::make('is_late'),
                 TextInput::make('title')
                     ->label(__('report.items.title'))
                     ->required()

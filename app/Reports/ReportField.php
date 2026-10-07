@@ -36,7 +36,24 @@ final class ReportField
 
     public const DATE = 'date';
 
+    /**
+     * Sistemin onerdigi kaynak satirlari (D-167): yazarin donemdeki gorusme
+     * notlari ya da ilgili kayitlara yazdigi raporlar. Formda isaretli onay
+     * listesi (isaretten cikan rapora girmez), raporda donmus kopya olarak
+     * saklanir (payload). Kaynak turu `$source` (SOURCE_* sabitleri).
+     */
+    public const SOURCES = 'sources';
+
+    /** Kaynak: gorusme notu (party_meeting_notes; hareket konusu adi). */
+    public const SOURCE_MEETING_NOTES = 'party_meeting_note';
+
+    /** Kaynak: ilgili kayda (proje, potansiyel is, teklif) yazilan rapor. */
+    public const SOURCE_REPORTS = 'report';
+
     public bool $required = false;
+
+    /** SOURCES alaninin kaynak turu. */
+    public ?string $source = null;
 
     /** @var list<string> */
     public array $options = [];
@@ -145,6 +162,15 @@ final class ReportField
         return new self($name, self::DATE);
     }
 
+    /** Onerilen kaynak satirlari (D-167); $source SOURCE_* sabitlerinden biridir. */
+    public static function sources(string $name, string $source): self
+    {
+        $field = new self($name, self::SOURCES);
+        $field->source = $source;
+
+        return $field;
+    }
+
     public function required(bool $required = true): self
     {
         $this->required = $required;
@@ -210,5 +236,10 @@ final class ReportField
     public function isLongText(): bool
     {
         return $this->type === self::LONG_TEXT;
+    }
+
+    public function isSources(): bool
+    {
+        return $this->type === self::SOURCES && $this->source !== null;
     }
 }

@@ -66,11 +66,35 @@ final class ReleaseNotes
                 ],
             ],
             [
-                'version' => '2.5',
+                'version' => '2.6',
                 'date' => '06.10.2026',
                 'groups' => [
                     self::IMPROVEMENTS => [
+                        'İş panosu sadeleşti: süzgeçler süzgeç simgesinin arkasında (Yoksayılanlar da bir süzgeç), Hızlı iş ekle solda bir düğmeyle açılıyor, Planlandı / Devam ediyor / Bekleniyor / Tamamlandı / İptal başlıkları kendi renginde, simgeli ve sayılı.',
+                    ],
+                ],
+            ],
+            [
+                'version' => '2.5',
+                'date' => '06.10.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'İş Geliştirme: sıcaklığı %0 olan kayıt Yatırımcı projesi, %0\'dan büyük olan Potansiyel iş. Liste Tümü / Yatırımcı Projeleri / Potansiyel İşler / Teklifte / Taslaklar sekmeleriyle geliyor; yeni kayıt "Yatırımcı Projesi oluştur" ile açılıyor.',
+                        'Genel aramada kişiler çıkıyor: firmalardaki iletişim kişileri ve görüşülen kişiler, firmasıyla birlikte.',
+                        'Görüşme notunda ve görüşme planında görüşülen kişi listede yoksa yanındaki + ile eklenebiliyor.',
+                        'Proje durumuna YEKA eklendi; YEKA projesinde çağrı mektubu opsiyonel.',
+                        'Günlük ve haftalık rapor Rapor oluştur ekranından da yazılabiliyor. O günün / haftanın işleri, görüşme notları ve potansiyel iş, teklif ve projelere yazdığınız raporlar öneri olarak geliyor; kaldırmadıklarınız rapora giriyor.',
+                        'Rapor detayında düzenli rapor metni (başlıklar, maddeler, kalın yazılar) ve Kopyala düğmesi; listede satırdan kopyalama. Kopyalanan metin e-postaya ve Word\'e biçimiyle yapışıyor.',
+                        'Raporlara özel PDF ve Excel: PDF kişiyi, tarihi ve rapor metnini düzenli sayfada veriyor; Excel özet ve rapor satırları sayfalarıyla geliyor.',
+                    ],
+                    self::IMPROVEMENTS => [
                         'Güncellemeler canlıdaki verilere dokunmuyor: verdiğiniz rol ve yetkiler, firmalar, kişiler, görüşmeler, potansiyel işler ve teklifler güncelleme sırasında değişmiyor, silinmiyor; sildiğiniz bir kayıt güncellemeyle geri gelmiyor.',
+                        'Müşteri, Yatırımcı ve İşveren tek tip oldu: İşveren.',
+                        'Sol menüde Potansiyel İşler artık İş Geliştirme; "Teklif sıcaklığı" yerine "Sıcaklık" yazıyor ve boş sıcaklık %0 görünüyor.',
+                        'Teklifteki proje kapsamı oluştur / düzenle ekranında ve teklif detayında yarım genişlikte; marj alanında tek açıklama var.',
+                        'Teklife dönüşmüş bir işi düzenlerken ekranda işin şu anda Teklif adımında olduğu yazıyor.',
+                        'İhalelerde "Yakalandı" yerine "Tespit edildi" yazıyor.',
+                        'Görüşme planı listesinde durumlar simgeli rozetlerle görünüyor.',
                     ],
                 ],
             ],

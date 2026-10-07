@@ -2,16 +2,26 @@
 
 return [
     'label' => 'Potansiyel İş',
-    'plural' => 'Potansiyel İşler',
+    'plural' => 'İş Geliştirme',
 
-    // Liste sekmeleri (D-162).
+    // Liste sekmeleri (D-162, D-167).
     'tabs' => [
         'business_development' => 'İş Geliştirme',
+        'investor_projects' => 'Yatırımcı Projeleri',
+        'potential_jobs' => 'Potansiyel İşler',
         'in_offer' => 'Teklifte',
     ],
 
+    // D-167: sicaklik 0 ise Yatirimci projesi, 0'dan buyukse Potansiyel is.
+    'kinds' => [
+        'investor_project' => 'Yatırımcı projesi',
+        'potential_job' => 'Potansiyel iş',
+    ],
+    'kind' => 'Tür',
+
     'sections' => [
-        'identity' => 'Müşteri ve başlık',
+        // D-167: Müşteri / Yatırımcı / İşveren tek ad: İşveren.
+        'identity' => 'İşveren ve başlık',
         'classification' => 'Sınıflandırma',
         'commercial' => 'Ticari bilgiler',
         'ownership' => 'Sorumlular',
@@ -37,7 +47,7 @@ return [
         'tender_description' => 'İhale ilanı (varsa)',
         'tender_form_description' => 'İlan bilgileri ve yayın',
         'case' => 'Potansiyel iş',
-        'case_description' => 'Müşteri, başlık ve iş bilgileri',
+        'case_description' => 'İşveren, başlık ve iş bilgileri',
         'proposal' => 'Teklif',
         'proposal_description' => 'İlk teklif ve sürümü (isteğe bağlı)',
         'project' => 'Proje',
@@ -47,6 +57,7 @@ return [
     'steps' => [
         'no_proposal' => 'Henüz teklif yok',
         'proposal_summary' => ':count teklif · seçili: :selected',
+        'now_here' => 'Bu iş şu anda burada',
         'project_created' => 'Proje oluşturuldu: :code',
         'no_project' => 'Henüz proje yok',
     ],
@@ -65,7 +76,7 @@ return [
         'offer_type' => 'Teklif tipi',
         'outcome' => 'Sonuç',
         'owner' => 'Kontrol eden',
-        'primary_party' => 'Müşteri (taraf)',
+        'primary_party' => 'İşveren',
         'project_type_code' => 'Proje kategorisi',
         'proposal_owner' => 'Hazırlayan',
         'reason' => 'Gerekçe',
@@ -104,7 +115,7 @@ return [
     'relation' => [
         'title' => 'Potansiyel İşler',
         'empty' => 'Henüz potansiyel iş yok.',
-        'party_help' => 'Bu tarafın müşteri olduğu potansiyel işler (teklif süreçleri). Satıra tıklayınca potansiyel iş açılır.',
+        'party_help' => 'Bu tarafın işveren olduğu potansiyel işler (teklif süreçleri). Satıra tıklayınca potansiyel iş açılır.',
     ],
 
     'actions' => [
@@ -119,7 +130,7 @@ return [
         'waive' => 'Muafiyet ver',
         'add_evidence' => 'Kanıt ekle',
         'accept' => 'Kabul et',
-        'create' => 'Potansiyel iş oluştur',
+        'create' => 'Yatırımcı Projesi oluştur',
     ],
 
     // D-161: durum dugmesi (detayda sabit, duzenlemede degistirilir).
@@ -141,6 +152,7 @@ return [
 
     'help' => [
         'edit_intro' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı üç adımı kullanır. İlk adımdaki alanlar "Kaydet" ile kaydedilir; teklifler alttaki "Teklifler" sekmesinde yönetilir, projeye dönüşüm anında uygulanır.',
+        'edit_now_in_offer' => 'Bu iş teklife dönüştürüldü: şu anda Teklif adımındasınız. Burada potansiyel iş bilgilerini düzenliyorsunuz; teklifi Teklif adımından açın.',
         'edit_intro_chain' => 'Düzenleme ekranı oluşturma sihirbazıyla aynı dört adımı kullanır: İhale → Potansiyel iş → Teklif → Proje. Potansiyel iş adımındaki alanlar "Kaydet" ile kaydedilir; teklif oluşturma ve düzenleme kendi adımlı ekranında açılır.',
         'tender_existing' => 'Henüz bir potansiyel işe bağlanmamış ihaleler listelenir.',
         'no_tender' => 'Bu potansiyel iş bir ihaleye bağlı değil.',
@@ -149,7 +161,7 @@ return [
         'scope_types_chain' => 'Seçilen tipe göre teklif öncesi kontrol listesi açılır; proje kapsamı (tutarlar ve kapsam listesi) teklif adımında girilir.',
         'proposal_step' => 'İşaretliyse potansiyel işle birlikte ilk teklif (kendi TKLF numarasıyla) ve taslak ilk sürümü açılır; potansiyel iş "Teklif hazırlanıyor" durumuna geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
         'proposal_title' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
-        'proposal_table' => 'Bu potansiyel işin teklifleri sayfanın altındaki "Teklifler" sekmesinde: yeni teklif, seçili yapma ve düzenleme oradan. Sürümler, dokümanlar ve müşteriye gönderim teklif detayında yönetilir; sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
+        'proposal_table' => 'Bu potansiyel işin teklifleri sayfanın altındaki "Teklifler" sekmesinde: yeni teklif, seçili yapma ve düzenleme oradan. Sürümler, dokümanlar ve işverene gönderim teklif detayında yönetilir; sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
         'project_step' => 'Yalnız kazanılmış ya da doğrudan yapılacak işler için: teklif sürümü onaylanır, potansiyel iş "Kazanıldı" durumuna yürütülür, Operasyona devir kaydı açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Normal akışta bu adımı boş bırakın; teklif kazanıldığında "Projeye dönüştür" ile yapılır.',
         'project_name' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
         'convert_requires_proposal' => 'Projeye dönüştürmek için önce teklif oluşturulmalıdır.',

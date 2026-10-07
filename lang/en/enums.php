@@ -322,12 +322,13 @@ return [
         'prospect' => 'Prospect',
     ],
     'party_role_code' => [
-        'customer' => 'Customer',
+        // D-167: Customer and Investor merged into Employer; old rows show as Employer.
+        'customer' => 'Employer',
         'supplier' => 'Supplier',
         'subcontractor' => 'Subcontractor',
         'partner' => 'Partner',
         'employer' => 'Employer',
-        'investor' => 'Investor',
+        'investor' => 'Employer',
         'consultant' => 'Consultant',
         'carrier' => 'Carrier',
         'authority' => 'Authority',
@@ -419,7 +420,8 @@ return [
         'manual' => 'Manual',
         'tender_source' => 'Tender source',
         'referral' => 'Referral',
-        'existing_customer' => 'Existing customer',
+        // D-167: employer instead of customer.
+        'existing_customer' => 'Existing employer',
     ],
     'business_criticality' => [
         'normal' => 'Normal',
@@ -442,6 +444,7 @@ return [
         'unlicensed_5_1_h' => 'Unlicensed 5.1-H',
         'pre_license' => 'Pre-licence',
         'license' => 'Licence',
+        'yeka' => 'YEKA',
     ],
     'checklist_answer' => [
         'yes' => 'Yes',
@@ -522,7 +525,7 @@ return [
         'api' => 'API',
     ],
     'tender_notice_status' => [
-        'captured' => 'Captured',
+        'captured' => 'Identified',
         'screening' => 'Screening',
         'pursuing' => 'Pursuing',
         'not_pursued' => 'Not pursued',

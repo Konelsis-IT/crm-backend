@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\Pages;
 
-use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Platform\Feature;
 use App\Filament\Exports\BusinessCaseExporter;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
@@ -34,7 +33,8 @@ class ListBusinessCases extends ListRecords
     }
 
     /**
-     * Tumu / Is Gelistirme / Teklifte / Taslaklar (D-162, 6 Ekim 2026 kullanici
+     * D-167: Tumu / Yatirimci Projeleri / Potansiyel Isler / Teklifte / Taslaklar.
+     * Once: Tumu / Is Gelistirme / Teklifte / Taslaklar (D-162, 6 Ekim 2026 kullanici
      * talimati). Taslaklar yalniz kendi sekmesinde; sonuclanan isler (kazanildi,
      * kaybedildi, devir, iptal) Tumu'de. Durum sekmeleri kendi ozellik
      * anahtariyla kapanir; kapaliyken Tumu / Taslaklar (B43, D-155; taslak
@@ -52,15 +52,19 @@ class ListBusinessCases extends ListRecords
         $drafts = DraftSupport::enabled();
         $tabs = ['all' => Tab::make(__('app.tabs.all'))->badge($queries->total())];
 
-        foreach ([
-            'business_development' => [AcquisitionStage::BusinessDevelopment],
-            'in_offer' => BusinessCaseQueries::OFFER_STAGES,
-        ] as $key => $stages) {
+        // D-167: Is Gelistirme durumu sicakliga gore ikiye ayrilir.
+        foreach (['investor_projects' => [false, 'slate'], 'potential_jobs' => [true, 'amber']] as $key => [$potential, $color]) {
             $tabs[$key] = Tab::make(__('business_case.tabs.'.$key))
-                ->badge($queries->stageCount($stages, $drafts))
-                ->badgeColor($stages[0]->getColor())
-                ->modifyQueryUsing(fn (Builder $query): Builder => $queries->withStages($query, $stages, $drafts));
+                ->badge($queries->kindCount($potential, $drafts))
+                ->badgeColor($color)
+                ->modifyQueryUsing(fn (Builder $query): Builder => $queries->withKind($query, $potential, $drafts));
         }
+
+        $stages = BusinessCaseQueries::OFFER_STAGES;
+        $tabs['in_offer'] = Tab::make(__('business_case.tabs.in_offer'))
+            ->badge($queries->stageCount($stages, $drafts))
+            ->badgeColor($stages[0]->getColor())
+            ->modifyQueryUsing(fn (Builder $query): Builder => $queries->withStages($query, $stages, $drafts));
 
         if ($drafts) {
             $tabs['drafts'] = DraftSupport::draftTab(BusinessCase::class);

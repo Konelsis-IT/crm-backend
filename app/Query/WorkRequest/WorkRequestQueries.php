@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Query\WorkRequest;
 
+use App\Enums\Party\PartyRoleCode;
 use App\Enums\WorkRequest\RequestTargetKind;
 use App\Enums\WorkRequest\WorkRequestStatus;
 use App\Models\Acquisition\BusinessCase;
@@ -155,6 +156,9 @@ final class WorkRequestQueries
     }
 
     /**
+     * Ilgili isveren secimi (alan adi customer_party_id kalir). D-167: Musteri,
+     * Yatirimci ve Isveren tek rol Isveren; eski kodlu satirlar da kabul edilir.
+     *
      * @return array<int, string>
      */
     public function customerOptions(): array
@@ -165,7 +169,7 @@ final class WorkRequestQueries
 
         return Party::query()
             ->whereNull('merged_into_party_id')
-            ->whereHas('roles', fn (Builder $roles) => $roles->where('role_code', 'customer'))
+            ->whereHas('roles', fn (Builder $roles) => $roles->whereIn('role_code', PartyRoleCode::Employer->storedValues()))
             ->orderBy('display_name')
             ->pluck('display_name', 'id')
             ->all();

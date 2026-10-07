@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services\Party;
 
+use App\Enums\Party\CommunicationChannelType;
+use App\Enums\Party\ContactRelationshipRole;
 use App\Enums\Party\PartyKind;
 use App\Exceptions\Personnel\SelfParentNotAllowedException;
 use App\Models\Party\ContactRelationship;
 use App\Models\Party\Party;
 use App\Services\AbstractService;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -51,6 +54,52 @@ final class ContactRelationshipService extends AbstractService
         );
 
         return parent::update($current, $data);
+    }
+
+    /**
+     * Hizli kisi ekleme (D-167, 6 Ekim 2026 kullanici istegi: "gorusulen kisi o
+     * ekranda + butonu ile modal icinde eklenebilir olmalidir"). Kisi verilen
+     * kurum tarafina (gorusme notunun / planinin tarafina) yazilir; cep telefonu
+     * ve e-posta verildiyse kisinin iletisim kanali olarak ayni islemde eklenir.
+     * Hareket kayitlari: contact_relationship.created, communication_point.created.
+     *
+     * @param  array<string, mixed>  $data  contact_name, relationship_role, department_note, phone, email
+     */
+    public function quickCreate(int $organizationPartyId, array $data): ContactRelationship
+    {
+        return $this->transactions->run(function () use ($organizationPartyId, $data): ContactRelationship {
+            $role = $data['relationship_role'] ?? null;
+            $role = $role instanceof BackedEnum ? (string) $role->value : (filled($role) ? (string) $role : ContactRelationshipRole::Other->value);
+
+            /** @var ContactRelationship $contact */
+            $contact = $this->create([
+                'organization_party_id' => $organizationPartyId,
+                'contact_name' => trim((string) ($data['contact_name'] ?? '')),
+                'relationship_role' => $role,
+                'department_note' => filled($data['department_note'] ?? null) ? trim((string) $data['department_note']) : null,
+            ]);
+
+            $channels = [
+                CommunicationChannelType::Mobile->value => $data['phone'] ?? null,
+                CommunicationChannelType::Email->value => $data['email'] ?? null,
+            ];
+
+            foreach ($channels as $type => $value) {
+                if (blank($value)) {
+                    continue;
+                }
+
+                app(CommunicationPointService::class)->create([
+                    'party_id' => $organizationPartyId,
+                    'contact_relationship_id' => $contact->getKey(),
+                    'channel_type' => $type,
+                    'value' => trim((string) $value),
+                    'is_primary' => false,
+                ]);
+            }
+
+            return $contact;
+        });
     }
 
     /**

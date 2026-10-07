@@ -58,4 +58,25 @@ return [
         'code_taken' => 'Bu kod zaten kullanılıyor.',
         'duplicate' => 'Bu kayıt zaten var.',
     ],
+
+    // D-167: görüşme notu / planı formunda "+" ile kişi ekleme.
+    'quick' => [
+        'action' => 'Kişi ekle',
+        'heading' => 'Kişi ekle',
+        'description' => 'Görüşülen kişi listede yoksa ekleyin: kişi :party firmasının "İletişim ve kişiler" listesine yazılır ve bu alanda seçili gelir.',
+        'submit' => 'Ekle',
+        'name' => 'Ad soyad',
+        'created' => 'Kişi eklendi: :name',
+    ],
+
+    // D-167: genel aramada kişiler (iletişim ve görüşülen kişiler).
+    'search' => [
+        'category' => 'Kişiler',
+        'party' => 'Firma',
+        'role' => 'Rol',
+        'channel' => 'İletişim',
+        'last_meeting' => 'Son görüşme',
+        'open_notes' => 'Görüşme notları',
+        'open_contact' => 'Kişi kartı',
+    ],
 ];

@@ -14,7 +14,8 @@ return [
         'contract_type' => 'Contract type',
         'created_at' => 'Created at',
         'current_version' => 'Current version',
-        'customer_party' => 'Customer',
+        // D-167: employer instead of customer.
+        'customer_party' => 'Employer',
         'effective_from' => 'Effective from',
         'reason' => 'Reason',
         'signed_on' => 'Signed on',

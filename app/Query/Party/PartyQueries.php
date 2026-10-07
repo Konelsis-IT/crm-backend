@@ -23,13 +23,16 @@ use Illuminate\Support\Str;
  */
 final class PartyQueries
 {
-    /** Verilen tipe sahip (acik) taraflar. */
+    /**
+     * Verilen tipe sahip (acik) taraflar. Isveren, B46 uygulanmamis ortamdaki
+     * eski Musteri / Yatirimci satirlarini da kapsar (D-167).
+     */
     public function withRole(Builder $query, PartyRoleCode $code): Builder
     {
         return $query->whereHas(
             'roles',
             fn (Builder $roles): Builder => $roles
-                ->where('role_code', $code->value)
+                ->whereIn('role_code', $code->canonical()->storedValues())
                 ->whereNull('valid_until'),
         );
     }
@@ -64,6 +67,7 @@ final class PartyQueries
 
     /**
      * Tip basina acik taraf sayisi (tek sorgu); arsivli taraflar sayilmaz.
+     * Eski Musteri / Yatirimci satirlari Isveren'de sayilir (D-167).
      *
      * @return array<string, int>
      */
@@ -73,7 +77,7 @@ final class PartyQueries
             ->whereNull('valid_until')
             ->whereHas('party', fn (Builder $party): Builder => $this->withoutAssociations($party->whereNull('archived_at')))
             ->get(['role_code', 'party_id'])
-            ->groupBy(static fn (PartyRole $role): string => (string) $role->role_code?->value)
+            ->groupBy(static fn (PartyRole $role): string => (string) $role->role_code?->canonical()->value)
             ->map(static fn ($rows): int => $rows->pluck('party_id')->unique()->count())
             ->all();
     }

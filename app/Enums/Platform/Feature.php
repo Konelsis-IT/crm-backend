@@ -153,11 +153,17 @@ enum Feature: string
     case WorkRequests = 'work_requests';
     case WorkRequestThread = 'work_requests.thread';
     case Reports = 'reports';
+    // Arayuze ozel disa aktarim (D-167): genel Excel / PDF (tools.exports) kapali
+    // kalirken her ekran kendi anahtariyla kademe kademe acilir; ilki raporlar.
+    case ReportExports = 'reports.exports';
+    case ReportPdf = 'reports.exports.pdf';
+    case ReportExcel = 'reports.exports.excel';
 
     // Is takibi
     case Work = 'work';
     case WorkItems = 'work.items';
     case WorkBoard = 'work.board';
+    case WorkBoardCompact = 'work.board.compact';
     case ControlMatrix = 'work.control_matrix';
     case ControlPersonnelTab = 'work.control_matrix.personnel_tab';
     case AttentionCard = 'work.control_matrix.attention_card';
@@ -340,7 +346,7 @@ enum Feature: string
             self::DealMeetingNotes => ['Potansiyel iş ve teklif görüşme notları', 'Potansiyel iş ve teklif sayfalarındaki Görüşme notları sekmesi; taraf görüşme notunda potansiyel iş ve teklif seçimi.', 'D-137', '2.2'],
             self::BusinessCaseChecklist => ['Potansiyel iş: Teklif öncesi kontrol listesi', 'Potansiyel iş sihirbazındaki GES / TM kontrol listesi, proje durumu (lisans), madde belgeleri, kaydederken eksikler penceresi, teklif sıcaklığı ve 1.3 kuralı (çağrı mektubunun geçerliliği bittiyse teklif tipi Bütçesel). Kapanınca potansiyel iş kontrol listesiz açılır; kayıtlı cevaplar silinmez.', 'D-155', '2.4'],
             self::BusinessCaseDocuments => ['Potansiyel iş: Belgeler', 'Potansiyel iş sihirbazındaki belge yükleme alanı ve potansiyel iş sayfasındaki Belgeler kartı. Yüklenen belgeler Dokümanlar\'da kalır.', 'D-155', '2.4'],
-            self::BusinessCaseStageTabs => ['Potansiyel işler: Durum sekmeleri', 'Potansiyel İşler listesindeki Tümü / İş Geliştirme / Teklifte / Taslaklar sekmeleri; taslaklar yalnız kendi sekmesinde görünür. Kapanınca liste Tümü / Taslaklar sekmeleriyle gelir.', 'D-162', '2.4'],
+            self::BusinessCaseStageTabs => ['İş Geliştirme: Durum sekmeleri', 'İş Geliştirme listesindeki Tümü / Yatırımcı Projeleri / Potansiyel İşler / Teklifte / Taslaklar sekmeleri; taslaklar yalnız kendi sekmesinde görünür. Kapanınca liste Tümü / Taslaklar sekmeleriyle gelir.', 'D-162', '2.4'],
             self::DealTrack => ['Bu iş nerede?', 'Teklif ve potansiyel iş sayfalarındaki "Bu iş nerede?" bölümü (potansiyel iş → teklif → proje hattı, özet etiketler, Projeye dönüştür durağı). Sayfanın kartları ve sekmeleri etkilenmez.', 'D-143', '2.3'],
             self::AcquisitionDrafts => ['Taslak kaydı: ihale, potansiyel iş, teklif', 'Sihirbaz adımlarındaki "Taslak olarak kaydet", listelerdeki Taslaklar sekmesi ve taslağın kaldığı adımdan açılması. Kapanınca kayıtlar normal kaydedilir.', 'D-155', '2.4'],
             self::Proposals => ['Teklifler', 'İş Alım > Teklifler, teklif sürümleri ve maliyet tahminleri.', 'D-67', '1.0'],
@@ -364,10 +370,14 @@ enum Feature: string
             self::WorkRequests => ['Talepler', 'Talepler ekranı, onaya tabi talepler, talep dosyaları ve kartlardaki talep sekmeleri. Alt özellik (talep yazışması) de kapanır.', 'D-84', '1.0'],
             self::WorkRequestThread => ['Talep yazışması (talep sohbeti)', 'Talep sayfasındaki Yazışma bölümü: cevap yazma ve dosya ekleme. Talebin kendisi etkilenmez.', 'D-108', '1.7'],
             self::Reports => ['Raporlar', 'Raporlar ekranı ve kartlardaki rapor sekmeleri.', 'D-86', '1.2'],
+            self::ReportExports => ['Raporlar: Dışa aktarım', 'Rapor listesi ve rapor detayındaki PDF ve Excel indirme. Genel dışa aktarımdan (Araçlar) bağımsızdır. Alt özellikler de kapanır.', 'D-167', '2.4'],
+            self::ReportPdf => ['Raporlar: PDF', 'Rapora özel düzenli PDF çıktısı (kişi, tarih, biçimli rapor metni).', 'D-167', '2.4'],
+            self::ReportExcel => ['Raporlar: Excel', 'Raporun Excel çıktısı (özet ve rapor satırları).', 'D-167', '2.4'],
 
             self::Work => ['İş takibi', 'İş kartları: İşler, İş panosu, Kontrol matrisi, Analizler. Alt özellikler de kapanır.', 'D-115', '1.9'],
             self::WorkItems => ['İşler ekranı', 'Raporlar > İşler listesi ve genel bakıştaki Görevlerim ve işlerim ile sayılar.', 'D-115', '1.9'],
             self::WorkBoard => ['İş panosu', 'İş panosu ekranı, üst çubuktaki İş panosu düğmesi, gün / hafta kapatma.', 'D-115', '1.9'],
+            self::WorkBoardCompact => ['İş panosu: sade görünüm', 'İş panosunda süzgeçler süzgeç simgesinin arkasında (Yoksayılanlar dahil), Hızlı iş ekle düğmesi, okunaklı renkli sütun başlıkları. Kapanınca eski görünüm gelir.', 'D-167', '2.6'],
             self::ControlMatrix => ['Kontrol matrisi', 'Kontrol matrisi ekranı ve üst çubuktaki düğmesi. Alt özellikler (personel kartındaki parçalar) de kapanır.', 'D-116', '1.9'],
             self::ControlPersonnelTab => ['Personel kartı: Haftalık kontrol sekmesi', 'Personel kartındaki Haftalık kontrol sekmesi (kontrol matrisi kayıtları).', 'D-116', '5.0'],
             self::AttentionCard => ['Personel kartı: Dikkat kartı', 'Personel kartındaki Dikkat kartı (son 12 haftanın kontrol matrisi özeti).', 'D-115', '5.0'],

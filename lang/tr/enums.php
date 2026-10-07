@@ -322,12 +322,13 @@ return [
         'prospect' => 'Aday',
     ],
     'party_role_code' => [
-        'customer' => 'Müşteri',
+        // D-167: Müşteri ve Yatırımcı İşveren'de toplandı; eski kayıtlar da İşveren görünür.
+        'customer' => 'İşveren',
         'supplier' => 'Tedarikçi',
         'subcontractor' => 'Taşeron',
         'partner' => 'İş ortağı',
         'employer' => 'İşveren',
-        'investor' => 'Yatırımcı',
+        'investor' => 'İşveren',
         'consultant' => 'Danışman',
         'carrier' => 'Nakliyeci',
         'authority' => 'Resmî kurum',
@@ -419,7 +420,8 @@ return [
         'manual' => 'Elle giriş',
         'tender_source' => 'İhale kaynağı',
         'referral' => 'Referans',
-        'existing_customer' => 'Mevcut müşteri',
+        // D-167: müşteri yerine işveren.
+        'existing_customer' => 'Mevcut işveren',
     ],
     'business_criticality' => [
         'normal' => 'Normal',
@@ -443,6 +445,7 @@ return [
         'unlicensed_5_1_h' => 'Lisanssız 5.1-H',
         'pre_license' => 'Önlisans',
         'license' => 'Lisans',
+        'yeka' => 'YEKA',
     ],
     'checklist_answer' => [
         'yes' => 'Evet',
@@ -457,7 +460,7 @@ return [
         'business_development' => 'İş Geliştirme',
         'offer_preparation' => 'Teklif hazırlanıyor',
         'offer_review' => 'Teklif incelemede',
-        'submitted' => 'Müşteriye gönderildi',
+        'submitted' => 'İşverene gönderildi',
         'negotiation' => 'Müzakere',
         'won' => 'Kazanıldı',
         'handover_preparing' => 'Devir hazırlanıyor',
@@ -523,7 +526,7 @@ return [
         'api' => 'API',
     ],
     'tender_notice_status' => [
-        'captured' => 'Yakalandı',
+        'captured' => 'Tespit edildi',
         'screening' => 'Ön inceleme',
         'pursuing' => 'Takip ediliyor',
         'not_pursued' => 'Takip edilmiyor',

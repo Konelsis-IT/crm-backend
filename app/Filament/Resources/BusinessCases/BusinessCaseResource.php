@@ -109,9 +109,10 @@ class BusinessCaseResource extends Resource
                 // Teklif sicakligi (B43, D-155): kalp ve yuzde.
                 TextColumn::make('heat_score')
                     ->label(__('checklist.heat'))
-                    ->formatStateUsing(fn (mixed $state): HtmlString => ChecklistSchema::heatHtml(is_numeric($state) ? (int) $state : null, small: true))
+                    // D-167: bos sicaklik 0 sayilir ve %0 gorunur (0 = Yatirimci projesi).
+                    ->default(0)
+                    ->formatStateUsing(fn (mixed $state): HtmlString => ChecklistSchema::heatHtml(is_numeric($state) ? (int) $state : 0, small: true))
                     ->html()
-                    ->placeholder('-')
                     ->sortable()
                     ->visible(fn (): bool => ChecklistSchema::enabled()),
                 // Taraf tablosundaki ad sutunuyla ayni kisalik (28 Eylul 2026 kullanici istegi);
@@ -123,6 +124,14 @@ class BusinessCaseResource extends Resource
                 TextColumn::make('acquisition_stage')
                     ->label(__('business_case.fields.acquisition_stage'))
                     ->badge(),
+                // D-167: Is Gelistirme durumunda sicaklik 0 = Yatirimci projesi, > 0 = Potansiyel is.
+                TextColumn::make('development_kind')
+                    ->label(__('business_case.kind'))
+                    ->state(fn (BusinessCase $record): ?string => $record->developmentKind())
+                    ->formatStateUsing(fn (?string $state): string => $state === null ? '-' : (string) __('business_case.kinds.'.$state))
+                    ->badge()
+                    ->color(fn (?string $state): string => $state === 'potential_job' ? 'amber' : 'slate')
+                    ->placeholder('-'),
                 TextColumn::make('outcome')
                     ->label(__('business_case.fields.outcome'))
                     ->badge(),

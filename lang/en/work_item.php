@@ -561,6 +561,12 @@ return [
         'unit_picker' => 'Department',
         'limited' => 'There are many cards; the first :n are shown. Narrow the filters.',
         'columns_label' => 'Status columns',
+        // Sade gorunum (D-167, work.board.compact)
+        'filter_button' => 'Filter',
+        'filters_heading' => 'Filters',
+        'filters_reset' => 'Reset',
+        'filters_active' => ':n filters active',
+        'quick_open' => 'Quick add',
 
         'tray_title' => 'Suggestions from the system',
         'make_card' => 'Convert to work',

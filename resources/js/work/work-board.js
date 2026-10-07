@@ -12,6 +12,13 @@
  * duzenleme penceresi, gunluk / haftalik rapora donustur ve panoyu dondur
  * pencereleri.
  *
+ * Sade gorunum (D-167, 6 Ekim 2026; anahtar work.board.compact, config.features.compact):
+ * suzgecler Filament tablosundaki gibi huni simgeli Filtrele dugmesinin arkasinda
+ * (etkin suzgec sayisi rozette; Yoksayilanlar da bir suzgec), hizli satir solda
+ * "Hizli is ekle" dugmesiyle acilir, sutun basliklari durum renginde bant + simge +
+ * sayi rozeti ve pano kendi icinde kayarken ustte sabit kalir. Anahtar kapaliyken
+ * pano eski gorunumuyle (asagidaki eski dallar) birebir cizilir.
+ *
  * Kok: [data-kw-root="work-board"]; data-config: WorkAppConfig::board().
  */
 (function () {
@@ -31,6 +38,33 @@
     const RANGES = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'range'];
     const GROUP_DEFAULT = { mine: 'none', team: 'personnel', all: 'project' };
     const NONE = '__none__';
+
+    // Sade gorunum simgeleri (D-167): Filament'in simge seti Heroicons'un 24'luk
+    // cizgi yollari (blade-heroicons o-funnel, o-plus, o-calendar, o-play, o-clock,
+    // o-check-circle, o-x-circle).
+    const ICONS = {
+        funnel: 'M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z',
+        plus: 'M12 4.5v15m7.5-7.5h-15',
+        planned: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5',
+        in_progress: 'M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z',
+        waiting: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+        done: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+        blocked: 'm9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+    };
+
+    function Icon(props) {
+        return h('svg', {
+            className: cx('kw-icon', props.className),
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: props.strokeWidth || 1.8,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            'aria-hidden': 'true',
+            focusable: 'false',
+        }, h('path', { d: ICONS[props.name] || '' }));
+    }
 
     function defaultFilters(scope) {
         return {
@@ -106,13 +140,35 @@
     /* Suzgec kutulari                                                      */
     /* ------------------------------------------------------------------ */
 
+    /**
+     * Sade gorunumde (D-167) suzgec Filtreler panelinde etiketli bir alandir;
+     * etiket alanin ustunde (FilterField), tetikleyici secili degeri gosterir.
+     */
+    function FieldTrigger(props) {
+        const { label, value, open, onClick } = props;
+
+        return h('button', {
+            type: 'button',
+            className: cx('kw-field', open && 'open'),
+            onClick,
+            'aria-expanded': String(!!open),
+            'aria-label': label + ': ' + value,
+        }, h('span', null, value), h('span', { className: 'kw-caret', style: { marginLeft: 'auto', color: 'var(--kw-muted)', fontSize: '10px' }, 'aria-hidden': 'true' }, '▼'));
+    }
+
+    function FilterField(props) {
+        return h('div', { className: 'kw-ff' }, h('span', { className: 'kw-ff-label', 'aria-hidden': 'true' }, props.label), props.children);
+    }
+
     function MultiFilter(props) {
-        const { label, options, selected, onApply, searchable, searchPlaceholder, hint, valueLabel } = props;
+        const { label, options, selected, onApply, searchable, searchPlaceholder, hint, valueLabel, field } = props;
         const { t } = useApp();
 
         return h(Dropdown, {
             width: '260px',
-            trigger: (open, toggle) => h(Chip, { label, value: valueLabel, open, onClick: toggle }),
+            trigger: (open, toggle) => (field
+                ? h(FieldTrigger, { label, value: valueLabel, open, onClick: toggle })
+                : h(Chip, { label, value: valueLabel, open, onClick: toggle })),
         }, (close) => h(MultiPanel, { options, selected, searchable, searchPlaceholder, hint, t, onApply: (next) => { onApply(next); close(); } }));
     }
 
@@ -150,12 +206,14 @@
     }
 
     function RadioFilter(props) {
-        const { label, options, value, onApply, valueLabel, hint, extra } = props;
+        const { label, options, value, onApply, valueLabel, hint, extra, field } = props;
         const { t } = useApp();
 
         return h(Dropdown, {
             width: '240px',
-            trigger: (open, toggle) => h(Chip, { label, value: valueLabel, open, onClick: toggle }),
+            trigger: (open, toggle) => (field
+                ? h(FieldTrigger, { label, value: valueLabel, open, onClick: toggle })
+                : h(Chip, { label, value: valueLabel, open, onClick: toggle })),
         }, (close) => h(RadioPanel, { options, value, hint, extra, t, onApply: (next, more) => { onApply(next, more); close(); } }));
     }
 
@@ -496,7 +554,7 @@
     /* ------------------------------------------------------------------ */
 
     function Column(props) {
-        const { status, label, cards, lane, type, drag, dropAt, setDropAt, onDrop, newIds, handlers, dragStart, dragEnd } = props;
+        const { status, label, cards, lane, type, drag, dropAt, setDropAt, onDrop, newIds, handlers, dragStart, dragEnd, compact } = props;
         const { t } = useApp();
         const ref = useRef(null);
         const isTarget = drag && dropAt && dropAt.status === status && dropAt.lane === lane;
@@ -561,7 +619,14 @@
                 onDrop(status, indexAt(event.clientY), others.map((card) => card.id));
             },
         },
-        h('div', { className: 'kw-col-head' }, h('i', null), label, h('span', { className: 'kw-n' }, countLabel)),
+        // Sade gorunum (D-167): durum renginde bant, simge, kalin baslik ve sayi
+        // rozeti; bant pano kayarken sutunun ustunde sabit kalir (CSS sticky).
+        compact
+            ? h('div', { className: 'kw-col-head' },
+                h(Icon, { name: status, className: 'kw-col-icon', strokeWidth: 2 }),
+                h('span', { className: 'kw-col-title' }, label),
+                h('span', { className: 'kw-n', title: t('cards_n', { n }) }, countLabel))
+            : h('div', { className: 'kw-col-head' }, h('i', null), label, h('span', { className: 'kw-n' }, countLabel)),
         children.length ? children : h('div', { className: 'kw-col-empty' }, '–'),
         );
     }
@@ -1088,7 +1153,7 @@
     }
 
     function Tray(props) {
-        const { suggestions, gone, onMake, onDismiss, onDetail, dismissedMode, dismissed, onRestore, open, onToggle } = props;
+        const { suggestions, gone, onMake, onDismiss, onDetail, dismissedMode, dismissed, onRestore, open, onToggle, onBack } = props;
         const { t } = useApp();
         const list = dismissedMode ? dismissed : suggestions;
         const visible = list.filter((row) => dismissedMode || !gone[row.id] || gone[row.id] === 'fading');
@@ -1110,6 +1175,8 @@
             h('span', { className: 'kw-tray-state' }, open ? t('tray_hide') : t('tray_show'), h(Chevron, { open }))),
             open && dismissedMode ? h('p', { className: 'kw-tray-help' }, t('dismissed_help')) : null,
             open && dismissedMode && !visible.length ? h('p', { className: 'kw-tray-help' }, t('dismissed_empty')) : null,
+            // Sade gorunumde (D-167) Yoksayilanlar bir suzgectir; tepside geri donus de var.
+            open && dismissedMode && onBack ? h('div', null, h(Btn, { size: 'sm', onClick: onBack }, t('back_to_suggestions'))) : null,
             open ? visible.map((row) => {
                 const isGone = !dismissedMode && gone[row.id];
 
@@ -1188,7 +1255,7 @@
     /* ------------------------------------------------------------------ */
 
     function QuickRow(props) {
-        const { onAdd, defaultProject, busy } = props;
+        const { onAdd, defaultProject, busy, autoFocus } = props;
         const app = useApp();
         const { t, config } = app;
         const me = config.me || {};
@@ -1218,7 +1285,7 @@
         };
 
         return h('form', { className: 'kw-quick', 'aria-label': t('quick_label'), onSubmit: submit },
-            h('input', { className: 'kw-field', value: title, placeholder: t('quick_title'), 'aria-label': t('field_title'), onChange: (event) => setTitle(event.target.value) }),
+            h('input', { className: 'kw-field', value: title, placeholder: t('quick_title'), 'aria-label': t('field_title'), autoFocus: !!autoFocus, onChange: (event) => setTitle(event.target.value) }),
             h(SearchSelect, { variant: 'field', value: project, options: config.options.projects || [], clearable: true, placeholder: t('quick_project'), searchPlaceholder: t('search_project'), onChange: setProject }),
             h(SearchSelect, { variant: 'field', value: category, options: categories, clearable: true, placeholder: t('quick_category'), onChange: setCategory }),
             h(RequesterPicker, { value: requester, variant: 'field', onChange: setRequester }),
@@ -1260,6 +1327,11 @@
         const [dropAt, setDropAt] = useState(null);
         const [busy, setBusy] = useState(false);
         const loadTicket = useRef(0);
+        // Sade gorunum (D-167, work.board.compact): Filtreler paneli ve hizli satir
+        // dugmeyle acilir; sayfa her acilista sade (kapali) gelir.
+        const compact = !!(config.features && config.features.compact);
+        const [filtersOpen, setFiltersOpen] = useState(false);
+        const [quickOpen, setQuickOpen] = useState(false);
 
         const setScope = (next) => {
             setScopeState(next);
@@ -1603,12 +1675,14 @@
                 handlers,
                 dragStart,
                 dragEnd,
+                compact,
             })),
         );
 
         const actions = [h(Btn, { key: 'q', onClick: () => setModal({ kind: 'item', card: null }) }, t('quick_item'))];
 
-        if (scope === 'mine') {
+        // Sade gorunumde (D-167) Yoksayilanlar dugme degil, Filtreler panelindeki bir suzgectir.
+        if (scope === 'mine' && !compact) {
             actions.push(h(Btn, { key: 'x', onClick: () => setDismissedMode(!dismissedMode) }, dismissedMode ? t('back_to_suggestions') : t('source_dismissed')));
         }
 
@@ -1621,26 +1695,38 @@
         }
 
         const chips = [];
+        // Sade gorunum (D-167): suzgecler Filtreler panelinde etiketli alanlardir;
+        // isaret suzgecleri (kritik, uzun bekleyen, Yoksayilanlar) ayri satirdadir,
+        // kapsam ise arac cubugunda gorunur kalir (Filament tablo sekmeleri gibi).
+        // Anahtar kapaliyken `field` dugumu degistirmez: eski cip satiri aynen cizilir.
+        const checks = [];
+        let scopeSeg = null;
+        const field = (key, label, node) => (compact ? h(FilterField, { key, label }, node) : node);
 
         // Kapsam: panonun kimin kartlarini gosterdigi (eski sekmelerin
         // karsiligi). Acilir kutu degil, secenekleri gorunen dugme grubu
         // (23 Eylul 2026 kullanici istegi).
         if (allowed.length > 1) {
-            chips.push(h(Seg, {
+            scopeSeg = h(Seg, {
                 key: 'scope',
                 label: t('filter_scope'),
                 value: scope,
                 items: allowed.map((value) => ({ value, label: t('scope_' + value) })),
                 onChange: setScope,
-            }));
+            });
+
+            if (!compact) {
+                chips.push(scopeSeg);
+            }
         }
 
-        chips.push(h(MultiFilter, { key: 'projects', label: t('filter_project'), options: projectOptions, selected: filters.projects, valueLabel: chipValue(filters.projects, projectOptions), searchable: true, searchPlaceholder: t('search_project'), hint: t('project_hint'), onApply: (next) => setFilters({ projects: next }) }));
-        chips.push(h(MultiFilter, { key: 'units', label: t('filter_unit'), options: unitOptions, selected: filters.units, valueLabel: chipValue(filters.units, unitOptions), hint: t('unit_hint'), onApply: (next) => setFilters({ units: next, categories: [] }) }));
+        chips.push(field('projects', t('filter_project'), h(MultiFilter, { key: 'projects', field: compact, label: t('filter_project'), options: projectOptions, selected: filters.projects, valueLabel: chipValue(filters.projects, projectOptions), searchable: true, searchPlaceholder: t('search_project'), hint: t('project_hint'), onApply: (next) => setFilters({ projects: next }) })));
+        chips.push(field('units', t('filter_unit'), h(MultiFilter, { key: 'units', field: compact, label: t('filter_unit'), options: unitOptions, selected: filters.units, valueLabel: chipValue(filters.units, unitOptions), hint: t('unit_hint'), onApply: (next) => setFilters({ units: next, categories: [] }) })));
 
-        chips.push(h(MultiFilter, { key: 'categories', label: t('filter_category'), options: categoryOptions, selected: filters.categories, valueLabel: chipValue(filters.categories, categoryOptions.filter((row) => !row.sub)), hint: t('category_hint'), onApply: (next) => setFilters({ categories: next }) }));
-        chips.push(h(RadioFilter, {
+        chips.push(field('categories', t('filter_category'), h(MultiFilter, { key: 'categories', field: compact, label: t('filter_category'), options: categoryOptions, selected: filters.categories, valueLabel: chipValue(filters.categories, categoryOptions.filter((row) => !row.sub)), hint: t('category_hint'), onApply: (next) => setFilters({ categories: next }) })));
+        chips.push(field('range', t('filter_date'), h(RadioFilter, {
             key: 'range',
+            field: compact,
             label: t('filter_date'),
             value: filters.range,
             valueLabel: rangeLabel,
@@ -1655,26 +1741,99 @@
                 ),
             },
             onApply: (next, more) => setFilters(next === 'range' ? { range: next, from: more.from, to: more.to } : { range: next }),
-        }));
+        })));
 
         if (scope !== 'mine') {
-            chips.push(h(MultiFilter, { key: 'personnel', label: t('filter_personnel'), options: personOptions, selected: filters.personnel, valueLabel: filters.personnel.length ? chipValue(filters.personnel, personOptions) : t('everyone'), searchable: true, searchPlaceholder: t('search_personnel'), onApply: (next) => setFilters({ personnel: next }) }));
+            chips.push(field('personnel', t('filter_personnel'), h(MultiFilter, { key: 'personnel', field: compact, label: t('filter_personnel'), options: personOptions, selected: filters.personnel, valueLabel: filters.personnel.length ? chipValue(filters.personnel, personOptions) : t('everyone'), searchable: true, searchPlaceholder: t('search_personnel'), onApply: (next) => setFilters({ personnel: next }) })));
         }
 
-        chips.push(h(Chip, { key: 'critical', label: t('filter_critical'), check: true, on: filters.critical, onClick: () => setFilters({ critical: !filters.critical }) }));
-        chips.push(h(Chip, { key: 'long', label: t('filter_long_wait'), check: true, on: filters.longWait, onClick: () => setFilters({ longWait: !filters.longWait }) }));
-        chips.push(h(RadioFilter, {
+        (compact ? checks : chips).push(h(Chip, { key: 'critical', label: t('filter_critical'), check: true, on: filters.critical, onClick: () => setFilters({ critical: !filters.critical }) }));
+        (compact ? checks : chips).push(h(Chip, { key: 'long', label: t('filter_long_wait'), check: true, on: filters.longWait, onClick: () => setFilters({ longWait: !filters.longWait }) }));
+        chips.push(field('group', t('filter_group'), h(RadioFilter, {
             key: 'group',
+            field: compact,
             label: t('filter_group'),
             value: filters.group,
             valueLabel: groupLabels[filters.group] || groupLabels.none,
             options: ['none', 'personnel', 'project', 'unit', 'category'].map((value) => ({ value, label: groupLabels[value] })),
             onApply: (next) => setFilters({ group: next }),
-        }));
+        })));
+
+        // Yoksayilanlar (D-167): yoksayilan onerileri tepside gosteren suzgec;
+        // acilinca kapali tepsi de acilir ki liste gorunsun.
+        if (compact && scope === 'mine') {
+            checks.push(h(Chip, {
+                key: 'dismissed',
+                label: t('source_dismissed'),
+                check: true,
+                on: dismissedMode,
+                onClick: () => {
+                    const next = !dismissedMode;
+                    setDismissedMode(next);
+
+                    if (next && !trayOpen) { setTrayOpen(true); }
+                },
+            }));
+        }
+
+        // Etkin suzgec sayisi (huni rozeti). Gruplama kart gizlemedigi icin sayilmaz;
+        // tarih yalniz varsayilandan (Bu hafta) farkliysa sayilir.
+        const baseFilters = defaultFilters(scope);
+        const activeCount = [
+            filters.projects.length > 0,
+            filters.units.length > 0,
+            filters.categories.length > 0,
+            filters.range !== baseFilters.range,
+            scope !== 'mine' && filters.personnel.length > 0,
+            filters.critical,
+            filters.longWait,
+            scope === 'mine' && dismissedMode,
+        ].filter(Boolean).length;
+        // Sifirla: suzgecler varsayilana doner, gruplama secimi korunur.
+        const resetFilters = () => {
+            setFilters({ ...baseFilters, group: filters.group });
+            setDismissedMode(false);
+        };
 
         const reportsUrl = config.urls && config.urls.reports;
 
-        return h('div', { className: 'kw-app' }, h('div', { className: 'kw-panel' },
+        const toolbar = compact ? h('div', { className: 'kw-toolbar' },
+            h('div', { className: 'kw-toolbar-side' },
+                h(Btn, { className: 'kw-toggle-btn', 'aria-expanded': String(quickOpen), 'aria-controls': 'kw-quick-panel', onClick: () => setQuickOpen(!quickOpen) },
+                    h(Icon, { name: 'plus', strokeWidth: 2.2 }), t('quick_open')),
+            ),
+            h('div', { className: 'kw-toolbar-side end' },
+                scopeSeg,
+                h('button', {
+                    type: 'button',
+                    className: 'kw-icon-btn',
+                    title: t('filter_button'),
+                    'aria-label': activeCount ? t('filter_button') + ' · ' + t('filters_active', { n: activeCount }) : t('filter_button'),
+                    'aria-expanded': String(filtersOpen),
+                    'aria-controls': 'kw-filter-panel',
+                    onClick: () => setFiltersOpen(!filtersOpen),
+                },
+                h(Icon, { name: 'funnel' }),
+                activeCount ? h('span', { className: 'kw-icon-badge', 'aria-hidden': 'true' }, activeCount) : null),
+            ),
+        ) : null;
+
+        const quickPanel = compact && quickOpen
+            ? h('div', { id: 'kw-quick-panel', className: 'kw-quick-panel' }, h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject, autoFocus: true }))
+            : null;
+
+        const filterPanel = compact && filtersOpen
+            ? h('div', { id: 'kw-filter-panel', className: 'kw-filter-panel', role: 'region', 'aria-label': t('filters_heading') },
+                h('div', { className: 'kw-fp-head' },
+                    h('h3', null, t('filters_heading')),
+                    activeCount ? h(Btn, { variant: 'link', onClick: resetFilters }, t('filters_reset')) : null,
+                ),
+                h('div', { className: 'kw-fp-grid' }, chips),
+                checks.length ? h('div', { className: 'kw-fp-checks' }, checks) : null,
+            )
+            : null;
+
+        return h('div', { className: cx('kw-app', { 'kw-compact': compact }) }, h('div', { className: 'kw-panel' },
             h('div', { className: 'kw-topbar' },
                 h('div', null,
                     h('div', { className: 'kw-crumbs' }, reportsUrl ? h('a', { href: reportsUrl }, t('reports')) : t('reports'), ' › ', t('board_title')),
@@ -1682,7 +1841,9 @@
                 ),
                 h('div', { className: 'kw-actions' }, actions),
             ),
-            h('div', { className: 'kw-filters', 'aria-label': t('filters_label') }, chips),
+            compact ? toolbar : h('div', { className: 'kw-filters', 'aria-label': t('filters_label') }, chips),
+            quickPanel,
+            filterPanel,
             scope === 'mine' ? h(Tray, {
                 suggestions: data.suggestions,
                 gone,
@@ -1694,8 +1855,9 @@
                 onDetail: (row) => setModal({ kind: 'suggestion', suggestion: row }),
                 onDismiss: dismiss,
                 onRestore: restore,
+                onBack: compact ? () => setDismissedMode(false) : undefined,
             }) : null,
-            h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject }),
+            compact ? null : h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject }),
             data.limited ? h('p', { className: 'kw-notice' }, t('limited', { n: 600 })) : null,
             error ? h(State, { error, onRetry: load }) : null,
             loading && !data.cards.length ? h(State, { loading: true }) : null,

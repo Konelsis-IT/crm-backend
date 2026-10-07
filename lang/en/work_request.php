@@ -41,7 +41,8 @@ return [
         'closed_by' => 'Closed by',
         'closing_note' => 'Note',
         'project' => 'Related project',
-        'customer' => 'Related customer',
+        // D-167: employer instead of customer.
+        'customer' => 'Related employer',
         'component' => 'Related product / component',
         'proposal' => 'Related proposal',
         'business_case' => 'Related business case',
@@ -79,7 +80,7 @@ return [
         'complete_with_approval' => 'Marks the work as finished; the request stays open until the approver :approver approves it.',
         'requester' => 'Open the request in your own name or on behalf of your department; the department manager is informed for departmental requests.',
         'target' => 'The addressee is a person or a department. A department request is accepted by its members or manager, and an assignee is set.',
-        'related' => 'Optional: link the request to a project, customer, product/component, proposal, business case, contract or document.',
+        'related' => 'Optional: link the request to a project, employer, product/component, proposal, business case, contract or document.',
         'on_behalf_of_unit' => 'When on, the request is opened on behalf of the department.',
         'reject_note' => 'A reason is required for rejection; it is shown to the requester.',
         'requires_approval' => 'When enabled, the request goes to the selected approver once the addressee completes the work; it closes on approval and returns to the addressee on rejection. The approver cannot be the requester or the addressee.',

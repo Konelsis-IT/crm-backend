@@ -67,11 +67,15 @@ final class ReportService extends AbstractService
         private readonly ReportTemplateRegistry $templates,
         private readonly ReportQueries $queries,
         private readonly PanelNotifier $notifier,
+        private readonly ReportSuggestions $suggestions,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
 
     /**
+     * Gunluk / haftalik raporda (D-167) gorusme notlari ve yazilan raporlar
+     * kayit aninda donmus satir olarak payload'a yazilir (ReportSuggestions).
+     *
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): Model
@@ -79,6 +83,7 @@ final class ReportService extends AbstractService
         $me = $this->actorPersonnel();
         $template = $this->templates->get((string) ($data['template_code'] ?? ''));
         $data = $this->normalize($template, $data);
+        $data['payload'] = $this->suggestions->resolve($template, $data['payload'], $data['period_start'] ?? null, (int) $me->getKey(), null);
         $this->assertAuthor($template, $data, $me);
         $this->assertPeriodUnique($template, $data, (int) $me->getKey(), null);
         $items = $this->extractItems($template, $data);
@@ -123,6 +128,7 @@ final class ReportService extends AbstractService
 
         $template = $report->template() ?? throw TemplateNotFoundException::make(['code' => (string) $report->template_code]);
         $data = $this->normalize($template, $data);
+        $data['payload'] = $this->suggestions->resolve($template, $data['payload'], $data['period_start'] ?? null, (int) $report->author_personnel_id, $report);
         $this->assertPeriodUnique($template, $data, (int) $report->author_personnel_id, (int) $report->getKey());
         $items = $this->extractItems($template, $data);
 
@@ -559,11 +565,7 @@ final class ReportService extends AbstractService
                 return [null, null];
             }
 
-            [$startAt, $endAt] = match ($mode) {
-                ReportPeriodMode::Day => [$startAt, $startAt->copy()],
-                ReportPeriodMode::Week => [$startAt->copy()->startOfWeek(Carbon::MONDAY), $startAt->copy()->endOfWeek(Carbon::SUNDAY)],
-                default => [$startAt->copy()->startOfMonth(), $startAt->copy()->endOfMonth()],
-            };
+            [$startAt, $endAt] = $mode->bounds($startAt);
 
             return [$startAt->format('Y-m-d'), $endAt->format('Y-m-d')];
         }

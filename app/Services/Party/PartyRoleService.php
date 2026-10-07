@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Party;
 
+use App\Enums\Party\PartyRoleCode;
 use App\Exceptions\DuplicateRecordException;
 use App\Models\Party\PartyRole;
 use App\Services\AbstractService;
@@ -30,11 +31,18 @@ final class PartyRoleService extends AbstractService
      */
     public function create(array $data): Model
     {
+        // D-167: Musteri ve Yatirimci Isveren'de toplandi; eski kod gelirse
+        // (seeder, ice aktarma) satir Isveren yazilir. Tarafta acik Isveren
+        // varsa asagidaki cift satir denetimi devreye girer.
+        $data['role_code'] = PartyRoleCode::normalize($data['role_code'] ?? null);
         $data['valid_from'] ??= Carbon::now('UTC');
+
+        $code = PartyRoleCode::tryFrom((string) ($data['role_code'] ?? ''));
 
         $exists = PartyRole::query()
             ->where('party_id', (int) ($data['party_id'] ?? 0))
-            ->where('role_code', (string) ($data['role_code'] ?? ''))
+            // Isveren, B46 oncesi acik kalmis Musteri / Yatirimci satiriyla da cakisir.
+            ->whereIn('role_code', $code?->storedValues() ?? [(string) ($data['role_code'] ?? '')])
             ->whereNull('valid_until')
             ->exists();
 

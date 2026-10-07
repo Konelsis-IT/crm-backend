@@ -54,6 +54,12 @@ class ContactRelationship extends Model
         return $this->hasMany(CommunicationPoint::class, 'contact_relationship_id');
     }
 
+    /** Bu kisiyle yapilan gorusme notlari (B28); genel aramada "Son gorusme" (D-167). */
+    public function meetingNotes(): HasMany
+    {
+        return $this->hasMany(PartyMeetingNote::class, 'contact_relationship_id');
+    }
+
     /**
      * Ekranda gorunen ad (D-94): bagli taraf kaydi varsa onun adi, yoksa
      * satira yazilan serbest ad.

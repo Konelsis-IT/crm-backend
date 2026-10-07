@@ -10,6 +10,7 @@ use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Resources\Reports\ReportActions;
 use App\Filament\Support\CardGallery;
 use App\Filament\Support\FieldGrid;
 use App\Models\Activity\PersonnelActivity;
@@ -17,6 +18,7 @@ use App\Models\Report\Report;
 use App\Models\Report\ReportItem;
 use App\Models\Report\ReportMetric;
 use App\Query\Report\ReportQueries;
+use App\Reports\Formatting\ReportFormatter;
 use App\Reports\ReportFieldComponents;
 use App\Support\ActivityLabels;
 use App\Support\DisplayTime;
@@ -77,6 +79,21 @@ final class ReportInfolist
                     ]),
             ]),
         ];
+
+        // Bicimli rapor metni (D-167): kopyalanan, PDF'e aktarilan metnin aynisi.
+        $components[] = Section::make(__('report.sections.text'))
+            ->description(__('report.help.text'))
+            ->icon(Heroicon::OutlinedDocumentText)
+            ->afterHeader([ReportActions::copy()])
+            ->collapsible()
+            ->components([
+                TextEntry::make('formatted_text')
+                    ->label(__('report.sections.text'))
+                    ->hiddenLabel()
+                    ->state(fn (Report $record): string => app(ReportFormatter::class)->markdown($record))
+                    ->markdown()
+                    ->columnSpanFull(),
+            ]);
 
         // Cevaplar genis (3/4), sayisal ozet dar (1/4) - ust karttaki duzenle ayni.
         $hasMetrics = $report->metrics->isNotEmpty() && $template !== null;

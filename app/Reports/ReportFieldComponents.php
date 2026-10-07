@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Reports;
 
+use App\Filament\Support\FieldGrid;
+use App\Models\Report\Report;
+use App\Services\Report\ReportSuggestions;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
@@ -17,6 +21,8 @@ use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * ReportField tanimindan Filament form bileseni ve goruntuleme girdisi
@@ -47,6 +53,7 @@ final class ReportFieldComponents
                 ->reorderable(false),
             ReportField::BOOLEAN => Toggle::make($field->name),
             ReportField::DATE => DatePicker::make($field->name),
+            ReportField::SOURCES => self::sourcesField($template, $field),
             default => TextInput::make($field->name),
         };
 
@@ -99,6 +106,34 @@ final class ReportFieldComponents
                 ->columnSpanFull(),
             ReportField::BOOLEAN => IconEntry::make($name)->boolean(),
             ReportField::DATE => TextEntry::make($name)->placeholder('-')->date('d.m.Y'),
+            // D-167: rapora giren (isaretli) gorusme / rapor satirlari tablo halinde.
+            ReportField::SOURCES => RepeatableEntry::make($name)
+                ->state(fn ($record): array => array_map(
+                    static fn (array $row): array => [
+                        'date' => ReportSuggestions::displayDate($row['date'] ?? null),
+                        'title' => (string) ($row['title'] ?? ''),
+                        'meta' => $row['meta'] ?? null,
+                        'text' => filled($row['text'] ?? null) ? (string) $row['text'] : null,
+                        'next' => $row['next'] ?? null,
+                    ],
+                    ReportSuggestions::included(data_get($record, $name)),
+                ))
+                ->table([
+                    TableColumn::make(__('report.sources.columns.date')),
+                    TableColumn::make(__('report.sources.columns.title')),
+                    TableColumn::make(__('report.sources.columns.meta')),
+                    TableColumn::make(__('report.sources.columns.text')),
+                    TableColumn::make(__('report.sources.columns.next')),
+                ])
+                ->schema([
+                    TextEntry::make('date')->color('gray')->placeholder('–'),
+                    TextEntry::make('title')->weight('medium'),
+                    TextEntry::make('meta')->color('gray')->placeholder('–'),
+                    TextEntry::make('text')->color('gray')->placeholder('–')->limit(300)->tooltip(fn (?string $state): ?string => $state),
+                    TextEntry::make('next')->color('gray')->placeholder('–'),
+                ])
+                ->placeholder(__('report.sources.none'))
+                ->columnSpanFull(),
             default => TextEntry::make($name)->placeholder('-'),
         };
 
@@ -190,6 +225,44 @@ final class ReportFieldComponents
         }
 
         return $options;
+    }
+
+    /**
+     * Onerilen kaynaklar (D-167): yazarin rapor donemindeki gorusme notlari /
+     * yazdigi raporlar isaretli gelir; isaretten cikan rapora girmez. Liste
+     * donem tarihinden (`../period_start`) ve duzenlenen raporun kayitli
+     * satirlarindan uretilir. Secenek yoksa alan gizlenir.
+     */
+    private static function sourcesField(ReportTemplate $template, ReportField $field): CheckboxList
+    {
+        $choices = static function (Get $get, ?Model $record) use ($template, $field): array {
+            $report = $record instanceof Report ? $record : null;
+            $suggestions = app(ReportSuggestions::class);
+
+            return $suggestions->choices(
+                $field,
+                $report !== null ? (int) $report->author_personnel_id : (int) auth()->id(),
+                $suggestions->period($template, $get('../period_start')),
+                ($report?->payload ?? [])[$field->name] ?? null,
+                $report !== null ? (int) $report->getKey() : null,
+            );
+        };
+
+        return CheckboxList::make($field->name)
+            ->options(fn (Get $get, ?Model $record): array => array_map(
+                static fn (array $row): string => ReportSuggestions::optionLabel($row),
+                $choices($get, $record),
+            ))
+            ->descriptions(fn (Get $get, ?Model $record): array => array_filter(array_map(
+                static fn (array $row): ?string => ReportSuggestions::optionDescription($row),
+                $choices($get, $record),
+            )))
+            ->helperText(__('report.sources.help'))
+            ->bulkToggleable()
+            ->searchable()
+            ->columns(['default' => 1, 'xl' => 2])
+            ->columnSpan(FieldGrid::FULL)
+            ->visible(fn (Get $get, ?Model $record): bool => $choices($get, $record) !== []);
     }
 
     private static function numeric(ReportField $field, bool $integer): TextInput

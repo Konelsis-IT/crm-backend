@@ -43,7 +43,8 @@ return [
         'currency' => 'Para birimi',
         'current_focus' => 'Şu anki adım',
         'current_macro_gate_code' => 'Son geçilen onay kapısı',
-        'customer_party' => 'Müşteri',
+        // D-167: müşteri yerine işveren.
+        'customer_party' => 'İşveren',
         'description' => 'Açıklama',
         'direction' => 'Yön',
         'legacy_reference' => 'Eski proje referansı',
@@ -185,7 +186,7 @@ return [
 
     'wizard' => [
         'identity' => 'Kimlik',
-        'identity_description' => 'Proje adı, müşteri ve tip',
+        'identity_description' => 'Proje adı, işveren ve tip',
         'site' => 'Saha',
         'site_description' => 'Tam adres ve konum',
         'plan' => 'Plan ve yönetim',

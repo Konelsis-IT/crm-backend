@@ -58,4 +58,25 @@ return [
         'code_taken' => 'This code is already in use.',
         'duplicate' => 'This record already exists.',
     ],
+
+    // D-167: add a contact with "+" in the meeting note / plan form.
+    'quick' => [
+        'action' => 'Add person',
+        'heading' => 'Add person',
+        'description' => 'Add the person you met if they are not in the list: they are written to the contacts of :party and selected in this field.',
+        'submit' => 'Add',
+        'name' => 'Full name',
+        'created' => 'Person added: :name',
+    ],
+
+    // D-167: people in the global search (contacts and people met).
+    'search' => [
+        'category' => 'People',
+        'party' => 'Company',
+        'role' => 'Role',
+        'channel' => 'Contact',
+        'last_meeting' => 'Last meeting',
+        'open_notes' => 'Meeting notes',
+        'open_contact' => 'Person record',
+    ],
 ];

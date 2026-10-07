@@ -121,6 +121,20 @@ class BusinessCase extends Model
     }
 
     /**
+     * Is gelistirme turu (D-167, 6 Ekim 2026 kullanici talimati: "sicaklik alani
+     * 0 ise yatirimci projesidir, %0'dan buyuk ise potansiyel istir"). Yalniz Is
+     * Gelistirme durumunda anlamlidir; teklifteki is "Teklifte"dir. null: tur yok.
+     */
+    public function developmentKind(): ?string
+    {
+        if ($this->acquisition_stage !== AcquisitionStage::BusinessDevelopment) {
+            return null;
+        }
+
+        return (int) ($this->getAttribute('heat_score') ?? 0) > 0 ? 'potential_job' : 'investor_project';
+    }
+
+    /**
      * Potansiyel isin kendi kodu: POTIS-YYYY-NNNN (B40, D-132); B40 oncesi
      * kayitlarda eski TKLF-n. Teklif numaralari tekliflerdedir (proposal_no).
      */

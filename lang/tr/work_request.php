@@ -41,7 +41,8 @@ return [
         'closed_by' => 'Kapatan',
         'closing_note' => 'Not',
         'project' => 'İlgili proje',
-        'customer' => 'İlgili müşteri',
+        // D-167: müşteri yerine işveren.
+        'customer' => 'İlgili işveren',
         'component' => 'İlgili ürün / bileşen',
         'proposal' => 'İlgili teklif',
         'business_case' => 'İlgili potansiyel iş',
@@ -79,7 +80,7 @@ return [
         'complete_with_approval' => 'İşi bitirdiğinizi bildirir; talep kapanmaz, onay mercii :approver onayladığında kapanır.',
         'requester' => 'Talebi kendi adınıza ya da departmanınız adına açarsınız; departman adına açılan talepte departman yöneticisi de bilgilendirilir.',
         'target' => 'Muhatap bir kişi ya da bir departman olabilir. Departmana gelen talebi üyeler ya da yönetici kabul eder ve sorumlu atanır.',
-        'related' => 'İsteğe bağlı: talebi ilgili proje, müşteri, ürün/bileşen, teklif, potansiyel iş, sözleşme ya da belgeye bağlayın.',
+        'related' => 'İsteğe bağlı: talebi ilgili proje, işveren, ürün/bileşen, teklif, potansiyel iş, sözleşme ya da belgeye bağlayın.',
         'on_behalf_of_unit' => 'Açıksa talep departman adına açılır.',
         'reject_note' => 'Ret için gerekçe zorunludur; talep edene gösterilir.',
         'requires_approval' => 'Açıksa muhatap işi tamamladığında talep seçilen onay merciine gider; onaylanınca kapanır, reddedilirse muhataba geri döner. Onay mercii talep eden ya da muhatap olamaz.',

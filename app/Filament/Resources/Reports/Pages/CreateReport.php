@@ -13,6 +13,7 @@ use App\Models\Personnel\Personnel;
 use App\Query\Report\ReportQueries;
 use App\Reports\ReportTemplateRegistry;
 use App\Services\Report\ReportService;
+use App\Services\Report\ReportSuggestions;
 use App\Support\DisplayTime;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -21,8 +22,10 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Rapor olusturma. Sorgu parametreleriyle on doldurulur: ?taslak=kod,
- * ?konu=tur&kayit=ID (ilgili kaydin sayfasindan "Rapor yaz"). Pano tipli
- * taslakta onceki raporun bitmemis kalemleri tasinir.
+ * ?konu=tur&kayit=ID (ilgili kaydin sayfasindan "Rapor yaz"), ?tarih=Y-m-d.
+ * Pano tipli taslakta onceki raporun bitmemis kalemleri tasinir; gunluk /
+ * haftalik calisma raporunda (D-167) donemin is panosu kartlari, gorusme
+ * notlari ve yazilan raporlar oneri olarak gelir.
  */
 class CreateReport extends CreateRecord
 {
@@ -35,6 +38,9 @@ class CreateReport extends CreateRecord
     public const QUERY_SUBJECT_KIND = 'konu';
 
     public const QUERY_SUBJECT_ID = 'kayit';
+
+    /** Donem tarihi (Y-m-d), gun / hafta / ay taslaklarinda (D-167). */
+    public const QUERY_DATE = 'tarih';
 
     protected function fillForm(): void
     {
@@ -104,11 +110,20 @@ class CreateReport extends CreateRecord
         }
 
         if ($template->periodMode()->isCalendarUnit()) {
-            $data['period_start'] = Carbon::today(DisplayTime::zone())->format('Y-m-d');
+            $date = (string) request()->query(self::QUERY_DATE);
+            $data['period_start'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1
+                ? $date
+                : Carbon::today(DisplayTime::zone())->format('Y-m-d');
         }
 
-        if ($template->hasItems()) {
-            $data['items'] = $queries->carryOverItems($template->code(), (int) $user->getKey());
+        // D-167: gunluk / haftalik raporda donemin isleri (is panosu), gorusme
+        // notlari ve yazilan raporlar isaretli oneri olarak gelir; diger pano
+        // taslaklarinda onceki raporun bitmemis kalemleri tasinir.
+        $prefill = app(ReportSuggestions::class)->prefill($template, (int) $user->getKey(), $data['period_start'] ?? null);
+        $data['payload'] = $prefill['payload'];
+
+        if ($prefill['items'] !== null) {
+            $data['items'] = $prefill['items'];
         }
 
         return $data;

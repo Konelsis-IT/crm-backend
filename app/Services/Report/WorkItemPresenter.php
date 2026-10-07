@@ -250,7 +250,11 @@ final class WorkItemPresenter
 
         // Panonun kendi urettigi raporlar (gunluk/haftalik calisma, kontrol,
         // koordinasyon) oneri olmaz; yalniz elle yazilan rapor kart onerir.
-        if ($subject instanceof Report && $subject->template()?->isManualEntry() !== true) {
+        // D-167: gunluk / haftalik calisma raporu Rapor yaz ekranindan da
+        // yazilir, yine de calisma ozeti oldugu icin kart onermez.
+        $template = $subject instanceof Report ? $subject->template() : null;
+
+        if ($subject instanceof Report && ($template?->isManualEntry() !== true || $template->summarisesWork())) {
             return null;
         }
 
@@ -524,6 +528,81 @@ final class WorkItemPresenter
             'editable' => $report->status->isEditable(),
             'reviewer' => $report->reviewer?->full_name,
             'url' => $this->safe(fn (): string => ReportResource::getUrl('view', ['record' => $report])),
+        ];
+    }
+
+    /**
+     * Kartlari donmus rapor kalemine cevirir (Gunu / Haftayi kapat, pano
+     * dondurmasi; D-167: Rapor yaz ekranindaki gunluk / haftalik rapor
+     * onerisi de ayni satirlari kullanir). Sira: durum sutunu, sutun ici sira.
+     *
+     * @param  Collection<int, WorkItem>  $cards
+     * @return list<array<string, mixed>>
+     */
+    public function reportRows(Collection $cards, bool $withOwner = false): array
+    {
+        $order = array_flip(array_map(static fn (WorkItemStatus $status): string => $status->value, WorkItemStatus::cases()));
+
+        return $cards
+            ->sortBy(fn (WorkItem $item): string => sprintf('%02d-%05d-%010d', $order[$item->status?->value] ?? 9, (int) $item->sort_order, (int) $item->getKey()))
+            ->values()
+            ->map(fn (WorkItem $item): array => $this->reportRow($item, $withOwner))
+            ->all();
+    }
+
+    /**
+     * Tek kartin rapor kalemi: baslik, durum, proje, saat, termin ve kisa
+     * ayrinti (sorumlu, kategori, kritik, bekleme, bagli kayit, kaynak).
+     *
+     * @return array<string, mixed>
+     */
+    public function reportRow(WorkItem $item, bool $withOwner = false): array
+    {
+        $meta = [];
+
+        if ($withOwner && $item->personnel !== null) {
+            $meta[] = (string) $item->personnel->full_name;
+        }
+
+        if ($item->orgUnit !== null && $withOwner) {
+            $meta[] = (string) $item->orgUnit->name;
+        }
+
+        if ($item->categoryLabel() !== null) {
+            $meta[] = (string) $item->categoryLabel();
+        }
+
+        if ($item->is_critical) {
+            $meta[] = (string) __('work_item.values.critical');
+        }
+
+        if ($item->status === WorkItemStatus::Waiting && $item->waitingLabel() !== null) {
+            $meta[] = __('work_item.values.waiting_meta', ['who' => $item->waitingLabel(), 'days' => (int) $item->waitingDays()]);
+        }
+
+        $link = $this->link($item);
+
+        if ($link !== null) {
+            $meta[] = trim(($link['no'] ?? '').' '.$link['label']);
+        }
+
+        if ($item->source === WorkItemSource::Automatic) {
+            $meta[] = (string) __('work_item.values.automatic');
+        }
+
+        if ($item->status === WorkItemStatus::Blocked && filled($item->note)) {
+            $meta[] = Str::limit(Str::squish((string) $item->note), 200, '…');
+        }
+
+        return [
+            'title' => (string) $item->title,
+            'description' => $meta === [] ? null : mb_substr(implode(' · ', $meta), 0, 1000),
+            'status' => ($item->status ?? WorkItemStatus::Planned)->reportItemStatus()->value,
+            'project_id' => $item->project_id !== null ? (int) $item->project_id : null,
+            'work_hours' => $item->work_hours !== null ? (float) $item->work_hours : null,
+            'due_on' => $item->due_on?->format('Y-m-d'),
+            'work_item_id' => (int) $item->getKey(),
+            'is_late' => false,
         ];
     }
 

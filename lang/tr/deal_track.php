@@ -28,7 +28,8 @@ return [
     'project_none_help' => 'Teklif kazanılınca "Projeye dönüştür" ile açılır: proje yöneticisi ve tarihler girilir, Operasyona devir otomatik açılıp kabul edilir. Gerekenler:',
     'project_off' => 'Proje · açılmayacak',
     'project_off_help' => 'İş kaybedildi ya da iptal edildi; bu işten proje çıkmayacak.',
-    'check_sent' => 'Teklif müşteriye gönderildi',
+    // D-167: müşteri yerine işveren.
+    'check_sent' => 'Teklif işverene gönderildi',
     'check_won' => 'Teklif kazanıldı',
     'handoff' => 'Operasyona devir: :status',
     // D-155: zincir ihaleyle baslar.
@@ -38,7 +39,7 @@ return [
     'case_none' => 'Potansiyel iş · henüz yok',
     'case_none_help' => 'İhale değerlendirilip devam kararı verilince bu ihaleden potansiyel iş açılır; ihale seçili gelir.',
     'chips' => [
-        'customer' => 'Müşteri',
+        'customer' => 'İşveren',
         'stage' => 'Durum',
         'type' => 'Proje tipi',
         'scopes' => 'Kapsam',
@@ -63,8 +64,8 @@ return [
         'draft' => 'Taslak',
     ],
     'state' => [
-        'draft' => ['headline' => 'Teklif hazırlanıyor', 'detail' => 'henüz müşteriye gönderilmedi.'],
-        'sent' => ['headline' => 'Müşterinin cevabı bekleniyor', 'detail' => ':date tarihinde gönderildi · :wait.'],
+        'draft' => ['headline' => 'Teklif hazırlanıyor', 'detail' => 'henüz işverene gönderilmedi.'],
+        'sent' => ['headline' => 'İşverenin cevabı bekleniyor', 'detail' => ':date tarihinde gönderildi · :wait.'],
         'won' => ['headline' => 'Teklif kazanıldı', 'detail' => 'proje henüz açılmadı; "Projeye dönüştür" ile açılır.'],
         'lost' => ['headline' => 'Teklif kaybedildi', 'detail' => 'bu teklifle ilgili yapılacak iş kalmadı.'],
         'cancelled' => ['headline' => 'İş iptal edildi', 'detail' => 'bu teklifle ilgili yapılacak iş kalmadı.'],

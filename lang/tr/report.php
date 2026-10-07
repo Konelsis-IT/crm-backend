@@ -12,6 +12,57 @@ return [
         'metrics' => 'Sayısal özet',
         'review' => 'İnceleme',
         'history' => 'Geçmiş',
+        'text' => 'Rapor metni',
+    ],
+
+    // Biçimli rapor metni (D-167): detayda gösterilen, kopyalanan ve PDF'e basılan metin.
+    'text' => [
+        'type' => 'Rapor türü',
+        'author' => 'Hazırlayan',
+        'works' => 'İşler',
+        'key_facts' => 'Özet bilgiler',
+        'next_step' => 'Sonraki adım',
+        'due' => 'Termin: :date',
+        'week_no' => ':week. hafta',
+    ],
+
+    // Günlük / haftalık rapor önerileri (D-167): görüşme notları ve yazılan raporlar.
+    'sources' => [
+        'help' => 'Bu dönemde yazdığınız kayıtlar öneri olarak geldi; işaretli olanlar rapora girer. İstemediğinizin işaretini kaldırın.',
+        'contact' => 'Görüşülen: :name',
+        'proposals' => 'Teklif: :list',
+        'project' => 'Proje: :name',
+        'none' => 'Kayıt yok.',
+        'columns' => [
+            'date' => 'Tarih',
+            'title' => 'Kayıt',
+            'meta' => 'Ayrıntı',
+            'text' => 'Not / özet',
+            'next' => 'Sonraki adım',
+        ],
+    ],
+
+    // Rapora özel PDF ve Excel (D-167).
+    'pdf' => [
+        'page' => 'Sayfa',
+        'downloaded_by' => 'İndiren',
+    ],
+
+    'export' => [
+        'summary_sheet' => 'Rapor',
+        'lines_sheet' => 'Rapor satırları',
+        'field' => 'Alan',
+        'value' => 'Değer',
+        'source_count' => ':count kayıt (ayrıntısı "Rapor satırları" sayfasında)',
+        'columns' => [
+            'section' => 'Bölüm',
+            'date' => 'Tarih',
+            'title' => 'Başlık',
+            'detail' => 'Ayrıntı',
+            'status' => 'Durum',
+            'hours' => 'Saat',
+            'note' => 'Not',
+        ],
     ],
 
     'fields' => [
@@ -65,13 +116,15 @@ return [
         'report' => 'Önce rapor taslağını seçin; taslak, doldurulacak alanları ve raporun görünümünü belirler.',
         'title' => 'Boş bırakılırsa taslak adı, ilgili kayıt ve dönemden otomatik oluşturulur.',
         'answers' => 'Bu alanlar seçtiğiniz taslağa özeldir.',
-        'board' => 'Dönemde yaptığınız işler; her satır bir iş kalemidir, durumu panoda sütun olarak görünür. Önceki raporun bitmemiş işleri otomatik taşınır.',
+        'board' => 'Dönemde yaptığınız işler; her satır bir iş kalemidir. Günlük ve haftalık raporda iş panosundaki kartlarınız öneri olarak gelir, istemediğiniz satırı silin. Diğer raporlarda önceki raporun bitmemiş işleri taşınır.',
         'period_week' => 'Haftanın herhangi bir gününü seçin; dönem Pazartesi–Pazar olarak kaydedilir.',
         'period_month' => 'Ayın herhangi bir gününü seçin; dönem ayın tamamı olarak kaydedilir.',
         'metrics' => 'Taslağın sayısal göstergeleri; gönderimde hesaplanır.',
         'submit' => 'Gönderilen rapor inceleme başlayana kadar geri çekilebilir; inceleme gerektiren taslaklarda inceleyen bildirim alır.',
         'review_comment' => 'Revizyon ve ret için açıklama zorunludur; yazara gösterilir.',
         'delete' => 'Taslak rapor kalemleriyle birlikte silinir. Bu işlem geri alınamaz.',
+        'text' => 'Raporun okunur hali. Kopyala ile e-postaya ya da Word\'e biçimiyle yapıştırabilirsiniz; PDF de aynı metni basar.',
+        'copy' => 'Rapor metnini biçimiyle kopyala (e-posta, Word)',
     ],
 
     'tabs' => [
@@ -97,6 +150,7 @@ return [
         'delete' => 'Taslağı sil',
         'add_item' => 'İş ekle',
         'add_measurement' => 'Ölçüm ekle',
+        'copy' => 'Kopyala',
     ],
 
     'values' => [
@@ -131,6 +185,8 @@ return [
         'revision_required' => 'Rapor revizyon için yazara döndü.',
         'rejected' => 'Rapor reddedildi.',
         'deleted' => 'Taslak silindi.',
+        'copied' => 'Rapor metni kopyalandı; e-postaya ya da Word\'e yapıştırabilirsiniz.',
+        'copy_failed' => 'Rapor metni kopyalanamadı; tarayıcı panoya yazmaya izin vermedi.',
     ],
 
     'notifications' => [
@@ -169,21 +225,33 @@ return [
     'templates' => [
         'daily_work' => [
             'name' => 'Günlük çalışma raporu',
-            'description' => 'Günün işleri pano olarak (planlandı / devam ediyor / tamamlandı / engellendi), kısa özet ve yarın planı.',
+            'description' => 'Günün işleri, görüşmeleri ve yazdığınız raporlar öneri olarak gelir; kısa özet, engeller ve yarın planı eklenir.',
             'fields' => [
                 'summary' => 'Günün özeti',
+                'meetings' => 'Görüşmeler',
+                'written_reports' => 'Yazılan raporlar',
                 'blockers' => 'Engeller ve ihtiyaçlar',
                 'tomorrow_plan' => 'Yarın planı',
+            ],
+            'help' => [
+                'meetings' => 'Bu gün yazdığınız görüşme notları (taraf, potansiyel iş, teklif). İşaretli olanlar rapora girer; istemediğinizin işaretini kaldırın.',
+                'written_reports' => 'Bu gün proje, potansiyel iş ve tekliflere yazdığınız raporlar. İşaretli olanlar rapora girer.',
             ],
         ],
         'weekly_work' => [
             'name' => 'Haftalık çalışma raporu',
-            'description' => 'Haftanın iş panosu, öne çıkanlar, engeller ve gelecek hafta planı; doğrudan amir inceler.',
+            'description' => 'Haftanın işleri, görüşmeleri ve yazdığınız raporlar öneri olarak gelir; öne çıkanlar, engeller ve gelecek hafta planı eklenir. Doğrudan amir inceler.',
             'fields' => [
                 'summary' => 'Haftanın özeti',
+                'meetings' => 'Görüşmeler',
+                'written_reports' => 'Yazılan raporlar',
                 'achievements' => 'Öne çıkanlar',
                 'blockers' => 'Engeller ve ihtiyaçlar',
                 'next_week_plan' => 'Gelecek hafta planı',
+            ],
+            'help' => [
+                'meetings' => 'Bu hafta yazdığınız görüşme notları (taraf, potansiyel iş, teklif). İşaretli olanlar rapora girer; istemediğinizin işaretini kaldırın.',
+                'written_reports' => 'Bu hafta proje, potansiyel iş ve tekliflere yazdığınız raporlar. İşaretli olanlar rapora girer.',
             ],
         ],
         'monthly_work' => [

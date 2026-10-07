@@ -92,6 +92,26 @@ abstract class ReportTemplate
         return $this->presentation() === ReportPresentation::Board;
     }
 
+    /**
+     * Calisma ozeti raporu mu (gunluk / haftalik / aylik calisma, pano
+     * dondurmasi)? Bu raporlar is panosuna kart onerisi olmaz ve baska bir
+     * gunluk / haftalik raporda "yazilan rapor" olarak onerilmez (D-167).
+     */
+    public function summarisesWork(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Sistemin onerdigi kaynak alanlari (D-167: gorusme notlari, yazilan raporlar).
+     *
+     * @return list<ReportField>
+     */
+    public function sourceFields(): array
+    {
+        return array_values(array_filter($this->fieldList(), static fn (ReportField $field): bool => $field->isSources()));
+    }
+
     public function icon(): Heroicon
     {
         return $this->kind()->getIcon();

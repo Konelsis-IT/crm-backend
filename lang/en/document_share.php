@@ -21,7 +21,7 @@ return [
     ],
 
     'help' => [
-        'label' => 'Who/why it was sent to (e.g. "Sent to customer").',
+        'label' => 'Who/why it was sent to (e.g. "Sent to employer").',
         'expires_at' => 'Leave blank to keep the link open until it is revoked.',
         'relation' => 'Anyone with the link can view the document; revoke links that are no longer needed.',
     ],

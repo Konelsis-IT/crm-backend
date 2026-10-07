@@ -12,7 +12,8 @@ return [
         'clarification_no' => 'Talep no',
         'clarification_type' => 'Tür',
         'created_at' => 'Oluşturulma',
-        'customer_contact_party' => 'Müşteri iletişim kişisi (taraf)',
+        // D-167: müşteri yerine işveren.
+        'customer_contact_party' => 'İşveren iletişim kişisi (taraf)',
         'description' => 'Açıklama',
         'linked_change' => 'Bağlı değişiklik',
         'reason' => 'Gerekçe',

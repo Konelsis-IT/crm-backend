@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Enums\Platform\Feature;
 use App\Enums\Report\WorkItemLinkKind;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
@@ -16,6 +17,7 @@ use App\Models\Personnel\Personnel;
 use App\Models\Report\WorkItem;
 use App\Query\Report\WorkItemQueries;
 use App\Reports\Work\WorkCategoryCatalog;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Report\WorkItemPresenter;
 use App\Support\DisplayTime;
 use Illuminate\Support\Carbon;
@@ -72,6 +74,11 @@ final class WorkAppConfig
             ],
             'scope' => in_array($scope, WorkItemQueries::SCOPES, true) ? $scope : 'mine',
             'project' => filled(request()->query('proje')) ? (int) request()->query('proje') : null,
+            // Parca anahtarlari (D-128): React ekrani kapali olani cizmez. D-167 sade
+            // gorunum (work.board.compact) kapaliyken pano eski gorunumuyle cizilir.
+            'features' => [
+                'compact' => FeatureFlags::enabled(Feature::WorkBoardCompact),
+            ],
             'can' => [
                 'team' => $me !== null && Gate::forUser($me)->allows('viewTeam', WorkItem::class),
                 'all' => $me !== null && Gate::forUser($me)->allows('viewAll', WorkItem::class),

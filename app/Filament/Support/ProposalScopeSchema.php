@@ -105,7 +105,7 @@ final class ProposalScopeSchema
 
                 return $margin === null ? __('proposal_version.help.margin_from_scope_empty') : '% '.Number::format($margin, precision: 2, locale: 'tr');
             })
-            ->helperText(__('proposal_version.help.margin_from_scope'))
+            // D-167: tek aciklama; bosken alanin kendisi nasil hesaplandigini yazar.
             ->icon(Heroicon::OutlinedReceiptPercent)
             ->iconColor('success')
             ->weight(FontWeight::SemiBold)
@@ -236,7 +236,7 @@ final class ProposalScopeSchema
                     ->color('primary')
                     ->url($info['url'] ?? null)
                     ->openUrlInNewTab()
-                    ->columnSpan(['default' => 2, 'md' => 3, 'xl' => 2]);
+                    ->columnSpan(['default' => 2, 'md' => 3]);
             }
 
             // Her tip kendi simgesi ve rengiyle kucuk bolum (D-163; Fieldset simge almaz).
@@ -246,7 +246,8 @@ final class ProposalScopeSchema
                 ->iconColor($type instanceof ProjectScopeType ? $type->getColor() : 'gray')
                 ->compact()
                 ->secondary()
-                ->columns(['default' => 2, 'md' => 3, 'xl' => 6])
+                // D-168: kart yarim genislikte; degerler uc sutunda.
+                ->columns(['default' => 2, 'md' => 3])
                 ->components($entries);
         }
 

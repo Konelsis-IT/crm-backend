@@ -2,15 +2,24 @@
 
 return [
     'label' => 'Potential job',
-    'plural' => 'Potential jobs',
+    'plural' => 'Business development',
 
     'tabs' => [
         'business_development' => 'Business development',
+        'investor_projects' => 'Investor projects',
+        'potential_jobs' => 'Potential jobs',
         'in_offer' => 'In offer',
     ],
 
+    'kinds' => [
+        'investor_project' => 'Investor project',
+        'potential_job' => 'Potential job',
+    ],
+    'kind' => 'Kind',
+
     'sections' => [
-        'identity' => 'Customer and title',
+        // D-167: customer / investor / employer share one name: Employer.
+        'identity' => 'Employer and title',
         'classification' => 'Classification',
         'commercial' => 'Commercial details',
         'ownership' => 'Owners',
@@ -34,7 +43,7 @@ return [
         'tender_description' => 'Tender notice (if any)',
         'tender_form_description' => 'Notice details and publication',
         'case' => 'Business case',
-        'case_description' => 'Customer, title and business details',
+        'case_description' => 'Employer, title and business details',
         'proposal' => 'Proposal',
         'proposal_description' => 'First proposal and its version (optional)',
         'project' => 'Project',
@@ -44,6 +53,7 @@ return [
     'steps' => [
         'no_proposal' => 'No proposal yet',
         'proposal_summary' => ':count proposal(s) · selected: :selected',
+        'now_here' => 'This job is here now',
         'project_created' => 'Project created: :code',
         'no_project' => 'No project yet',
     ],
@@ -62,7 +72,7 @@ return [
         'offer_type' => 'Offer type',
         'outcome' => 'Outcome',
         'owner' => 'Reviewer',
-        'primary_party' => 'Primary party',
+        'primary_party' => 'Employer',
         'project_type_code' => 'Project category',
         'proposal_owner' => 'Preparer',
         'reason' => 'Reason',
@@ -101,7 +111,7 @@ return [
     'relation' => [
         'title' => 'Business cases',
         'empty' => 'No business cases yet.',
-        'party_help' => 'Business cases (offer processes) where this party is the customer. Click a row to open it.',
+        'party_help' => 'Business cases (offer processes) where this party is the employer. Click a row to open it.',
     ],
 
     'actions' => [
@@ -116,7 +126,7 @@ return [
         'waive' => 'Grant waiver',
         'add_evidence' => 'Add evidence',
         'accept' => 'Accept',
-        'create' => 'Create business case',
+        'create' => 'Create investor project',
     ],
 
     'status' => [
@@ -136,6 +146,7 @@ return [
     ],
 
     'help' => [
+        'edit_now_in_offer' => 'This job has been turned into a proposal: it is at the Proposal step now. Here you edit the potential job details; open the proposal from the Proposal step.',
         'edit_intro_chain' => 'The edit screen uses the same four steps as the creation wizard: Tender → Potential job → Proposal → Project. Fields in the potential job step are saved with "Save"; creating and editing proposals opens their own stepped screen.',
         'tender_existing' => 'Lists tenders that are not linked to a potential job yet.',
         'no_tender' => 'This potential job is not linked to a tender.',

@@ -22,7 +22,8 @@ return [
 
     'relation' => [
         'title' => 'Lisanslar',
-        'project_title' => 'Müşteri lisansları',
+        // D-167: müşteri yerine işveren.
+        'project_title' => 'İşveren lisansları',
         'empty' => 'Henüz lisans yok.',
     ],
 

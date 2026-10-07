@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Reports\Tables;
 
 use App\Enums\Report\ReportKind;
 use App\Enums\Report\ReportStatus;
+use App\Filament\Resources\Reports\ReportActions;
 use App\Models\Report\Report;
 use App\Reports\ReportTemplateRegistry;
 use Filament\Actions\ViewAction;
@@ -86,6 +87,9 @@ final class ReportTable
             ])
             ->recordActions([
                 ViewAction::make()->label(__('report.actions.open')),
+                // D-167: bicimli metni kopyala + rapora ozel PDF / Excel (yalniz simge).
+                ReportActions::copy(),
+                ReportActions::rowExports(),
             ])
             ->toolbarActions([])
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with([

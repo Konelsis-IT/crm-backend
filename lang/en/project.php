@@ -43,7 +43,8 @@ return [
         'currency' => 'Currency',
         'current_focus' => 'Current step',
         'current_macro_gate_code' => 'Last passed gate',
-        'customer_party' => 'Customer',
+        // D-167: employer instead of customer.
+        'customer_party' => 'Employer',
         'description' => 'Description',
         'direction' => 'Direction',
         'legacy_reference' => 'Legacy project reference',
@@ -185,7 +186,7 @@ return [
 
     'wizard' => [
         'identity' => 'Identity',
-        'identity_description' => 'Project name, customer and type',
+        'identity_description' => 'Project name, employer and type',
         'site' => 'Site',
         'site_description' => 'Full address and location',
         'plan' => 'Plan and management',

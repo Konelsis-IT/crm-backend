@@ -22,12 +22,13 @@ return [
 
     'relation' => [
         'title' => 'Licenses',
-        'project_title' => 'Investor licenses',
+        // D-167: employer instead of customer / investor.
+        'project_title' => 'Employer licenses',
         'empty' => 'No licenses yet.',
     ],
 
     'actions' => [
-        'open_party' => 'Open investor record',
+        'open_party' => 'Open employer record',
         'change_status' => 'Change status',
         'set_status' => 'Set status to \":status\"',
         'select' => 'Mark as selected',

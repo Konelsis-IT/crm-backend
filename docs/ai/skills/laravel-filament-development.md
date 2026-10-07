@@ -133,6 +133,8 @@ The "Oluştur & yeni oluştur" (create & create another) button is disabled syst
 
 The user's rule of 2026-10-05: "Hiçbir düzenleme/oluşturma ekranında schema boyutu olarak tüm satır alan olarak seçilmemeli ... Compact olmalı, gerektiği kadar bir alan olmalıdır. Tüm satır doldurulmuş anlamsız böyle satırı full dolduran bir yapı hiç olmayacak projede."
 
+The rule covers detail (view) pages too (2026-10-07, D-168: "oluşturda w-1/2 yapmıştık ama neden teklif detayında w-full gösteriyoruz? İkisi de w-1/2 olmalı, gereksiz alan kullanma"). A card or section that is half width on the create or edit screen is half width on the view page as well: wrap it in `Grid::make(['default' => 1, 'xl' => 2])` and size its inner columns for half width. Never place a lone full-width card on a view page when its content fits half.
+
 No input field on any create/edit screen (page, wizard step, modal, relation manager form) spans the whole row. Every field takes only the width its content needs.
 
 - `FieldGrid::fields()` sizes fields by content:
@@ -288,6 +290,21 @@ Code always goes to production directly from one branch; there are no release br
 - Gate background work too: scheduled commands, reminders and notification senders of a feature check `FeatureFlags::enabled()` before doing anything (the four existing scheduled commands do).
 - `FeatureSeeder` applies `database/seeders/data/features.php` only to features inserted in that run; it never changes an existing production switch.
 - `tools/safe-verify.php` fails when a `Feature` case has no version in its definition row, when a version is above `Feature::NEXT_RELEASE` (or the constant is missing), or when the B42 signature is missing from `SchemaReadiness`. The only exception is the parking version `Feature::PARKED` (5.0, D-164): features the user does not want opened yet sit there and never open with a release; when the user names a release for one, move its version and its release-note bullet (from the `5.0` entry) to that release.
+
+- A version between `NEXT_RELEASE` and `PARKED` is allowed only when the user names that release for the feature (D-167: `work.board.compact` at 2.6). Its release-note bullet goes into that version's entry.
+
+### Per-screen exports (user decision, 2026-10-06, D-167)
+
+- Excel and PDF are opened screen by screen, as the user asks: "excel ve pdf sistemi ben söyledikçe özellik olarak arayüzlere eklenecektir". The general switches `tools.exports*` stay parked at 5.0.
+- Each opened screen gets its own Feature keys (for example `reports.exports`, `.pdf`, `.excel`) and passes `ExportSwitches::for(excel, pdf)` to `ExportActions::table/record/row`. Callers that pass nothing keep the general switches.
+- A screen's PDF and Excel are designed for that screen, not the generic exporter. Reports use `ReportPdf` (dedicated layout, same text as the copy) and `ReportWorkbook` (a summary sheet plus a lines sheet with equal-width columns), and `ReportFormatter` is the single source for screen, copy, PDF and Excel. List Excel exports for later screens use only that list's suitable columns, at equal width.
+
+### Business development kinds (user decision, 2026-10-06, D-167)
+
+- The business case list and navigation say "İş Geliştirme"; the create button says "Yatırımcı Projesi oluştur".
+- In the İş Geliştirme stage, heat 0 or null means Yatırımcı projesi and heat above 0 means Potansiyel iş (`BusinessCase::developmentKind()`). Tabs: Tümü / Yatırımcı Projeleri / Potansiyel İşler / Teklifte / Taslaklar.
+- "Sıcaklık" is the field name; never use "Teklif sıcaklığı". An empty heat value shows %0.
+- Party roles customer and investor are merged into employer ("İşveren"); new rows are always employer.
 
 ### Seeders never change existing data (user decision, 2026-10-06, D-165)
 

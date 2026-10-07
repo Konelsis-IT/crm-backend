@@ -76,7 +76,7 @@ return [
     'view_help' => 'The potential job’s checklist (read-only). Use Edit to change answers; documents download when clicked.',
     'choose_type_first' => 'Choose a project type to open its checklist here.',
     'license_status' => 'Project status',
-    'license_help' => 'With Pre-licence or Licence, the call letter becomes optional and its weight is shared by the other items.',
+    'license_help' => 'With Pre-licence, Licence or YEKA, the call letter becomes optional and its weight is shared by the other items.',
     'license_placeholder' => 'Choose',
     'weight' => 'Weight: :weight%',
     'optional' => 'Optional',
@@ -86,7 +86,7 @@ return [
     'document_required' => 'Document required',
     'document_optional_licensed' => 'Not required because the project is licensed; you can still upload it.',
     'negative_hint' => '“No” counts as favourable for this question.',
-    'heat' => 'Offer heat',
+    'heat' => 'Heat',
     'heat_help' => 'Each main item’s weight is split equally between its three questions and its document: favourable answers and uploaded documents score. Optional items are not counted.',
     'heat_levels' => [
         'cold' => 'Cold',

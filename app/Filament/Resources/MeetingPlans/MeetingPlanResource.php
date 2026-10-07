@@ -25,6 +25,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\FormState;
 use App\Filament\Support\MeetingNoteComponents;
+use App\Filament\Support\QuickContact;
 use App\Models\Party\MeetingPlan;
 use App\Models\Party\Party;
 use App\Models\Personnel\Personnel;
@@ -136,12 +137,9 @@ class MeetingPlanResource extends Resource
                             ->visible(fn (): bool => FeatureFlags::enabled(Feature::MeetingPlanQuickParty) && Gate::allows('create', Party::class)))
                         ->native(false)
                         ->columnSpan(FieldGrid::HALF),
-                    Select::make('contact_relationship_id')
-                        ->label(__('meeting_plan.fields.contact'))
-                        ->options(fn (Get $get): array => app(PartyQueries::class)->contactOptions(filled($get('party_id')) ? (int) $get('party_id') : null))
-                        ->searchable()
+                    // Gorusulecek kisi listede yoksa "+" ile secilen firmaya eklenir (D-167).
+                    QuickContact::select('contact_relationship_id', __('meeting_plan.fields.contact'), fn (Get $get): ?int => filled($get('party_id')) ? (int) $get('party_id') : null)
                         ->placeholder('-')
-                        ->native(false)
                         ->columnSpan(FieldGrid::HALF),
                     DatePicker::make('planned_on')
                         ->label(__('meeting_plan.fields.planned_on'))
@@ -214,7 +212,8 @@ class MeetingPlanResource extends Resource
                 Select::make('role_code')
                     ->label(__('party_role.fields.role_code'))
                     ->options(PartyRoleCode::availableOptions())
-                    ->default(PartyRoleCode::Customer->value)
+                    // D-167: Musteri / Yatirimci yerine tek rol Isveren.
+                    ->default(PartyRoleCode::Employer->value)
                     ->required()
                     ->native(false),
                 Select::make('country_code')
@@ -240,7 +239,7 @@ class MeetingPlanResource extends Resource
                 'status' => PartyStatus::Prospect->value,
                 'organization_profile' => [],
                 'party_roles' => [[
-                    'role_code' => FormState::value($data['role_code'] ?? null) ?? PartyRoleCode::Customer->value,
+                    'role_code' => FormState::value($data['role_code'] ?? null) ?? PartyRoleCode::Employer->value,
                     'status' => PartyRoleStatus::Active->value,
                 ]],
             ]);
@@ -273,6 +272,7 @@ class MeetingPlanResource extends Resource
                             ->label(__('meeting_plan.fields.status'))
                             ->state(fn (MeetingPlan $record): string => self::statusLabel($record))
                             ->badge()
+                            ->icon(fn (MeetingPlan $record): Heroicon => self::statusIcon($record))
                             ->color(fn (MeetingPlan $record): string => self::statusColor($record)),
                         TextEntry::make('party.display_name')
                             ->label(__('meeting_plan.fields.party'))
@@ -339,10 +339,13 @@ class MeetingPlanResource extends Resource
                     ->label(__('meeting_plan.fields.planned_on'))
                     ->date('d.m.Y D')
                     ->sortable(),
+                // D-167 (6 Ekim 2026 kullanici istegi): Tumu listesinde her gorusmenin
+                // sonucu rozetle okunur: Planli / Gecmis / Gerceklesti / Gerceklesmedi.
                 TextColumn::make('status')
                     ->label(__('meeting_plan.fields.status'))
                     ->state(fn (MeetingPlan $record): string => self::statusLabel($record))
                     ->badge()
+                    ->icon(fn (MeetingPlan $record): Heroicon => self::statusIcon($record))
                     ->color(fn (MeetingPlan $record): string => self::statusColor($record))
                     // Tarihi gecmis, sonucu girilmemis gorusme (D-156): ne yapilacagi ipucunda.
                     ->tooltip(fn (MeetingPlan $record): ?string => ! $record->isArchived() && $record->isOverdue(MeetingPlanQueries::today()) ? __('meeting_plan.help.past') : null),
@@ -449,6 +452,18 @@ class MeetingPlanResource extends Resource
         }
 
         return $record->isOverdue(MeetingPlanQueries::today()) ? 'danger' : ($record->status?->getColor() ?? 'gray');
+    }
+
+    /** Durum rozetinin simgesi (D-167): gecmis saat, digerleri durumun kendi simgesi. */
+    public static function statusIcon(MeetingPlan $record): Heroicon
+    {
+        if ($record->isArchived()) {
+            return Heroicon::OutlinedArchiveBox;
+        }
+
+        return $record->isOverdue(MeetingPlanQueries::today())
+            ? Heroicon::OutlinedClock
+            : ($record->status ?? MeetingPlanStatus::Planned)->getIcon();
     }
 
     public static function getPages(): array

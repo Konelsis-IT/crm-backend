@@ -19,6 +19,7 @@ use App\Filament\Resources\MeetingPlans\Pages\MeetingPlanCalendar;
 use App\Filament\Resources\Personnel\Pages\ViewPersonnelRecord;
 use App\Filament\Resources\SocialContents\Pages\ManageSocialMedia;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\KonelsisGlobalSearchProvider;
 use App\Filament\Support\StatusColors;
 use App\Filament\Support\ReactRuntime;
 use App\Http\Controllers\Chat\ChatAttachmentController;
@@ -125,6 +126,9 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarWidth('15rem')
             // Her kaynak icin Policy zorunlu; tanimsiz yetki reddedilir.
             ->strictAuthorization()
+            // Genel arama (D-167): Filament'in kaynak sonuclarina "Kisiler" (taraf
+            // iletisim kisileri ve gorusulen kisiler) eklenir.
+            ->globalSearch(KonelsisGlobalSearchProvider::class)
             // Goruntuleme sayfalari bu urunde calisma alanidir (proje, is dosyasi,
             // dokuman): alt tablolar salt okunur degil, Policy'nin izin verdigi
             // olcude kayit ekler/duzenler (D-73). Filament varsayilani kapatildi.
