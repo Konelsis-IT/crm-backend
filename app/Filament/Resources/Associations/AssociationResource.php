@@ -94,7 +94,8 @@ class AssociationResource extends Resource
             ->columns([
                 TextColumn::make('display_name')
                     ->label(__('association.fields.name'))
-                    ->searchable()
+                    // D-170: kisa ad ya da uzun ad (unvan) ile de bulunur.
+                    ->searchable(query: fn (Builder $query, string $search): Builder => app(PartyQueries::class)->searchByName($query, $search))
                     ->sortable(),
                 TextColumn::make('contacts_count')
                     ->label(__('association.fields.contacts'))

@@ -320,6 +320,8 @@ return [
         'inactive' => 'Pasif',
         'blocked' => 'Yasaklı',
         'prospect' => 'Aday',
+        // D-170: başka bir tarafa birleştirilen kayıt.
+        'merged' => 'Birleştirildi',
     ],
     'party_role_code' => [
         // D-167: Müşteri ve Yatırımcı İşveren'de toplandı; eski kayıtlar da İşveren görünür.

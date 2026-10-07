@@ -500,6 +500,7 @@ return [
         'party.deleted' => 'Taraf (firma/kişi) silindi',
         'party.archived' => 'Taraf (firma/kişi) arşivlendi',
         'party.restored' => 'Taraf (firma/kişi) arşivden çıkarıldı',
+        'party.merged' => 'Taraf (firma/kişi) birleştirildi',
         'party_role.created' => 'Taraf rolü oluşturuldu',
         'party_role.updated' => 'Taraf rolü güncellendi',
         'party_role.deleted' => 'Taraf rolü silindi',

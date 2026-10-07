@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Query\Party;
 
 use App\Enums\Party\PartyRoleCode;
+use App\Enums\Party\PartyStatus;
 use App\Models\Party\ContactRelationship;
 use App\Models\Party\Party;
 use App\Models\Party\PartyRole;
@@ -55,6 +56,39 @@ final class PartyQueries
         );
     }
 
+    /**
+     * Ada gore arama (D-170): gorunen ad, kisa ad ya da uzun ad (unvan). Tablo
+     * aramasi ve secim listeleri ayni kurali kullanir.
+     */
+    public function searchByName(Builder $query, string $search): Builder
+    {
+        $term = '%'.trim($search).'%';
+        $model = $query->getModel();
+
+        return $query->where(fn (Builder $inner): Builder => $inner
+            ->where($model->qualifyColumn('display_name'), 'like', $term)
+            ->orWhereHas('organizationProfile', fn (Builder $profile): Builder => $profile
+                ->where('legal_name', 'like', $term)
+                ->orWhere('trade_name', 'like', $term)));
+    }
+
+    /** Taraf listesi: dernekler haric, kisa / uzun ad icin profil birlikte yuklenir (D-170). */
+    public function forList(Builder $query): Builder
+    {
+        return $this->withoutAssociations($query->with('organizationProfile'));
+    }
+
+    /**
+     * Genel arama (D-170): kisa ve uzun ad icin profil yuklenir; baska tarafa
+     * birlestirilmis kayitlar sonuclarda cikmaz.
+     */
+    public function forGlobalSearch(Builder $query): Builder
+    {
+        return $query
+            ->with('organizationProfile')
+            ->where($query->getModel()->qualifyColumn('status'), '<>', PartyStatus::Merged->value);
+    }
+
     /** Arsiv suzgeci: active (varsayilan) / archived / all. */
     public function archiveScope(Builder $query, string $mode): Builder
     {
@@ -97,7 +131,8 @@ final class PartyQueries
     {
         return Party::query()
             ->whereNull('archived_at')
-            ->when(trim($term) !== '', fn (Builder $query): Builder => $query->where('display_name', 'like', '%'.trim($term).'%'))
+            // D-170: kisa ad ya da uzun ad (unvan) ile de bulunur.
+            ->when(trim($term) !== '', fn (Builder $query): Builder => $this->searchByName($query, $term))
             ->orderBy('display_name')
             ->limit($limit)
             ->pluck('display_name', 'id')
@@ -141,7 +176,14 @@ final class PartyQueries
 
         /** @var Party|null $party */
         $party = Party::query()
-            ->where('normalized_name', $normalized)
+            ->where(fn (Builder $query): Builder => $query
+                ->where('normalized_name', $normalized)
+                // D-170: kurulusun kisa adi ya da uzun adi (unvani) da ayni addir.
+                ->orWhereHas('organizationProfile', fn (Builder $profile): Builder => $profile
+                    ->where('legal_name', Str::of($name)->squish()->value())
+                    ->orWhere('trade_name', Str::of($name)->squish()->value())))
+            // D-170: baska tarafa birlestirilmis kayit onerilmez.
+            ->where('status', '<>', PartyStatus::Merged->value)
             // MySQL artan siralamada NULL once gelir: aktif kayit onde.
             ->orderBy('archived_at')
             ->first(['id', 'display_name', 'archived_at']);

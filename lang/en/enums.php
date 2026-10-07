@@ -320,6 +320,8 @@ return [
         'inactive' => 'Inactive',
         'blocked' => 'Blocked',
         'prospect' => 'Prospect',
+        // D-170: merged into another party.
+        'merged' => 'Merged',
     ],
     'party_role_code' => [
         // D-167: Customer and Investor merged into Employer; old rows show as Employer.

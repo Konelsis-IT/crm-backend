@@ -23,6 +23,9 @@ return [
         'restore' => 'The record leaves the archive and returns to the list.',
         'channels' => 'Company-level contact details independent of a person: email, phone, website. Person details are entered in the contacts list.',
         'network_note' => 'Where the party is known from: referral, fair, acquaintance, internet…',
+        // D-170: short name / long name.
+        'trade_name' => 'Short name used in some documents and lists. When filled, the company is shown with it; otherwise with the long name.',
+        'legal_name' => 'The full company name (legal title). If unknown, enter the known name and correct it later.',
         'role_codes' => 'Pick at least one type; a party can hold several at once (employer and supplier, for example).',
     ],
 
@@ -64,7 +67,9 @@ return [
         'given_name' => 'Given name',
         'is_public_company' => 'Public company',
         'job_title' => 'Job title',
-        'legal_name' => 'Legal name',
+        // D-170: short name / long name.
+        'legal_name' => 'Long name (legal title)',
+        'merged_into' => 'Merged into',
         'network_note' => 'Network',
         'party_kind' => 'Kind',
         'party_no' => 'Party no',
@@ -76,7 +81,7 @@ return [
         'status' => 'Status',
         'tax_number' => 'Tax number',
         'tax_office' => 'Tax office',
-        'trade_name' => 'Trade name',
+        'trade_name' => 'Short name',
         'visit_priority' => 'Visit priority',
         'website_url' => 'Website',
     ],
@@ -116,6 +121,11 @@ return [
         'restored' => 'Party restored.',
         'status_changed' => 'Status updated.',
         'done' => 'Done.',
+    ],
+
+    // D-170: party merge (PartyMergeService).
+    'merge' => [
+        'archive_reason' => 'Merged into :name',
     ],
 
     'validation' => [

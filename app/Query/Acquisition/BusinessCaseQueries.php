@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Query\Acquisition;
 
 use App\Enums\Acquisition\AcquisitionStage;
+use App\Enums\Acquisition\BusinessDevelopmentKind;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Party\PartyMeetingNote;
 use App\Services\Platform\SchemaReadiness;
@@ -59,15 +60,31 @@ final class BusinessCaseQueries
      * Is gelistirme durumundaki kayitlar sicakliga gore (D-167, 6 Ekim 2026
      * kullanici talimati): sicaklik 0 (ya da bos) ise Yatirimci projesi,
      * 0'dan buyukse Potansiyel is.
+     *
+     * D-170 / B47: elle secilen tur (`development_kind`) sicakliktan once
+     * gelir; bos olan kayitlar sicakliga gore ayrilir
+     * (BusinessCase::developmentKind ile ayni kural).
      */
     public function withKind(Builder $query, bool $potential, bool $excludeDrafts): Builder
     {
         $query = $this->withStages($query, [AcquisitionStage::BusinessDevelopment], $excludeDrafts);
-        $column = $query->getModel()->qualifyColumn('heat_score');
+        $model = $query->getModel();
+        $heat = $model->qualifyColumn('heat_score');
 
-        return $potential
-            ? $query->where($column, '>', 0)
-            : $query->where(fn (Builder $inner): Builder => $inner->whereNull($column)->orWhere($column, 0));
+        $byHeat = $potential
+            ? static fn (Builder $inner): Builder => $inner->where($heat, '>', 0)
+            : static fn (Builder $inner): Builder => $inner->where(static fn (Builder $zero): Builder => $zero->whereNull($heat)->orWhere($heat, 0));
+
+        if (! SchemaReadiness::hasBatch('B47')) {
+            return $byHeat($query);
+        }
+
+        $kind = $model->qualifyColumn('development_kind');
+        $wanted = $potential ? BusinessDevelopmentKind::PotentialJob : BusinessDevelopmentKind::InvestorProject;
+
+        return $query->where(static fn (Builder $inner): Builder => $inner
+            ->where($kind, $wanted->value)
+            ->orWhere(static fn (Builder $auto): Builder => $byHeat($auto->whereNull($kind))));
     }
 
     public function kindCount(bool $potential, bool $excludeDrafts): int

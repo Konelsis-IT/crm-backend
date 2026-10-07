@@ -76,6 +76,7 @@ return [
     'party' => [
         'activity_area_parent_invalid' => 'Alt faaliyet alanı yalnız bir ana faaliyet alanının altına bağlanabilir; alt alanı olan bir ana alan başka bir alanın altına taşınamaz.',
         'meeting_note_proposal_mismatch' => 'Görüşme notuna yalnız seçilen potansiyel işin teklifleri bağlanabilir.',
+        'party_merge_not_allowed' => 'Bu iki taraf birleştirilemez: iki farklı ve aynı türde (kuruluş ya da kişi) taraf seçilmeli; birleştirilmiş bir taraf yeniden birleştirilemez ve arşivdeki bir tarafa birleştirme yapılamaz.',
     ],
     'work_request' => [
         'message_empty' => 'Cevap boş; bir metin, bağlantı ya da dosya ekleyin.',

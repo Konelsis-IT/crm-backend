@@ -95,6 +95,8 @@ final class ReleaseNotes
                         'Teklife dönüşmüş bir işi düzenlerken ekranda işin şu anda Teklif adımında olduğu yazıyor.',
                         'İhalelerde "Yakalandı" yerine "Tespit edildi" yazıyor.',
                         'Görüşme planı listesinde durumlar simgeli rozetlerle görünüyor.',
+                        'Firmanın adı ikiye ayrıldı: Kısa ad ve Uzun ad (unvan). Kısa adı olan firma kısa adıyla, olmayan uzun adıyla görünüyor; listede uzun ad adın altında, firma kartında ikisi birlikte duruyor. Arama iki adla da buluyor.',
+                        'İş Geliştirme kaydının Sınıflandırma bölümünde Tür seçilebiliyor: Otomatik (sıcaklığa göre), Yatırımcı projesi ya da Potansiyel iş. Seçilen tür sıcaklıktan bağımsız geçerli.',
                     ],
                 ],
             ],

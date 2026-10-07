@@ -35,6 +35,13 @@ class EditParty extends EditRecord
         $data['organization_profile'] = $record->organizationProfile?->toArray() ?? [];
         $data['person_profile'] = $record->personProfile?->toArray() ?? [];
 
+        // D-170: kisa ad yoksa gorunen ad uzun addir. Eski bir duzenlemede yalniz
+        // gorunen ad degismisse (profil adi geride kalmissa) form ekrandaki adi
+        // uzun ad olarak acar; kaydedince profil gorunen adla esitlenir.
+        if (blank($data['organization_profile']['trade_name'] ?? null) && $record->organizationProfile !== null) {
+            $data['organization_profile']['legal_name'] = $record->display_name;
+        }
+
         return $data;
     }
 

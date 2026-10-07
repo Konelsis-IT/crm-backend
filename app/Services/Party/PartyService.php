@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Party;
 
 use App\Enums\Party\PartyKind;
+use App\Enums\Party\PartyStatus;
 use App\Exceptions\InvalidTransitionException;
+use App\Exceptions\RecordArchivedException;
 use App\Models\Party\OrganizationProfile;
 use App\Models\Party\Party;
 use App\Models\Party\PersonProfile;
@@ -32,6 +34,11 @@ use Illuminate\Support\Str;
  *
  * B33 (21 Eylul 2026): faaliyet satirlari ('activity_areas' anahtari) da ayni
  * islemde tam liste olarak yazilir; koken ve rakip firma taraf kolonudur.
+ *
+ * D-170 (7 Ekim 2026): kurulusun adi kisa ad (trade_name) ve uzun ad / unvan
+ * (legal_name) olarak ikiye ayrildi; gorunen ad her zaman kisa ad, kisa ad
+ * bossa uzun addir (organizationNames). Birlestirilen taraf (status merged,
+ * PartyMergeService) degistirilemez ve arsivden cikarilamaz.
  */
 final class PartyService extends AbstractService
 {
@@ -54,6 +61,11 @@ final class PartyService extends AbstractService
             unset($data['organization_profile'], $data['person_profile'], $data['party_roles'], $data['communication_points'], $data['activity_areas']);
 
             $data['party_no'] = $this->generatePartyNo();
+
+            if (self::kindOf($data['party_kind'] ?? null) === PartyKind::Organization) {
+                [$data, $organization] = $this->organizationNames($data, $organization, null);
+            }
+
             $data = $this->normalize($data, $organization['tax_number'] ?? null);
 
             /** @var Party $party */
@@ -77,18 +89,30 @@ final class PartyService extends AbstractService
             /** @var Party $current */
             $current = $this->show($record);
 
+            // D-170: birlestirilmis taraf (status merged) arsivdedir; tasinan
+            // kayitlar hedeftedir ve kaynak artik degistirilmez.
+            if ($current->status === PartyStatus::Merged) {
+                throw RecordArchivedException::make();
+            }
+
             $organization = isset($data['organization_profile']) ? (array) $data['organization_profile'] : null;
             $person = isset($data['person_profile']) ? (array) $data['person_profile'] : null;
             $channels = array_key_exists('communication_points', $data) ? (array) $data['communication_points'] : null;
             $activities = array_key_exists('activity_areas', $data) ? (array) $data['activity_areas'] : null;
             unset($data['organization_profile'], $data['person_profile'], $data['communication_points'], $data['activity_areas'], $data['party_roles'], $data['party_no'], $data['party_kind']);
 
-            $taxNumber = $organization['tax_number'] ?? $current->organizationProfile?->tax_number;
-            $data = $this->normalize([
+            $data = [
                 'display_name' => $current->display_name,
                 'country_code' => $current->country_code,
                 ...$data,
-            ], is_string($taxNumber) ? $taxNumber : null);
+            ];
+
+            if ($current->party_kind === PartyKind::Organization) {
+                [$data, $organization] = $this->organizationNames($data, $organization, $current);
+            }
+
+            $taxNumber = $organization['tax_number'] ?? $current->organizationProfile?->tax_number;
+            $data = $this->normalize($data, is_string($taxNumber) ? $taxNumber : null);
 
             /** @var Party $party */
             $party = parent::update($current, $data);
@@ -99,6 +123,76 @@ final class PartyService extends AbstractService
 
             return $party;
         });
+    }
+
+    /**
+     * Kurulusun kisa ve uzun adi (D-170, 7 Ekim 2026 kullanici talimati: "Taraf
+     * sistemine kisa isim ve uzun isim seklinde ad kismi 2'ye ayrilacak ...
+     * ikisini bilmediklerimizin hepsi uzun isim olarak kaydedilsin").
+     *
+     * - Uzun ad (unvan) = organization_profiles.legal_name (zorunlu), kisa ad =
+     *   organization_profiles.trade_name (bos olabilir).
+     * - Gorunen ad (parties.display_name) her zaman kisa ad, kisa ad bossa uzun
+     *   addir; formdan ya da cagirandan gelen serbest gorunen ad bu kurali
+     *   bozamaz.
+     * - Ad yalniz gorunen ad olarak geldiyse (hizli firma ekleme, ice aktarma,
+     *   eski cagiranlar) ve profilin gosterdigi addan farkliysa: kisa ad
+     *   doluysa kisa ad, degilse uzun ad o ad olur (yeni kayitta uzun ad).
+     * - Profil adlari degismediyse profil verisine ad eklenmez (gereksiz yazma
+     *   olmaz).
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|null  $organization
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>|null}
+     */
+    private function organizationNames(array $data, ?array $organization, ?Party $current): array
+    {
+        $profile = $current?->organizationProfile;
+        $hasLegal = $organization !== null && array_key_exists('legal_name', $organization);
+        $hasTrade = $organization !== null && array_key_exists('trade_name', $organization);
+        $legal = self::cleanName($hasLegal ? $organization['legal_name'] : $profile?->legal_name);
+        $trade = self::cleanName($hasTrade ? $organization['trade_name'] : $profile?->trade_name);
+
+        if (! $hasLegal && ! $hasTrade) {
+            $display = self::cleanName($data['display_name'] ?? null);
+
+            if ($display !== null && $display !== ($trade ?? $legal)) {
+                if ($trade !== null) {
+                    $trade = $display;
+                } else {
+                    $legal = $display;
+                }
+            }
+        }
+
+        $legal ??= $trade ?? self::cleanName($data['display_name'] ?? null) ?? '';
+        $changed = $profile === null
+            || self::cleanName($profile->legal_name) !== $legal
+            || self::cleanName($profile->trade_name) !== $trade;
+
+        if ($hasLegal || $hasTrade || $changed) {
+            $organization = [...($organization ?? []), 'legal_name' => $legal, 'trade_name' => $trade];
+        }
+
+        $data['display_name'] = $trade ?? $legal;
+
+        return [$data, $organization];
+    }
+
+    private static function cleanName(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $name = Str::of((string) $value)->squish()->value();
+
+        return $name === '' ? null : $name;
+    }
+
+    private static function kindOf(mixed $value): ?PartyKind
+    {
+        return $value instanceof PartyKind ? $value : PartyKind::tryFrom(is_scalar($value) ? (string) $value : '');
     }
 
     /**
@@ -135,10 +229,17 @@ final class PartyService extends AbstractService
     private function syncProfile(Party $party, ?array $organization, ?array $person): void
     {
         if ($party->party_kind === PartyKind::Organization && $organization !== null) {
-            OrganizationProfile::query()->updateOrCreate(
-                ['party_id' => $party->getKey()],
-                [...$organization, 'legal_name' => filled($organization['legal_name'] ?? null) ? $organization['legal_name'] : $party->display_name],
-            );
+            // D-170: uzun ad verilmediyse var olan profilin uzun adi korunur
+            // (gorunen ad kisa ad olabilir); profil yoksa gorunen ad uzun addir.
+            if (blank($organization['legal_name'] ?? null)) {
+                unset($organization['legal_name']);
+
+                if (! OrganizationProfile::query()->whereKey($party->getKey())->exists()) {
+                    $organization['legal_name'] = $party->display_name;
+                }
+            }
+
+            OrganizationProfile::query()->updateOrCreate(['party_id' => $party->getKey()], $organization);
         }
 
         if ($party->party_kind === PartyKind::Person && $person !== null) {
@@ -190,7 +291,8 @@ final class PartyService extends AbstractService
             /** @var Party $party */
             $party = $this->lockForUpdate($record);
 
-            if ($party->archived_at === null) {
+            // D-170: birlestirilen taraf (status merged) arsivden cikarilamaz.
+            if ($party->archived_at === null || $party->status === PartyStatus::Merged) {
                 throw InvalidTransitionException::make();
             }
 

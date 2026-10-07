@@ -16,6 +16,9 @@ enum PartyStatus: string implements HasColor, HasLabel
     case Inactive = 'inactive';
     case Blocked = 'blocked';
     case Prospect = 'prospect';
+    // Baska bir tarafa birlestirildi (D-170, PartyMergeService): kayitlari
+    // hedef taraftadir, merged_into_party_id hedefi gosterir. Formda secilmez.
+    case Merged = 'merged';
 
     public function getColor(): string
     {
@@ -24,6 +27,21 @@ enum PartyStatus: string implements HasColor, HasLabel
             self::Inactive => 'gray',
             self::Blocked => 'danger',
             self::Prospect => 'info',
+            self::Merged => 'gray',
         };
+    }
+
+    /**
+     * Formda secilebilen durumlar: "Birlestirildi" yalniz birlestirme
+     * servisiyle yazilir (D-170).
+     *
+     * @return array<string, string>
+     */
+    public static function selectableOptions(): array
+    {
+        $options = self::options();
+        unset($options[self::Merged->value]);
+
+        return $options;
     }
 }

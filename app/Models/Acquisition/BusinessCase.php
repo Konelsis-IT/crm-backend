@@ -7,6 +7,7 @@ namespace App\Models\Acquisition;
 use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\BusinessCodeKind;
 use App\Enums\Acquisition\BusinessCriticality;
+use App\Enums\Acquisition\BusinessDevelopmentKind;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\BusinessSourceKind;
 use App\Enums\Acquisition\LicenseStatus;
@@ -30,6 +31,7 @@ use App\Models\Reference\Currency;
 use App\Models\Reference\LegalEntity;
 use App\Models\Reference\SecurityClassification;
 use App\Policies\BusinessCasePolicy;
+use App\Services\Platform\SchemaReadiness;
 use App\Models\Report\Report;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -47,6 +49,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'estimated_value', 'classification_id', 'offer_type',
     // B43 (D-155): proje durumu, teklif sicakligi, taslak.
     'license_status', 'heat_score', 'is_draft', 'draft_step',
+    // B47 (D-170): elle secilen is gelistirme turu (bos = sicakliga gore).
+    'development_kind',
 ])]
 #[UsePolicy(BusinessCasePolicy::class)]
 class BusinessCase extends Model
@@ -124,6 +128,11 @@ class BusinessCase extends Model
      * Is gelistirme turu (D-167, 6 Ekim 2026 kullanici talimati: "sicaklik alani
      * 0 ise yatirimci projesidir, %0'dan buyuk ise potansiyel istir"). Yalniz Is
      * Gelistirme durumunda anlamlidir; teklifteki is "Teklifte"dir. null: tur yok.
+     *
+     * D-170 / B47 (7 Ekim 2026 kullanici talimati: listeden gelen potansiyel
+     * isler sicakliktan bagimsiz "Potansiyel is"): `development_kind` doluysa
+     * kayitli tur gecerlidir; bossa sicaklik kurali uygulanir. Grup
+     * uygulanmadan kolon yoktur ve hep sicakliga bakilir.
      */
     public function developmentKind(): ?string
     {
@@ -131,7 +140,11 @@ class BusinessCase extends Model
             return null;
         }
 
-        return (int) ($this->getAttribute('heat_score') ?? 0) > 0 ? 'potential_job' : 'investor_project';
+        $stored = SchemaReadiness::hasBatch('B47')
+            ? BusinessDevelopmentKind::normalize($this->getAttribute('development_kind'))
+            : null;
+
+        return $stored ?? BusinessDevelopmentKind::fromHeat($this->getAttribute('heat_score'))->value;
     }
 
     /**

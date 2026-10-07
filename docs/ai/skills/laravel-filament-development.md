@@ -316,6 +316,23 @@ The user: "canlida son hali neyse o kalmali. Biz sadece ekledigimiz db:seed'ler 
 - Seeders never call `PositionRoleSync::syncAll()`: it re-granted position roles taken away in production. They use `Database\Seeders\Support\SeedPositionRoles::sync()`, which creates roles only for positions the seed created and grants roles only on assignments the seed created.
 - Code counters (`BusinessCodeSequence`) are the only existing rows a seed may advance, because new POTIS/TKLF/PRJ codes need them.
 - A new data import that should run on the next production deploy is registered in `DatabaseSeeder::DEPLOY_SEEDERS`; the user never has to type `--class`.
+- List updates (D-169, 2026-10-07): when the user sends a newer version of an imported list, write a new dated seeder that extends the original importer. It reads the new data file and matches each row to the previous one by firm, name and scope, or by the previous summary tag.
+  - New rows are created. Existing records only move forward: offer status Verilecek → Verilen → Kaçan fırsat, never backwards.
+  - Changed facts are appended to the summary as a "dd.mm.yyyy listesi" line. Nothing is overwritten or deleted, and rows that left the list stay untouched.
+  - Only new dated note parts become meeting notes; recorded text is never re-added.
+  - These forward updates run inside `SeedGuard::allowingUpdates()`, which never permits delete or restore. A failing row is rolled back alone and retried on the next deploy.
+  - Provide `preview()` and show its output before handing over.
+- Party identity in imports (D-170, 2026-10-07):
+  - Never guess that two firms are the same. Ask the user in chat, a few questions at a time; never hand over a decision spreadsheet.
+  - Record each answer as a named constant in the seeder (`MERGES`, `NAMES`, `PARTY_ALIASES`). Identify parties by name, never by id, because ids differ between environments.
+  - Merge duplicate parties only with `PartyMergeService::merge()`. The source is never deleted: it becomes "Birleştirildi" and is archived.
+  - Organizations have a short name (`trade_name`) and a long name (`legal_name`). `display_name` is always the short name, or the long name when there is no short name.
+  - When an import knows only one name, store it as the long name; the user corrects it by hand.
+  - A list row for a project that already exists under a sibling firm (same first name word) is the same project; never open it twice.
+- Meeting notes and reports in imports (D-171, 2026-10-07):
+  - A separate visit report is the detail of the plan's short note ("will be sent in a separate form"). Add it to that note as a "Ziyaret raporu" section, never as a second meeting.
+  - When the same content is in two sources, write it once, with the dated source winning over an undated list.
+  - Link a note to a business case only on evidence: matching MW or place names in the title, or the same text in the list that created the case. A generic note ("tanıtım maili atıldı") stays on the party.
 - `ArchiveLegacySeedsSeeder` (first entry of `DEPLOY_SEEDERS`) runs `DatabaseSeeder::START_CHAIN` once in mark-only mode (`ProtectedSeeder::markOnly`). In that mode no row is written: every row key goes into `seed_archive`, and all other writes run inside a rolled-back transaction. A filled production database therefore gets an archive covering every legacy seeder, so a manual run of an old seeder never re-creates a deleted record. The `legacy-backfill` marker in the archive stops it from running twice.
 
 ### Production deploy script (user decision, 2026-10-06, D-166)

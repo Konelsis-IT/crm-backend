@@ -39,7 +39,8 @@ final class PartyInfolist
             return $schema->components([]);
         }
 
-        $record->loadMissing(['country', 'roles', 'addresses', 'ownCommunicationPoints', 'contacts.contact', 'archivedBy']);
+        // D-170: kisa ad / uzun ad kartta gosterilir.
+        $record->loadMissing(['country', 'organizationProfile', 'roles', 'addresses', 'ownCommunicationPoints', 'contacts.contact', 'archivedBy']);
 
         if (SchemaReadiness::hasBatch('B28')) {
             $record->loadMissing('meetingNotes');
@@ -90,6 +91,10 @@ final class PartyInfolist
                             ->label(__('party.fields.created_at'))
                             ->icon(Heroicon::OutlinedClock)
                             ->dateTime('d.m.Y H:i'),
+                        // D-170: birlestirilen taraf hangi tarafa tasindi (baglanti).
+                        TextEntry::make('mergedInto.display_name')
+                            ->label(__('party.fields.merged_into'))
+                            ->visible(fn (Party $party): bool => $party->merged_into_party_id !== null),
                         // Arsiv bilgisi (S3, D-99): yalniz arsivli kayitta.
                         TextEntry::make('archived_at')
                             ->label(__('party.fields.archived_at'))

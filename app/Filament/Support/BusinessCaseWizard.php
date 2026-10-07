@@ -6,6 +6,7 @@ namespace App\Filament\Support;
 
 use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\BusinessCriticality;
+use App\Enums\Acquisition\BusinessDevelopmentKind;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\BusinessSourceKind;
 use App\Enums\Acquisition\LicenseStatus;
@@ -229,6 +230,19 @@ final class BusinessCaseWizard
                 ->visible($b29)
                 ->dehydrated($b29)
                 ->columnSpan(FieldGrid::SHORT),
+            // Is gelistirme turu (B47, D-170, 7 Ekim 2026 kullanici talimati): bos
+            // = Otomatik (sicaklik 0 Yatirimci projesi, 0'dan buyuk Potansiyel is);
+            // secilirse sicakliktan bagimsiz o tur gecerlidir.
+            Select::make('development_kind')
+                ->label(__('business_case.kind'))
+                ->options(BusinessDevelopmentKind::class)
+                ->placeholder(__('business_case.development_kind.auto'))
+                ->hintIcon(Heroicon::OutlinedInformationCircle, tooltip: __('business_case.development_kind.help'))
+                ->hintColor('gray')
+                ->native(false)
+                ->visible(fn (): bool => SchemaReadiness::hasBatch('B47'))
+                ->dehydrated(fn (): bool => SchemaReadiness::hasBatch('B47'))
+                ->columnSpan(FieldGrid::NORMAL),
             // D-163: tipler kendi simgesi ve rengiyle secim dugmesi (coklu secim);
             // secilen dugme tipin renginde dolar.
             ToggleButtons::make('scope_types')
@@ -380,7 +394,7 @@ final class BusinessCaseWizard
             // Musteri yaninda Ulke, Baslik alt satirda (16 Eylul 2026 kullanici
             // karari): Siniflandirma'dan Ulke cikinca kalan alanlar rahatlar.
             'identity' => ['label' => __('business_case.sections.identity'), 'icon' => Heroicon::OutlinedBriefcase, 'fields' => ['primary_party_id', 'country_code', 'title', 'short_description'], 'columns' => FieldGrid::HALF_COLUMNS],
-            'classification' => ['label' => __('business_case.sections.classification'), 'icon' => Heroicon::OutlinedTag, 'fields' => ['offer_type', 'criticality', 'source_kind', 'classification_id', 'scope_types', 'license_status'], 'columns' => FieldGrid::HALF_COLUMNS],
+            'classification' => ['label' => __('business_case.sections.classification'), 'icon' => Heroicon::OutlinedTag, 'fields' => ['offer_type', 'development_kind', 'criticality', 'source_kind', 'classification_id', 'scope_types', 'license_status'], 'columns' => FieldGrid::HALF_COLUMNS],
             'commercial' => ['label' => __('business_case.sections.commercial'), 'icon' => Heroicon::OutlinedBanknotes, 'fields' => ['currency_code', 'estimated_value', 'legal_entity_id'], 'columns' => FieldGrid::HALF_COLUMNS],
             'ownership' => ['label' => __('business_case.sections.ownership'), 'icon' => Heroicon::OutlinedUsers, 'fields' => ['owner_employee_id', 'proposal_owner_employee_id'], 'columns' => FieldGrid::HALF_COLUMNS],
         ]);

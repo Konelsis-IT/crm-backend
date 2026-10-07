@@ -72,6 +72,9 @@ class KksProposalSeeder extends ProtectedSeeder
 {
     public const LIST_DATE = '22.09.2026';
 
+    /** Veri dosyasi (database/seeders/data altinda); guncelleme seeder'lari kendi dosyasini verir. */
+    public const DATA_FILE = 'kks_proposals.php';
+
     /** Listedeki firma adi => sistemdeki taraf adi (display_name). */
     public const PARTY_ALIASES = [
         'AKSA Yenilenebilir Enerji' => 'Aksa Yenilenebilir Enerji Üretim Anonim Şirketi',
@@ -96,7 +99,7 @@ class KksProposalSeeder extends ProtectedSeeder
     ];
 
     /** Sistemde olmayan ve Turkiye disindaki firmalar: ulke kodu. */
-    private const NEW_PARTY_COUNTRIES = [
+    protected const NEW_PARTY_COUNTRIES = [
         'OZBEKİSTAN' => 'UZ',
         'GÜNEY AFRİKA' => 'ZA',
         'SRL-CEF CARACAL' => 'RO',
@@ -104,7 +107,7 @@ class KksProposalSeeder extends ProtectedSeeder
     ];
 
     /** Listedeki kapsam => [proje tipi (bilesen katalogu kodu), kapsamlar]. */
-    private const SCOPES = [
+    protected const SCOPES = [
         'GES' => ['GES', ['ges']],
         'DGES' => ['GES', ['ges', 'bes']],
         'RES' => ['RES', ['res']],
@@ -221,7 +224,7 @@ class KksProposalSeeder extends ProtectedSeeder
      *
      * @param  array<string, mixed>  $row
      */
-    private function rowKey(array $row): string
+    protected function rowKey(array $row): string
     {
         return 'proposal:'.$this->normalize((string) $row['sheet']).'|'.$this->normalize(trim((string) $row['firm'])).'|'.$this->normalize($this->proposalTitle($row));
     }
@@ -239,7 +242,7 @@ class KksProposalSeeder extends ProtectedSeeder
     private function seedMeetingNotes(int $ownerId): int
     {
         /** @var list<array<string, mixed>> $source */
-        $source = require __DIR__.'/data/kks_proposals.php';
+        $source = require __DIR__.'/data/'.static::DATA_FILE;
         $personnel = $this->personnelNames();
         $groups = [];
 
@@ -271,9 +274,9 @@ class KksProposalSeeder extends ProtectedSeeder
                 $entry = $group['entry'];
                 [$personnelId, $text] = $this->splitPersonnel($entry['text'], $personnel);
                 $note = $entry['date'] === null
-                    ? $text.' (Listede tarih yok; liste tarihi '.self::LIST_DATE.' yazıldı.)'
+                    ? $text.' (Listede tarih yok; liste tarihi '.static::LIST_DATE.' yazıldı.)'
                     : $text;
-                $notedOn = Carbon::createFromFormat('d.m.Y', $entry['date'] ?? self::LIST_DATE)->toDateString();
+                $notedOn = Carbon::createFromFormat('d.m.Y', $entry['date'] ?? static::LIST_DATE)->toDateString();
 
                 /** @var PartyMeetingNote|null $existing */
                 $existing = PartyMeetingNote::query()
@@ -349,7 +352,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @return list<array{date: string|null, text: string}> */
-    private function lineEntries(string $line): array
+    protected function lineEntries(string $line): array
     {
         if ($line === '') {
             return [];
@@ -390,7 +393,7 @@ class KksProposalSeeder extends ProtectedSeeder
      * Tarih parantezinin kapanisi: parca sonundaysa atilir, arada kaliyorsa
      * (kisi + not) " – " olur; hic kapanmiyorsa metin oldugu gibi kalir.
      */
-    private function closeDateParen(string $body): string
+    protected function closeDateParen(string $body): string
     {
         $depth = 0;
         $length = strlen($body);
@@ -414,7 +417,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @return array{date: string|null, text: string} */
-    private function bareEntry(string $text): array
+    protected function bareEntry(string $text): array
     {
         // Tamami parantez icindeyse (kisi bilgisi gibi) dis parantez atilir.
         if (preg_match('/^\((.*)\)$/su', $text, $wrapped) === 1 && ! str_contains($wrapped[1], ')')) {
@@ -437,7 +440,7 @@ class KksProposalSeeder extends ProtectedSeeder
      * @param  array<string, int>  $personnel  kucuk harf ad => id
      * @return array{0: int|null, 1: string}
      */
-    private function splitPersonnel(string $text, array $personnel): array
+    protected function splitPersonnel(string $text, array $personnel): array
     {
         if (preg_match('/^([^;()]{3,40}?)(?:\s+ziyareti)?\s*;\s*(.*)$/su', $text, $match) === 1) {
             $id = $personnel[$this->normalize($match[1])] ?? null;
@@ -451,7 +454,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @return array<string, int> */
-    private function personnelNames(): array
+    protected function personnelNames(): array
     {
         $names = [];
 
@@ -466,7 +469,7 @@ class KksProposalSeeder extends ProtectedSeeder
         return $names;
     }
 
-    private function channel(string $text): MeetingChannel
+    protected function channel(string $text): MeetingChannel
     {
         $lower = mb_strtolower($text, 'UTF-8');
 
@@ -479,15 +482,15 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** Tekrar karsilastirmasi: harf ve rakam disi atilir, kucuk harf. */
-    private function fingerprint(string $text): string
+    protected function fingerprint(string $text): string
     {
         return (string) preg_replace('/[^\p{L}\p{N}]+/u', '', mb_strtolower($text, 'UTF-8'));
     }
 
     /** @param  array<string, mixed>  $row */
-    private function proposalForRow(array $row): ?Proposal
+    protected function proposalForRow(array $row): ?Proposal
     {
-        $tag = '('.self::LIST_DATE.', '.$row['sheet'].', satır '.$row['excel_row'].').';
+        $tag = '('.static::LIST_DATE.', '.$row['sheet'].', satır '.$row['excel_row'].').';
 
         /** @var Proposal|null $proposal */
         $proposal = Proposal::query()
@@ -505,7 +508,7 @@ class KksProposalSeeder extends ProtectedSeeder
     public function plan(): array
     {
         /** @var list<array<string, mixed>> $source */
-        $source = require __DIR__.'/data/kks_proposals.php';
+        $source = require __DIR__.'/data/'.static::DATA_FILE;
         $namesByFirm = [];
 
         foreach ($source as $item) {
@@ -542,15 +545,15 @@ class KksProposalSeeder extends ProtectedSeeder
         return ['rows' => $rows, 'case_rows' => $caseRows];
     }
 
-    private function findParty(string $firm): ?Party
+    protected function findParty(string $firm): ?Party
     {
-        $name = self::PARTY_ALIASES[$firm] ?? $firm;
+        $name = static::PARTY_ALIASES[$firm] ?? $firm;
 
         return Party::query()->where('normalized_name', $this->normalize($name))->first();
     }
 
     /** @param  array<string, int>  $totals */
-    private function partyFor(array $row, array &$totals): Party
+    protected function partyFor(array $row, array &$totals): Party
     {
         if ($row['party_name'] !== null) {
             return Party::query()->where('normalized_name', $this->normalize((string) $row['party_name']))->firstOrFail();
@@ -562,7 +565,7 @@ class KksProposalSeeder extends ProtectedSeeder
         $party = app(PartyService::class)->create([
             'party_kind' => 'organization',
             'display_name' => $name,
-            'country_code' => self::NEW_PARTY_COUNTRIES[$name] ?? 'TR',
+            'country_code' => static::NEW_PARTY_COUNTRIES[$name] ?? 'TR',
             'status' => 'prospect',
             'organization_profile' => ['legal_name' => $name],
         ]);
@@ -585,7 +588,7 @@ class KksProposalSeeder extends ProtectedSeeder
      * @param  array<string, mixed>  $item
      * @param  array<string, true>  $firmNames
      */
-    private function caseTitle(array $item, array $firmNames, ?Party $party): string
+    protected function caseTitle(array $item, array $firmNames, ?Party $party): string
     {
         $firm = trim((string) $item['firm']);
         $name = trim((string) $item['name']);
@@ -610,7 +613,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @param  array<string, mixed>  $item */
-    private function proposalTitle(array $item): string
+    protected function proposalTitle(array $item): string
     {
         $name = trim((string) $item['name']);
         $scope = (string) $item['scope'];
@@ -625,7 +628,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @param  array<string, mixed>  $item */
-    private function unnamedTitle(array $item): string
+    protected function unnamedTitle(array $item): string
     {
         $power = trim((string) $item['power_mwp']);
         $power = $power === '' ? '' : (is_numeric($power) ? $power.' MWp ' : $power.' ');
@@ -633,7 +636,7 @@ class KksProposalSeeder extends ProtectedSeeder
         return Str::limit(trim((string) $item['firm']), 180, '').' – '.$power.$item['scope'].' teklifi';
     }
 
-    private function findCase(Party $party, string $title): ?BusinessCase
+    protected function findCase(Party $party, string $title): ?BusinessCase
     {
         $key = $this->normalize($title);
 
@@ -648,7 +651,7 @@ class KksProposalSeeder extends ProtectedSeeder
      * @param  array<string, int>  $totals
      * @param  array<int, BusinessCase>  $createdCases  bu calismada acilanlar (D-165)
      */
-    private function caseFor(Party $party, array $row, array $caseRows, int $ownerId, array &$totals, array &$createdCases): BusinessCase
+    protected function caseFor(Party $party, array $row, array $caseRows, int $ownerId, array &$totals, array &$createdCases): BusinessCase
     {
         $existing = $this->findCase($party, (string) $row['case_title']);
 
@@ -660,7 +663,7 @@ class KksProposalSeeder extends ProtectedSeeder
         $scopes = [];
 
         foreach ($caseRows as $item) {
-            [$code, $itemScopes] = self::SCOPES[(string) $item['scope']] ?? [null, []];
+            [$code, $itemScopes] = static::SCOPES[(string) $item['scope']] ?? [null, []];
             $typeCode ??= $code;
 
             foreach ($itemScopes as $scope) {
@@ -677,7 +680,7 @@ class KksProposalSeeder extends ProtectedSeeder
         $case = app(BusinessCaseService::class)->create([
             'title' => (string) $row['case_title'],
             'primary_party_id' => (int) $party->getKey(),
-            'short_description' => 'KKS teklif takip listesinden aktarıldı ('.self::LIST_DATE.').',
+            'short_description' => 'KKS teklif takip listesinden aktarıldı ('.static::LIST_DATE.').',
             'country_code' => (string) ($party->country_code ?? 'TR'),
             'currency_code' => (string) config('konelsis.organization.default_currency', 'TRY'),
             'project_type_code' => $typeCode,
@@ -698,7 +701,7 @@ class KksProposalSeeder extends ProtectedSeeder
      * @param  array<string, mixed>  $item
      * @return array<string, mixed>
      */
-    private function scopeRow(string $scope, array $item): array
+    protected function scopeRow(string $scope, array $item): array
     {
         $power = trim((string) $item['power_mwp']);
         $storage = trim((string) $item['storage_mwh']);
@@ -717,7 +720,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @param  array<string, mixed>  $row */
-    private function openProposal(BusinessCase $case, array $row): Proposal
+    protected function openProposal(BusinessCase $case, array $row): Proposal
     {
         $status = OfferStatus::from((string) $row['offer_status']);
 
@@ -732,7 +735,7 @@ class KksProposalSeeder extends ProtectedSeeder
         }
 
         // Listede tarih yoksa teklif en gec liste tarihinde verilmistir.
-        $submittedAt = Carbon::createFromFormat('d.m.Y H:i', ($row['offer_date'] ?: self::LIST_DATE).' 12:00', DisplayTime::zone());
+        $submittedAt = Carbon::createFromFormat('d.m.Y H:i', ($row['offer_date'] ?: static::LIST_DATE).' 12:00', DisplayTime::zone());
 
         $versions = app(ProposalVersionService::class);
 
@@ -753,7 +756,7 @@ class KksProposalSeeder extends ProtectedSeeder
      * Listedeki butun teklifleri kaybedilen potansiyel is "Kaybedildi" olur.
      * D-165: yalniz bu calismada acilan potansiyel is icin cagrilir.
      */
-    private function closeIfAllLost(BusinessCase $case): bool
+    protected function closeIfAllLost(BusinessCase $case): bool
     {
         $statuses = Proposal::query()->where('business_case_id', $case->getKey())->pluck('offer_status');
 
@@ -773,9 +776,9 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** @param  array<string, mixed>  $row */
-    private function summary(array $row): string
+    protected function summary(array $row): string
     {
-        $lines = ['KKS teklif takip listesinden aktarıldı ('.self::LIST_DATE.', '.$row['sheet'].', satır '.$row['excel_row'].').'];
+        $lines = ['KKS teklif takip listesinden aktarıldı ('.static::LIST_DATE.', '.$row['sheet'].', satır '.$row['excel_row'].').'];
         $dateLabel = $row['offer_status'] === OfferStatus::ToBeSubmitted->value ? 'Teklif verme tarihi' : 'Teklif tarihi';
         $power = trim((string) $row['power_mwp']);
         $storage = trim((string) $row['storage_mwh']);
@@ -787,7 +790,7 @@ class KksProposalSeeder extends ProtectedSeeder
             'Proje durumu' => (string) $row['status'],
             $dateLabel => (string) ($row['offer_date'] ?? '') !== ''
                 ? (string) $row['offer_date']
-                : trim($row['offer_date_text'].($row['offer_status'] === OfferStatus::ToBeSubmitted->value ? '' : ' (listede tarih yok; gönderim tarihi liste tarihi '.self::LIST_DATE.' alındı)')),
+                : trim($row['offer_date_text'].($row['offer_status'] === OfferStatus::ToBeSubmitted->value ? '' : ' (listede tarih yok; gönderim tarihi liste tarihi '.static::LIST_DATE.' alındı)')),
         ] as $label => $value) {
             if (trim($value) !== '') {
                 $lines[] = $label.': '.trim($value);
@@ -802,7 +805,7 @@ class KksProposalSeeder extends ProtectedSeeder
     }
 
     /** RealPartySeeder ile ayni kural: kucuk harf, tek bosluk. */
-    private function normalize(string $value): string
+    protected function normalize(string $value): string
     {
         return Str::of($value)->lower()->squish()->value();
     }

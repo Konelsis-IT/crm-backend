@@ -7,6 +7,7 @@ namespace App\Services\Acquisition;
 use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\BusinessCodeKind;
 use App\Enums\Acquisition\BusinessCodeStatus;
+use App\Enums\Acquisition\BusinessDevelopmentKind;
 use App\Enums\Acquisition\BusinessOutcome;
 use App\Enums\Acquisition\LifecycleSegment;
 use App\Enums\Acquisition\OfferStatus;
@@ -138,6 +139,7 @@ final class BusinessCaseService extends AbstractService
     public function createForProject(array $data): array
     {
         return $this->transactions->run(function () use ($data): array {
+            $data = $this->developmentKind($data);
             $sequenceNo = $this->allocator->handle();
             $now = Carbon::now('UTC');
 
@@ -371,6 +373,7 @@ final class BusinessCaseService extends AbstractService
             'names' => $data['case_document_files_name'] ?? null,
         ];
         unset($data['checklist'], $data['case_document_files'], $data['case_document_files_name'], $data['heat_score']);
+        $data = $this->developmentKind($data);
 
         if (! SchemaReadiness::hasBatch('B43')) {
             unset($data['license_status'], $data['is_draft'], $data['draft_step']);
@@ -383,6 +386,31 @@ final class BusinessCaseService extends AbstractService
         }
 
         return [$data, $payload];
+    }
+
+    /**
+     * Is gelistirme turu (B47, D-170): "Otomatik" (bos) ya da Yatirimci projesi /
+     * Potansiyel is. Gecersiz deger bos (sicakliga gore) yazilir; grup
+     * uygulanmadan kolon yoktur ve anahtar cikarilir.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function developmentKind(array $data): array
+    {
+        if (! array_key_exists('development_kind', $data)) {
+            return $data;
+        }
+
+        if (! SchemaReadiness::hasBatch('B47')) {
+            unset($data['development_kind']);
+
+            return $data;
+        }
+
+        $data['development_kind'] = BusinessDevelopmentKind::normalize($data['development_kind']);
+
+        return $data;
     }
 
     /**

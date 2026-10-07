@@ -55,6 +55,34 @@ final class SeedGuard
         return self::$depth > 0;
     }
 
+    /** @var int acik guncelleme izinleri (allowingUpdates) */
+    private static int $allowUpdates = 0;
+
+    /**
+     * Kullanicinin acikca istedigi guncelleme icin dar izin (D-169, 7 Ekim 2026:
+     * "bazi belgeler bir sonraki asamaya gecmis olabilir, o durumlarda da
+     * guncelleme yapacagiz ama daha once kayitli bilgileri kesinlikle silmiyor,
+     * goz ardi etmiyoruz"). Yalniz verilen islem suresince var olan kayit
+     * guncellenebilir (durumu ileri almak, ozete satir eklemek); silme ve geri
+     * alma yine durdurulur. Seeder bu izni yalniz ileri giden, veri kaybettirmeyen
+     * islemler icin kullanir.
+     *
+     * @template T
+     *
+     * @param  \Closure(): T  $callback
+     * @return T
+     */
+    public static function allowingUpdates(\Closure $callback): mixed
+    {
+        self::$allowUpdates++;
+
+        try {
+            return $callback();
+        } finally {
+            self::$allowUpdates--;
+        }
+    }
+
     private static function listen(): void
     {
         if (self::$listening) {
@@ -72,10 +100,15 @@ final class SeedGuard
         });
 
         foreach (['updating' => 'guncellenmek', 'deleting' => 'silinmek', 'restoring' => 'geri alinmak'] as $action => $verb) {
-            Event::listen('eloquent.'.$action.': *', static function (string $event, array $payload) use ($verb): void {
+            Event::listen('eloquent.'.$action.': *', static function (string $event, array $payload) use ($action, $verb): void {
                 $model = $payload[0] ?? null;
 
                 if (self::$depth === 0 || ! $model instanceof Model || in_array($model::class, self::COUNTERS, true) || self::createdInProcess($model)) {
+                    return;
+                }
+
+                // D-169: dar guncelleme izni yalniz guncellemeyi acar; silme / geri alma her zaman durur.
+                if ($action === 'updating' && self::$allowUpdates > 0) {
                     return;
                 }
 

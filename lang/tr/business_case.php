@@ -18,6 +18,11 @@ return [
         'potential_job' => 'Potansiyel iş',
     ],
     'kind' => 'Tür',
+    // D-170 (B47): tür elle seçilebilir; boş bırakılırsa sıcaklığa göre bulunur.
+    'development_kind' => [
+        'auto' => 'Otomatik (sıcaklığa göre)',
+        'help' => 'Otomatik: sıcaklık %0 ise Yatırımcı projesi, %0\'dan büyükse Potansiyel iş. Yatırımcı projesi ya da Potansiyel iş seçilirse sıcaklıktan bağımsız olarak o tür geçerlidir. Tür yalnız İş Geliştirme aşamasında gösterilir.',
+    ],
 
     'sections' => [
         // D-167: Müşteri / Yatırımcı / İşveren tek ad: İşveren.

@@ -248,9 +248,15 @@ final class CardGallery
         $phone = $channels->first(fn (CommunicationPoint $point): bool => $point->channel_type === CommunicationChannelType::Mobile)
             ?? $channels->first(fn (CommunicationPoint $point): bool => $point->channel_type === CommunicationChannelType::Phone);
 
-        $entries = [
-            $this->entry('address', __('ui_gallery.entries.address'), $address instanceof Address ? self::addressLine($address) : '-', Heroicon::OutlinedMapPin, 'danger'),
-        ];
+        $entries = [];
+
+        // D-170: kurulusun kisa adi ve uzun adi (unvani) kartta birlikte durur.
+        if ($party->party_kind === PartyKind::Organization) {
+            $entries[] = $this->entry('trade_name', __('party.fields.trade_name'), $party->shortName() ?? '-', Heroicon::OutlinedTag, 'gray');
+            $entries[] = $this->entry('legal_name', __('party.fields.legal_name'), $party->longName() ?? (string) $party->display_name, Heroicon::OutlinedBuildingOffice2, 'gray');
+        }
+
+        $entries[] = $this->entry('address', __('ui_gallery.entries.address'), $address instanceof Address ? self::addressLine($address) : '-', Heroicon::OutlinedMapPin, 'danger');
 
         foreach ($channels as $point) {
             $entries[] = $this->channelEntry($point);

@@ -76,6 +76,7 @@ return [
     'party' => [
         'activity_area_parent_invalid' => 'A sub-activity area can only belong to a main activity area; a main area with sub-areas cannot be moved under another area.',
         'meeting_note_proposal_mismatch' => 'Only proposals of the selected potential job can be linked to the meeting note.',
+        'party_merge_not_allowed' => 'These two parties cannot be merged: choose two different parties of the same kind (organization or person); a merged party cannot be merged again and nothing can be merged into an archived party.',
     ],
     'work_request' => [
         'message_empty' => 'The reply is empty; add text, a link or a file.',

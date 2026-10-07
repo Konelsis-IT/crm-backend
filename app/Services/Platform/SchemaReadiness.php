@@ -75,6 +75,7 @@ final class SchemaReadiness
         'B43' => 'proposal_version_scopes',            // Ihale -> potansiyel is -> teklif zinciri, kontrol listesi, teklif kapsamlari (D-155)
         'B44' => 'meeting_plans.archived_at',          // Gorusme notu ve plan arsivi (D-156; grubun son degisikligi)
         'B45' => 'seed_archive',                       // Seed satir arsivi (D-165)
+        'B47' => 'business_cases.development_kind',    // Is gelistirme turunun elle secilmesi (D-170)
     ];
 
     /** @var array<string, bool> */

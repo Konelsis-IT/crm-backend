@@ -70,6 +70,8 @@ final class AcquisitionIntakeService
         'classification_id', 'legal_entity_id', 'scope_types', 'scopes',
         // B43: proje durumu, kontrol listesi, belgeler, taslak.
         'license_status', 'checklist', 'case_document_files', 'case_document_files_name', 'is_draft', 'draft_step',
+        // B47 (D-170): elle secilen is gelistirme turu; grup yokken servis cikarir.
+        'development_kind',
     ];
 
     /** @var list<string> Teklif surumune yazilan alanlar (B43: marj kapsamdan hesaplanir). */

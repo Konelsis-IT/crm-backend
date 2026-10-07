@@ -432,6 +432,7 @@ return [
         'party.deleted' => 'Party deleted',
         'party.archived' => 'Party archived',
         'party.restored' => 'Party restored',
+        'party.merged' => 'Party merged',
         'party_role.created' => 'Party role created',
         'party_role.updated' => 'Party role updated',
         'party_role.deleted' => 'Party role deleted',

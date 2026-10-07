@@ -16,6 +16,11 @@ return [
         'potential_job' => 'Potential job',
     ],
     'kind' => 'Kind',
+    // D-170 (B47): the kind can be chosen; left empty it follows the heat.
+    'development_kind' => [
+        'auto' => 'Automatic (by heat)',
+        'help' => 'Automatic: heat 0% means Investor project, above 0% means Potential job. Choosing Investor project or Potential job applies that kind regardless of the heat. The kind is shown only in the Business development stage.',
+    ],
 
     'sections' => [
         // D-167: customer / investor / employer share one name: Employer.

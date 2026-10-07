@@ -71,6 +71,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use UnitEnum;
 
@@ -94,6 +96,34 @@ class PartyResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('party.plural');
+    }
+
+    /**
+     * Genel arama (D-170): taraf gorunen adiyla, kisa adiyla ya da uzun adiyla
+     * (unvan) bulunur.
+     *
+     * @return list<string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['display_name', 'organizationProfile.legal_name', 'organizationProfile.trade_name'];
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return app(PartyQueries::class)->forGlobalSearch(parent::getGlobalSearchEloquentQuery());
+    }
+
+    /**
+     * Uzun ad gorunen addan farkliysa sonucta gosterilir (D-170).
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        $long = $record instanceof Party ? $record->longNameIfDifferent() : null;
+
+        return $long === null ? [] : [__('party.fields.legal_name') => $long];
     }
 
     public static function canAccess(): bool
@@ -135,10 +165,30 @@ class PartyResource extends Resource
                             ->dehydratedWhenHidden(false)
                             ->visible(! $association)
                             ->live(),
+                        // Kisi tarafi tek ad tasir; kurulusta gorunen ad kisa addan,
+                        // kisa ad yoksa uzun addan gelir (D-170, PartyService).
                         TextInput::make('display_name')
                             ->label(__('party.fields.display_name'))
-                            ->required()
-                            ->maxLength(255),
+                            ->required(fn (Get $get): bool => ! self::isOrganization($get, $association))
+                            ->visible(fn (Get $get): bool => ! self::isOrganization($get, $association))
+                            ->maxLength(255)
+                            ->columnSpan(FieldGrid::WIDE),
+                        // Kisa ad / uzun ad (D-170, 7 Ekim 2026 kullanici talimati): bazi
+                        // belgelerde kisa ad kullanilir, firmanin uzun adi (unvani) her
+                        // zaman bilinir. Bilinmeyenler uzun ad olarak kaydedilir.
+                        TextInput::make('organization_profile.trade_name')
+                            ->label(__('party.fields.trade_name'))
+                            ->helperText(__('party.help.trade_name'))
+                            ->visible(fn (Get $get): bool => self::isOrganization($get, $association))
+                            ->maxLength(255)
+                            ->columnSpan(FieldGrid::WIDE),
+                        TextInput::make('organization_profile.legal_name')
+                            ->label(__('party.fields.legal_name'))
+                            ->helperText(__('party.help.legal_name'))
+                            ->required(fn (Get $get): bool => self::isOrganization($get, $association))
+                            ->visible(fn (Get $get): bool => self::isOrganization($get, $association))
+                            ->maxLength(255)
+                            ->columnSpan(FieldGrid::WIDE),
                         Select::make('country_code')
                             ->label(__('party.fields.country'))
                             ->options(fn (): array => app(ReferenceOptions::class)->countries())
@@ -147,7 +197,10 @@ class PartyResource extends Resource
                             ->native(false),
                         Select::make('status')
                             ->label(__('party.fields.status'))
-                            ->options(PartyStatus::class)
+                            // D-170: "Birlestirildi" yalniz birlestirme servisiyle yazilir.
+                            ->options(fn (?Party $record): array => $record?->status === PartyStatus::Merged
+                                ? PartyStatus::options()
+                                : PartyStatus::selectableOptions())
                             ->default(PartyStatus::Prospect->value)
                             ->required()
                             ->native(false),
@@ -406,6 +459,32 @@ class PartyResource extends Resource
         return $kind instanceof PartyKind ? $kind : PartyKind::tryFrom((string) $kind);
     }
 
+    /**
+     * Kurulus formu mu (D-170: kisa ad / uzun ad alanlari). Dernekler her zaman
+     * kurulustur; tur secimi bos gelirse varsayilan Kurulus kabul edilir.
+     */
+    private static function isOrganization(Get $get, bool $association): bool
+    {
+        return $association || self::kind($get) !== PartyKind::Person;
+    }
+
+    /** Liste aciklamasi icin kisaltma (D-170); bos ise null. */
+    private static function shortened(?string $text, int $limit): ?string
+    {
+        return $text === null ? null : Str::limit($text, $limit);
+    }
+
+    /** Ad ipucu: kisaltilmis gorunen adin tam hali ve farkliysa uzun ad (D-170). */
+    private static function nameTooltip(Party $record): ?string
+    {
+        $lines = array_filter([
+            mb_strlen((string) $record->display_name) > 25 ? (string) $record->display_name : null,
+            $record->longNameIfDifferent() !== null ? __('party.fields.legal_name').': '.$record->longNameIfDifferent() : null,
+        ]);
+
+        return $lines === [] ? null : implode(' · ', $lines);
+    }
+
     private static function intOrNull(mixed $value): ?int
     {
         return filled($value) && is_numeric($value) ? (int) $value : null;
@@ -431,11 +510,14 @@ class PartyResource extends Resource
                     ->sortable(),
                 // Uzun adlar diger sutunlari itmesin (21 Eylul 2026 kullanici karari):
                 // 25 karakter, tam ad ustune gelince gorunur; Excel'e tam ad yazilir.
+                // D-170: uzun ad (unvan) gorunen addan farkliysa altinda kisaltilmis
+                // ve ipucunda tam haliyle gorunur; arama iki adda da yapilir.
                 TextColumn::make('display_name')
                     ->label(__('party.fields.display_name'))
                     ->limit(25)
-                    ->tooltip(fn (Party $record): ?string => mb_strlen((string) $record->display_name) > 25 ? $record->display_name : null)
-                    ->searchable()
+                    ->description(fn (Party $record): ?string => self::shortened($record->longNameIfDifferent(), 40))
+                    ->tooltip(fn (Party $record): ?string => self::nameTooltip($record))
+                    ->searchable(query: fn (Builder $query, string $search): Builder => app(PartyQueries::class)->searchByName($query, $search))
                     ->sortable(),
                 TextColumn::make('party_kind')
                     ->label(__('party.fields.party_kind'))
@@ -487,9 +569,8 @@ class PartyResource extends Resource
                     ->visible(fn (): bool => SchemaReadiness::hasBatch('B33')),
             ])
             // Dernekler ayri menudedir (AssociationResource); Taraflar listesinde yer almaz.
-            ->modifyQueryUsing(fn (Builder $query): Builder => SchemaReadiness::hasBatch('B33')
-                ? app(PartyQueries::class)->withoutAssociations($query)
-                : $query)
+            // D-170: kisa / uzun ad icin profil birlikte yuklenir (PartyQueries::forList).
+            ->modifyQueryUsing(fn (Builder $query): Builder => app(PartyQueries::class)->forList($query))
             ->filters([
                 // Arsiv (S3): varsayilan yalniz aktif kayitlar.
                 SelectFilter::make('archive')

@@ -83,6 +83,33 @@ class Party extends Model
         return $this->hasOne(OrganizationProfile::class, 'party_id');
     }
 
+    /**
+     * Kurulusun uzun adi / unvani (D-170): organization_profiles.legal_name.
+     * Kisi tarafinda ve profil yoksa null.
+     */
+    public function longName(): ?string
+    {
+        $name = $this->party_kind === PartyKind::Organization ? $this->organizationProfile?->legal_name : null;
+
+        return filled($name) ? (string) $name : null;
+    }
+
+    /** Kurulusun kisa adi (D-170): organization_profiles.trade_name; bossa null. */
+    public function shortName(): ?string
+    {
+        $name = $this->party_kind === PartyKind::Organization ? $this->organizationProfile?->trade_name : null;
+
+        return filled($name) ? (string) $name : null;
+    }
+
+    /** Uzun ad gorunen addan farkliysa uzun ad (liste ipucu, D-170); degilse null. */
+    public function longNameIfDifferent(): ?string
+    {
+        $long = $this->longName();
+
+        return $long !== null && $long !== (string) $this->display_name ? $long : null;
+    }
+
     public function personProfile(): HasOne
     {
         return $this->hasOne(PersonProfile::class, 'party_id');

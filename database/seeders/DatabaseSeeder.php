@@ -59,6 +59,18 @@ class DatabaseSeeder extends Seeder
         ArchiveLegacySeedsSeeder::class,
         // D-167: Mukaddes Tekik ve Haydar Samet Cakmak'in ikinci yoneticisi (Yusuf Gokcan Fil).
         PersonnelManagerLinksSeeder::class,
+        // D-169: KKS teklif takip listesinin 07.10.2026 guncellemesi (yeni teklifler,
+        // ileri giden durumlar, ozete eklenen degisiklikler, yeni gorusme notlari).
+        KksListUpdate20261007Seeder::class,
+        // D-170: firma takip listesi 07.10.2026 (kullanici kararli birlestirmeler, kisa /
+        // uzun ad, yeni taraflar, eksik kisi / kanal / not, yatirimci projeleri) ve
+        // potansiyel isler listesi (20 satir, tur Potansiyel is). KKS guncellemesinden
+        // sonra: birlestirme o guncellemenin actigi kayitlari da hedef tarafa tasir.
+        FirmaTakipUpdate20261007Seeder::class,
+        PotentialJobs20261007Seeder::class,
+        // D-171: haftalik ziyaret plani 07.10.2026 (sekiz hafta) ve yedi gorusme raporu;
+        // D-170 taraflarindan ve islerinden sonra (notlar o islere baglanir).
+        WeeklyVisitPlan20261007Seeder::class,
     ];
 
     /**
