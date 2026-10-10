@@ -735,12 +735,21 @@ final class WorkItemService extends AbstractService
     }
 
     /**
+     * Formdan gelen secim degeri: Filament enum secenekli Select'te durum enum
+     * nesnesi olarak gelir; (string) donusumu hata verir (canli isler/35/edit).
+     */
+    private static function rawValue(mixed $value): string
+    {
+        return $value instanceof \BackedEnum ? (string) $value->value : (is_scalar($value) ? (string) $value : '');
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function waitingAttributes(array $data, ?WorkItem $item): array
     {
-        $kind = WorkWaitingKind::tryFrom((string) ($data['waiting_kind'] ?? ''));
+        $kind = WorkWaitingKind::tryFrom(self::rawValue($data['waiting_kind'] ?? null));
 
         if ($kind === null) {
             return ['waiting_kind' => null, 'waiting_personnel_id' => null, 'waiting_party_id' => null, 'waiting_text' => null];
@@ -781,7 +790,7 @@ final class WorkItemService extends AbstractService
      */
     private function requesterAttributes(array $data): array
     {
-        $kind = WorkWaitingKind::tryFrom((string) ($data['requester_kind'] ?? ''));
+        $kind = WorkWaitingKind::tryFrom(self::rawValue($data['requester_kind'] ?? null));
         $empty = ['requester_kind' => null, 'requester_personnel_id' => null, 'requester_party_id' => null, 'requester_text' => null];
 
         if ($kind === null) {
@@ -810,7 +819,7 @@ final class WorkItemService extends AbstractService
      */
     private function linkAttributes(array $data): array
     {
-        $kind = WorkItemLinkKind::tryFrom((string) ($data['link_kind'] ?? '')) ?? WorkItemLinkKind::None;
+        $kind = WorkItemLinkKind::tryFrom(self::rawValue($data['link_kind'] ?? null)) ?? WorkItemLinkKind::None;
         $id = filled($data['link_id'] ?? null) ? (int) $data['link_id'] : null;
         $attributes = ['link_kind' => WorkItemLinkKind::None->value];
 

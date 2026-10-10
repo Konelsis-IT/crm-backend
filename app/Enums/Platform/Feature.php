@@ -81,7 +81,7 @@ enum Feature: string
      * yayinladigini soyleyince bir artirilir (2.4 -> 2.5). Hicbir ozelligin
      * surumu bundan buyuk olamaz (safe-verify).
      */
-    public const NEXT_RELEASE = '2.6';
+    public const NEXT_RELEASE = '2.7';
 
     /**
      * Bekleme surumu (D-164, 6 Ekim 2026 kullanici karari: "Ben sana bunlari

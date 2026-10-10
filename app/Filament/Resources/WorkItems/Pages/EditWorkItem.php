@@ -51,6 +51,7 @@ class EditWorkItem extends EditRecord
             'work_time' => $local?->format('H:i'),
             'status' => $record->status?->value,
             'waiting_kind' => $record->waiting_kind?->value,
+            'requester_kind' => $record->requester_kind?->value,
             'link_kind' => $column !== null ? $record->link_kind?->value : null,
             'link_id' => $column !== null ? $record->getAttribute($column) : null,
         ];
