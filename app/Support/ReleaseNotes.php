@@ -87,6 +87,9 @@ final class ReleaseNotes
                         'Projelerde Proje tipi: GES, RES, TM, HES, BESS, ENH/EİH potansiyel işteki gibi simgeli düğmelerle seçiliyor; her tip için projenin kendi ölçüleri (MWp, MWe / MWh, km, adet), sözleşme tutarı ve bütçesi giriliyor. Listede Proje tipi sütunu, proje sayfasında tipler ve ölçü kartı var. Tekliften projeye dönüşünce tipler ve ölçüler kabul edilen tekliften kendiliğinden geliyor.',
                         'Proje tipi koordinatörü: proje müdürlerinden bağımsız olarak bir proje tipinin (GES, RES, TM, HES, BESS, ENH/EİH) bütün projeleriyle ilgilenen kişi. Proje Grubu > Proje tipi koordinatörleri ekranında her tipin koordinatörü atanıyor, değiştiriliyor ya da kaldırılıyor; GES koordinatörü Ertuğrul Şahin. Personel kartında ve detayında "GES koordinatörü" rozeti, proje sayfasında projenin tiplerinin koordinatörleri, proje listesinde koordinatör sütunu ve süzgeci var.',
                     ],
+                    self::IMPROVEMENTS => [
+                        'Yönetim departmanında iş eklerken üç yeni kategori: Proje onay, Ön kabul, Geçici kabul.',
+                    ],
                     self::FIXES => [
                         'İş düzenleme ekranında "Kimden bekleniyor", "Talep eden" ya da "Bağlı kayıt" seçiliyken kaydetmek hata veriyordu; düzeltildi.',
                     ],

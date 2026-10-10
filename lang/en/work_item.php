@@ -324,6 +324,9 @@ return [
         'vehicle' => 'Vehicle',
         'warehouse' => 'Warehouse',
         'production' => 'Production',
+        'project_approval' => 'Project approval',
+        'preliminary_acceptance' => 'Preliminary acceptance',
+        'provisional_acceptance' => 'Provisional acceptance',
     ],
 
     'control' => [

@@ -325,6 +325,9 @@ return [
         'vehicle' => 'Araç',
         'warehouse' => 'Depo',
         'production' => 'Üretim',
+        'project_approval' => 'Proje onay',
+        'preliminary_acceptance' => 'Ön kabul',
+        'provisional_acceptance' => 'Geçici kabul',
     ],
 
     // Haftalik kontrol cizelgesi (App\Reports\Work\ControlSectionCatalog).

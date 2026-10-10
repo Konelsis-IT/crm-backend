@@ -37,7 +37,8 @@ final class WorkCategoryCatalog
         'BILGI_ISLEM' => ['support', 'backup', 'hardware', 'network'],
         'MUHASEBE' => ['invoice', 'receivable', 'payment', 'reconciliation'],
         'INSAN_KAYNAKLARI' => ['hr', 'isg', 'quality', 'recruitment', 'training'],
-        'YONETIM' => ['coordination', 'hr', 'isg', 'quality', 'receivable', 'meeting'],
+        // 10 Ekim 2026, kullanici: Idari mudur icin Proje onay, On kabul, Gecici kabul.
+        'YONETIM' => ['coordination', 'hr', 'isg', 'quality', 'receivable', 'meeting', 'project_approval', 'preliminary_acceptance', 'provisional_acceptance'],
         'LOJISTIK' => ['shipment', 'vehicle', 'warehouse'],
         'ATOLYE' => ['production', 'warehouse', 'maintenance'],
     ];
