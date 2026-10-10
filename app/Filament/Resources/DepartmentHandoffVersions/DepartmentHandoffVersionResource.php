@@ -78,7 +78,7 @@ class DepartmentHandoffVersionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('handoff.project.name')
+                TextColumn::make('handoff.project.display_name')
                     ->label(__('department_handoff_version.fields.project'))
                     ->limit(30),
                 TextColumn::make('version_no')

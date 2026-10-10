@@ -7,6 +7,7 @@ namespace App\Filament\Support;
 use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
 use App\Query\Personnel\PersonnelQueries;
+use App\Support\Projects\ProjectNames;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -48,8 +49,16 @@ final class ProjectConversionForm
                         ->helperText(__('project.help.approve_draft'))
                         ->default(true)
                         ->inline(false),
+                    // D-174: Kisa ad (istege bagli) + Lisans adi.
+                    TextInput::make('short_name')
+                        ->label(__('project.fields.short_name'))
+                        ->helperText(__('project.help.short_name'))
+                        ->maxLength(120)
+                        ->visible(ProjectNames::shortNameEnabled())
+                        ->dehydrated(ProjectNames::shortNameEnabled())
+                        ->columnSpan(FieldGrid::WIDE),
                     TextInput::make('name')
-                        ->label(__('project.fields.name'))
+                        ->label(ProjectNames::nameLabel())
                         ->default((string) ($case?->title ?? $proposal->title))
                         ->required()
                         ->maxLength(255)

@@ -17,6 +17,9 @@ use Illuminate\Support\Str;
  * - html(): panoya zengin metin (e-posta / Word) ve PDF govdesi. PDF'te
  *   simgeler (emoji) yazilmaz; dompdf yazi tipi onlari basamaz.
  *
+ * D-179: ReportFormatter artik simge vermez (sade metin); simge destegi
+ * yalniz bu sinifin genel bicimi olarak kalir.
+ *
  * Kullanici metni (not, ozet) Markdown olarak yorumlanir; satir baslarindaki
  * "-" ve "1." maddeleri korunur, baslik ve cizgi isaretleri kacirilir, HTML
  * etiketi metne cevrilir (html_input: escape).
@@ -243,17 +246,22 @@ final class FormattedText
     }
 
     /**
+     * Duz metin basligi. D-179 (8 Ekim 2026 kullanici istegi: "kopyalanabilecek
+     * metin alaninin icon'lari daha sade ve az olsun"): alt cizgi satirlari
+     * (═══ / ───) kalkti; ana ve bolum basliklari *yildiz* arasinda yazilir
+     * (WhatsApp'ta kalin gorunur, e-postada okunur), alt basliklar duz metin.
+     *
      * @param  array<string, mixed>  $block
      */
     private function plainHeading(array $block, bool $icons): string
     {
-        $text = $this->withIcon((string) $block['text'], $block['icon'], $icons);
+        $text = $this->withIcon(trim((string) $block['text']), $block['icon'], $icons);
 
-        if ($block['level'] >= 3) {
+        if ($block['level'] >= 3 || $text === '') {
             return $text;
         }
 
-        return $text."\n".str_repeat($block['level'] === 1 ? '═' : '─', max(8, min(60, mb_strlen((string) $block['text']) + 2)));
+        return '*'.$text.'*';
     }
 
     private function withIcon(string $text, mixed $icon, bool $icons): string

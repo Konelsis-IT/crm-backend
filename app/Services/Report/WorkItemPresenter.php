@@ -39,6 +39,7 @@ use App\Reports\Work\WorkCategoryCatalog;
 use App\Reports\Work\WorkSuggestionCatalog;
 use App\Support\ActivityLabels;
 use App\Support\DisplayTime;
+use App\Support\Projects\ProjectNames;
 use Filament\Support\Contracts\HasLabel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -84,7 +85,8 @@ final class WorkItemPresenter
             'done_on' => $item->done_on?->format('Y-m-d'),
             'personnel' => $item->personnel !== null ? $this->person($item->personnel) : null,
             'unit' => $item->orgUnit !== null ? ['id' => (int) $item->orgUnit->getKey(), 'name' => (string) $item->orgUnit->name, 'code' => (string) $item->orgUnit->code] : null,
-            'project' => $item->project !== null ? ['id' => (int) $item->project->getKey(), 'name' => (string) $item->project->name] : null,
+            // D-174: is panosu kartinda kisa ad (yoksa lisans adi).
+            'project' => $item->project !== null ? ['id' => (int) $item->project->getKey(), 'name' => (string) $item->project->display_name] : null,
             'parent' => $item->parent !== null ? ['id' => (int) $item->parent->getKey(), 'title' => (string) $item->parent->title] : null,
             'children' => (int) ($item->getAttribute('children_count') ?? 0),
             'category' => $item->category_code,
@@ -346,12 +348,12 @@ final class WorkItemPresenter
             case $subject instanceof Document:
                 $name = (string) $subject->title;
                 $link = $subject;
-                $project = $subject->project_id !== null ? Project::query()->find($subject->project_id, ['id', 'name']) : null;
+                $project = $subject->project_id !== null ? Project::query()->find($subject->project_id, ProjectNames::columns()) : null;
                 break;
             case $subject instanceof DocumentRevision:
                 $name = (string) ($subject->document?->title ?? '');
                 $link = $subject->document;
-                $project = $subject->document?->project_id !== null ? Project::query()->find($subject->document->project_id, ['id', 'name']) : null;
+                $project = $subject->document?->project_id !== null ? Project::query()->find($subject->document->project_id, ProjectNames::columns()) : null;
                 break;
             case $subject instanceof ProjectSupplyItem:
                 $name = (string) $subject->name;
@@ -362,7 +364,7 @@ final class WorkItemPresenter
                 $name = (string) $subject->request_no;
                 $mono = true;
                 $link = $subject;
-                $project = $subject->project_id !== null ? Project::query()->find($subject->project_id, ['id', 'name']) : null;
+                $project = $subject->project_id !== null ? Project::query()->find($subject->project_id, ProjectNames::columns()) : null;
                 break;
             case $subject instanceof MeetingPlan:
                 $name = (string) ($subject->party?->display_name ?? $subject->subject ?? '');
@@ -380,11 +382,11 @@ final class WorkItemPresenter
                 $mono = true;
                 break;
             case $subject instanceof Project:
-                $name = (string) $subject->name;
+                $name = (string) $subject->display_name;
                 $project = $subject;
                 break;
             case $subject instanceof ProjectPhoto:
-                $name = (string) ($subject->project?->name ?? '');
+                $name = (string) ($subject->project?->display_name ?? '');
                 $project = $subject->project;
                 break;
         }
@@ -415,7 +417,7 @@ final class WorkItemPresenter
             'link_no' => $linkNo,
             'link_label' => $linkLabel,
             'project_id' => $project instanceof Project ? (int) $project->getKey() : null,
-            'project_name' => $project instanceof Project ? (string) $project->name : null,
+            'project_name' => $project instanceof Project ? (string) $project->display_name : null,
             'url' => $url,
             'status' => $this->statusLabel($link instanceof Model ? $link : $subject),
         ];

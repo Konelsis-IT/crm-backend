@@ -86,7 +86,7 @@ class ProjectStageInstanceResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('project_stage_instance.fields.project'))
                     ->limit(30),
                 TextColumn::make('stageNode.stage_code')

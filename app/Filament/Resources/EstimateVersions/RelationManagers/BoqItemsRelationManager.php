@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\BoqItem;
 use App\Services\Acquisition\BoqItemService;
 use BackedEnum;
@@ -65,11 +67,11 @@ class BoqItemsRelationManager extends RelationManager
                             ->preload()
                             ->required()
                             ->native(false),
-                        TextInput::make('unit_price')
+                        // D-180: tahmin surumunun para birimiyle maskeli birim fiyat.
+                        MoneyInput::make('unit_price')
                             ->label(__('boq_item.fields.unit_price'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->currency(fn (): ?string => $this->ownerCurrency())
+                            ->decimals(4),
                         TextInput::make('sort_order')
                             ->label(__('boq_item.fields.sort_order'))
                             ->numeric()
@@ -96,9 +98,8 @@ class BoqItemsRelationManager extends RelationManager
                     ->label(__('boq_item.fields.quantity')),
                 TextColumn::make('uom.symbol')
                     ->label(__('boq_item.fields.uom')),
-                TextColumn::make('unit_price')
+                MoneyDisplay::column('unit_price', $this->ownerCurrency(...), 4)
                     ->label(__('boq_item.fields.unit_price'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
             ])
             ->headerActions([
@@ -141,5 +142,11 @@ class BoqItemsRelationManager extends RelationManager
             ->defaultSort('sort_order')
             ->emptyStateHeading(__('boq_item.relation.empty'))
             ->emptyStateIcon(Heroicon::OutlinedQueueList);
+    }
+
+    /** Tahmin surumunun para birimi (D-180: tutar simgesi). */
+    private function ownerCurrency(): ?string
+    {
+        return $this->getOwnerRecord()->getAttribute('currency_code');
     }
 }

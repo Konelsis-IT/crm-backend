@@ -30,9 +30,15 @@ use Illuminate\Database\Eloquent\Model;
  *
  * B43 (D-155, 5 Ekim 2026 kullanici talimati: "Teklif olustur'a bastigimizda
  * ... adimli olan arayuz acilmalidir"): potansiyel is sihirbaziyla ayni dort
- * adim (ihale, potansiyel is secimi, teklif, proje). ?business_case_id= ile
- * acilirsa teklif adiminda baslar. Teklif adiminda "Kaydet" ve "Taslak olarak
- * kaydet" vardir; son adimdaki "Olustur" istenirse projeye de donusturur.
+ * adim (ihale, potansiyel is, teklif, proje). Teklif adiminda "Kaydet" ve
+ * "Taslak olarak kaydet" vardir; son adimdaki "Olustur" istenirse projeye de
+ * donusturur.
+ *
+ * D-183 (9 Ekim 2026 kullanici talimati: "Potansiyel is karti ve teklifin
+ * olusturma ekrani ayni ekrandi ... Ayirma"): sayfa her zaman Teklif adiminda
+ * acilir; potansiyel is secimi, potansiyel is karti ve teklif alanlari ayni
+ * ekrandadir. ?business_case_id= ile acilirsa is secili gelir ve potansiyel
+ * isten tureyen alanlar (baslik, sorumlu, GES MWp, ulke, para birimi) dolar.
  */
 class CreateProposal extends CreateRecord
 {
@@ -81,12 +87,34 @@ class CreateProposal extends CreateRecord
         return app(BusinessCaseWizard::class)->proposalCreateSteps();
     }
 
-    /** Potansiyel is secili geldiyse teklif adimi, degilse potansiyel is secimi. */
+    /** D-183: her zaman Teklif adimi (potansiyel is secimi o adimin ustunde). */
     public function getStartStep(): int
     {
-        $step = request()->integer('business_case_id') > 0 ? BusinessCaseWizard::STEP_PROPOSAL : BusinessCaseWizard::STEP_CASE;
+        return (int) (BusinessCaseWizard::stepNumber(BusinessCaseWizard::STEP_PROPOSAL) ?? 1);
+    }
 
-        return (int) (BusinessCaseWizard::stepNumber($step) ?? 1);
+    /**
+     * D-183: ?business_case_id= ile secili gelen potansiyel isin tureyen alanlari.
+     * Form doldurulduktan sonra yazilir; secim alaninin afterStateHydrated'i
+     * sonraki alanlarin varsayilan dolumunda bosalirdi.
+     */
+    protected function afterFill(): void
+    {
+        if (! BusinessCaseWizard::b43()) {
+            return;
+        }
+
+        $caseId = data_get($this->data, 'business_case_id');
+
+        if (blank($caseId)) {
+            return;
+        }
+
+        $values = app(BusinessCaseWizard::class)->proposalAutofill($caseId, fn (string $path): mixed => data_get($this->data, $path));
+
+        foreach ($values as $path => $value) {
+            data_set($this->data, $path, $value);
+        }
     }
 
     protected function hasSkippableSteps(): bool

@@ -75,7 +75,7 @@ class DepartmentHandoffResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('department_handoff.fields.project'))
                     ->limit(30),
                 TextColumn::make('sourceWorkstream.group.name_tr')

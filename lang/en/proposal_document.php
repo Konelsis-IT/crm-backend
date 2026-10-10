@@ -27,9 +27,17 @@ return [
         'empty' => 'No documents yet.',
     ],
 
+    // D-184: rows of the Documents table that are not copied into the proposal.
+    'virtual' => [
+        'reference_list' => 'Reference list',
+        'reference_count' => ':type · :count references',
+    ],
+
     'actions' => [
         'upload' => 'Upload document',
-        'upload_revision' => 'Upload new version',
+        // D-186: no "Upload new version"; the bin removes the document from the proposal.
+        'detach' => 'Remove from proposal',
+        'detach_heading' => 'Remove the document from the proposal?',
         'download' => 'Download',
         'change_status' => 'Change status',
         'set_status' => 'Set status to \":status\"',
@@ -45,14 +53,14 @@ return [
     ],
 
     'help' => [
-        'upload' => 'If a document of this type exists, the file becomes its new revision and the proposal gets a new version. Unchanged documents are not copied.',
-        'upload_revision' => 'The file becomes the new revision of this document and the proposal gets a new version.',
+        'upload' => 'You can select several files. Each file is added to the current version as a new document of this type; the proposal version does not change.',
+        'detach' => 'The document is removed from this proposal version; it stays in Documents and is not deleted. The proposal version does not change.',
         'current_only' => 'Documents of the current version. Earlier versions are shown from the Versions button at the top of the page.',
     ],
 
     'messages' => [
-        'uploaded' => 'Document uploaded; new proposal version: Version :no',
         'uploaded_in_place' => 'Document uploaded.',
+        'detached' => 'Document removed from the proposal; it stays in Documents.',
         'status_changed' => 'Status updated.',
         'done' => 'Done.',
     ],

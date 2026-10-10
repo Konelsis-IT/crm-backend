@@ -20,6 +20,7 @@ use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
+use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
@@ -256,7 +257,7 @@ final class DealTrack
                 [__('deal_track.chips.version'), $version === null ? '' : __('proposal.steps.version', ['no' => $version->version_no, 'status' => (string) ($version->status?->getLabel() ?? '-')]), Heroicon::OutlinedDocumentDuplicate, null],
                 [__('deal_track.chips.sent'), $submitted !== null ? __('deal_track.sent_on', ['date' => $submitted->format('d.m.Y')]) : __('deal_track.not_sent'), Heroicon::OutlinedPaperAirplane, null],
                 [__('deal_track.chips.validity'), $version?->validity_until !== null ? __('deal_track.valid_until', ['date' => $version->validity_until->format('d.m.Y')]) : '', Heroicon::OutlinedCalendarDays, null],
-                $proposal->is_selected && $siblings->isNotEmpty() ? [__('deal_track.chips.selected'), __('deal_track.selected'), Heroicon::OutlinedCheckCircle, 'success'] : null,
+                // D-181: "Secili teklif" etiketi kaldirildi.
             ]),
             ...($siblings->isNotEmpty() ? [
                 Text::make(__('deal_track.other_proposals'))->size(TextSize::ExtraSmall)->weight(FontWeight::SemiBold)->color('gray'),
@@ -286,12 +287,12 @@ final class DealTrack
             ]),
             ...($proposals->isEmpty()
                 ? [Text::make(__('deal_track.no_proposal'))->color('gray')]
-                : $proposals->map(fn (Proposal $proposal): Component => $this->proposalRow($proposal, compact: false, multiple: $proposals->count() > 1))->all()),
+                : $proposals->map(fn (Proposal $proposal): Component => $this->proposalRow($proposal, compact: false))->all()),
         ])->extraAttributes(['class' => 'kc-metro-stop '.($proposals->isEmpty() ? 'kc-todo' : 'kc-done')]);
     }
 
     /** Teklif satiri: teklife giden baglanti ve ozet etiketler. */
-    private function proposalRow(Proposal $proposal, bool $compact, bool $multiple = false): Component
+    private function proposalRow(Proposal $proposal, bool $compact): Component
     {
         $version = $proposal->currentVersion;
         $submitted = $this->submittedAt($proposal);
@@ -309,7 +310,6 @@ final class DealTrack
                 [__('deal_track.chips.version'), $version === null ? '' : __('proposal.steps.version', ['no' => $version->version_no, 'status' => (string) ($version->status?->getLabel() ?? '-')]), Heroicon::OutlinedDocumentDuplicate, null],
                 [__('deal_track.chips.sent'), $submitted !== null ? __('deal_track.sent_on', ['date' => $submitted->format('d.m.Y')]) : __('deal_track.not_sent'), Heroicon::OutlinedPaperAirplane, null],
                 [__('deal_track.chips.price'), $this->money($version?->total_price, $version?->currency_code), Heroicon::OutlinedBanknotes, null],
-                $proposal->is_selected && $multiple ? [__('deal_track.chips.selected'), __('deal_track.selected'), Heroicon::OutlinedCheckCircle, 'success'] : null,
             ]),
         ])->from('md')->extraAttributes(['class' => 'kc-list-row']);
     }
@@ -331,7 +331,7 @@ final class DealTrack
 
             return Group::make([
                 Flex::make([
-                    Text::make(__('deal_track.project').' · '.trim(($project->businessCode?->formatted_code ?? '').' · '.$project->name, ' ·'))->weight(FontWeight::Bold),
+                    Text::make(__('deal_track.project').' · '.trim(($project->businessCode?->formatted_code ?? '').' · '.$project->display_name, ' ·'))->weight(FontWeight::Bold),
                     ...($this->canView($project) ? [Actions::make([$this->link('track_project', __('deal_track.go_project'), ProjectResource::getUrl('view', ['record' => $project]))])->grow(false)] : []),
                 ]),
                 $this->chips([
@@ -503,9 +503,10 @@ final class DealTrack
             ->all();
     }
 
+    /** Tutar + para birimi simgesi (D-180, Money::format); bossa bos metin. */
     private function money(mixed $amount, ?string $currency): string
     {
-        return $amount === null ? '' : Number::format((float) $amount, precision: 2, locale: 'tr').' '.($currency ?? '');
+        return Money::format($amount, $currency, '');
     }
 
     private function canView(mixed $record): bool

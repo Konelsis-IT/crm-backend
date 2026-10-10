@@ -102,7 +102,7 @@ class MyWorkItemsWidget extends TableWidget
                     ->wrap()
                     ->lineClamp(2)
                     ->tooltip(fn (WorkItem $record): ?string => mb_strlen((string) $record->title) > 70 ? (string) $record->title : null),
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('work_item.dashboard.columns.project'))
                     ->placeholder('–'),
                 // Tasarimdaki gibi rozet basinda nokta; durum simgesi yok.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Report;
 
 use App\Models\Party\PartyMeetingNote;
+use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
 use App\Models\Report\WorkItem;
 use App\Query\Report\ReportQueries;
@@ -37,6 +38,14 @@ use Illuminate\Support\Str;
  * rapora girer; alan hic gelmediyse (is panosundan Gunu / Haftayi kapat)
  * onceki secim korunur ve yeni oneriler eklenir. Ileri tarihli kayit kendi
  * gununun raporunda onerilir.
+ *
+ * D-179 (8 Ekim 2026 kullanici istegi): rapor yazilirken
+ * - panodan is secilir (pickOptions / pickedRow): yazarin daha once olusmus
+ *   kartlari, donemin kartlari once; kalem kartin kimligini tasir;
+ * - oneriler listesi (boardSuggestions): donemin rapora girmemis kartlari ve
+ *   is panosu onerileri (hareketler) tek tikla eklenir; eklenmis olan
+ *   "Eklendi" olarak isaretlenir. Gorusme notu ve rapor hareketleri kaynak
+ *   alanlarinda zaten oldugu icin burada tekrar onerilmez.
  */
 #[Scoped]
 final class ReportSuggestions
@@ -46,6 +55,12 @@ final class ReportSuggestions
 
     /** @var array<string, Collection<int, WorkItem>> */
     private array $cardMemo = [];
+
+    /** @var array<string, list<array<string, mixed>>> */
+    private array $boardMemo = [];
+
+    /** @var array<string, array<string, array<int|string, string>>> */
+    private array $pickMemo = [];
 
     public function __construct(
         private readonly ReportSuggestionQueries $queries,
@@ -258,6 +273,202 @@ final class ReportSuggestions
     }
 
     /**
+     * D-179: "Panodan is ekle" secenekleri, gruplu: donemin isleri, acik
+     * isler, diger isler (kart kimligi => "Is — 07.10.2026 · Durum · Proje").
+     *
+     * @param  array{0: Carbon, 1: Carbon}|null  $period
+     * @return array<string, array<int, string>>
+     */
+    public function pickOptions(int $authorId, ?array $period, string $search = ''): array
+    {
+        $memoKey = implode('|', [$authorId, $period !== null ? $period[0]->format('Y-m-d').'_'.$period[1]->format('Y-m-d') : '-', $search]);
+
+        if (array_key_exists($memoKey, $this->pickMemo)) {
+            return $this->pickMemo[$memoKey];
+        }
+
+        $groups = [];
+
+        foreach ($this->queries->pickableWorkItems($authorId, $period[0] ?? null, $period[1] ?? null, $search) as $item) {
+            $group = match ((int) $item->getAttribute('report_relevance')) {
+                0 => __('report.pick.groups.period'),
+                1 => __('report.pick.groups.open'),
+                default => __('report.pick.groups.other'),
+            };
+
+            $groups[$group][(int) $item->getKey()] = $this->pickLabel($item);
+        }
+
+        return $this->pickMemo[$memoKey] = $groups;
+    }
+
+    /**
+     * D-179: secilen kartin rapor kalemi (Gunu kapat ile ayni satir);
+     * kart yazarin degilse ya da yoksa null.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function pickedRow(int $authorId, int $workItemId): ?array
+    {
+        $item = $this->queries->pickableWorkItem($authorId, $workItemId);
+
+        return $item instanceof WorkItem ? $this->cardRow($item) : null;
+    }
+
+    /** Kart -> rapor kalemi (Repeater satiri). */
+    public function cardRow(WorkItem $item): array
+    {
+        return ['id' => null, 'carried_from_item_id' => null, ...$this->presenter->reportRow($item), 'picked' => true];
+    }
+
+    /**
+     * D-179: rapor yazilirken gosterilen oneriler: donemin kartlari ve (yazar
+     * kendisi yaziyorsa) is panosu onerileri. Her satir: key, kind (card /
+     * activity), id, title, meta, date. Eklenmis olani arayuz isaretler.
+     *
+     * @param  array{0: Carbon, 1: Carbon}|null  $period
+     * @return list<array{key: string, kind: string, id: int, title: string, meta: string|null, date: string|null}>
+     */
+    public function boardSuggestions(ReportTemplate $template, int $authorId, ?array $period, ?Personnel $author): array
+    {
+        if ($period === null || $authorId <= 0 || ! $this->usesBoard($template)) {
+            return [];
+        }
+
+        $withActivities = $author instanceof Personnel && (int) $author->getKey() === $authorId;
+        $memoKey = implode('|', [$template->code(), $authorId, $period[0]->format('Y-m-d'), $period[1]->format('Y-m-d'), (int) $withActivities]);
+
+        if (array_key_exists($memoKey, $this->boardMemo)) {
+            return $this->boardMemo[$memoKey];
+        }
+
+        $rows = [];
+
+        foreach ($this->cards($authorId, $period[0], $period[1]) as $item) {
+            $rows[] = [
+                'key' => 'card:'.(int) $item->getKey(),
+                'kind' => 'card',
+                'id' => (int) $item->getKey(),
+                'title' => (string) $item->title,
+                'meta' => $this->metaLine([
+                    $item->work_on?->format('d.m.Y'),
+                    $item->status?->getLabel(),
+                    $item->project?->display_name,
+                ]),
+                'date' => $item->work_on?->format('Y-m-d'),
+            ];
+        }
+
+        if ($withActivities) {
+            $rows = [...$rows, ...$this->activityRows($template, $author, $period)];
+        }
+
+        usort($rows, static fn (array $a, array $b): int => [(string) $a['date'], $a['key']] <=> [(string) $b['date'], $b['key']]);
+
+        return $this->boardMemo[$memoKey] = $rows;
+    }
+
+    /** D-179: bir oneri karta donunce ya da kart eklenince bu istegin onbellegi bosaltilir. */
+    public function forget(): void
+    {
+        $this->rowMemo = [];
+        $this->cardMemo = [];
+        $this->boardMemo = [];
+        $this->pickMemo = [];
+    }
+
+    /**
+     * D-179: rapor kalemi yalniz yazarin gorebildigi karta baglanir (ReportService).
+     *
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    public function visibleWorkItemIds(Personnel $author, array $ids): array
+    {
+        return $this->queries->visibleWorkItemIds($author, $ids);
+    }
+
+    /**
+     * Is panosu onerileri (hareketler); kaynak alanlarinda zaten olan gorusme
+     * notu / gorusme plani / rapor hareketleri haric.
+     *
+     * @param  array{0: Carbon, 1: Carbon}  $period
+     * @return list<array{key: string, kind: string, id: int, title: string, meta: string|null, date: string|null}>
+     */
+    private function activityRows(ReportTemplate $template, Personnel $author, array $period): array
+    {
+        $covered = [];
+
+        foreach ($template->sourceFields() as $field) {
+            $covered[] = (string) $field->source;
+
+            if ($field->source === ReportField::SOURCE_MEETING_NOTES) {
+                $covered[] = 'meeting_plan';
+            }
+        }
+
+        $activities = $this->queries->workSuggestionActivities((int) $author->getKey(), $period[0], $period[1])
+            ->reject(static fn ($activity): bool => in_array((string) $activity->subject_type, $covered, true))
+            ->values();
+
+        if ($activities->isEmpty()) {
+            return [];
+        }
+
+        $subjects = $this->workItems->suggestionSubjects($activities);
+        $unitCode = $author->orgUnit?->code;
+        $zone = DisplayTime::zone();
+        $rows = [];
+
+        foreach ($activities as $activity) {
+            $suggestion = $this->presenter->suggestion($activity, $subjects, $unitCode);
+
+            if ($suggestion === null) {
+                continue;
+            }
+
+            $at = $activity->occurred_at?->copy()->timezone($zone);
+
+            $rows[] = [
+                'key' => 'activity:'.(int) $activity->getKey(),
+                'kind' => 'activity',
+                'id' => (int) $activity->getKey(),
+                'title' => (string) ($suggestion['defaults']['title'] ?? $suggestion['subject']),
+                'meta' => $this->metaLine([
+                    $at?->format('d.m.Y H:i'),
+                    (string) $suggestion['label'],
+                    $suggestion['defaults']['project_name'] ?? null,
+                ]),
+                'date' => $at?->format('Y-m-d'),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /** Secim kutusundaki kart adi. */
+    private function pickLabel(WorkItem $item): string
+    {
+        $meta = $this->metaLine([
+            $item->work_on?->format('d.m.Y'),
+            $item->status?->getLabel(),
+            $item->project?->display_name,
+        ]);
+
+        return Str::limit((string) $item->title, 90, '…').($meta !== null ? ' — '.$meta : '');
+    }
+
+    /**
+     * @param  list<mixed>  $parts
+     */
+    private function metaLine(array $parts): ?string
+    {
+        $parts = array_values(array_filter(array_map(static fn ($part): string => trim((string) $part), $parts), static fn (string $part): bool => $part !== ''));
+
+        return $parts === [] ? null : implode(' · ', $parts);
+    }
+
+    /**
      * Guncel oneriler (anahtar => satir); is panosunda karta donmus kayit haric.
      *
      * @return array<string, array<string, mixed>>
@@ -330,7 +541,7 @@ final class ReportSuggestions
         $proposals = $note->relationLoaded('proposals')
             ? $note->proposals->map(static fn ($proposal): string => (string) ($proposal->proposal_no ?: $proposal->title))->filter()->implode(', ')
             : '';
-        $project = $case !== null && $case->relationLoaded('project') ? $case->project?->name : null;
+        $project = $case !== null && $case->relationLoaded('project') ? $case->project?->display_name : null;
 
         $meta = array_values(array_filter([
             $note->channel?->getLabel(),

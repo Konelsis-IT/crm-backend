@@ -42,7 +42,9 @@ use App\Models\Reference\SecurityClassification;
 use App\Policies\ProjectPolicy;
 use App\Models\Report\Report;
 use App\Models\WorkRequest\WorkRequest;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
@@ -52,7 +54,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Table('projects')]
 #[Fillable([
-    'business_case_id', 'project_business_code_id', 'accepted_handoff_version_id', 'name', 'customer_party_id',
+    'business_case_id', 'project_business_code_id', 'accepted_handoff_version_id', 'name', 'short_name', 'customer_party_id',
     'legal_entity_id', 'project_manager_employee_id', 'country_code', 'timezone', 'site_location', 'currency_code',
     'contract_value_snapshot', 'stage_template_version_id', 'criticality_profile', 'status',
     'current_macro_gate_code', 'primary_focus_workstream_id', 'cover_file_object_id', 'classification_id',
@@ -82,6 +84,23 @@ class Project extends Model
             'actual_start_on' => 'date',
             'actual_finish_on' => 'date',
         ];
+    }
+
+    /**
+     * Gorunen ad (D-174): kisa ad, yoksa lisans adi (`name`). Liste, kart,
+     * secim kutulari ve baslik bunu kullanir; ozellik kapaliysa lisans adi.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function displayName(): Attribute
+    {
+        return Attribute::get(fn (): string => ProjectNames::display($this));
+    }
+
+    /** Projenin kendi kapsam satirlari / proje tipleri (B48, D-174). */
+    public function scopes(): HasMany
+    {
+        return $this->hasMany(ProjectScope::class, 'project_id')->orderBy('id');
     }
 
     public function businessCase(): BelongsTo

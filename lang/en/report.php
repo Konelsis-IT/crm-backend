@@ -42,6 +42,30 @@ return [
         ],
     ],
 
+    // Picking existing work board items while writing a report (D-179).
+    'pick' => [
+        'label' => 'Add from work board',
+        'placeholder' => 'Search or pick a work item',
+        'help' => 'Your work items on the board; this period\'s items come first. The picked item is added below as a work line.',
+        'empty' => 'No matching work item.',
+        'groups' => [
+            'period' => 'This period\'s work',
+            'open' => 'Open work',
+            'other' => 'Other work',
+        ],
+        'added' => 'Added to the report: :title',
+        'exists' => 'This work item is already in the report.',
+        'not_found' => 'The work item could not be found or is not yours.',
+    ],
+
+    // One-click suggestions while writing a report (D-179).
+    'suggest' => [
+        'title' => 'Suggestions (:count waiting)',
+        'help' => 'This period\'s work and work board suggestions. Add puts it into the report with one click; added ones are marked.',
+        'add' => 'Add',
+        'added' => 'Added',
+    ],
+
     // Report-specific PDF and Excel (D-167).
     'pdf' => [
         'page' => 'Page',

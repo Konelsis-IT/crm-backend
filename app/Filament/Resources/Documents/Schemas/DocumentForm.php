@@ -8,7 +8,9 @@ use App\Enums\Document\DocumentStatus;
 use App\Enums\Document\RevisionPurpose;
 use App\Filament\Support\DocumentWorkspace;
 use App\Filament\Support\FieldGrid;
+use App\Models\Project\Project;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\Projects\ProjectNames;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -114,8 +116,10 @@ final class DocumentForm
                     Select::make('project_id')
                         ->label(__('document.fields.project'))
                         ->relationship('project', 'name')
+                        // D-174: kisa ad (yoksa lisans adi).
+                        ->getOptionLabelFromRecordUsing(fn (Project $record): string => ProjectNames::optionLabel($record))
                         ->helperText(__('document.help.project'))
-                        ->searchable()
+                        ->searchable(ProjectNames::searchColumns())
                         ->preload()
                         ->native(false),
                 ])),

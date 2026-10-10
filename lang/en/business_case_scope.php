@@ -11,6 +11,7 @@ return [
         'hes' => 'HES scope',
         'bes' => 'BESS scope',
         'enh_eih' => 'ENH/EIH scope',
+        'automation' => 'Automation / Process scope',
     ],
 
     'labels' => [
@@ -51,6 +52,10 @@ return [
             'res_construction_amount' => 'Respark construction',
             'res_assembly_amount' => 'Respark assembly',
         ],
+        'automation' => [
+            'total_cost' => 'Total cost',
+            'total_sales' => 'Total sales',
+        ],
     ],
 
     'fields' => [
@@ -71,11 +76,12 @@ return [
         'scope_file' => 'Scope list (Excel)',
         'current_file' => 'Uploaded scope list',
         'scope_document' => 'Scope list',
+        'cost_files' => 'Cost list',
+        'current_cost_files' => 'Uploaded cost lists',
         'note' => 'Note',
     ],
 
     'help' => [
-        'scope_file' => 'The scope list prepared for this project type (.xlsx/.xls/.csv). A new upload is added as a new version replacing the previous one.',
         'fields_later' => 'Fields for this type will be defined later; for now you can upload the scope list.',
     ],
 

@@ -57,7 +57,7 @@ return [
 
     'steps' => [
         'no_proposal' => 'No proposal yet',
-        'proposal_summary' => ':count proposal(s) · selected: :selected',
+        'proposal_summary' => ':count proposal(s) · latest: :latest',
         'now_here' => 'This job is here now',
         'project_created' => 'Project created: :code',
         'no_project' => 'No project yet',
@@ -135,12 +135,15 @@ return [
     ],
 
     'status' => [
-        'fixed' => 'The status is changed on the edit screen',
-        'change' => 'Click to change the status',
+        'fixed' => 'The status is changed with the status button at the top of the edit screen',
         'no_targets' => 'No manual change from this status',
-        'modal_heading' => 'Change status',
-        'modal_description' => 'Current status: :status. The new status is saved at once; other form fields and proposal versions are not affected.',
-        'target' => 'New status',
+        // D-182: status dropdown in the page header (detail and edit).
+        'no_permission' => 'You are not allowed to change the status',
+        'menu_label' => ':status ▾',
+        'menu_tooltip' => 'Change the status; the chosen status is saved at once',
+        'confirm_heading' => 'Set the status to ":status"?',
+        'confirm_description' => 'The potential job moves from ":from" to ":to"; there is no way back from this status. A reason is optional.',
+        'lost_note' => 'Its proposals become "Lost opportunity".',
     ],
 
     'messages' => [
@@ -160,8 +163,7 @@ return [
         'scope_types_chain' => 'The pre-offer checklist opens for the selected types; the project scope (amounts and scope list) is entered in the proposal step.',
         'edit_intro' => 'The edit screen uses the same three steps as the creation wizard. Fields in the first step are saved with "Save"; proposals are managed in the "Proposals" tab below and the conversion applies instantly.',
         'proposal_step' => 'When checked, the first proposal (with its TKLF number) and a draft first version are opened together with the business case, which moves to "Preparing proposal". Version details can be changed later from the proposal.',
-        'proposal_title' => 'Leave blank to use the business case title.',
-        'proposal_table' => 'The proposals of this potential job are in the "Proposals" tab at the bottom of the page: create, select and edit them there. Versions, documents and submission are managed in the proposal itself; the stage advances automatically when a version goes to review or is submitted.',
+        'proposal_table' => 'The proposals of this potential job are in the "Proposals" tab at the bottom of the page: create and edit them there; the job always continues from the latest proposal. Versions, documents and submission are managed in the proposal itself; the stage advances automatically when a version goes to review or is submitted.',
         'project_step' => 'Only for won or direct jobs: the proposal version is approved, the business case is walked to "Won", a handoff is opened and accepted, and the project is created with a PRJ code. In the normal flow leave this step empty and use "Convert to project" once the proposal is won.',
         'project_name' => 'Leave blank to use the business case title.',
         'convert_requires_proposal' => 'A proposal must be created before converting to a project.',
@@ -175,7 +177,15 @@ return [
         'proposal_letter_file' => 'Proposal letter file (attached to the proposal documents when uploaded).',
         'attach_references' => 'The fixed references document from the Documents area is linked to this proposal.',
         'attach_catalog' => 'The fixed general catalogue from the Documents area is linked to this proposal.',
-        'fixed_document_missing' => 'The references document and the general catalogue must be uploaded once to the Documents area with the REF / KAT types; once uploaded they are suggested automatically on every proposal.',
+    ],
+
+    // D-177: "I want to add a project type" on the edit screens.
+    'scope_add' => [
+        'section' => 'Project type',
+        // D-185: label "Yeni proje tipi eklemek istiyorum"; the help text was removed.
+        'checkbox' => 'I want to add a new project type',
+        'types' => 'Project type to add',
+        'none' => 'No project type selected',
     ],
 
     'validation' => [

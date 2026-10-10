@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Query\Personnel;
 
+use App\Enums\Personnel\PersonnelStatus;
 use App\Models\Personnel\Competency;
 use App\Models\Personnel\Personnel;
 use App\Models\Personnel\PersonnelCompetency;
@@ -38,6 +39,20 @@ final class PersonnelQueries
     public function personnelOptions(): array
     {
         return Personnel::query()
+            ->orderBy('full_name')
+            ->pluck('full_name', 'id')
+            ->all();
+    }
+
+    /**
+     * Yalniz aktif personel (D-175: proje tipi koordinatoru secimi).
+     *
+     * @return array<int, string>
+     */
+    public function activePersonnelOptions(): array
+    {
+        return Personnel::query()
+            ->where('status', PersonnelStatus::Active->value)
             ->orderBy('full_name')
             ->pluck('full_name', 'id')
             ->all();

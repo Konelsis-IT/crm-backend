@@ -12,6 +12,7 @@ use App\Filament\Resources\EstimateVersions\RelationManagers\BoqItemsRelationMan
 use App\Filament\Resources\EstimateVersions\RelationManagers\LinesRelationManager;
 use App\Filament\Resources\EstimateVersions\RelationManagers\ScenariosRelationManager;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\EstimateVersion;
 use App\Query\Reference\ReferenceOptions;
 use App\Enums\Platform\Feature;
@@ -106,13 +107,12 @@ class EstimateVersionResource extends Resource
                 TextColumn::make('status')
                     ->label(__('estimate_version.fields.status'))
                     ->badge(),
-                TextColumn::make('total_cost')
+                // D-180: tutar + para birimi simgesi.
+                MoneyDisplay::column('total_cost')
                     ->label(__('estimate_version.fields.total_cost'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
-                TextColumn::make('total_price')
+                MoneyDisplay::column('total_price')
                     ->label(__('estimate_version.fields.total_price'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
                 TextColumn::make('target_margin_pct')
                     ->label(__('estimate_version.fields.target_margin_pct'))

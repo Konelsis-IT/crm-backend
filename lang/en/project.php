@@ -25,6 +25,7 @@ return [
         'photos' => 'Site photos',
         'summary' => 'Summary',
         'description' => 'Description',
+        'scope' => 'Project type and measures',
     ],
 
     'fields' => [
@@ -51,6 +52,11 @@ return [
         'legal_entity' => 'Legal entity',
         'missing_items' => 'Missing',
         'name' => 'Name',
+        // D-174
+        'short_name' => 'Short name',
+        'license_name' => 'Licence name',
+        'names' => 'Short name / Licence name',
+        'scope_types' => 'Project type',
         'next_focus' => 'Next step',
         'origin' => 'Origin',
         'planned_finish_on' => 'Planned finish',
@@ -169,7 +175,7 @@ return [
 
     'help' => [
         'create_direct_intro' => 'Use this form for a project that never went through a proposal, was completed in the past, or is already running. The PRJ code is issued automatically and the business case opens in the "Operation" segment.',
-        'convert_intro' => 'The proposal is marked selected, its version is approved if needed, a handoff record is opened and accepted automatically, and the project is created with a PRJ code. A contract can be linked later.',
+        'convert_intro' => 'The latest version of the proposal is used and approved if needed, a handoff record is opened and accepted automatically, and the project is created with a PRJ code. A contract can be linked later.',
         'force' => 'When checked the project moves on even though mandatory expectations of the current step are missing; a reason is required.',
         'approve_draft' => 'If the selected version is a draft or under review it is approved automatically during conversion.',
         'initial_status' => 'Choose "Closed" for projects finished in the past and "Active" for running ones.',
@@ -182,11 +188,15 @@ return [
         'cover_replace' => 'A newly selected image is added as the cover; existing photos are managed in the table below.',
         'contract_value_locked' => 'The contract value comes from the handoff/proposal source and is not edited here.',
         'checklist' => 'Use "+" to add the related record right away, the pencil to edit it or jump to its table.',
+        'short_name' => 'The name shown in lists, cards and other screens. When empty, the licence name is shown.',
+        'license_name' => 'The project\'s official name on the licence.',
+        'scope_types' => 'Each selected type opens the project\'s own measures (MWp, MWe / MWh, km, count), contract amount and budget. A project converted from a proposal takes its types from the proposal.',
     ],
 
     'wizard' => [
         'identity' => 'Identity',
         'identity_description' => 'Project name, employer and type',
+        'identity_description_named' => 'Short name, licence name, employer and type',
         'site' => 'Site',
         'site_description' => 'Full address and location',
         'plan' => 'Plan and management',

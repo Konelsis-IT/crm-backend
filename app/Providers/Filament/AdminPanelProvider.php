@@ -7,6 +7,10 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\PersonnelProfile;
 use App\Filament\Clusters\Settings;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\UiCostItems;
+use App\Filament\Pages\UiDashboardComponents;
+use App\Filament\Pages\UiDashboardGallery;
+use App\Http\Controllers\Dashboard\DashboardExportController;
 use App\Filament\NavigationGroup;
 use Filament\Navigation\NavigationGroup as FilamentNavigationGroup;
 use App\Filament\Pages\Work\ControlMatrix;
@@ -31,6 +35,8 @@ use App\Http\Controllers\Work\WorkBoardController;
 use App\Http\Controllers\Work\WorkInsightController;
 use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
+use App\Http\Controllers\Files\RevisionPreviewController;
+use App\Http\Controllers\Files\DocumentBundleController;
 use App\Http\Controllers\Notifications\ApprovalQuickDecisionController;
 use App\Http\Controllers\Notifications\AlertFeedController;
 use App\Http\Controllers\Notifications\BusinessAlertAcknowledgeController;
@@ -310,10 +316,23 @@ class AdminPanelProvider extends PanelProvider
                     Route::get('attention/{personnel}', [WorkInsightController::class, 'attention'])->middleware(RequireFeature::for(Feature::AttentionCard))->name('attention');
                 });
 
+                // Departman panolari (D-173): gorunen tablonun Excel / PDF'i, salt okunur.
+                // filament.admin.dashboards.export; ozellik + UI Deneme kurali + politika.
+                Route::get('dashboards/export', DashboardExportController::class)
+                    ->middleware(RequireFeature::for(Feature::UiDashboardExports))
+                    ->name('dashboards.export');
+
                 Route::prefix('files')->name('files.')->group(function (): void {
                     Route::get('revisions/{file}', RevisionFileController::class)->middleware(RequireFeature::for(Feature::Documents))->name('revision');
+                    // D-186: Excel / CSV / Word onizleme sayfasi: filament.admin.files.revision-preview
+                    Route::get('revisions/{file}/preview', RevisionPreviewController::class)->middleware(RequireFeature::for(Feature::DocumentOfficePreview))->name('revision-preview');
                     Route::get('project-photos/{photo}', ProjectPhotoController::class)->middleware(RequireFeature::for(Feature::Projects))->name('photo');
                     Route::get('work-request/{file}', WorkRequestFileController::class)->middleware(RequireFeature::for(Feature::WorkRequests))->name('work-request');
+                    // D-176 "Tum belgeleri indir": filament.admin.files.bundle.proposal / .business-case
+                    Route::middleware(RequireFeature::for(Feature::DocumentBundles))->prefix('bundles')->name('bundle.')->group(function (): void {
+                        Route::get('proposals/{proposal}', [DocumentBundleController::class, 'proposal'])->whereNumber('proposal')->name('proposal');
+                        Route::get('business-cases/{businessCase}', [DocumentBundleController::class, 'businessCase'])->whereNumber('businessCase')->name('business-case');
+                    });
                 });
 
                 // Bildirimden tek tiklama (D-82): imzali baglantilar.
@@ -505,6 +524,23 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.work.scripts', ['screens' => ['work-attention']]),
                 scopes: ViewPersonnelRecord::class,
+            )
+            // Departman panolari (D-173, React): UI Deneme'deki iki sayfa.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.dashboards.scripts', ['screens' => ['dash-app']]),
+                scopes: UiDashboardGallery::class,
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.dashboards.scripts', ['screens' => ['dash-catalog']]),
+                scopes: UiDashboardComponents::class,
+            )
+            // Maliyet kalemleri denemesi (D-187, React): ayni pano cekirdegi + cost-lab.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.dashboards.scripts', ['screens' => ['cost-lab']]),
+                scopes: UiCostItems::class,
             )
             // Teklif oncesi kontrol listesi tahtasi (D-157, React): potansiyel is
             // sihirbazi; D-158 ile detay sayfasindaki salt okunur hali.

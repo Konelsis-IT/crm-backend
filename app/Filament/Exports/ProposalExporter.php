@@ -24,7 +24,6 @@ class ProposalExporter extends KonelsisExporter
             self::text('businessCase.title', __('proposal.fields.business_case')),
             self::text('status', __('proposal.fields.status')),
             self::text('offer_status', __('proposal.fields.offer_status')),
-            self::boolean('is_selected', __('proposal.fields.is_selected')),
             self::text('currentVersion.version_no', __('proposal.fields.current_version')),
             self::text('owner.full_name', __('proposal.fields.owner')),
         ];

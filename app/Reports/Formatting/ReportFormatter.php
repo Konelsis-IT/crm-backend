@@ -29,36 +29,19 @@ use Illuminate\Support\Collection;
  * "Ozet bilgiler" blogunda, uzun metinler kendi basliginda, plan satirlari
  * madde halinde); pano raporunda ozetten sonra isler (durum basliklari
  * altinda); gorusmeler ve yazilan raporlar; sayisal ozet; inceleme notu.
+ *
+ * D-179 (8 Ekim 2026 kullanici istegi: "kopyalanabilecek metin alaninin
+ * icon'lari daha sade ve az olsun"): basliklarda, kimlik satirlarinda ve
+ * durum basliklarinda simge (emoji) yok; metin yalniz baslik, kalin etiket
+ * ve madde isaretiyle duzenlenir (WhatsApp ve e-postada sade okunur).
  */
 final class ReportFormatter
 {
-    /** Alan basliklarinin simgeleri (PDF'te yazilmaz). */
-    private const FIELD_ICONS = [
-        'summary' => '📝', 'achievements' => '🏆', 'blockers' => '⚠️', 'tomorrow_plan' => '🗓️',
-        'next_week_plan' => '🗓️', 'next_month_targets' => '🎯', 'meetings' => '🤝', 'written_reports' => '📄',
-        'risks' => '⚠️', 'next_steps' => '➡️', 'decisions_needed' => '❓', 'strengths' => '💪',
-        'weaknesses' => '🔻', 'actions' => '✅', 'observations' => '🔎', 'anomalies' => '🚨',
-        'measurements' => '📏', 'overall' => '🧭', 'development_areas' => '🌱', 'quality_note' => '🔍',
-        'supplier_note' => '🏭', 'improvement' => '💡', 'customer_relationship' => '🤝', 'note' => '🗒️',
-        'results' => '📋', 'training_status' => '🎓', 'disciplinary_note' => '📌',
-    ];
-
-    /** Rapor turune gore baslik simgesi. */
-    private const KIND_ICONS = [
-        'daily' => '📅', 'weekly' => '🗓️', 'monthly' => '📆', 'project' => '🏗️', 'product' => '📦',
-        'proposal' => '💼', 'business_case' => '📁', 'personnel' => '👤', 'system' => '🖥️',
-    ];
-
-    /** Islerin durum sirasi ve simgeleri. */
-    private const STATUS_ICONS = [
-        'done' => '✅', 'in_progress' => '🔄', 'waiting' => '⏳', 'blocked' => '⛔', 'planned' => '🗓️',
-    ];
-
     /**
-     * Kimlik satirlari (anahtar, etiket, deger, simge). Metin basligi, PDF
-     * bilgi tablosu ve Excel ozet sayfasi ayni listeyi kullanir.
+     * Kimlik satirlari (anahtar, etiket, deger). Metin basligi, PDF bilgi
+     * tablosu ve Excel ozet sayfasi ayni listeyi kullanir.
      *
-     * @return list<array{key: string, label: string, value: string, icon: string|null}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     public function facts(Report $report): array
     {
@@ -82,15 +65,15 @@ final class ReportFormatter
         $subject = $report->subjectLabel();
 
         $facts = [
-            ['key' => 'report_no', 'label' => __('report.fields.report_no'), 'value' => (string) $report->report_no, 'icon' => '🧾'],
-            ['key' => 'template', 'label' => __('report.text.type'), 'value' => $report->templateName(), 'icon' => '🗂️'],
-            ['key' => 'author', 'label' => __('report.text.author'), 'value' => implode(' · ', array_map('strval', $author)), 'icon' => '👤'],
-            ['key' => 'period', 'label' => $this->periodLabel($template), 'value' => (string) ($this->periodValue($report, $template) ?? ''), 'icon' => '📅'],
-            ['key' => 'subject', 'label' => __('report.fields.subject'), 'value' => filled($subject) ? $report->subject_kind->getLabel().': '.$subject : '', 'icon' => '🔗'],
-            ['key' => 'status', 'label' => __('report.fields.status'), 'value' => (string) $report->status->getLabel(), 'icon' => '📌'],
-            ['key' => 'created_at', 'label' => __('report.fields.created_at'), 'value' => DisplayTime::format($report->created_at, empty: ''), 'icon' => '🕒'],
-            ['key' => 'submitted_at', 'label' => __('report.fields.submitted_at'), 'value' => DisplayTime::format($report->submitted_at, empty: ''), 'icon' => '📤'],
-            ['key' => 'reviewer', 'label' => __('report.fields.reviewer'), 'value' => (string) ($reviewer ?? ''), 'icon' => '🔍'],
+            ['key' => 'report_no', 'label' => __('report.fields.report_no'), 'value' => (string) $report->report_no],
+            ['key' => 'template', 'label' => __('report.text.type'), 'value' => $report->templateName()],
+            ['key' => 'author', 'label' => __('report.text.author'), 'value' => implode(' · ', array_map('strval', $author))],
+            ['key' => 'period', 'label' => $this->periodLabel($template), 'value' => (string) ($this->periodValue($report, $template) ?? '')],
+            ['key' => 'subject', 'label' => __('report.fields.subject'), 'value' => filled($subject) ? $report->subject_kind->getLabel().': '.$subject : ''],
+            ['key' => 'status', 'label' => __('report.fields.status'), 'value' => (string) $report->status->getLabel()],
+            ['key' => 'created_at', 'label' => __('report.fields.created_at'), 'value' => DisplayTime::format($report->created_at, empty: '')],
+            ['key' => 'submitted_at', 'label' => __('report.fields.submitted_at'), 'value' => DisplayTime::format($report->submitted_at, empty: '')],
+            ['key' => 'reviewer', 'label' => __('report.fields.reviewer'), 'value' => (string) ($reviewer ?? '')],
         ];
 
         return array_values(array_filter($facts, static fn (array $fact): bool => $fact['value'] !== ''));
@@ -107,7 +90,7 @@ final class ReportFormatter
         $doc = new FormattedText;
 
         if ($withHeader) {
-            $doc->heading(1, (string) ($report->title ?: $report->templateName()), self::KIND_ICONS[$report->kind->value] ?? '📋');
+            $doc->heading(1, (string) ($report->title ?: $report->templateName()));
             $doc->facts(array_values(array_filter(
                 $this->facts($report),
                 static fn (array $fact): bool => ! in_array($fact['key'], ['created_at'], true),
@@ -138,10 +121,10 @@ final class ReportFormatter
     {
         $doc = $this->document($report);
 
-        return ['html' => $doc->html(icons: true, inlineStyles: true), 'text' => $doc->plain()];
+        return ['html' => $doc->html(inlineStyles: true), 'text' => $doc->plain()];
     }
 
-    /** PDF govdesi: ayni metin, simgesiz, sablonun stilleriyle. */
+    /** PDF govdesi: ayni metin, sablonun stilleriyle. */
     public function pdfBody(Report $report): string
     {
         return $this->document($report, withHeader: false)->html(icons: false);
@@ -282,11 +265,10 @@ final class ReportFormatter
         foreach ($fields as $field) {
             $value = $payload[$field->name] ?? null;
             $label = $template->label($field->name);
-            $icon = self::FIELD_ICONS[$field->name] ?? '🔹';
 
             if ($this->isScalar($field)) {
                 if (! $scalarsPlaced) {
-                    $doc->heading(2, __('report.text.key_facts'), '📌')->facts($scalars);
+                    $doc->heading(2, __('report.text.key_facts'))->facts($scalars);
                     $scalarsPlaced = true;
                 }
 
@@ -297,7 +279,7 @@ final class ReportFormatter
                 $rows = ReportSuggestions::included($value);
 
                 if ($rows !== []) {
-                    $doc->heading(2, $label.' ('.count($rows).')', $icon)->bullets(array_map(
+                    $doc->heading(2, $label.' ('.count($rows).')')->bullets(array_map(
                         static fn (array $row): array => [
                             'title' => (string) ($row['title'] ?? ''),
                             'rest' => $multiDay ? ReportSuggestions::displayDate($row['date'] ?? null) : null,
@@ -313,18 +295,18 @@ final class ReportFormatter
                 $lines = $this->lineList($value);
 
                 if ($lines !== []) {
-                    $doc->heading(2, $label, $icon)->bullets(array_map(static fn (string $line): array => ['rest' => $line], $lines));
+                    $doc->heading(2, $label)->bullets(array_map(static fn (string $line): array => ['rest' => $line], $lines));
                 }
             } elseif ($field->type === ReportField::KEY_VALUE) {
                 if (is_array($value) && $value !== []) {
-                    $doc->heading(2, $label, $icon)->bullets(array_map(
+                    $doc->heading(2, $label)->bullets(array_map(
                         static fn ($key, $item): array => ['title' => (string) $key, 'rest' => is_scalar($item) ? (string) $item : null],
                         array_keys($value),
                         $value,
                     ));
                 }
             } elseif (filled($value)) {
-                $doc->heading(2, $label, $icon)->text((string) $value);
+                $doc->heading(2, $label)->text((string) $value);
             }
 
             if (! $itemsPlaced && $field->name === $summaryField) {
@@ -336,11 +318,11 @@ final class ReportFormatter
         $metrics = $this->metricRows($report, $template);
 
         if ($metrics !== []) {
-            $doc->heading(2, __('report.sections.metrics'), '📊')->facts($metrics);
+            $doc->heading(2, __('report.sections.metrics'))->facts($metrics);
         }
 
         if (filled($report->review_comment)) {
-            $doc->heading(2, __('report.fields.review_comment'), '💬')->text((string) $report->review_comment);
+            $doc->heading(2, __('report.fields.review_comment'))->text((string) $report->review_comment);
         }
     }
 
@@ -353,7 +335,7 @@ final class ReportFormatter
             return;
         }
 
-        $doc->heading(2, __('report.text.works').' ('.$items->count().')', '💼');
+        $doc->heading(2, __('report.text.works').' ('.$items->count().')');
 
         foreach ($this->statusOrder() as $status) {
             $rows = $items->filter(static fn (ReportItem $item): bool => $item->status === $status)->values();
@@ -362,7 +344,7 @@ final class ReportFormatter
                 continue;
             }
 
-            $doc->heading(3, $status->getLabel().' ('.$rows->count().')', self::STATUS_ICONS[$status->value] ?? null)
+            $doc->heading(3, $status->getLabel().' ('.$rows->count().')')
                 ->bullets($rows->map(fn (ReportItem $item): array => [
                     'title' => (string) $item->title,
                     'rest' => ($meta = $this->itemMeta($item)) !== [] ? implode(' · ', $meta) : null,
@@ -379,7 +361,7 @@ final class ReportFormatter
         $meta = [];
 
         if ($item->project !== null) {
-            $meta[] = (string) $item->project->name;
+            $meta[] = (string) $item->project->display_name;
         }
 
         if ($withHours && ($hours = ReportFieldComponents::formatNumber($item->work_hours, __('report.values.hours'))) !== null) {

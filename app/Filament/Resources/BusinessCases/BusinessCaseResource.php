@@ -24,6 +24,7 @@ use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\ChecklistSchema;
 use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\BusinessCase;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
@@ -152,9 +153,9 @@ class BusinessCaseResource extends Resource
                 TextColumn::make('owner.full_name')
                     ->label(__('business_case.fields.owner'))
                     ->placeholder('-'),
-                TextColumn::make('estimated_value')
+                // D-180: tutar + para birimi simgesi (ISO kodu degil).
+                MoneyDisplay::column('estimated_value')
                     ->label(__('business_case.fields.estimated_value'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
             ])
             ->filters([

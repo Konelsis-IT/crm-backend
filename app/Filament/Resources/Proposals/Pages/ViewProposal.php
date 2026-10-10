@@ -9,6 +9,7 @@ use App\Filament\Exports\ProposalExporter;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\DealTrack;
+use App\Filament\Support\DocumentBundleAction;
 use App\Services\Platform\FeatureFlags;
 use App\Filament\Support\ExportActions;
 use App\Filament\Support\ProposalDetail;
@@ -53,17 +54,21 @@ class ViewProposal extends ViewRecord
         // "Bu iş nerede?" kendi ozellik anahtariyla kapanabilir (D-147).
         $track = FeatureFlags::enabled(Feature::DealTrack) ? app(DealTrack::class)->forProposal($proposal) : null;
 
-        // B43 (D-155): proje kapsami guncel surumun kartinda. D-158: yeni tasarim
-        // (D-168: yarim genislik); belgeler yalniz Dokumanlar sekmesinde
-        // (ayni belgeler iki yerde gorunmesin), eski surumler "Surumler" penceresinde.
-        $scopeCard = null;
+        // B43 (D-155): guncel surumun proje kapsami; belgeler yalniz Dokumanlar
+        // sekmesinde (ayni belgeler iki yerde gorunmesin), eski surumler
+        // "Surumler" penceresinde. D-186 ("duzenle'deki tasarim ile goruntule
+        // tasarimi birebir ayni olmalidir"): duzenleme ekranindaki tip bolumlerinin
+        // aynisi (GES kapsami ...: ayni baslik, simge, Referanslar + indir, izgara,
+        // kutular), degerler etiketli; kapsam toplam satisi ve marj surum kartinda
+        // (duzenlemede Teklif bilgileri'nde oldugu gibi).
+        $scopeGrid = null;
 
         if (SchemaReadiness::hasBatch('B43')) {
             $proposal->loadMissing([
                 'currentVersion.scopes.scopeDocument.revisions.files.fileObject',
                 'currentVersion.scopes.scopeDocumentRevision.files.fileObject',
             ]);
-            $scopeCard = app(ProposalScopeSchema::class)->recordCard($proposal->currentVersion);
+            $scopeGrid = app(ProposalScopeSchema::class)->recordGrid($proposal->currentVersion, references: true);
         }
 
         return $schema->columns(1)->components([
@@ -73,8 +78,7 @@ class ViewProposal extends ViewRecord
                     $detail->headerCard($proposal),
                     $detail->versionCard($proposal),
                 ]),
-            // D-168: kapsam karti olusturma ekranindaki gibi yarim genislikte (tam satir yok).
-            ...($scopeCard !== null ? [Grid::make(['default' => 1, 'xl' => 2])->components([$scopeCard])] : []),
+            ...($scopeGrid !== null ? [$scopeGrid] : []),
             ...($track !== null ? [$track] : []),
             $this->getRelationManagersContentComponent(),
         ]);
@@ -89,11 +93,17 @@ class ViewProposal extends ViewRecord
         $versions = SchemaReadiness::hasBatch('B43') ? app(ProposalDetail::class)->versionsAction($proposal) : null;
 
         return [
-            // Durum: rengiyle sabit dugme; teklif duzenleme ekraninda degistirilir (D-161).
-            StatusButton::proposal(editable: false),
+            // D-182: Teklif durumu acilir dugmesi (duzenlemedekiyle ayni, yeni
+            // durum hemen kaydedilir); ozellik kapaliyken D-161'deki sabit dugme.
+            ...StatusButton::proposalHeader($proposal),
             EditAction::make(),
+            // D-186: surumleme personelde; Duzenle surum artirmaz, bu dugme N+1 acar.
+            ...array_filter([app(ProposalDetail::class)->newVersionAction($proposal)]),
             ...($versions !== null ? [$versions] : []),
             ...($case !== null ? [app(BusinessCaseWizard::class)->convertAction($case, proposal: $proposal)] : []),
+            // D-184: "Tum belgeleri indir" baslikta (yalniz simge, ipucunda adi);
+            // Dokumanlar sekmesindeki dugme kalir.
+            DocumentBundleAction::proposalHeader($proposal),
             ExportActions::record(ProposalExporter::class),
         ];
     }

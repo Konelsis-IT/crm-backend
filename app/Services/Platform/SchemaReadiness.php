@@ -76,6 +76,10 @@ final class SchemaReadiness
         'B44' => 'meeting_plans.archived_at',          // Gorusme notu ve plan arsivi (D-156; grubun son degisikligi)
         'B45' => 'seed_archive',                       // Seed satir arsivi (D-165)
         'B47' => 'business_cases.development_kind',    // Is gelistirme turunun elle secilmesi (D-170)
+        'B48' => 'project_scopes',                     // Proje kisa adi ve proje tipleri (D-174; grubun son tablosu)
+        'B49' => 'project_type_coordinators',          // Proje tipi koordinatorleri (D-175)
+        'B50' => 'project_reference_scope_types',      // Referanslar ve Otomasyon / Process tipi (D-177; grubun son tablosu)
+        'B51' => 'proposal_version_scope_documents',   // Teklif kapsaminda maliyet listesi (D-181)
     ];
 
     /** @var array<string, bool> */

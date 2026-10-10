@@ -192,6 +192,32 @@ final class BusinessCaseService extends AbstractService
     }
 
     /**
+     * Potansiyel ise proje tipi ekler (D-177, teklif duzenlemedeki "Proje tipi
+     * eklemek istiyorum"): yalniz eksik tipler acilir, hicbir tip kaldirilmaz.
+     * Tip eklendiyse kontrol listesi acikken sicaklik tazelenir (liste
+     * degisebilir). Eklenen tip degerlerini doner.
+     *
+     * @param  list<mixed>  $types
+     * @return list<string>
+     */
+    public function addScopeTypes(BusinessCase $case, array $types): array
+    {
+        if (! SchemaReadiness::hasBatch('B29')) {
+            return [];
+        }
+
+        return $this->transactions->run(function () use ($case, $types): array {
+            $added = app(BusinessCaseScopeService::class)->add($case, $types);
+
+            if ($added !== [] && FeatureFlags::enabled(Feature::BusinessCaseChecklist)) {
+                $this->refreshChecklistState($case);
+            }
+
+            return $added;
+        });
+    }
+
+    /**
      * Kontrol listesinden teklif sicakligi ve GES 1.3 kurali (B43, D-155):
      * potansiyel isin proje tiplerinin baktigi listelerin kayitli cevaplariyla
      * heat_score yeniden hesaplanir; 1.3 "Hayir" ise teklif tipi Butcesel olur

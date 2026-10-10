@@ -1650,9 +1650,345 @@ body:has(#konelsis-chat-root) .fi-main {
     .kc-heat__heart, .kc-heat__ecg-trace { animation: none; }
 }
 
-/* Teklif belgeleri: kucuk yukleme kutulari yan yana (4-6 tane). */
-.kc-doc-grid .filepond--drop-label { min-height: 3.25rem; font-size: 0.75rem; }
-.kc-doc-grid .filepond--root { margin-bottom: 0; }
+/*
+ * Kompakt belge yukleme kutusu (D-185, App\Filament\Support\CompactUpload):
+ * baslik, kayitli dosyalar kucuk notr cip, altinda kucuk "Yukle" dugmesi.
+ * FilePond'un birakma alani dugme boyunda; surukle-birak yine calisir
+ * (uzerine dosya gelince kutu vurgulanir). Bekleyen yuklemeler FilePond'un
+ * kendi satirlariyla dugmenin altinda listelenir.
+ */
+.kc-upload-slot {
+    height: 100%;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    background: var(--gray-50);
+    box-shadow: inset 0 0 0 1px var(--gray-200);
+}
+
+.kc-upload-slot:where(.dark, .dark *) {
+    background: color-mix(in oklab, white 3%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 10%, transparent);
+}
+
+.kc-upload-slot > .fi-sc {
+    gap: 0.5rem;
+}
+
+.kc-upload-slot .fi-in-entry-label {
+    font-size: 0.8125rem;
+}
+
+.fi-fo-file-upload.kc-upload .filepond--root {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.fi-fo-file-upload.kc-upload .filepond--drop-label {
+    right: auto;
+    min-height: 0;
+    padding: 0 !important;
+    justify-content: flex-start;
+}
+
+.fi-fo-file-upload.kc-upload .filepond--drop-label label {
+    cursor: pointer;
+}
+
+.kc-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 0.5rem;
+    background: white;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), inset 0 0 0 1px var(--gray-300);
+    color: var(--gray-700);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    transition: background-color 75ms, box-shadow 75ms;
+}
+
+.kc-upload-btn .fi-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--gray-500);
+}
+
+.kc-upload-btn:hover {
+    background: var(--gray-50);
+}
+
+.kc-upload-btn:where(.dark, .dark *) {
+    background: color-mix(in oklab, white 5%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 20%, transparent);
+    color: var(--gray-200);
+}
+
+.fi-fo-file-upload.kc-upload .filepond--root[data-hopper-state='drag-over'] {
+    outline: 2px dashed var(--primary-500);
+    outline-offset: 2px;
+    background: color-mix(in oklab, var(--primary-500) 6%, transparent);
+}
+
+.fi-fo-file-upload.kc-upload .filepond--item {
+    font-size: 0.75rem;
+}
+
+/* Dosya cipi: tur simgesi, kirpilan ad (tam ad ipucunda), "Rev 01"; tiklaninca iner. */
+.kc-file-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.kc-file-chips .kc-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+    background: white;
+    box-shadow: inset 0 0 0 1px var(--gray-200);
+    color: var(--gray-800);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    text-decoration: none;
+}
+
+.kc-file-chips a.kc-file-chip:hover {
+    background: var(--gray-100);
+    color: var(--gray-950);
+    text-decoration: none;
+}
+
+.kc-file-chips .kc-file-chip:where(.dark, .dark *) {
+    background: color-mix(in oklab, white 5%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 12%, transparent);
+    color: var(--gray-200);
+}
+
+.kc-file-chips a.kc-file-chip:where(.dark, .dark *):hover {
+    background: color-mix(in oklab, white 10%, transparent);
+    color: white;
+}
+
+.kc-file-chip .fi-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--gray-400);
+}
+
+.kc-file-chip--sheet .fi-icon { color: var(--success-600); }
+.kc-file-chip--pdf .fi-icon { color: var(--danger-500); }
+.kc-file-chip--doc .fi-icon { color: var(--info-600); }
+.kc-file-chip--image .fi-icon { color: var(--warning-500); }
+
+.kc-file-chip__name {
+    min-width: 0;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kc-file-chip__rev {
+    flex-shrink: 0;
+    color: var(--gray-500);
+    font-weight: 400;
+}
+
+/*
+ * D-186: ayni cip, sag ucunda kucuk notr simgeler: indir (onizlenebilen
+ * dosyada govde onizler) ve duzenlemede "x" (Kaldir; uzerine gelince kirmizi).
+ * Kaldirilmak uzere isaretlenen cip soluk ve ustu cizili, "x" yerine "Geri al".
+ */
+.kc-file-chip__open {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+a.kc-file-chip__open:hover .kc-file-chip__name {
+    text-decoration: underline;
+}
+
+.kc-file-chips .kc-file-chip .kc-file-chip__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--gray-400);
+    cursor: pointer;
+}
+
+.kc-file-chips .kc-file-chip .kc-file-chip__icon .fi-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: inherit;
+}
+
+.kc-file-chips .kc-file-chip .kc-file-chip__icon:hover {
+    color: var(--gray-700);
+}
+
+.kc-file-chips .kc-file-chip .kc-file-chip__remove:hover {
+    color: var(--danger-600);
+}
+
+.kc-file-chips .kc-file-chip.kc-file-chip--removed .kc-file-chip__open {
+    opacity: 0.55;
+    text-decoration: line-through;
+}
+
+.kc-file-chips .kc-file-chip.kc-file-chip--removed .kc-file-chip__remove:hover {
+    color: var(--gray-700);
+}
+
+/*
+ * D-186: proje tipi secimi rozet boyunda cipler (BusinessCaseWizard::TYPE_CHIPS_CLASS):
+ * "GES" rozeti gibi kucuk; secilmemis tip gri cerceveli, secilen kendi renginde dolu.
+ */
+.fi-fo-toggle-buttons.kc-type-chips.fi-inline {
+    gap: 0.375rem;
+}
+
+.fi-fo-toggle-buttons.kc-type-chips .fi-btn {
+    gap: 0.25rem;
+    min-height: 0;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+}
+
+.fi-fo-toggle-buttons.kc-type-chips .fi-btn .fi-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Kutunun basligindaki kucuk "KonelsisAI yakinda" etiketi. */
+.kc-ai-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-inline-start: 0.375rem;
+    padding: 0 0.375rem;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--primary-500) 10%, transparent);
+    color: var(--primary-700);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.125rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.kc-ai-tag .fi-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+.kc-ai-tag:where(.dark, .dark *) {
+    color: var(--primary-300);
+}
+
+/*
+ * Veri baglantilari kirmizi degil (D-185, 9 Ekim 2026 kullanici talebi: "Genel
+ * projedeki link yazilari kirmizi olmasin ... detay sayfasindaki link/route ekli
+ * olan bir bilgi kisminin yazisi kirmizi olmamalidir"). Bir kayda / dosyaya
+ * giden metin (infolist girisi, tablo hucresi) koddaki ->color('primary') ne
+ * olursa olsun normal yazi renginde, simgesi gri; uzerine gelince alti cizilir
+ * (Filament'in kendi davranisi). Sol menu, secili sekme, dugmeler ve rozetler
+ * bu kurala girmez (rozet ogesi renk sinifi tasimaz).
+ */
+.fi-in-text-item.fi-color-primary:has(a[href]),
+.fi-ta-text-item.fi-color-primary:has(a[href]),
+.fi-ta-col-has-column-url .fi-ta-text-item.fi-color-primary {
+    color: var(--gray-950);
+}
+
+.fi-in-text-item.fi-color-primary:has(a[href]):where(.dark, .dark *),
+.fi-ta-text-item.fi-color-primary:has(a[href]):where(.dark, .dark *),
+.fi-ta-col-has-column-url .fi-ta-text-item.fi-color-primary:where(.dark, .dark *) {
+    color: white;
+}
+
+.fi-in-text-item:has(a[href]) .fi-icon.fi-color-primary,
+.fi-ta-text-item:has(a[href]) .fi-icon.fi-color-primary,
+.fi-ta-col-has-column-url .fi-ta-text-item .fi-icon.fi-color-primary {
+    color: var(--gray-400);
+}
+
+.fi-in-text-item:has(a[href]) .fi-icon.fi-color-primary:where(.dark, .dark *),
+.fi-ta-text-item:has(a[href]) .fi-icon.fi-color-primary:where(.dark, .dark *),
+.fi-ta-col-has-column-url .fi-ta-text-item .fi-icon.fi-color-primary:where(.dark, .dark *) {
+    color: var(--gray-500);
+}
+
+/*
+ * Ters yapi (D-185 duzeltmesi, 9 Ekim 2026 kullanici: "kirmizi yazi olayini coz
+ * demistim, buralarda hala kirmizi yazilar gorunuyor" — dokuman sayfasi Sahip ve
+ * Bagli kayitlar): giris ->url() verilince Filament metni baglantinin ICINE koyar
+ * (a.fi-in-entry-content > .fi-in-text-item). Ayni notr renk bu yapida da gecerli;
+ * dugmeler (.fi-btn), baglanti gorunumlu eylemler (.fi-link), sol menu ve sekmeler
+ * bu secicilere girmez.
+ */
+.fi-main a[href] .fi-in-text-item.fi-color-primary,
+.fi-main a[href] .fi-ta-text-item.fi-color-primary {
+    color: var(--gray-950);
+}
+
+.fi-main a[href] .fi-in-text-item.fi-color-primary:where(.dark, .dark *),
+.fi-main a[href] .fi-ta-text-item.fi-color-primary:where(.dark, .dark *) {
+    color: white;
+}
+
+.fi-main a[href] .fi-in-text-item .fi-icon.fi-color-primary,
+.fi-main a[href] .fi-ta-text-item .fi-icon.fi-color-primary {
+    color: var(--gray-400);
+}
+
+.fi-main a[href] .fi-in-text-item .fi-icon.fi-color-primary:where(.dark, .dark *),
+.fi-main a[href] .fi-ta-text-item .fi-icon.fi-color-primary:where(.dark, .dark *) {
+    color: var(--gray-500);
+}
+
+/*
+ * Baglanti gorunumlu eylemler (.fi-link, ana renkte): ornegin "Bu is nerede?"
+ * kartindaki diger teklif baglantisi ve "Potansiyel ise git". Ana icerikte
+ * bunlar da notr; dolu dugmeler (.fi-btn), sol menu ve sekmeler degismez.
+ */
+.fi-main .fi-link.fi-color-primary {
+    color: var(--gray-950);
+}
+
+.fi-main .fi-link.fi-color-primary:where(.dark, .dark *) {
+    color: white;
+}
+
+.fi-main .fi-link.fi-color-primary .fi-icon {
+    color: var(--gray-400);
+}
+
+.fi-main .fi-link.fi-color-primary .fi-icon:where(.dark, .dark *) {
+    color: var(--gray-500);
+}
 
 /*
  * Durum dugmesi (D-161): durum kendi renginde baslikta dugme. Detay

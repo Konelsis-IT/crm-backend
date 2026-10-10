@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ContractVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\ContractMilestone;
 use App\Services\Acquisition\ContractMilestoneService;
 use BackedEnum;
@@ -61,11 +63,10 @@ class MilestonesRelationManager extends RelationManager
                             ->step('0.01')
                             ->minValue(0)
                             ->maxValue(100),
-                        TextInput::make('payment_amount')
+                        // D-180: sozlesme surumunun para birimiyle maskeli tutar.
+                        MoneyInput::make('payment_amount')
                             ->label(__('contract_milestone.fields.payment_amount'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->currency(fn (): ?string => $this->getOwnerRecord()->getAttribute('currency_code')),
                         Textarea::make('description')
                             ->label(__('contract_milestone.fields.description'))
                             ->columnSpan(FieldGrid::LONG),
@@ -93,9 +94,8 @@ class MilestonesRelationManager extends RelationManager
                     ->label(__('contract_milestone.fields.payment_pct'))
                     ->suffix('%')
                     ->placeholder('-'),
-                TextColumn::make('payment_amount')
+                MoneyDisplay::column('payment_amount', fn (): ?string => $this->getOwnerRecord()->getAttribute('currency_code'))
                     ->label(__('contract_milestone.fields.payment_amount'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
             ])
             ->headerActions([

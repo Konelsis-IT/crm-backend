@@ -440,6 +440,8 @@ return [
         'hes' => 'HES',
         'bes' => 'BESS',
         'enh_eih' => 'ENH/EIH',
+        // D-177 (B50)
+        'automation' => 'Automation / Process',
     ],
     'license_status' => [
         'unlicensed_5_1_c' => 'Unlicensed 5.1-C',
@@ -612,6 +614,10 @@ return [
         'catalog' => 'General catalogue',
         'scope_list' => 'Scope list',
         'deviation_list' => 'Deviation list',
+    ],
+    // D-181: documents attached to a proposal scope.
+    'proposal_scope_document_role' => [
+        'cost_list' => 'Cost list',
     ],
     'compliance_state' => [
         'comply' => 'Comply',

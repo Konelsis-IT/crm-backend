@@ -12,9 +12,12 @@ use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\ProjectSupplyItems\Pages\CreateProjectSupplyItem;
 use App\Filament\Resources\ProjectSupplyItems\Pages\EditProjectSupplyItem;
 use App\Filament\Resources\ProjectSupplyItems\Pages\ListProjectSupplyItems;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Models\Project\Project;
 use App\Models\Project\ProjectSupplyItem;
+use App\Support\Projects\ProjectNames;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Query\Reference\ReferenceOptions;
 use App\Enums\Platform\Feature;
@@ -136,16 +139,19 @@ class ProjectSupplyItemResource extends Resource
                         ->searchable()
                         ->preload()
                         ->native(false),
-                    TextInput::make('unit_cost')
+                    // D-180: maskeli birim maliyet (kolon 4 ondalikli); para birimi
+                    // secilmediyse kayitli kalemin projesininki.
+                    MoneyInput::make('unit_cost')
                         ->label(__('project_supply_item.fields.unit_cost'))
-                        ->numeric()
-                        ->minValue(0),
+                        ->currency(fn (Get $get, ?ProjectSupplyItem $record): ?string => filled($get('currency_code')) ? (string) $get('currency_code') : $record?->project?->currency_code)
+                        ->decimals(4),
                     Select::make('currency_code')
                         ->label(__('project_supply_item.fields.currency'))
                         ->helperText(__('project_supply_item.help.currency'))
                         ->options(fn (): array => app(ReferenceOptions::class)->currencies())
                         ->searchable()
-                        ->native(false),
+                        ->native(false)
+                        ->live(),
                     Select::make('supplier_party_id')
                         ->label(__('project_supply_item.fields.supplier'))
                         ->relationship('supplier', 'display_name')
@@ -193,6 +199,8 @@ class ProjectSupplyItemResource extends Resource
                     ->color('gray'),
                 TextColumn::make('project.name')
                     ->label(__('project_supply_item.fields.project'))
+                    // D-174: kisa ad (yoksa lisans adi); arama lisans adinda.
+                    ->formatStateUsing(fn (mixed $state, ProjectSupplyItem $record): string => $record->project?->display_name ?? (string) $state)
                     ->limit(30)
                     ->searchable()
                     ->url(fn (ProjectSupplyItem $record): ?string => $record->project === null ? null : ProjectResource::getUrl('view', ['record' => $record->project])),
@@ -234,7 +242,9 @@ class ProjectSupplyItemResource extends Resource
                 SelectFilter::make('project_id')
                     ->label(__('project_supply_item.fields.project'))
                     ->relationship('project', 'name')
-                    ->searchable()
+                    // D-174: kisa ad (yoksa lisans adi).
+                    ->getOptionLabelFromRecordUsing(fn (Project $record): string => ProjectNames::optionLabel($record))
+                    ->searchable(ProjectNames::searchColumns())
                     ->preload(),
                 SelectFilter::make('status')
                     ->label(__('project_supply_item.fields.status'))

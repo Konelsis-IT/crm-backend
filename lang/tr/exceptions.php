@@ -44,6 +44,8 @@ return [
         'same_project_required' => 'Bağlanan kayıtlar aynı projeye ait olmalı.',
         'project_component_duplicate' => 'Bu bileşen projede zaten tanımlı; aynı bileşen ikinci kez eklenemez.',
         'allocation_exceeded' => 'Dağılım yüzdelerinin toplamı 100\'ü aşamaz (şu an :total).',
+        // D-175
+        'coordinator_not_active' => 'Proje tipi koordinatörü olarak yalnız aktif bir personel seçilebilir.',
     ],
 
     'actor_required' => 'Bu işlem için oturum açmış bir personel gerekir.',
@@ -131,5 +133,10 @@ return [
         'invalid_release_version' => 'Sürüm numarası ":version" geçersiz. "2.4" ya da "2.4.1" biçiminde yazın.',
         'release_already_published' => ':version zaten canlıdaki yayın sürümü.',
         'release_downgrade' => ':version, canlıdaki :current sürümünden eski. Geri almak istiyorsanız komutu --geri-al seçeneğiyle çalıştırın; :current ile gelen özellikler yeniden kapanır.',
+    ],
+    // D-176: Tum belgeleri indir.
+    'document' => [
+        'bundle_empty' => 'Bu kayıtta indirebileceğiniz belge yok.',
+        'bundle_not_created' => 'Belgeler ZIP dosyasına yazılamadı. Biraz sonra yeniden deneyin.',
     ],
 ];

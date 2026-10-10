@@ -8,7 +8,10 @@ use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\BusinessCaseChecklistAnswer;
 use App\Models\Acquisition\Contract;
 use App\Models\Acquisition\OperationHandoff;
+use App\Models\Acquisition\ProjectReference;
+use App\Models\Acquisition\ProjectReferenceScopeType;
 use App\Models\Acquisition\Proposal;
+use App\Models\Acquisition\ProposalVersionScopeDocument;
 use App\Models\Acquisition\TenderNotice;
 use App\Models\Acquisition\TenderSource;
 use App\Models\Activity\PersonnelActivity;
@@ -31,6 +34,8 @@ use App\Models\Personnel\PersonnelCompetency;
 use App\Models\Personnel\Training;
 use App\Models\Personnel\TrainingAttendance;
 use App\Models\Project\Project;
+use App\Models\Project\ProjectScope;
+use App\Models\Project\ProjectTypeCoordinator;
 use App\Models\Project\ProjectStageInstance;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Project\StageTemplate;
@@ -76,7 +81,7 @@ enum Feature: string
      * yayinladigini soyleyince bir artirilir (2.4 -> 2.5). Hicbir ozelligin
      * surumu bundan buyuk olamaz (safe-verify).
      */
-    public const NEXT_RELEASE = '2.5';
+    public const NEXT_RELEASE = '2.6';
 
     /**
      * Bekleme surumu (D-164, 6 Ekim 2026 kullanici karari: "Ben sana bunlari
@@ -118,6 +123,10 @@ enum Feature: string
     case Transmittals = 'documents.transmittals';
     case DocumentTypes = 'documents.types';
     case DocumentTemplates = 'documents.templates';
+    // D-176: kayitta birikmis belgelerin klasorlu ZIP'i (teklif, potansiyel is).
+    case DocumentBundles = 'documents.bundles';
+    // D-186: Excel / CSV / Word dosyalarini indirmeden onizleme (ek paket yok).
+    case DocumentOfficePreview = 'documents.office_preview';
 
     // Is alim
     case Acquisition = 'acquisition';
@@ -130,17 +139,35 @@ enum Feature: string
     case BusinessCaseStageTabs = 'acquisition.business_cases.stage_tabs';
     case DealTrack = 'acquisition.deal_track';
     case AcquisitionDrafts = 'acquisition.drafts';
+    // D-178: teklif ve potansiyel is detayinda durum menusu (kapaliyken D-161 sabit dugme).
+    case AcquisitionQuickStatus = 'acquisition.quick_status';
     case Proposals = 'acquisition.proposals';
     case ProposalStatusTabs = 'acquisition.proposals.status_tabs';
+    // D-176: Dokumanlar'daki Genel katalog her teklifte otomatik (kopya yok, okumada iliski).
+    case AutomaticDocuments = 'acquisition.proposals.automatic_documents';
+    // D-181: teklif kapsaminda kapsam listesinin yaninda Maliyet listesi (B51).
+    case ProposalCostLists = 'acquisition.proposals.cost_lists';
     case Contracts = 'acquisition.contracts';
     case OperationHandoffs = 'acquisition.operation_handoffs';
     case Tenders = 'acquisition.tenders';
     case MeetingPlans = 'acquisition.meeting_plans';
     case MeetingPlanQuickParty = 'acquisition.meeting_plans.quick_party';
     case ActivityAreas = 'acquisition.activity_areas';
+    // D-177: Referanslar, teklifteki referans listesi, Otomasyon / Process tipi, proje tipi ekleme.
+    // D-183: Referanslar Ayarlar'da sekmeli; teklifte kapsam bolumu basliginda Referanslar + indir.
+    case References = 'acquisition.references';
+    case ReferenceExcel = 'acquisition.references.excel';
+    case ProposalReferences = 'acquisition.references.proposal_field';
+    case ScopeAutomation = 'acquisition.scope_automation';
+    case ScopeTypeAdd = 'acquisition.scope_type_add';
 
     // Projeler
     case Projects = 'projects';
+    // D-174: kisa ad + Lisans adi, proje tipleri (B48 uygulanana kadar ekranda yok).
+    case ProjectShortName = 'projects.short_name';
+    case ProjectScopeTypes = 'projects.scope_types';
+    // D-175: proje tipi koordinatorleri (B49 uygulanana kadar ekranda yok).
+    case ProjectTypeCoordinators = 'projects.type_coordinators';
     case SupplyItems = 'projects.supply_items';
     case StageGates = 'projects.stage_gates';
     case ProjectCatalogs = 'projects.catalogs';
@@ -158,6 +185,10 @@ enum Feature: string
     case ReportExports = 'reports.exports';
     case ReportPdf = 'reports.exports.pdf';
     case ReportExcel = 'reports.exports.excel';
+    // D-179: gunluk / haftalik rapor yazilirken panodan is secme ve tek tikla
+    // eklenen oneriler (is panosu kapaliysa ikisi de gorunmez).
+    case ReportPickWorkItems = 'reports.pick_work_items';
+    case ReportWorkSuggestions = 'reports.work_suggestions';
 
     // Is takibi
     case Work = 'work';
@@ -204,6 +235,16 @@ enum Feature: string
     case PdfExport = 'tools.exports.pdf';
     case ReleaseNotes = 'tools.release_notes';
     case UiGallery = 'tools.ui_gallery';
+    // Departman panolari denemesi (D-173, React): genel yerlesim + bilesen katalogu;
+    // gorunen tablonun Excel / PDF'i arayuze ozel anahtarlarla (D-167).
+    case UiDashboards = 'tools.ui_gallery.dashboards';
+    case UiDashboardExports = 'tools.ui_gallery.dashboards.exports';
+    case UiDashboardExcel = 'tools.ui_gallery.dashboards.exports.excel';
+    case UiDashboardPdf = 'tools.ui_gallery.dashboards.exports.pdf';
+    case UiDashboardComponents = 'tools.ui_gallery.dashboard_components';
+    // Maliyet kalemleri denemesi (D-187, React): Excel maliyet listesinin Urun/Hizmet,
+    // Idari Kadro, Genel Giderler sekmeleri, departman onaylari, katalog eslestirmesi, Icmal.
+    case UiCostItems = 'tools.ui_gallery.cost_items';
 
     /** Ust ozellik; kod noktasindan once gelen kisim. */
     public function parent(): ?self
@@ -288,7 +329,11 @@ enum Feature: string
             self::Tenders => [TenderNotice::class, TenderSource::class],
             self::MeetingPlans => [MeetingPlan::class],
             self::ActivityAreas => [ActivityArea::class],
+            self::References => [ProjectReference::class, ProjectReferenceScopeType::class],
+            self::ProposalCostLists => [ProposalVersionScopeDocument::class],
             self::Projects => [Project::class],
+            self::ProjectScopeTypes => [ProjectScope::class],
+            self::ProjectTypeCoordinators => [ProjectTypeCoordinator::class],
             self::SupplyItems => [ProjectSupplyItem::class],
             self::StageGates => [ProjectStageInstance::class],
             self::StageTemplates => [StageTemplate::class],
@@ -338,6 +383,8 @@ enum Feature: string
             self::Transmittals => ['Teslim tutanakları', 'Doküman > Teslim Tutanakları ekranı.', 'D-66', '5.0'],
             self::DocumentTypes => ['Doküman tipleri', 'Ayarlar > Doküman Tipleri ekranı.', 'D-66', '1.0'],
             self::DocumentTemplates => ['Doküman şablonları', 'Ayarlar > Şablonlar ekranı.', 'D-66', '1.0'],
+            self::DocumentOfficePreview => ['Belge önizleme: Excel ve Word', 'Excel (xlsx, xlsm, ods), CSV ve Word (docx) dosyaları indirilmeden yeni sekmede önizlenir: Excel\'de sayfa sekmeleriyle tablo (ilk 500 satır, 50 sütun), Word\'de başlıklar, paragraflar ve tablolar. Belge kartlarında (teklif kapsam ve belge kutuları, potansiyel iş belgeleri) dosyaya tıklamak önizler, yanındaki küçük simge indirir; PDF ve görseller de yeni sekmede açılır. Teklifin Dokümanlar tablosunda "Önizle" simgesi. Kapanınca dosyalar eskisi gibi tıklayınca iner.', 'D-186', '2.6'],
+            self::DocumentBundles => ['Tüm belgeleri indir','"Tüm belgeleri indir" düğmesi: teklif ve potansiyel iş sayfalarının ve düzenleme ekranlarının başlığında (simge), teklifin Dokümanlar sekmesinde ve potansiyel işin Belgeler kartında. Kayıttaki bütün belgeler (teklifte referans listesi Excel\'i dahil) klasörlere ayrılmış tek ZIP dosyası olarak iner. Kapanınca belgeler yine tek tek indirilir.', 'D-176, D-184', '2.6'],
 
             self::Acquisition => ['İş alım', 'İş Alım menüsünün tamamı: taraflar, potansiyel işler, teklifler, sözleşmeler, ihaleler, görüşme planı. Alt özellikler de kapanır.', 'D-67', '1.0'],
             self::Parties => ['Taraflar', 'İş Alım > Taraflar ekranı ve taraf kartı.', 'D-67', '1.0'],
@@ -349,16 +396,27 @@ enum Feature: string
             self::BusinessCaseStageTabs => ['İş Geliştirme: Durum sekmeleri', 'İş Geliştirme listesindeki Tümü / Yatırımcı Projeleri / Potansiyel İşler / Teklifte / Taslaklar sekmeleri; taslaklar yalnız kendi sekmesinde görünür. Kapanınca liste Tümü / Taslaklar sekmeleriyle gelir.', 'D-162', '2.4'],
             self::DealTrack => ['Bu iş nerede?', 'Teklif ve potansiyel iş sayfalarındaki "Bu iş nerede?" bölümü (potansiyel iş → teklif → proje hattı, özet etiketler, Projeye dönüştür durağı). Sayfanın kartları ve sekmeleri etkilenmez.', 'D-143', '2.3'],
             self::AcquisitionDrafts => ['Taslak kaydı: ihale, potansiyel iş, teklif', 'Sihirbaz adımlarındaki "Taslak olarak kaydet", listelerdeki Taslaklar sekmesi ve taslağın kaldığı adımdan açılması. Kapanınca kayıtlar normal kaydedilir.', 'D-155', '2.4'],
+            self::AcquisitionQuickStatus => ['Detayda durum değiştirme: teklif, potansiyel iş', 'Teklif ve potansiyel iş detay sayfasının başındaki durum düğmesi (teklifte Teklif durumu: Verilecek / Verilen / Onaylandı / Kaçan fırsat): tıklayınca geçilebilecek durumlar kendi renkleri ve simgeleriyle açılır, seçilen durum hemen kaydedilir (yeni teklif sürümü açılmaz). Kapanınca durum detayda sabit düğme olarak görünür ve düzenleme ekranının başındaki durum düğmesinden değiştirilir.', 'D-178 / D-182', '2.6'],
             self::Proposals => ['Teklifler', 'İş Alım > Teklifler, teklif sürümleri ve maliyet tahminleri.', 'D-67', '1.0'],
             self::ProposalStatusTabs => ['Teklifler: Durum sekmeleri', 'Teklifler listesindeki Tümü / Verilen Teklifler / Verilecek Teklifler / Kaçan Fırsat sekmeleri. Kapanınca liste sekmesiz gelir.', 'D-136', '2.2'],
+            self::AutomaticDocuments => ['Teklifler: Otomatik şirket belgeleri', 'Dokümanlar\'a yüklenen en yeni Genel katalog her teklifte kendiliğinden görünür: Teklif belgeleri bölümünün başlığındaki ve Dokümanlar sekmesindeki "Genel katalog" düğmesi ile Dokümanlar tablosundaki Genel katalog satırı PDF\'i yeni sekmede açar; katalog tüm belgeler ZIP\'ine de girer. Belge teklife kopyalanmaz. Kapanınca düğme ve satır görünmez, katalog teklife eskisi gibi "Genel kataloğu ekle" seçimiyle bağlanır.', 'D-176, D-184', '2.6'],
+            self::ProposalCostLists => ['Teklif: Maliyet listesi', 'Teklif oluştur / düzenle ekranında her proje tipinin kapsam bölümünde, kapsam listesinin yanında "Maliyet listesi" yükleme alanı (Excel, birden fazla dosya; her dosya yeni belge, D-186); teklif sayfasındaki ve Sürümler penceresindeki kapsam kartında maliyet listeleri, tüm belgeler ZIP\'inde "Maliyet listeleri" klasörü ve doküman sayfasındaki bağlantısı. Kapanınca alan ve listeler görünmez; yüklenmiş belgeler Dokümanlar\'da kalır.', 'D-181', '2.8'],
             self::Contracts => ['Sözleşmeler', 'İş Alım > Sözleşmeler ve sözleşme sürümleri.', 'D-67', '2.4'],
             self::OperationHandoffs => ['Operasyona devirler', 'Tekliften operasyona devir kayıtları ve sürümleri.', 'D-67', '1.0'],
             self::Tenders => ['İhaleler', 'İhaleler menüsü: ihale ilanları ve ihale kaynakları.', 'D-107', '1.0'],
             self::MeetingPlans => ['Görüşme planı', 'İş Alım > Görüşme Planı, takvimi, hatırlatmaları ve taraf kartındaki görüşme sekmesi.', 'D-109', '1.7'],
             self::MeetingPlanQuickParty => ['Görüşme planı: Firma ekle', 'Görüşme planlarken firma listede yoksa firma alanının yanındaki "Firma ekle" penceresi; eklenen firma alanda seçili gelir. Kapanınca firma yalnız Taraflar ekranından eklenir.', 'D-156', '2.4'],
             self::ActivityAreas => ['Faaliyet alanları', 'Ayarlar > Faaliyet Alanları ekranı (pazar haritası).', 'D-107', '1.7'],
+            self::References => ['Referanslar', 'Ayarlar > Referanslar ekranı: şirketin referans listesi proje tipine göre sekmelerde (Tümü, GES, HES, RES, BESS, TM, ENH/EİH, Otomasyon / Process; sayılarıyla); referans ekleme, düzenleme, arşivleme. Alt özellikler (Excel, teklifteki Referanslar düğmeleri) de kapanır; kayıtlı referanslar silinmez.', 'D-177, D-183', '2.6'],
+            self::ReferenceExcel => ['Referanslar: Excel', 'Referans listesinin Excel çıktısı Excel\'deki biçimde (her proje tipi ayrı sayfa, "GES REFERANSLARIMIZ" başlığı, sıra no ve referans metni): Referanslar ekranında (açık sekmenin tipi), teklifteki referans penceresinde ve teklif kapsam bölümlerinin başlığındaki indir simgesinde.', 'D-177, D-183', '2.6'],
+            self::ProposalReferences => ['Teklif: Referanslar', 'Teklif oluştur / düzenle adımında ve teklif sayfasındaki kapsam kartında her proje tipi bölümünün (GES kapsamı, BESS kapsamı…) başlığında "Referanslar" düğmesi ve yanında indir simgesi: düğme o tipin referans tablosunu (arama, süzgeç, Excel, Referans ekle) pencerede açar, simge o tipin referanslarını Excel olarak indirir. Teklifin Dokümanlar tablosunda da "Referans listesi" satırı (ör. "GES · 166 referans"): satır teklifin proje tiplerinin referanslarını Excel olarak indirir, referanslar teklife kopyalanmaz.', 'D-177, D-184', '2.6'],
+            self::ScopeAutomation => ['Proje tipi: Otomasyon / Process', 'Potansiyel iş, teklif, proje, koordinatör ve firma faaliyet seçimlerinde "Otomasyon / Process" tipi; teklif kapsamında Toplam maliyet - Toplam satış ve kapsam belgesi. Kapanınca tip seçilemez; kayıtlı satırlar görünmeye devam eder.', 'D-177', '2.6'],
+            self::ScopeTypeAdd => ['Yeni proje tipi eklemek istiyorum', 'Potansiyel iş düzenle, teklif oluştur ve teklif düzenle ekranında (teklifte Teklif bilgileri\'nin sağındaki Proje tipi bölümü, D-186) proje tipi seçimi bir onay kutusunun arkasında: kayıtlı tipler rozet olarak görünür, kutu işaretlenince yeni tip ve kapsam bölümleri eklenebilir (kayıtlı tip kaldırılmaz). Kapanınca potansiyel iş düzenlemede tip seçimi eskisi gibi açık, teklif düzenlemede tip seçimi yok.', 'D-177', '2.6'],
 
             self::Projects => ['Projeler', 'Projeler ekranı, proje kartı ve alt ekranları (workstream, iş kırılımı, iş paketleri, gecikmeler, departman devirleri). Alt özellikler de kapanır.', 'D-67', '1.0'],
+            self::ProjectShortName => ['Projeler: Kısa ad ve Lisans adı', 'Projenin Kısa ad alanı; proje adı alanı "Lisans adı" olarak görünür. Listede kısa ad ve altında lisans adı, kartta ve diğer ekranlarda kısa ad. Kapanınca projeler eskisi gibi tek "Ad" ile görünür; kayıtlı kısa adlar silinmez.', 'D-174', '2.7'],
+            self::ProjectScopeTypes => ['Projeler: Proje tipi', 'Proje oluştur / düzenle ekranında proje tipi seçimi (GES, RES, TM, HES, BESS, ENH/EİH) ve tip başına proje ölçüleri; listede proje tipi sütunu, proje sayfasında tipler ve kapsam kartı. Tekliften dönüşen projeye tipler yine kopyalanır; kapanınca yalnız ekranda görünmez.', 'D-174', '2.7'],
+            self::ProjectTypeCoordinators => ['Projeler: Proje tipi koordinatörleri', 'Proje Grubu > Proje tipi koordinatörleri ekranı (her proje tipinin koordinatörü atanır, değiştirilir, kaldırılır); personel kartında ve detayında "GES koordinatörü" gibi rozet; proje sayfasında tiplerin koordinatörleri; proje listesinde koordinatör sütunu ve süzgeci. Kapanınca atamalar silinmez, yalnız görünmez.', 'D-175', '2.7'],
             self::SupplyItems => ['Tedarik kalemleri', 'Satın Alma > Tedarik Kalemleri ve projedeki tedarik sekmesi.', 'D-68', '1.0'],
             self::StageGates => ['Proje onay kapıları', 'Proje kartındaki onay kapıları (kanıt, inceleme, muafiyet).', 'D-67', '1.0'],
             self::ProjectCatalogs => ['Proje ayarları', 'Ayarlar altındaki proje tanımları: bileşenler, operasyon grupları, odak beklentileri, onay kapısı şablonları. Alt özellikler de kapanır.', 'D-68', '1.0'],
@@ -373,6 +431,8 @@ enum Feature: string
             self::ReportExports => ['Raporlar: Dışa aktarım', 'Rapor listesi ve rapor detayındaki PDF ve Excel indirme. Genel dışa aktarımdan (Araçlar) bağımsızdır. Alt özellikler de kapanır.', 'D-167', '2.4'],
             self::ReportPdf => ['Raporlar: PDF', 'Rapora özel düzenli PDF çıktısı (kişi, tarih, biçimli rapor metni).', 'D-167', '2.4'],
             self::ReportExcel => ['Raporlar: Excel', 'Raporun Excel çıktısı (özet ve rapor satırları).', 'D-167', '2.4'],
+            self::ReportPickWorkItems => ['Raporlar: Panodan iş ekleme', 'Günlük / haftalık rapor oluştur ve düzenle ekranında "Panodan iş ekle" seçim kutusu: kişinin iş panosunda daha önce oluşmuş işleri (dönemin işleri önce) aranıp rapora iş kalemi olarak eklenir. Kapanınca işler yine elle yazılır; dönemin kartları eskisi gibi kendiliğinden gelir.', 'D-179', '2.6'],
+            self::ReportWorkSuggestions => ['Raporlar: Yazarken öneriler', 'Günlük / haftalık rapor oluştur ve düzenle ekranında Öneriler listesi: dönemin rapora girmemiş işleri ve iş panosu önerileri tek tıkla "Ekle" ile rapora eklenir; eklenenler "Eklendi" olarak işaretlenir. Kapanınca liste görünmez.', 'D-179', '2.6'],
 
             self::Work => ['İş takibi', 'İş kartları: İşler, İş panosu, Kontrol matrisi, Analizler. Alt özellikler de kapanır.', 'D-115', '1.9'],
             self::WorkItems => ['İşler ekranı', 'Raporlar > İşler listesi ve genel bakıştaki Görevlerim ve işlerim ile sayılar.', 'D-115', '1.9'],
@@ -414,6 +474,12 @@ enum Feature: string
             self::PdfExport => ['PDF indirme', 'Detay sayfalarındaki "PDF" seçeneği.', 'D-110', '5.0'],
             self::ReleaseNotes => ['Sürüm notları', 'Kullanıcı menüsündeki sürüm notları penceresi. Notlar kodda yazılmaya devam eder; kapalıyken arayüzde görünmez.', 'D-91', '5.0'],
             self::UiGallery => ['UI Deneme', 'UI Deneme kataloğu (yalnız tam yetkili kişiler).', 'D-77', '5.0'],
+            self::UiDashboards => ['UI Deneme: Departman panoları', 'UI Deneme > Departman panoları: departman seçicili genel pano yerleşimi (Genel / Teklif - İş Geliştirme / Yönetici), gerçek verilerle. Durum düğmeleri kayıt değiştirmez.', 'D-173', '5.0'],
+            self::UiDashboardExports => ['UI Deneme: Departman panoları dışa aktarım', 'Departman panolarındaki tabloların Excel ve PDF indirme düğmeleri. Alt özellikler de kapanır.', 'D-173', '5.0'],
+            self::UiDashboardExcel => ['UI Deneme: Departman panoları Excel', 'Görünen tablonun (seçili sütunlar ve süzgeçlerle) Excel çıktısı.', 'D-173', '5.0'],
+            self::UiDashboardPdf => ['UI Deneme: Departman panoları PDF', 'Görünen tablonun (seçili sütunlar ve süzgeçlerle) PDF çıktısı.', 'D-173', '5.0'],
+            self::UiDashboardComponents => ['UI Deneme: Pano bileşen kataloğu', 'UI Deneme > Pano bileşenleri: panolara konabilecek numaralı bileşen seçenekleri (gösterge bandı, birleşik grafikler, yoğun tablolar, huni, ısı haritası...).', 'D-173', '5.0'],
+            self::UiCostItems => ['UI Deneme: Maliyet kalemleri', 'UI Deneme > Maliyet kalemleri: Excel maliyet listesinin Ürün/Hizmet, İdari Kadro ve Genel Giderler sekmeleri, kalem başına departman onayları, katalog eşleştirmesi ve İcmal için numaralı tasarım seçenekleri. Deneme; kayıt değiştirmez.', 'D-187', '5.0'],
         };
     }
 }

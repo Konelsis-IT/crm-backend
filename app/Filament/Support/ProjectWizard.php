@@ -9,6 +9,7 @@ use App\Enums\Project\ExpectationKind;
 use App\Enums\Project\ProjectStatus;
 use App\Enums\Project\WorkstreamStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Projects\RelationManagers\AutomationDocumentsRelationManager;
@@ -35,6 +36,7 @@ use App\Query\Project\ProjectCatalogQueries;
 use App\Query\Project\ProjectStepReadiness;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Project\ProjectService;
+use App\Support\Projects\ProjectNames;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -179,7 +181,7 @@ final class ProjectWizard
             Step::make(__('project.wizard.identity'))
                 ->id(self::STEP_IDENTITY)
                 ->key(self::STEP_IDENTITY)
-                ->description(__('project.wizard.identity_description'))
+                ->description(ProjectNames::shortNameEnabled() ? __('project.wizard.identity_description_named') : __('project.wizard.identity_description'))
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->completedIcon(Heroicon::OutlinedRocketLaunch)
                 ->columns(1)
@@ -212,9 +214,20 @@ final class ProjectWizard
      */
     private function identityFields(bool $isEdit, array $photoComponents): array
     {
+        $named = ProjectNames::shortNameEnabled();
+
         return [
+            // D-174: Kisa ad listelerde ve kartlarda gorunur; eski "Ad" Lisans adidir.
+            TextInput::make('short_name')
+                ->label(__('project.fields.short_name'))
+                ->helperText(__('project.help.short_name'))
+                ->maxLength(120)
+                ->visible($named)
+                ->dehydrated($named)
+                ->columnSpan(FieldGrid::WIDE),
             TextInput::make('name')
-                ->label(__('project.fields.name'))
+                ->label(ProjectNames::nameLabel())
+                ->helperText($named ? __('project.help.license_name') : null)
                 ->required()
                 ->maxLength(255)
                 ->columnSpan(FieldGrid::WIDE),
@@ -227,12 +240,14 @@ final class ProjectWizard
                 ->native(false)
                 ->disabled($isEdit)
                 ->dehydrated(! $isEdit),
+            // D-174: Proje tipi bolumu acikken tek tip secimi gizlenir; kod ilk tipten turer
+            // (ProjectService::createDirect).
             Select::make('project_type_code')
                 ->label(__('project.fields.project_type'))
                 ->options(fn (): array => app(ProjectCatalogQueries::class)->componentDefinitionOptions())
                 ->searchable()
                 ->native(false)
-                ->visibleOn('create'),
+                ->visible(fn (string $operation): bool => $operation === 'create' && ! ProjectNames::scopeTypesEnabled()),
             Select::make('criticality_profile')
                 ->label(__('project.fields.criticality_profile'))
                 ->options(CriticalityProfile::class)
@@ -267,10 +282,13 @@ final class ProjectWizard
      */
     public function identitySections(bool $isEdit, array $photoComponents = []): array
     {
-        return FieldGrid::group($this->identityFields($isEdit, $photoComponents), [
-            'identity' => ['label' => __('project.sections.identity'), 'icon' => Heroicon::OutlinedIdentification, 'fields' => ['name', 'customer_party_id', 'project_type_code', 'criticality_profile', 'classification_id', 'legacy_reference']],
+        $sections = FieldGrid::group($this->identityFields($isEdit, $photoComponents), [
+            'identity' => ['label' => __('project.sections.identity'), 'icon' => Heroicon::OutlinedIdentification, 'fields' => ['short_name', 'name', 'customer_party_id', 'project_type_code', 'criticality_profile', 'classification_id', 'legacy_reference']],
             'description' => ['label' => $isEdit ? __('project.sections.description') : __('project.sections.description_cover'), 'icon' => Heroicon::OutlinedDocumentText, 'fields' => ['description', 'cover_file', 'cover_caption']],
         ]);
+
+        // D-174: proje tipi ve tip basina olculer (ozellik + B48 kapaliyken gorunmez).
+        return [...$sections, app(ProjectScopeSchema::class)->formSection()];
     }
 
     /**
@@ -319,13 +337,13 @@ final class ProjectWizard
                 ->searchable()
                 ->required()
                 ->native(false)
+                // D-180: sozlesme tutarinin simgesi secimle birlikte degisir.
+                ->live()
                 ->disabled($isEdit)
                 ->dehydrated(! $isEdit),
-            TextInput::make('contract_value_snapshot')
+            MoneyInput::make('contract_value_snapshot')
                 ->label(__('project.fields.contract_value'))
                 ->helperText($isEdit ? __('project.help.contract_value_locked') : null)
-                ->numeric()
-                ->minValue(0)
                 ->disabled($isEdit)
                 ->dehydrated(! $isEdit),
             ...$this->dateFields(),

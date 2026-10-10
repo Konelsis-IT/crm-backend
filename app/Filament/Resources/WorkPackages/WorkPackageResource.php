@@ -111,7 +111,7 @@ class WorkPackageResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('work_package.fields.project'))
                     ->limit(30),
                 TextColumn::make('package_code')

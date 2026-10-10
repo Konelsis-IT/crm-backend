@@ -11,6 +11,7 @@ use App\Filament\Resources\Projects\Pages\Concerns\OpensChecklistTargets;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ProjectScopeSchema;
 use App\Filament\Support\ProjectWizard;
 use App\Models\Project\Project;
 use App\Services\Project\ProjectPhotoService;
@@ -98,6 +99,20 @@ class EditProject extends EditRecord
                 ->label(__('project.actions.open_workspace'))
                 ->icon(Heroicon::OutlinedRocketLaunch),
         ];
+    }
+
+    /**
+     * D-174: kayitli proje tipleri ve tip basina olculer formda gelir.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        /** @var Project $project */
+        $project = $this->getRecord();
+
+        return [...$data, ...ProjectScopeSchema::formData($project)];
     }
 
     protected function handleRecordUpdate(Model $record, array $data): Model

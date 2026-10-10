@@ -13,6 +13,7 @@ use App\Exceptions\InvalidTransitionException;
 use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
 use App\Services\AbstractService;
+use App\Services\Acquisition\Concerns\ProposalAmendment;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Support\OptimisticLock;
@@ -28,7 +29,9 @@ use Illuminate\Support\Carbon;
  * changeStatus: approved'da version_hash kilitlenir ve onceki
  * approved/submitted surumler superseded olur; submitted'da gonderim
  * kaniti/kanali yazilir ve business case 'submitted' asamasina tasinir.
- * revise (B43, D-155): teklif duzenlemedeki degisiklik yeni guncel surum acar.
+ * revise (B43, D-155): yeni guncel surum acar. D-186: yalniz personelin
+ * "Yeni teklif surumu" dugmesiyle; "Duzenle" guncel surumu yerinde degistirir
+ * (update + ProposalAmendment, refreshHash).
  */
 final class ProposalVersionService extends AbstractService
 {
@@ -90,7 +93,9 @@ final class ProposalVersionService extends AbstractService
         /** @var ProposalVersion $current */
         $current = $this->show($record);
 
-        if (! in_array($current->status, [ProposalVersionStatus::Draft, ProposalVersionStatus::Review], true)) {
+        // D-186: teklif "Duzenle" guncel surumu durumundan bagimsiz yerinde duzeltir
+        // (ProposalAmendment yalniz o surum ve o cagri icin izin verir).
+        if (! ProposalAmendment::allows($current->getKey()) && ! in_array($current->status, [ProposalVersionStatus::Draft, ProposalVersionStatus::Review], true)) {
             throw InvalidTransitionException::make(['from' => $current->status->getLabel(), 'to' => '-']);
         }
 
@@ -100,9 +105,9 @@ final class ProposalVersionService extends AbstractService
     }
 
     /**
-     * Teklif duzenlemedeki gercek degisiklik yeni surumdur (B43, D-155; 5 Ekim
-     * 2026 kullanici karari: "Teklif duzenle dedigimizde herhangi bir degisiklik
-     * yaptiysak, zaten bu yeni versiyondur"). Yeni surum taslak acilir ve teklifin
+     * Teklifin yeni surumu (B43, D-155; D-186 ile yalniz "Yeni teklif surumu"
+     * dugmesinden: "Komple teklifte yeni surum secenegi olacak ... bu hamle teklif
+     * surumunu 2 yapacaktir"). Yeni surum taslak acilir ve teklifin
      * guncel surumu olur; onceki guncel surum "superseded" olur — taslak ya da
      * incelemedeki surum icin de (normal gecis tablosunun disinda, yalniz bu
      * yolda). Teklif kokunun surume bagli durumu (inceleme / onay / gonderim)
@@ -251,6 +256,25 @@ final class ProposalVersionService extends AbstractService
 
             return $version;
         });
+    }
+
+    /**
+     * D-186: yerinde duzeltilen onayli / gonderilmis surumun ozeti (hash) yeni
+     * icerikle yeniden hesaplanir; hash'i olmayan surume dokunulmaz.
+     */
+    public function refreshHash(ProposalVersion $version): void
+    {
+        $version->refresh();
+
+        if ($version->version_hash === null) {
+            return;
+        }
+
+        $hash = $this->hashVersion($version);
+
+        if ($hash !== $version->version_hash) {
+            $version->forceFill(['version_hash' => $hash])->save();
+        }
     }
 
     private function syncBusinessCaseStage(Proposal $proposal, ProposalVersionStatus $target): void

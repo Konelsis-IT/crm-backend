@@ -14,13 +14,17 @@ use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\Projects\Pages\ViewProject;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\ProjectTypeCoordinatorSchema;
 use App\Filament\Support\ProjectWizard;
+use App\Filament\Support\RecordLinks;
 use App\Models\Project\Project;
 use App\Query\Project\ProjectCatalogQueries;
+use App\Query\Project\ProjectTypeCoordinatorQueries;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectService;
+use App\Support\Projects\ProjectNames;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -34,7 +38,9 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -65,6 +71,34 @@ class ProjectResource extends Resource
         return __('project.plural');
     }
 
+    /** D-174: baslik ve kirintilar kisa adla (yoksa lisans adi). */
+    public static function getRecordTitle(?Model $record): string | Htmlable | null
+    {
+        return $record instanceof Project ? $record->display_name : parent::getRecordTitle($record);
+    }
+
+    /**
+     * Genel arama (D-174): lisans adi ve kisa ad.
+     *
+     * @return list<string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ProjectNames::schemaReady() ? ['name', 'short_name'] : ['name'];
+    }
+
+    /**
+     * Kisa adla gorunen sonucta lisans adi da yazar.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        $license = $record instanceof Project ? ProjectNames::licenseNameIfDifferent($record) : null;
+
+        return $license === null ? [] : [__('project.fields.license_name') => $license];
+    }
+
     public static function canAccess(): bool
     {
         return FeatureFlags::enabled(Feature::Projects)
@@ -93,11 +127,20 @@ class ProjectResource extends Resource
                     ->badge()
                     ->color('gray')
                     ->searchable(),
+                // D-174: tek sutunda kisa ad, altinda lisans adi; iki adla da aranir.
                 TextColumn::make('name')
-                    ->label(__('project.fields.name'))
+                    ->label(fn (): string => ProjectNames::shortNameEnabled() ? __('project.fields.names') : __('project.fields.name'))
+                    ->formatStateUsing(fn (Project $record): string => $record->display_name)
+                    ->description(fn (Project $record): ?string => ProjectNames::licenseNameIfDifferent($record))
                     ->limit(40)
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => app(ProjectCatalogQueries::class)->searchByName($query, $search))
+                    ->sortable(ProjectNames::schemaReady() ? ['short_name', 'name'] : ['name']),
+                // D-174: proje tipi rozetleri (tipin rengi ve simgesi, teklif listesindeki gibi).
+                TextColumn::make('scopes.scope_type')
+                    ->label(__('project.fields.scope_types'))
+                    ->badge()
+                    ->placeholder('-')
+                    ->visible(fn (): bool => ProjectNames::scopeTypesEnabled()),
                 TextColumn::make('customerParty.display_name')
                     ->label(__('project.fields.customer_party'))
                     ->limit(30)
@@ -105,6 +148,15 @@ class ProjectResource extends Resource
                 TextColumn::make('projectManager.full_name')
                     ->label(__('project.fields.project_manager'))
                     ->toggleable(),
+                // D-175: projenin tiplerinin koordinatorleri ("GES: Ertugrul Sahin").
+                TextColumn::make('project_type_coordinators')
+                    ->label(__('project_type_coordinator.fields.project_coordinator'))
+                    ->state(fn (Project $record): array => app(ProjectTypeCoordinatorSchema::class)->projectNames($record))
+                    ->listWithLineBreaks()
+                    ->icon(RecordLinks::PERSONNEL_ICON)
+                    ->placeholder('-')
+                    ->visible(fn (): bool => ProjectNames::coordinatorsEnabled() && ProjectNames::scopeTypesEnabled())
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->label(__('project.fields.status'))
                     ->badge(),
@@ -153,6 +205,14 @@ class ProjectResource extends Resource
                 SelectFilter::make('origin')
                     ->label(__('project.fields.origin'))
                     ->options(ProjectOrigin::class),
+                // D-175: secilen koordinatorun tiplerinden birini tasiyan projeler.
+                SelectFilter::make('type_coordinator')
+                    ->label(__('project_type_coordinator.fields.project_coordinator'))
+                    ->options(fn (): array => app(ProjectTypeCoordinatorQueries::class)->coordinatorOptions())
+                    ->query(fn (Builder $query, array $data): Builder => blank($data['value'] ?? null)
+                        ? $query
+                        : app(ProjectTypeCoordinatorQueries::class)->applyCoordinatorFilter($query, (int) $data['value']))
+                    ->visible(fn (): bool => ProjectNames::coordinatorsEnabled() && ProjectNames::scopeTypesEnabled()),
                 SelectFilter::make('criticality_profile')
                     ->label(__('project.fields.criticality_profile'))
                     ->options(CriticalityProfile::class),

@@ -6,8 +6,11 @@ namespace App\Filament\Resources\ApprovalPolicyVersions\Schemas;
 
 use App\Enums\Approval\ApprovalMode;
 use App\Enums\Approval\RiskLevel;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\FormState;
+use App\Query\Reference\ReferenceOptions;
+use App\Support\Money;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -75,19 +78,19 @@ final class PolicyVersionForm
                 ->collapsible()
                 ->collapsed()
                 ->components(FieldGrid::fields([
-                    TextInput::make('applies_min_amount')
-                        ->label(__('approval_policy_version.fields.applies_min_amount'))
-                        ->numeric()
-                        ->minValue(0),
-                    TextInput::make('applies_max_amount')
-                        ->label(__('approval_policy_version.fields.applies_max_amount'))
-                        ->numeric()
-                        ->minValue(0),
-                    TextInput::make('currency_code')
+                    // D-180: tutarlar Turkce maskeli, para birimi simgesiyle; para
+                    // birimi serbest metin ("TRY") yerine simgeli secim (ISO kodu saklanir).
+                    MoneyInput::make('applies_min_amount')
+                        ->label(__('approval_policy_version.fields.applies_min_amount')),
+                    MoneyInput::make('applies_max_amount')
+                        ->label(__('approval_policy_version.fields.applies_max_amount')),
+                    Select::make('currency_code')
                         ->label(__('approval_policy_version.fields.currency_code'))
-                        ->maxLength(3)
-                        ->minLength(3)
-                        ->placeholder('TRY'),
+                        ->options(fn (): array => app(ReferenceOptions::class)->currencies())
+                        ->placeholder(fn (): string => Money::label(Money::defaultCurrency()))
+                        ->searchable()
+                        ->native(false)
+                        ->live(),
                 ])),
             Section::make(__('approval_policy_version.sections.note'))
                 ->icon(Heroicon::OutlinedPencilSquare)

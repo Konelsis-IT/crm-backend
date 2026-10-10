@@ -42,6 +42,7 @@ use App\Services\Party\PartyService;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\Acquisition\ScopeTypes;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -325,7 +326,9 @@ class PartyResource extends Resource
                         ->schema([
                             Select::make('project_type')
                                 ->label(__('party.fields.project_type'))
-                                ->options(ProjectScopeType::class)
+                                // D-177: Otomasyon / Process B50 ve ozellikle; kayitli deger kalir.
+                                ->options(fn (Select $component): array => ScopeTypes::optionsKeeping($component->getState()))
+                                ->enum(ProjectScopeType::class)
                                 ->placeholder(__('party.values.all_project_types'))
                                 ->native(false),
                             Select::make('activity_area_id')
@@ -601,7 +604,8 @@ class PartyResource extends Resource
                     ->schema([
                         Select::make('project_type')
                             ->label(__('party.fields.project_type'))
-                            ->options(ProjectScopeType::class)
+                            ->options(fn (): array => ScopeTypes::options())
+                            ->enum(ProjectScopeType::class)
                             ->placeholder('-')
                             ->native(false),
                         Select::make('activity_area_id')

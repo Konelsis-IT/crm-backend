@@ -20,7 +20,7 @@ final class DocumentLine
      * Revizyon verilmezse belgenin en yeni revizyonu. Iliskiler onceden
      * yuklendiyse (revisions.files.fileObject) ek sorgu olmaz.
      *
-     * @return array{title: string, revision: string|null, file: string|null, url: string|null}|null
+     * @return array{title: string, revision: string|null, file: string|null, url: string|null, preview: string|null}|null
      */
     public static function info(?Document $document, ?DocumentRevision $revision = null): ?array
     {
@@ -31,15 +31,17 @@ final class DocumentLine
         $document ??= $revision?->document;
         /** @var DocumentRevision|null $revision */
         $revision ??= $document?->revisions->sortByDesc('revision_no')->first();
-        $file = $revision?->files
-            ->first(static fn (DocumentRevisionFile $row): bool => $row->file_role === DocumentRevisionFileRole::Original)
-            ?->fileObject;
+        $row = $revision?->files
+            ->first(static fn (DocumentRevisionFile $row): bool => $row->file_role === DocumentRevisionFileRole::Original);
+        $file = $row?->fileObject;
 
         return [
             'title' => (string) ($document?->title ?? $revision?->title ?? '-'),
             'revision' => $revision?->revision_code,
             'file' => $file?->original_name,
             'url' => $revision !== null ? FileLinks::revisionOriginal($revision, 'download') : null,
+            // D-186: indirmeden goruntuleme (ozellik kapaliysa null; cip eskisi gibi indirir).
+            'preview' => FileLinks::previewFor($row),
         ];
     }
 

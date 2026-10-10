@@ -130,11 +130,14 @@ final class ReportForm
                 ->components(fn (Get $get): array => ($current = $template($get)) !== null
                     ? FieldGrid::fields($current->formComponents())
                     : []),
+            // D-179: panodan is secme kutusu ve tek tikla eklenen oneriler,
+            // is kalemlerinin ustunde (yalniz is panosu kullanan taslaklarda).
             Section::make(__('report.sections.board'))
                 ->description(__('report.help.board'))
                 ->icon(Heroicon::OutlinedViewColumns)
+                ->columns(FieldGrid::COLUMNS)
                 ->visible(fn (Get $get): bool => $template($get)?->hasItems() ?? false)
-                ->components([self::itemsRepeater()]),
+                ->components([...ReportWorkPicker::components($template), self::itemsRepeater()]),
         ]);
     }
 
@@ -200,9 +203,15 @@ final class ReportForm
         }
 
         if ($suggestions->usesBoard($template)) {
+            // D-179: panodan secilen ya da oneriden eklenen kart, yeni donemin
+            // kartlari arasinda yoksa elle yazilan satirlar gibi korunur.
+            $prefillIds = ReportWorkPicker::linkedIds($prefill['items'] ?? []);
             $manual = array_filter(
                 is_array($get('items')) ? $get('items') : [],
-                static fn ($row): bool => is_array($row) && blank($row['work_item_id'] ?? null) && blank($row['carried_from_item_id'] ?? null),
+                static fn ($row): bool => is_array($row) && (
+                    (blank($row['work_item_id'] ?? null) && blank($row['carried_from_item_id'] ?? null))
+                    || ((bool) ($row['picked'] ?? false) && ! in_array((int) $row['work_item_id'], $prefillIds, true))
+                ),
             );
 
             $set('items', [...self::keyedRows($prefill['items'] ?? []), ...$manual]);
@@ -244,6 +253,8 @@ final class ReportForm
                 // Is panosundan gelen kalemin kaynak karti (B36; D-167 Rapor yaz onerisi).
                 Hidden::make('work_item_id'),
                 Hidden::make('is_late'),
+                // D-179: panodan secilen / oneriden eklenen satir (yalniz formda).
+                Hidden::make('picked')->dehydrated(false),
                 TextInput::make('title')
                     ->label(__('report.items.title'))
                     ->required()

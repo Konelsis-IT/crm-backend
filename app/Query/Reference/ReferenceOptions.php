@@ -6,6 +6,7 @@ namespace App\Query\Reference;
 
 use App\Models\Reference\Country;
 use App\Models\Reference\Currency;
+use App\Support\Money;
 
 /**
  * Kod anahtarli referans tablolarinin secim listeleri (ulke, para birimi).
@@ -26,8 +27,10 @@ final class ReferenceOptions
     }
 
     /**
-     * Para birimi listesi; anahtar da deger de ISO kodu (TRY, USD, EUR) —
-     * kullanici karari (10 Eylul 2026): girdilerde uzun ad gosterilmez.
+     * Para birimi listesi; anahtar ISO kodu (kaydedilen deger degismez),
+     * etiket simge + ad ("[TL simgesi] Turk lirasi", "lei Rumen leyi") —
+     * D-180 (8 Ekim 2026): ISO kodu ("TRY") ekranda hic gorulmez; 10 Eylul
+     * 2026'daki "yalniz kod" etiketinin yerini alir.
      *
      * @return array<string, string>
      */
@@ -35,7 +38,10 @@ final class ReferenceOptions
     {
         return Currency::query()
             ->orderBy('code')
-            ->pluck('code', 'code')
+            ->get(['code', 'name_tr'])
+            ->mapWithKeys(static fn (Currency $currency): array => [
+                (string) $currency->code => Money::label((string) $currency->code, $currency->name_tr),
+            ])
             ->all();
     }
 

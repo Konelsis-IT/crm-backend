@@ -52,7 +52,7 @@ final class WorkItemInfolist
                                 ->label(__('work_item.fields.category'))
                                 ->state(fn (WorkItem $record): ?string => $record->categoryLabel())
                                 ->placeholder('–'),
-                            TextEntry::make('project.name')->label(__('work_item.fields.project'))->icon(Heroicon::OutlinedBriefcase)->placeholder('–'),
+                            TextEntry::make('project.display_name')->label(__('work_item.fields.project'))->icon(Heroicon::OutlinedBriefcase)->placeholder('–'),
                             TextEntry::make('parent.title')->label(__('work_item.fields.parent'))->placeholder('–'),
                             TextEntry::make('requester')
                                 ->label(__('work_item.fields.requester'))

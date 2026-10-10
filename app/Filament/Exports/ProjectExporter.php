@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Exports;
 
 use App\Models\Project\Project;
+use App\Support\Projects\ProjectNames;
 
 /** Projeler tablosu (ProjectResource) sutunlari. */
 class ProjectExporter extends KonelsisExporter
@@ -20,7 +21,9 @@ class ProjectExporter extends KonelsisExporter
     {
         return [
             self::text('businessCode.formatted_code', __('project.fields.business_code')),
-            self::text('name', __('project.fields.name')),
+            // D-174: kisa ad ve lisans adi.
+            ...(ProjectNames::shortNameEnabled() ? [self::text('short_name', __('project.fields.short_name'))] : []),
+            self::text('name', ProjectNames::nameLabel()),
             self::text('customerParty.display_name', __('project.fields.customer_party')),
             self::text('projectManager.full_name', __('project.fields.project_manager')),
             self::text('status', __('project.fields.status')),

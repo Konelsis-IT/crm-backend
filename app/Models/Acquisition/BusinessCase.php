@@ -225,11 +225,15 @@ class BusinessCase extends Model
         return $this->hasOne(Project::class, 'business_case_id');
     }
 
-    /** Projeye donusumde kullanilacak teklif: secili olan, yoksa en son acilan. */
-    public function selectedOrLatestProposal(): ?Proposal
+    /**
+     * Isin en son acilan teklifi; projeye donusum ve "Teklifi duzenle" bunu
+     * kullanir. D-181: secili teklif kavrami kaldirildi, is her zaman en son
+     * tekliften (ve onun guncel surumunden) devam eder; proposals.is_selected
+     * kolonu veritabaninda kalir ama okunmaz.
+     */
+    public function latestProposal(): ?Proposal
     {
-        return $this->proposals()->where('is_selected', true)->first()
-            ?? $this->proposals()->orderByDesc('id')->first();
+        return $this->proposals()->orderByDesc('id')->first();
     }
 
     /** Bu kayda bagli raporlar (B10A, D-86). */

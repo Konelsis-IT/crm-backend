@@ -11,6 +11,7 @@ use App\Models\Report\Report;
 use App\Models\Report\WorkItem;
 use App\Reports\Templates\DailyWorkReportTemplate;
 use App\Support\DisplayTime;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -80,7 +81,7 @@ final class WorkAnalysisQueries
             ->select('work_items.*')
             ->selectRaw('COALESCE(work_items.parent_id, CASE WHEN EXISTS (SELECT 1 FROM work_items AS c WHERE c.parent_id = work_items.id) THEN work_items.id END) AS root_key')
             ->withCount('children')
-            ->with(['project:id,name', 'personnel:id,full_name', 'orgUnit:id,name', 'parent:id,title,due_on']);
+            ->with(['project:'.ProjectNames::select(), 'personnel:id,full_name', 'orgUnit:id,name', 'parent:id,title,due_on']);
 
         return $this->work->applyVisible($query, $viewer);
     }
@@ -398,7 +399,7 @@ final class WorkAnalysisQueries
         $today = WorkItemQueries::today();
 
         return $this->scoped($viewer, $unitId, $projectId)
-            ->with(['project:id,name', 'personnel:id,full_name'])
+            ->with(['project:'.ProjectNames::select(), 'personnel:id,full_name'])
             ->whereIn('work_items.status', WorkItemStatus::openValues())
             ->orderBy('work_items.work_on')
             ->orderBy('work_items.id')
@@ -407,7 +408,7 @@ final class WorkAnalysisQueries
             ->map(fn (WorkItem $item): array => [
                 'id' => (int) $item->getKey(),
                 'title' => (string) $item->title,
-                'project' => $item->project?->name,
+                'project' => $item->project?->display_name,
                 'status' => $item->status?->value,
                 'status_label' => $item->status?->getLabel(),
                 'owner' => $item->personnel?->full_name,

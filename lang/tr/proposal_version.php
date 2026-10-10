@@ -32,8 +32,8 @@ return [
     // D-155: marj kapsamdan hesaplanir.
     'help' => [
         'margin_from_scope' => 'Proje kapsamındaki toplam maliyet ve toplam satıştan hesaplanır.',
-        'margin_from_scope_empty' => 'Kapsamda toplam maliyet ve satış girilince hesaplanır',
-        'total_price_from_scope' => 'Boş bırakılırsa proje kapsamının toplam satışı yazılır.',
+        // D-185: kısa metin; toplam fiyat yardım metni kaldırıldı.
+        'margin_from_scope_empty' => 'Kapsamdan hesaplanıyor',
     ],
 
     'relation' => [

@@ -8,8 +8,10 @@ use App\Filament\Resources\Projects\RelationManagers\Concerns\OpensFromChecklist
 use App\Enums\Project\SupplyItemKind;
 use App\Enums\Project\SupplyItemStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Project\ProjectWorkstream;
 use App\Models\Project\WbsNode;
@@ -27,6 +29,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
@@ -132,17 +135,20 @@ class SupplyItemsRelationManager extends RelationManager
                         ->searchable()
                         ->preload()
                         ->native(false),
-                    TextInput::make('unit_cost')
+                    // D-180: maskeli birim maliyet (kolon 4 ondalikli); para birimi
+                    // secilmediyse projeninki.
+                    MoneyInput::make('unit_cost')
                         ->label(__('project_supply_item.fields.unit_cost'))
-                        ->numeric()
-                        ->minValue(0),
+                        ->currency(fn (Get $get): ?string => filled($get('currency_code')) ? (string) $get('currency_code') : $this->getOwnerRecord()->getAttribute('currency_code'))
+                        ->decimals(4),
                     Select::make('currency_code')
                         ->label(__('project_supply_item.fields.currency'))
                         ->helperText(__('project_supply_item.help.currency'))
                         ->options(fn (): array => app(ReferenceOptions::class)->currencies())
                         ->default(fn (): ?string => $this->getOwnerRecord()->currency_code)
                         ->searchable()
-                        ->native(false),
+                        ->native(false)
+                        ->live(),
                     Select::make('supplier_party_id')
                         ->label(__('project_supply_item.fields.supplier'))
                         ->relationship('supplier', 'display_name')
@@ -203,9 +209,8 @@ class SupplyItemsRelationManager extends RelationManager
                     ->label(__('project_supply_item.fields.quantity'))
                     ->numeric(decimalPlaces: 2)
                     ->suffix(fn (ProjectSupplyItem $record): string => $record->uom?->symbol ? ' '.$record->uom->symbol : ''),
-                TextColumn::make('unit_cost')
+                MoneyDisplay::column('unit_cost', fn (?ProjectSupplyItem $record): ?string => $record?->getAttribute('currency_code') ?? $this->getOwnerRecord()->getAttribute('currency_code'), 4)
                     ->label(__('project_supply_item.fields.unit_cost'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-')
                     ->toggleable(),
                 TextColumn::make('supplier.display_name')

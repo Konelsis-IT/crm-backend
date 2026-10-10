@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Acquisition;
 
 use App\Enums\Acquisition\ProjectScopeType;
+use App\Enums\Acquisition\ProposalScopeDocumentRole;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Document\Document;
 use App\Models\Document\DocumentRevision;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Teklif surumunun proje kapsami (B43, D-155): kapsam potansiyel isten teklife
@@ -66,5 +68,14 @@ class ProposalVersionScope extends Model
     public function scopeDocumentRevision(): BelongsTo
     {
         return $this->belongsTo(DocumentRevision::class, 'scope_document_revision_id');
+    }
+
+    /** Kapsamin maliyet listeleri (B51, D-181); bir kapsamda birden fazla olabilir. */
+    public function costDocuments(): HasMany
+    {
+        return $this->hasMany(ProposalVersionScopeDocument::class, 'proposal_version_scope_id')
+            ->where('document_role', ProposalScopeDocumentRole::CostList->value)
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 }

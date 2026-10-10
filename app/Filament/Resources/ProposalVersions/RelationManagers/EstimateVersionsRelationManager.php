@@ -9,9 +9,11 @@ use App\Exceptions\AbstractException;
 use App\Filament\Resources\EstimateVersions\EstimateVersionResource;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\EstimateVersion;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Acquisition\EstimateVersionService;
+use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -51,7 +53,7 @@ class EstimateVersionsRelationManager extends RelationManager
                         Select::make('currency_code')
                             ->label(__('estimate_version.fields.currency'))
                             ->options(fn (): array => app(ReferenceOptions::class)->currencies())
-                            ->default('TRY')
+                            ->default(fn (): string => Money::defaultCurrency())
                             ->searchable()
                             ->required()
                             ->native(false),
@@ -82,13 +84,12 @@ class EstimateVersionsRelationManager extends RelationManager
                 TextColumn::make('status')
                     ->label(__('estimate_version.fields.status'))
                     ->badge(),
-                TextColumn::make('total_cost')
+                // D-180: tutar + para birimi simgesi.
+                MoneyDisplay::column('total_cost')
                     ->label(__('estimate_version.fields.total_cost'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
-                TextColumn::make('total_price')
+                MoneyDisplay::column('total_price')
                     ->label(__('estimate_version.fields.total_price'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
                 TextColumn::make('target_margin_pct')
                     ->label(__('estimate_version.fields.target_margin_pct'))

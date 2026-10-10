@@ -33,6 +33,7 @@ use App\Reports\Templates\WeeklyWorkReportTemplate;
 use App\Reports\Work\WorkSuggestionCatalog;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -116,7 +117,7 @@ final class WorkItemQueries
     public function relations(): array
     {
         return [
-            'personnel:id,full_name,org_unit_id', 'orgUnit:id,name,code', 'project:id,name', 'parent:id,title',
+            'personnel:id,full_name,org_unit_id', 'orgUnit:id,name,code', 'project:'.ProjectNames::select(), 'parent:id,title',
             'waitingPersonnel:id,full_name', 'waitingParty:id,display_name',
             ...(SchemaReadiness::hasBatch('B37') ? ['requesterPersonnel:id,full_name', 'requesterParty:id,display_name'] : []),
             ...WorkItemLinkKind::relations(),
@@ -264,7 +265,7 @@ final class WorkItemQueries
     public function personnelRange(int $personnelId, Carbon $from, Carbon $to): Builder
     {
         return $this->applyRange(
-            WorkItem::query()->with(['project:id,name'])->where('work_items.personnel_id', $personnelId),
+            WorkItem::query()->with(['project:'.ProjectNames::select()])->where('work_items.personnel_id', $personnelId),
             $from,
             $to,
         );
@@ -287,7 +288,7 @@ final class WorkItemQueries
         $query = WorkItem::query()
             ->select('work_items.*')
             ->selectRaw($groupSql.' as agenda_group', $bindings)
-            ->with(['project:id,name', 'personnel:id,full_name,photo_path'])
+            ->with(['project:'.ProjectNames::select(), 'personnel:id,full_name,photo_path'])
             ->where('work_items.personnel_id', (int) $viewer->getKey());
 
         $this->applyRange($query, $today, $today->copy()->addDay());
@@ -401,10 +402,11 @@ final class WorkItemQueries
             return [];
         }
 
+        // D-174: kisa ad (yoksa lisans adi), ada gore sirali.
         return Project::query()
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->mapWithKeys(fn ($name, $id): array => [(int) $id => (string) $name])
+            ->get(ProjectNames::columns())
+            ->mapWithKeys(fn (Project $project): array => [(int) $project->getKey() => $project->display_name])
+            ->sort(fn (string $a, string $b): int => strcasecmp($a, $b))
             ->all();
     }
 
@@ -547,20 +549,20 @@ final class WorkItemQueries
         }
 
         $loaders = [
-            'proposal' => fn (array $keys) => Proposal::query()->with('businessCase.project:id,business_case_id,name')->whereIn('id', $keys)->get(),
-            'proposal_version' => fn (array $keys) => ProposalVersion::query()->with('proposal.businessCase.project:id,business_case_id,name')->whereIn('id', $keys)->get(),
-            'business_case' => fn (array $keys) => BusinessCase::query()->with('project:id,business_case_id,name')->whereIn('id', $keys)->get(),
+            'proposal' => fn (array $keys) => Proposal::query()->with('businessCase.project:'.ProjectNames::select('business_case_id'))->whereIn('id', $keys)->get(),
+            'proposal_version' => fn (array $keys) => ProposalVersion::query()->with('proposal.businessCase.project:'.ProjectNames::select('business_case_id'))->whereIn('id', $keys)->get(),
+            'business_case' => fn (array $keys) => BusinessCase::query()->with('project:'.ProjectNames::select('business_case_id'))->whereIn('id', $keys)->get(),
             'tender_notice' => fn (array $keys) => TenderNotice::query()->whereIn('id', $keys)->get(),
             'document' => fn (array $keys) => Document::query()->whereIn('id', $keys)->get(),
             'document_revision' => fn (array $keys) => DocumentRevision::query()->with('document')->whereIn('id', $keys)->get(),
-            'project_supply_item' => fn (array $keys) => ProjectSupplyItem::query()->with('project:id,name')->whereIn('id', $keys)->get(),
+            'project_supply_item' => fn (array $keys) => ProjectSupplyItem::query()->with('project:'.ProjectNames::select())->whereIn('id', $keys)->get(),
             'work_request' => fn (array $keys) => WorkRequest::query()->whereIn('id', $keys)->get(),
             'meeting_plan' => fn (array $keys) => MeetingPlan::query()->with('party:id,display_name')->whereIn('id', $keys)->get(),
             'party_meeting_note' => fn (array $keys) => PartyMeetingNote::query()->with('party:id,display_name')->whereIn('id', $keys)->get(),
             'report' => fn (array $keys) => Report::query()->whereIn('id', $keys)->get(),
             'contract' => fn (array $keys) => Contract::query()->whereIn('id', $keys)->get(),
-            'project' => fn (array $keys) => Project::query()->whereIn('id', $keys)->get(['id', 'name']),
-            'project_photo' => fn (array $keys) => ProjectPhoto::query()->with('project:id,name')->whereIn('id', $keys)->get(),
+            'project' => fn (array $keys) => Project::query()->whereIn('id', $keys)->get(ProjectNames::columns()),
+            'project_photo' => fn (array $keys) => ProjectPhoto::query()->with('project:'.ProjectNames::select())->whereIn('id', $keys)->get(),
         ];
 
         $subjects = [];
@@ -744,10 +746,10 @@ final class WorkItemQueries
                 ->orderByDesc('id')->limit(20)->get()
                 ->map(fn (Document $document): array => ['id' => (int) $document->getKey(), 'no' => $document->document_no, 'label' => (string) $document->title, 'project_id' => $document->project_id !== null ? (int) $document->project_id : null]),
             WorkItemLinkKind::SupplyItem => ProjectSupplyItem::query()
-                ->with('project:id,name')
+                ->with('project:'.ProjectNames::select())
                 ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('name', 'like', $like)->orWhere('item_code', 'like', $like)))
                 ->orderByDesc('id')->limit(20)->get()
-                ->map(fn (ProjectSupplyItem $item): array => ['id' => (int) $item->getKey(), 'no' => $item->item_code, 'label' => trim((string) $item->name.($item->project !== null ? ' · '.$item->project->name : '')), 'project_id' => $item->project_id !== null ? (int) $item->project_id : null]),
+                ->map(fn (ProjectSupplyItem $item): array => ['id' => (int) $item->getKey(), 'no' => $item->item_code, 'label' => trim((string) $item->name.($item->project !== null ? ' · '.$item->project->display_name : '')), 'project_id' => $item->project_id !== null ? (int) $item->project_id : null]),
             WorkItemLinkKind::WorkRequest => WorkRequest::query()
                 ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('title', 'like', $like)->orWhere('request_no', 'like', $like)))
                 ->orderByDesc('id')->limit(20)->get()
@@ -797,7 +799,9 @@ final class WorkItemQueries
 
         return $query->where(function (Builder $inner) use ($like): void {
             $inner->where('work_items.title', 'like', $like)
-                ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', $like))
+                // D-174: lisans adi ya da kisa ad.
+                ->orWhereHas('project', fn (Builder $project) => $project->where(fn (Builder $names) => $names->where('name', 'like', $like)
+                    ->when(ProjectNames::schemaReady(), fn (Builder $short) => $short->orWhere('short_name', 'like', $like))))
                 ->orWhereHas('linkedProposal', fn (Builder $link) => $link->where('proposal_no', 'like', $like))
                 ->orWhereHas('linkedDocument', fn (Builder $link) => $link->where('document_no', 'like', $like))
                 ->orWhereHas('linkedWorkRequest', fn (Builder $link) => $link->where('request_no', 'like', $like))

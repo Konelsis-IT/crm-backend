@@ -33,6 +33,7 @@ use App\Models\Project\WorkstreamDependency;
 use App\Services\Audit\ActivityInput;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\TransactionRunner;
 use Illuminate\Support\Carbon;
 
@@ -51,7 +52,7 @@ final class ProjectOpener
 {
     /** Girdi dizisinden dogrudan projeye kopyalanan serbest alanlar. */
     private const OPTIONAL_INPUT_KEYS = [
-        'site_location', 'planned_start_on', 'planned_finish_on', 'description', 'legacy_reference',
+        'short_name', 'site_location', 'planned_start_on', 'planned_finish_on', 'description', 'legacy_reference',
         'site_address_line1', 'site_address_line2', 'site_district', 'site_city', 'site_postal_code',
         'site_country_code', 'site_latitude', 'site_longitude', 'site_note',
     ];
@@ -60,6 +61,7 @@ final class ProjectOpener
         private readonly ActorContext $actor,
         private readonly ActivityRecorder $activities,
         private readonly TransactionRunner $transactions,
+        private readonly ProjectScopeService $scopes,
     ) {}
 
     /**
@@ -82,6 +84,9 @@ final class ProjectOpener
             'contract_value_snapshot' => $version->contractVersion?->contract_value ?? $version->proposalVersion?->total_price,
             'status' => ProjectStatus::Opening,
         ], $overrides);
+
+        // D-174: proje tipleri ve olculeri kabul edilen teklif surumunden (yoksa potansiyel isten) kopyalanir.
+        $this->scopes->copyFromAcquisition($project, $case, $version->proposalVersion);
 
         $this->activities->record(new ActivityInput(
             subjectType: 'project',
@@ -158,6 +163,11 @@ final class ProjectOpener
         $now = Carbon::now('UTC');
 
         $optional = array_intersect_key($input, array_flip(self::OPTIONAL_INPUT_KEYS));
+
+        // Kisa ad kolonu B48 ile gelir (D-174); oncesinde yazilmaz.
+        if (! SchemaReadiness::hasBatch('B48') || blank($optional['short_name'] ?? null)) {
+            unset($optional['short_name']);
+        }
 
         $project = Project::query()->create([
             'business_case_id' => $case->getKey(),

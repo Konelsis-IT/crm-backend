@@ -142,7 +142,7 @@ class ViewWorkRequest extends ViewRecord
                     ->visible(fn (WorkRequest $record): bool => $record->project_id !== null || $record->customer_party_id !== null || $record->component_definition_id !== null
                         || $record->proposal_id !== null || $record->business_case_id !== null || $record->contract_id !== null || $record->document_id !== null)
                     ->components([
-                        $this->relatedEntry('project.name', 'project', fn (WorkRequest $r) => $r->project, ProjectResource::class),
+                        $this->relatedEntry('project.display_name', 'project', fn (WorkRequest $r) => $r->project, ProjectResource::class),
                         $this->relatedEntry('customer.display_name', 'customer', fn (WorkRequest $r) => $r->customer, PartyResource::class),
                         $this->relatedEntry('componentDefinition.name_tr', 'component', fn (WorkRequest $r) => $r->componentDefinition, ComponentDefinitionResource::class),
                         $this->relatedEntry('proposal.title', 'proposal', fn (WorkRequest $r) => $r->proposal, ProposalResource::class),

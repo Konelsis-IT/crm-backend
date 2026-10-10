@@ -28,8 +28,8 @@ use Illuminate\Support\Carbon;
 /**
  * Operasyona devir surumu servisi (10 SS5.2-5.3).
  *
- * create: version_no otomatik; teklif surumu verilmezse secili teklifin
- * onayli/gonderilmis surumu, sozlesme surumu verilmezse business case'in
+ * create: version_no otomatik; teklif surumu verilmezse en son teklifin
+ * (D-181: secili teklif kavrami yok) onayli/gonderilmis en yeni surumu, sozlesme surumu verilmezse business case'in
  * son yururlukteki sozlesme surumu baglanir; baseline_snapshot ve hash
  * uretilir; standart kontrol listesi maddeleri (BASELINE, SCHEDULE,
  * CONTRACT, RISKS, OPEN_ISSUES, DOC_MANIFEST) acilir.
@@ -197,10 +197,12 @@ final class OperationHandoffVersionService extends AbstractService
     {
         $query = ProposalVersion::query()->whereHas('proposal', fn ($q) => $q->where('business_case_id', $caseId));
 
+        // D-181: surum verilmezse "secili teklif" yerine isin en son onayli /
+        // gonderilmis teklif surumu baglanir (en son acilan teklif, en yuksek surum).
         $version = $requested !== null && $requested !== ''
             ? $query->whereKey((int) $requested)->first()
-            : $query->whereHas('proposal', fn ($q) => $q->where('is_selected', true))
-                ->whereIn('status', [ProposalVersionStatus::Approved->value, ProposalVersionStatus::Submitted->value])
+            : $query->whereIn('status', [ProposalVersionStatus::Approved->value, ProposalVersionStatus::Submitted->value])
+                ->orderByDesc('proposal_id')
                 ->orderByDesc('version_no')
                 ->first();
 

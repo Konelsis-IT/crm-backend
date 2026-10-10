@@ -7,6 +7,7 @@ namespace App\Query\Ui;
 use App\Models\Document\Document;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -52,6 +53,8 @@ final class RecordCardQueries
 
             $query->where(function (Builder $query) use ($like): void {
                 $query->where('name', 'like', $like)
+                    // D-174: kisa adla da bulunur.
+                    ->when(ProjectNames::schemaReady(), fn (Builder $query): Builder => $query->orWhere('short_name', 'like', $like))
                     ->orWhere('site_city', 'like', $like)
                     ->orWhereHas('businessCode', fn (Builder $code): Builder => $code->where('formatted_code', 'like', $like))
                     ->orWhereHas('projectManager', fn (Builder $manager): Builder => $manager->where('full_name', 'like', $like));

@@ -7,7 +7,6 @@ namespace App\Filament\Resources\BusinessCases\RelationManagers;
 use App\Enums\Acquisition\OfferStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Proposals\ProposalResource;
-use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\Proposal;
@@ -25,7 +24,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -94,9 +92,7 @@ class ProposalsRelationManager extends RelationManager
                     ->badge()
                     ->placeholder('-')
                     ->visible($b29),
-                IconColumn::make('is_selected')
-                    ->label(__('proposal.fields.is_selected'))
-                    ->boolean(),
+                // D-181: "Secili" sutunu ve "Secili yap" islemi kaldirildi.
                 TextColumn::make('currentVersion.version_no')
                     ->label(__('proposal.fields.current_version'))
                     ->placeholder('-'),
@@ -120,20 +116,6 @@ class ProposalsRelationManager extends RelationManager
                             DomainNotifications::failure($exception);
 
                             throw new Halt;
-                        }
-                    }),
-                Action::make('select')
-                    ->label(__('proposal.actions.select'))
-                    ->color(ActionColors::SAVE)
-                    ->icon(Heroicon::OutlinedCheckCircle)
-                    ->requiresConfirmation()
-                    ->visible(fn (Proposal $record): bool => ! $record->is_selected)
-                    ->action(function (Proposal $record, array $data): void {
-                        try {
-                            app(\App\Services\Acquisition\ProposalService::class)->select($record);
-                            DomainNotifications::success(__('proposal.messages.done'));
-                        } catch (AbstractException $exception) {
-                            DomainNotifications::failure($exception);
                         }
                     }),
             ])

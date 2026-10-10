@@ -28,9 +28,17 @@ return [
         'empty' => 'Henüz doküman yok.',
     ],
 
+    // D-184: Dokumanlar tablosunda teklife kopyalanmadan gorunen satirlar.
+    'virtual' => [
+        'reference_list' => 'Referans listesi',
+        'reference_count' => ':type · :count referans',
+    ],
+
     'actions' => [
         'upload' => 'Belge yükle',
-        'upload_revision' => 'Yeni sürüm yükle',
+        // D-186: "Yeni sürüm yükle" kaldırıldı; çöp kutusu belgeyi tekliften çıkarır.
+        'detach' => 'Tekliften kaldır',
+        'detach_heading' => 'Belge tekliften kaldırılsın mı?',
         'download' => 'İndir',
         'change_status' => 'Durum değiştir',
         'set_status' => 'Durumu \":status\" yap',
@@ -46,14 +54,14 @@ return [
     ],
 
     'help' => [
-        'upload' => 'Bu türde belge varsa yüklediğiniz dosya o belgenin yeni revizyonu olur; teklifin yeni sürümü açılır. Değişmeyen belgeler kopyalanmaz.',
-        'upload_revision' => 'Seçtiğiniz dosya bu belgenin yeni revizyonu olur ve teklifin yeni sürümü açılır.',
+        'upload' => 'Birden fazla dosya seçebilirsiniz. Her dosya bu türde yeni bir belge olarak güncel sürüme eklenir; teklif sürümü değişmez.',
+        'detach' => 'Belge bu teklif sürümünden çıkarılır; Dokümanlar\'da kalır, silinmez. Teklif sürümü değişmez.',
         'current_only' => 'Güncel sürümün belgeleri. Önceki sürümlerin belgeleri sayfanın üstündeki Sürümler düğmesinden görülür.',
     ],
 
     'messages' => [
-        'uploaded' => 'Belge yüklendi; teklifin yeni sürümü oluştu: Sürüm :no',
         'uploaded_in_place' => 'Belge yüklendi.',
+        'detached' => 'Belge tekliften kaldırıldı; Dokümanlar\'da duruyor.',
         'status_changed' => 'Durum güncellendi.',
         'done' => 'İşlem tamamlandı.',
     ],

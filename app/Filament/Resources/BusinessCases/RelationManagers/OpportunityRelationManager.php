@@ -6,8 +6,10 @@ namespace App\Filament\Resources\BusinessCases\RelationManagers;
 
 use App\Enums\Acquisition\OpportunityStage;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\Opportunity;
 use App\Services\Acquisition\OpportunityService;
 use BackedEnum;
@@ -53,11 +55,10 @@ class OpportunityRelationManager extends RelationManager
                             ->maxValue(100)
                             ->default(0)
                             ->required(),
-                        TextInput::make('expected_value')
+                        // D-180: potansiyel isin para birimiyle maskeli tutar.
+                        MoneyInput::make('expected_value')
                             ->label(__('opportunity.fields.expected_value'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->currency(fn (): ?string => $this->getOwnerRecord()->getAttribute('currency_code')),
                         DatePicker::make('expected_decision_on')
                             ->label(__('opportunity.fields.expected_decision_on'))
                             ->displayFormat('d.m.Y'),
@@ -87,9 +88,8 @@ class OpportunityRelationManager extends RelationManager
                 TextColumn::make('probability_pct')
                     ->label(__('opportunity.fields.probability_pct'))
                     ->suffix('%'),
-                TextColumn::make('expected_value')
+                MoneyDisplay::column('expected_value', fn (): ?string => $this->getOwnerRecord()->getAttribute('currency_code'))
                     ->label(__('opportunity.fields.expected_value'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
                 TextColumn::make('expected_decision_on')
                     ->label(__('opportunity.fields.expected_decision_on'))

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Filament\Forms\Components\MoneyInput;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Field;
@@ -314,7 +315,8 @@ final class FieldGrid
             if ($component instanceof TextInput) {
                 $maxLength = method_exists($component, 'getMaxLength') ? $component->getMaxLength() : null;
 
-                if ($component->isNumeric() || ($maxLength !== null && (int) $maxLength <= 32)) {
+                // D-180: tutar alani (MoneyInput) maskeli metin girisidir, sayi gibi kisa.
+                if ($component instanceof MoneyInput || $component->isNumeric() ||($maxLength !== null && (int) $maxLength <= 32)) {
                     return self::SIZE_SHORT;
                 }
             }

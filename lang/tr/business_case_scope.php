@@ -11,6 +11,8 @@ return [
         'hes' => 'HES kapsamı',
         'bes' => 'BESS kapsamı',
         'enh_eih' => 'ENH/EİH kapsamı',
+        // D-177 (B50)
+        'automation' => 'Otomasyon / Process kapsamı',
     ],
 
     // Teklif kapsami alan basliklari (B43, D-155; 5 Ekim 2026 kullanicinin yazdigi
@@ -53,6 +55,11 @@ return [
             'res_construction_amount' => 'Respark inşaat',
             'res_assembly_amount' => 'Respark montaj',
         ],
+        // D-177: "Toplam Maliyet - Toplam Satis seklinde 2 input".
+        'automation' => [
+            'total_cost' => 'Toplam Maliyet',
+            'total_sales' => 'Toplam Satış',
+        ],
     ],
 
     'fields' => [
@@ -73,11 +80,12 @@ return [
         'scope_file' => 'Kapsam listesi (Excel)',
         'current_file' => 'Yüklü kapsam listesi',
         'scope_document' => 'Kapsam listesi',
+        'cost_files' => 'Maliyet listesi',
+        'current_cost_files' => 'Yüklü maliyet listeleri',
         'note' => 'Not',
     ],
 
     'help' => [
-        'scope_file' => 'Bu proje tipi için hazırlanan kapsam listesi (.xlsx/.xls/.csv). Yeni yükleme eskisinin yerine yeni sürüm olarak eklenir.',
         'fields_later' => 'Bu tip için alanlar daha sonra tanımlanacak; şimdilik kapsam listesini yükleyebilirsiniz.',
     ],
 

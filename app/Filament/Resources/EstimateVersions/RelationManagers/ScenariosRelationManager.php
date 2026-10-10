@@ -6,8 +6,10 @@ namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Support\ActionColors;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\PricingScenario;
 use App\Services\Acquisition\PricingScenarioService;
 use BackedEnum;
@@ -66,11 +68,10 @@ class ScenariosRelationManager extends RelationManager
                             ->step('0.01')
                             ->minValue(-100)
                             ->maxValue(100),
-                        TextInput::make('total_price')
+                        // D-180: tahmin surumunun para birimiyle maskeli tutar.
+                        MoneyInput::make('total_price')
                             ->label(__('pricing_scenario.fields.total_price'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0)
+                            ->currency(fn (): ?string => $this->ownerCurrency())
                             ->required(),
                         Toggle::make('is_selected')
                             ->label(__('pricing_scenario.fields.is_selected')),
@@ -97,9 +98,8 @@ class ScenariosRelationManager extends RelationManager
                     ->label(__('pricing_scenario.fields.adjustment_pct'))
                     ->suffix('%')
                     ->placeholder('-'),
-                TextColumn::make('total_price')
-                    ->label(__('pricing_scenario.fields.total_price'))
-                    ->numeric(decimalPlaces: 2),
+                MoneyDisplay::column('total_price', $this->ownerCurrency(...))
+                    ->label(__('pricing_scenario.fields.total_price')),
                 IconColumn::make('is_selected')
                     ->label(__('pricing_scenario.fields.is_selected'))
                     ->boolean(),
@@ -158,5 +158,11 @@ class ScenariosRelationManager extends RelationManager
             ->defaultSort('scenario_code')
             ->emptyStateHeading(__('pricing_scenario.relation.empty'))
             ->emptyStateIcon(Heroicon::OutlinedScale);
+    }
+
+    /** Tahmin surumunun para birimi (D-180: tutar simgesi). */
+    private function ownerCurrency(): ?string
+    {
+        return $this->getOwnerRecord()->getAttribute('currency_code');
     }
 }

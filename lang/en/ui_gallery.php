@@ -9,6 +9,9 @@ return [
         'plugin' => 'Plugin: Filament Cards',
         'lists' => 'List previews',
         'chain' => 'Step previews',
+        'dashboards' => 'Department dashboards',
+        'dashboard_components' => 'Dashboard components',
+        'cost_items' => 'Cost items',
     ],
 
     'chain' => [

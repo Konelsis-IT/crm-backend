@@ -10,6 +10,7 @@ use App\Models\Project\Project;
 use App\Models\Project\ProjectComponent;
 use App\Models\Project\ProjectWorkstream;
 use App\Models\Project\WbsNode;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -71,13 +72,30 @@ final class ProjectCatalogQueries
         $projects = Project::query()
             ->with('businessCode')
             ->orderByDesc('id')
-            ->get(['id', 'name', 'project_business_code_id']);
+            ->get([...ProjectNames::columns(), 'project_business_code_id']);
 
+        // D-174: kisa ad (yoksa lisans adi).
         foreach ($projects as $project) {
-            $options[(int) $project->getKey()] = trim(($project->businessCode?->formatted_code ?? '').' · '.$project->name, ' ·');
+            $options[(int) $project->getKey()] = trim(($project->businessCode?->formatted_code ?? '').' · '.$project->display_name, ' ·');
         }
 
         return $options;
+    }
+
+    /**
+     * Proje adi aramasi (D-174): lisans adi ve (B48 uygulandiysa) kisa ad.
+     */
+    public function searchByName(Builder $query, string $search): Builder
+    {
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], trim($search)).'%';
+
+        return $query->where(function (Builder $inner) use ($like): void {
+            $inner->where('name', 'like', $like);
+
+            if (ProjectNames::schemaReady()) {
+                $inner->orWhere('short_name', 'like', $like);
+            }
+        });
     }
 
     /**

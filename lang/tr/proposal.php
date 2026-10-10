@@ -44,9 +44,19 @@ return [
 
     'help' => [
         'business_case' => 'Teklif bu potansiyel iş için açılır. Seçince potansiyel işin özeti aşağıda görünür.',
-        'documents' => 'Excel ya da herhangi bir dosya yüklenebilir. Yeni yükleme aynı belgenin yeni revizyonu olur; eski dosya silinmez.',
+        // D-183: Teklif oluştur ekranının Potansiyel iş adımı (salt okunur).
+        'case_in_proposal_step' => 'Potansiyel iş Teklif adımında seçilir; seçince özeti burada da görünür.',
         'ai_soon_short' => 'KonelsisAI yakında',
-        'revision_notice' => 'Kaydettiğinizde alanlarda, kapsamda ya da belgelerde değişiklik varsa teklifin yeni sürümü (Sürüm :next) oluşur. Önceki sürüm ve belgeleri saklanır.',
+    ],
+
+    // D-186: sürümleme personelde; "Düzenle" sürüm artırmaz, bu düğme N+1 açar.
+    'new_version' => [
+        'action' => 'Yeni teklif sürümü',
+        'tooltip' => 'Güncel bilgilerle Sürüm :no hazırlayın; belgeleri çıkarıp yenilerini ekleyebilirsiniz',
+        'heading' => 'Yeni sürüm (Sürüm :no)',
+        'breadcrumb' => 'Yeni sürüm',
+        'subheading' => 'Sürüm :current bilgileri dolu geldi. Kaydedince Sürüm :next oluşur; Sürüm :current olduğu gibi saklanır.',
+        'save' => 'Yeni sürümü kaydet',
     ],
 
     'relation' => [
@@ -55,9 +65,10 @@ return [
     ],
 
     'actions' => [
+        'general_catalog' => 'Genel katalog',
+        'general_catalog_tooltip' => 'Genel kataloğu yeni sekmede aç',
         'change_status' => 'Durum değiştir',
         'set_status' => 'Durumu ":status" yap',
-        'select' => 'Seçili yap',
         'submit' => 'İncelemeye gönder',
         'review' => 'İnceleme kararı ver',
         'publish' => 'Yayımla',
@@ -67,7 +78,7 @@ return [
         'add_evidence' => 'Kanıt ekle',
         'accept' => 'Kabul et',
         'open_business_case' => 'Potansiyel işi aç',
-        'edit_selected' => 'Teklifi düzenle (:no)',
+        'edit_latest' => 'Teklifi düzenle (:no)',
     ],
 
     // D-158: "Sürümler" düğmesi ve sürüm penceresi.
@@ -88,21 +99,28 @@ return [
 
     // D-161: durum dugmesi (guncel surumun durumu).
     'status' => [
-        'fixed' => 'Durum teklif düzenleme ekranından değiştirilir',
-        'change' => 'Teklifin durumunu değiştirmek için tıklayın',
+        'fixed' => 'Teklif durumu, teklif düzenleme ekranının başındaki teklif durumu düğmesinden değiştirilir',
         'no_targets' => 'Bu durumdan elle geçiş yok',
         'no_version' => 'Sürüm yok',
-        'modal_heading' => 'Teklifin durumunu değiştir',
-        'modal_description' => 'Şu anki durum: :status (Sürüm :no). Yeni sürüm açılmaz. Potansiyel işin durumu ve Teklif durumu (Verilecek / Verilen) buna göre güncellenir.',
+        // D-182: baslikta Teklif durumu acilir dugmesi (detay ve duzenleme).
+        'no_offer_status' => 'Teklif durumu yok',
+        'menu_label' => ':status ▾',
+        'menu_tooltip' => 'Teklif durumunu değiştirin; seçtiğiniz durum hemen kaydedilir, yeni sürüm açılmaz',
+        'confirm_heading' => 'Teklif ":status" olsun mu?',
+        'confirm_description' => 'Teklif durumu ":from" iken ":to" olur; bu durumdan geri dönülmez. Yeni sürüm açılmaz.',
+        'approved_note' => 'Teklif henüz gönderilmediyse güncel sürüm Gönderildi olarak işaretlenir; potansiyel iş Kazanıldı olur.',
+        'lost_note' => 'Potansiyel işin bütün teklifleri kaçan fırsatsa potansiyel iş Kaybedildi olur. Gerekçe yazmak isteğe bağlıdır.',
     ],
 
     'messages' => [
         'status_changed' => 'Durum güncellendi.',
+        'offer_status_changed' => 'Teklif durumu ":status" olarak kaydedildi.',
         'done' => 'İşlem tamamlandı.',
         'created' => 'Teklif oluşturuldu: :no',
         'draft_saved' => 'Teklif taslak olarak kaydedildi: :no',
         'new_version' => 'Teklifin yeni sürümü oluşturuldu: Sürüm :no',
-        'saved_no_version' => 'Kaydedildi. Teklifin içeriği değişmediği için yeni sürüm açılmadı.',
+        // D-186: Düzenle güncel sürümü yerinde değiştirir.
+        'saved_in_place' => 'Kaydedildi (Sürüm :no güncellendi).',
     ],
 
     'validation' => [

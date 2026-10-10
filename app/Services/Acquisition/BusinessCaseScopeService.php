@@ -126,6 +126,39 @@ final class BusinessCaseScopeService extends AbstractService
     }
 
     /**
+     * Yalniz ekler (D-177, "Proje tipi eklemek istiyorum"): kayitta olmayan
+     * tipler icin satir acar; var olan tiplere ve satirlara dokunmaz, hicbir
+     * tipi kaldirmaz. Eklenen tip degerlerini doner.
+     *
+     * @param  list<mixed>  $types
+     * @return list<string>
+     */
+    public function add(BusinessCase $case, array $types): array
+    {
+        $wanted = $this->normaliseTypes($types);
+
+        return $this->transactions->run(function () use ($case, $wanted): array {
+            $existing = BusinessCaseScope::query()
+                ->where('business_case_id', $case->getKey())
+                ->get()
+                ->map(static fn (BusinessCaseScope $scope): string => $scope->scope_type instanceof BackedEnum ? (string) $scope->scope_type->value : (string) $scope->scope_type)
+                ->all();
+            $added = [];
+
+            foreach ($wanted as $type) {
+                if (in_array($type, $existing, true)) {
+                    continue;
+                }
+
+                $this->create(['business_case_id' => $case->getKey(), 'scope_type' => $type]);
+                $added[] = $type;
+            }
+
+            return $added;
+        });
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function createdChanges(Model $record): array

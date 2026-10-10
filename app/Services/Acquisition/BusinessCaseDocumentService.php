@@ -29,6 +29,9 @@ use Illuminate\Support\Str;
  *   tek belge. Ilk yukleme yeni belge + ilk revizyon, sonraki yuklemeler ayni
  *   belgenin yeni revizyonudur; eski dosya silinmez (gecmis korunur).
  * - Genel belgeler: her yukleme ayri belgedir.
+ * - D-176: potansiyel is sayfasindaki "Belge ekle" ile bir maddeye birden fazla
+ *   belge eklenebilir (addDocuments); tahtadaki belge dugmesi maddenin ilk
+ *   belgesine yeni revizyon yuklemeye devam eder.
  *
  * Satirlar silinmez; belgeyi kaldirmak Dokumanlar'in isidir.
  */
@@ -95,6 +98,8 @@ final class BusinessCaseDocumentService extends AbstractService
                 ->where('business_case_id', $case->getKey())
                 ->where('template_code', $template)
                 ->where('item_code', $item)
+                // D-176: maddede birden fazla belge olabilir; tahtadaki ilk belge (iliski sirasi).
+                ->orderBy('sort_order')
                 ->orderBy('id')
                 ->first();
 
@@ -144,6 +149,64 @@ final class BusinessCaseDocumentService extends AbstractService
             ]);
 
             return $row;
+        });
+    }
+
+    /**
+     * Potansiyel is sayfasindaki "Belge ekle" (D-176, 8 Ekim 2026 kullanici
+     * talimati: "birden fazla yuklenebilir hem teklif hem potansiyel is
+     * tarafinda"): her dosya ayri yeni belge olur. $template + $item verilirse
+     * belge o kontrol listesi maddesine baglanir (maddenin ilk belgesi tahtada,
+     * digerleri Belgeler kartinda gorunur); verilmezse ek belgedir. Madde
+     * belgesi eklendiyse sicaklik yeniden hesaplanir (belge maddenin payidir).
+     *
+     * @param  list<array{path: string, name: string|null}>  $files
+     * @return list<BusinessCaseDocument>
+     */
+    public function addDocuments(BusinessCase $case, ?string $template, ?string $item, array $files): array
+    {
+        $isItem = $template !== null && $item !== null;
+
+        if ($isItem && ! in_array($item, ChecklistTemplates::itemCodes($template), true)) {
+            throw RecordNotFoundException::make();
+        }
+
+        return $this->transactions->run(function () use ($case, $template, $item, $files, $isItem): array {
+            $rows = [];
+
+            foreach ($files as $file) {
+                $path = trim((string) ($file['path'] ?? ''));
+
+                if ($path === '') {
+                    continue;
+                }
+
+                $name = $file['name'] ?? null;
+
+                if ($isItem) {
+                    $document = $this->newDocument($case, ChecklistTemplates::label((string) $template, (string) $item), $path, $name);
+
+                    /** @var BusinessCaseDocument $row */
+                    $row = $this->create([
+                        'business_case_id' => $case->getKey(),
+                        'document_id' => $document->getKey(),
+                        'template_code' => $template,
+                        'item_code' => $item,
+                        'sort_order' => $this->nextSortOrder($case),
+                    ]);
+                    $rows[] = $row;
+
+                    continue;
+                }
+
+                $rows[] = $this->storeGeneralDocument($case, $path, $name);
+            }
+
+            if ($isItem && $rows !== []) {
+                app(BusinessCaseService::class)->refreshChecklistState($case);
+            }
+
+            return $rows;
         });
     }
 

@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Support;
 
 use App\Enums\Document\DocumentRevisionFileRole;
+use App\Enums\Platform\Feature;
 use App\Models\Document\DocumentRevision;
 use App\Models\Document\DocumentRevisionFile;
 use App\Models\Project\ProjectPhoto;
+use App\Services\Document\Preview\OfficePreviewService;
+use App\Services\Platform\FeatureFlags;
 use Filament\Facades\Filament;
 
 /**
@@ -44,6 +47,34 @@ final class FileLinks
         }
 
         return self::revisionFile($file, 'original', 'inline');
+    }
+
+    /**
+     * Indirmeden goruntuleme baglantisi (D-186, ozellik documents.office_preview):
+     * PDF / gorsel / duz metin satir ici, Excel / CSV / Word onizleme sayfasi;
+     * ozellik kapaliysa ya da tur onizlenemiyorsa null.
+     */
+    public static function previewFor(?DocumentRevisionFile $file): ?string
+    {
+        $object = $file?->fileObject;
+
+        if ($file === null || $object === null || ! FeatureFlags::enabled(Feature::DocumentOfficePreview)) {
+            return null;
+        }
+
+        if ($object->isInlinePreviewable()) {
+            return self::revisionFile($file, 'original', 'inline');
+        }
+
+        return OfficePreviewService::supports($object->original_name)
+            ? route(self::routeName('files.revision-preview'), ['file' => $file->getKey()])
+            : null;
+    }
+
+    /** Revizyonun orijinalinin indirmeden goruntuleme baglantisi (D-186); yoksa null. */
+    public static function revisionView(DocumentRevision $revision): ?string
+    {
+        return self::previewFor(self::originalRow($revision));
     }
 
     /** Gorsel revizyonlar icin kucuk gorsel; gorsel degilse null. */

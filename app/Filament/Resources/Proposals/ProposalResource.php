@@ -6,18 +6,16 @@ namespace App\Filament\Resources\Proposals;
 
 use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\ProposalStatus;
-use App\Exceptions\AbstractException;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\Proposals\Pages\CreateProposal;
 use App\Filament\Resources\Proposals\Pages\EditProposal;
 use App\Filament\Resources\Proposals\Pages\ListProposals;
+use App\Filament\Resources\Proposals\Pages\NewProposalVersion;
 use App\Filament\Resources\Proposals\Pages\ViewProposal;
 use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\VersionsRelationManager;
-use App\Filament\Support\ActionColors;
-use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\RecordLinks;
@@ -26,7 +24,6 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
-use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
@@ -36,7 +33,6 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -106,6 +102,8 @@ class ProposalResource extends Resource
                             ->default('to_be_submitted')
                             ->native(false)
                             ->visible($b29)
+                            // D-182: duzenlemede Teklif durumu baslik dugmesinden degisir.
+                            ->hiddenOn('edit')
                             ->dehydrated($b29),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
@@ -159,9 +157,8 @@ class ProposalResource extends Resource
                     ->badge()
                     ->placeholder('-')
                     ->visible($b29),
-                IconColumn::make('is_selected')
-                    ->label(__('proposal.fields.is_selected'))
-                    ->boolean(),
+                // D-181: "Secili" sutunu kaldirildi; teklif her zaman en son
+                // surumunden devam eder, secili teklif kavrami yok.
                 TextColumn::make('currentVersion.version_no')
                     ->label(__('proposal.fields.current_version'))
                     ->placeholder('-'),
@@ -180,20 +177,6 @@ class ProposalResource extends Resource
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                Action::make('select')
-                    ->label(__('proposal.actions.select'))
-                    ->color(ActionColors::SAVE)
-                    ->icon(Heroicon::OutlinedCheckCircle)
-                    ->requiresConfirmation()
-                    ->visible(fn (Proposal $record): bool => ! $record->is_selected)
-                    ->action(function (Proposal $record, array $data): void {
-                        try {
-                            app(\App\Services\Acquisition\ProposalService::class)->select($record);
-                            DomainNotifications::success(__('proposal.messages.done'));
-                        } catch (AbstractException $exception) {
-                            DomainNotifications::failure($exception);
-                        }
-                    }),
             ])
             ->toolbarActions([])
             ->recordClasses(fn (Proposal $record): ?string => DraftSupport::rowClass($record))
@@ -224,6 +207,8 @@ class ProposalResource extends Resource
             'create' => CreateProposal::route('/create'),
             'view' => ViewProposal::route('/{record}'),
             'edit' => EditProposal::route('/{record}/edit'),
+            // D-186: "Yeni teklif surumu" (duzenleme ekraniyla ayni form, kaydedince surum N+1).
+            'new-version' => NewProposalVersion::route('/{record}/new-version'),
         ];
     }
 }

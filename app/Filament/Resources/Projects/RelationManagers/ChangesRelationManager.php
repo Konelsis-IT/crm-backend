@@ -7,8 +7,10 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 use App\Enums\Project\ChangeStatus;
 use App\Enums\Project\ChangeType;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Project\ProjectChange;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Project\ProjectChangeService;
@@ -22,6 +24,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
@@ -68,16 +71,16 @@ class ChangesRelationManager extends RelationManager
                             ->default(ChangeStatus::Draft->value)
                             ->required()
                             ->native(false),
-                        TextInput::make('impact_cost')
+                        // D-180: maskeli tutar; para birimi secilmediyse projeninki.
+                        MoneyInput::make('impact_cost')
                             ->label(__('project_change.fields.impact_cost'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->currency(fn (Get $get): ?string => filled($get('currency_code')) ? (string) $get('currency_code') : $this->ownerCurrency()),
                         Select::make('currency_code')
                             ->label(__('project_change.fields.currency'))
                             ->options(fn (): array => app(ReferenceOptions::class)->currencies())
                             ->searchable()
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
                         TextInput::make('impact_days')
                             ->label(__('project_change.fields.impact_days'))
                             ->numeric()
@@ -105,9 +108,8 @@ class ChangesRelationManager extends RelationManager
                 TextColumn::make('change_type')
                     ->label(__('project_change.fields.change_type'))
                     ->badge(),
-                TextColumn::make('impact_cost')
+                MoneyDisplay::column('impact_cost', fn (?ProjectChange $record): ?string => $record?->getAttribute('currency_code') ?? $this->ownerCurrency())
                     ->label(__('project_change.fields.impact_cost'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
                 TextColumn::make('impact_days')
                     ->label(__('project_change.fields.impact_days'))
@@ -149,5 +151,11 @@ class ChangesRelationManager extends RelationManager
             ->defaultSort('requested_at', 'desc')
             ->emptyStateHeading(__('project_change.relation.empty'))
             ->emptyStateIcon(Heroicon::OutlinedArrowPathRoundedSquare);
+    }
+
+    /** Projenin para birimi (D-180: degisiklikte secilmediyse tutar simgesi). */
+    private function ownerCurrency(): ?string
+    {
+        return $this->getOwnerRecord()->getAttribute('currency_code');
     }
 }

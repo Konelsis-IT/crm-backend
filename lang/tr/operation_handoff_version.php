@@ -18,7 +18,7 @@ return [
         'manifest_document_revision' => 'Manifest document revision',
         'planned_finish_on' => 'Planlanan bitiş',
         'planned_start_on' => 'Planlanan başlangıç',
-        'project_manager' => 'Proje yöneticisi',
+        'project_manager' => 'Proje müdürü',
         'project_name' => 'Proje adı',
         'proposal_version' => 'Teklif sürümü',
         'reason' => 'Gerekçe',
@@ -60,7 +60,7 @@ return [
     ],
 
     'help' => [
-        'proposal_version' => 'Boş bırakılırsa seçili teklifin onaylı sürümü bağlanır.',
+        'proposal_version' => 'Boş bırakılırsa en son teklifin onaylı sürümü bağlanır.',
         'contract_version' => 'Boş bırakılırsa potansiyel işin yürürlükteki sözleşme sürümü bağlanır (D-10).',
     ],
 ];

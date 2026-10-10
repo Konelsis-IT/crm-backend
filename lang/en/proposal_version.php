@@ -31,8 +31,8 @@ return [
 
     'help' => [
         'margin_from_scope' => 'Calculated from the total cost and total sales in the project scope.',
-        'margin_from_scope_empty' => 'Calculated once total cost and sales are entered in the scope',
-        'total_price_from_scope' => 'Leave blank to use the total sales of the project scope.',
+        // D-185: short text; the total price help text was removed.
+        'margin_from_scope_empty' => 'Calculated from the scope',
     ],
 
     'relation' => [

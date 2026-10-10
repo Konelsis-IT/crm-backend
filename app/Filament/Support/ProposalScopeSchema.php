@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Filament\Support;
 
 use App\Enums\Acquisition\ProjectScopeType;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
 use App\Models\Acquisition\ProposalVersionScope;
+use App\Models\Acquisition\ProposalVersionScopeDocument;
 use App\Services\Acquisition\ProposalVersionScopeService;
+use App\Support\Acquisition\CostLists;
+use App\Support\Money;
 use App\Support\UploadLimits;
 use BackedEnum;
 use Closure;
@@ -41,8 +45,24 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  * - RES: degismedi (Respark malzeme / insaat / montaj + toplam).
  *
  * Miktar ve birim fiyat girilince toplam kendiliginden yazilir (kullanici
- * degistirebilir). Marj kapsamdan hesaplanir (elle girilmez). Her tipin kapsam
- * listesi (Excel) yuklemesi korunur; yeni yukleme ayni belgenin yeni revizyonudur.
+ * degistirebilir). Marj kapsamdan hesaplanir (elle girilmez).
+ *
+ * D-181 (B51, ozellik acquisition.proposals.cost_lists): kapsam listesinin hemen
+ * yaninda "Maliyet listesi" yuklemesi (ayni dosya turleri ve sinir, coklu dosya).
+ *
+ * D-183: her tipin bolum basliginda "Referanslar" (o tipe ayarli referans
+ * penceresi) ve indir simgesi (ReferenceListField::scopeHeaderActions).
+ *
+ * D-186 (9 Ekim 2026 kullanici talimati: "duzenle'deki tasarim ile goruntule
+ * tasarimi birebir ayni olmalidir ... Tek fark duzenlede input var, goruntule
+ * kisminda label alani"): duzenleme ve goruntuleme ayni tanimdan kurulur.
+ * layout() her tipin alanlarini, turlerini ve satir baslarini tek yerde
+ * tutar; section() ayni baslik, simge, renk, baslik eylemleri ve izgarayi
+ * verir. Duzenlemede alan girdi, goruntulemede (sections($types) yerine
+ * recordSections($version)) ayni yerde ayni genislikte etiketli deger olur;
+ * dosya kutulari ayni kutudur (duzenlemede carpili cip + Yukle, goruntulemede
+ * cip). Teklifte belge revizyonu yok: yeni dosya yeni belgedir, carpi dosyayi
+ * surumden cikarir (ProposalVersionScopeService).
  */
 final class ProposalScopeSchema
 {
@@ -65,9 +85,21 @@ final class ProposalScopeSchema
         'enh_eih' => ['length_km' => 'km'],
     ];
 
+    /** Alan turleri (layout). */
+    private const AMOUNT = 'amount';
+
+    private const MEASURE = 'measure';
+
+    private const QUANTITY = 'quantity';
+
+    private const UNIT = 'unit';
+
+    private const RES_TOTAL = 'res_total';
+
     /**
-     * Secili tiplerin kapsam bolumleri. $types formdan secili tip listesini
-     * verir (sihirbazin potansiyel is adimi ya da teklif ekraninin gizli alani).
+     * Secili tiplerin kapsam bolumleri (duzenleme). $types formdan secili tip
+     * listesini verir (sihirbazin potansiyel is adimi ya da teklif ekraninin
+     * gizli alani).
      *
      * @param  Closure(Get): list<string>  $types
      * @param  Closure(Get): bool|null  $visible
@@ -77,22 +109,76 @@ final class ProposalScopeSchema
     {
         $visible ??= static fn (): bool => true;
         $sections = [];
+        $references = app(ReferenceListField::class);
 
         foreach (ProjectScopeType::cases() as $type) {
-            $sections[] = Section::make(__('business_case_scope.sections.'.$type->value))
-                ->key('proposal-scope-'.$type->value)
-                ->icon($type->getIcon())
-                ->iconColor($type->getColor())
-                ->compact()
-                ->columns(['default' => 1, 'md' => 2])
-                ->visible(fn (Get $get): bool => $visible($get) && in_array($type->value, $types($get), true))
-                ->components([
-                    ...$this->typeFields($type),
-                    ...$this->fileFields($type),
-                ]);
+            $sections[] = $this->section(
+                $type,
+                'proposal-scope-'.$type->value,
+                // D-183: basliktaki "Referanslar" ve indir simgesi (o tipin referanslari).
+                $references->scopeHeaderActions($type, 'form_scope'),
+                [...$this->typeComponents($type), ...$this->fileComponents($type)],
+            )->visible(fn (Get $get): bool => $visible($get) && in_array($type->value, $types($get), true));
         }
 
         return $sections;
+    }
+
+    /**
+     * Kayitli surumun kapsam bolumleri (D-186: teklif sayfasi ve Surumler
+     * penceresi): duzenleme bolumleriyle ayni baslik, simge, izgara ve kutular,
+     * degerler etiketli metin. $prefix: ayni sayfada iki blok olursa adlar
+     * karismasin. $references: basliktaki "Referanslar" ve indir simgesi
+     * (teklif sayfasinda; pencerede yok).
+     *
+     * @return list<Component>
+     */
+    public function recordSections(?ProposalVersion $version, string $prefix = 'proposal_scope', bool $references = false): array
+    {
+        if ($version === null || $version->scopes->isEmpty()) {
+            return [];
+        }
+
+        $byType = [];
+
+        foreach ($version->scopes as $scope) {
+            /** @var ProposalVersionScope $scope */
+            $byType[self::typeValue($scope)] = $scope;
+        }
+
+        $sections = [];
+        $referenceField = app(ReferenceListField::class);
+
+        // Duzenleme ekranindaki sira (ProjectScopeType::cases).
+        foreach (ProjectScopeType::cases() as $type) {
+            $scope = $byType[$type->value] ?? null;
+
+            if ($scope === null) {
+                continue;
+            }
+
+            $view = ['scope' => $scope, 'currency' => $version->currency_code, 'prefix' => $prefix.'_'.$type->value];
+
+            $sections[] = $this->section(
+                $type,
+                $prefix.'-'.$type->value,
+                $references ? $referenceField->scopeHeaderActions($type, $prefix) : [],
+                [...$this->typeComponents($type, $view), ...$this->fileComponents($type, $view)],
+            );
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Teklif sayfasindaki kapsam: bolumler duzenleme ekranindaki gibi yarim
+     * genislikte yan yana (D-167, D-168). Kapsam yoksa null.
+     */
+    public function recordGrid(?ProposalVersion $version, string $prefix = 'proposal_scope', bool $references = false): ?Component
+    {
+        $sections = $this->recordSections($version, $prefix, $references);
+
+        return $sections === [] ? null : Grid::make(['default' => 1, 'xl' => 2])->components($sections);
     }
 
     /** Kapsamdan hesaplanan marj (teklif adiminda, kaydedilmez). */
@@ -130,8 +216,9 @@ final class ProposalScopeSchema
 
     /**
      * Duzenleme formu icin surumun kapsamlari: scopes.{tip}.{alan} => deger.
+     * D-186: kaldirilmak uzere isaretlenen dosyalar (cipin "x"i) bos dizi.
      *
-     * @return array<string, array<string, string|null>>
+     * @return array<string, array<string, mixed>>
      */
     public static function formData(?ProposalVersion $version): array
     {
@@ -146,6 +233,10 @@ final class ProposalScopeSchema
                 $raw = $scope->getAttribute($field);
                 $row[$field] = $raw === null ? null : (string) $raw;
             }
+
+            // D-186: cipin "x"i ile isaretlenecek dosyalar bos baslar.
+            $row[ProposalVersionScopeService::REMOVED_SCOPE_FILE_KEY] = [];
+            $row[ProposalVersionScopeService::REMOVED_COST_FILES_KEY] = [];
 
             $rows[$type] = $row;
         }
@@ -170,216 +261,358 @@ final class ProposalScopeSchema
                 continue;
             }
 
-            $unit = self::QUANTITIES[$type->value][$field] ?? ($field === 'power_mwe' ? 'MWe' : null);
-            $parts[] = __('business_case_scope.labels.'.$type->value.'.'.$field).': '.($unit !== null
-                ? Number::format($value, maxPrecision: 3, locale: 'tr').' '.$unit
-                : self::money($value, $currency));
+            $parts[] = __('business_case_scope.labels.'.$type->value.'.'.$field).': '.self::display($type, $field, $value, $currency);
         }
 
         $parts[] = __('business_case_scope.fields.scope_file').': '.self::fileName($read($path.'scope_file'), $read($path.'scope_file_name'));
+
+        // D-181: maliyet listeleri (ozellik acikken).
+        if (CostLists::enabled()) {
+            $parts[] = __('business_case_scope.fields.cost_files').': '.self::costFileNames($read, $path);
+        }
 
         return implode(' · ', $parts);
     }
 
     /**
-     * Teklif sayfasindaki (ve surum penceresindeki) kapsam karti (D-158, 5 Ekim
-     * 2026 kullanici: "ekran goruntusundeki tasarim berbat"; eski kart her tipi
-     * tek kirmizi satirda yaziyordu). Ustte toplamlar (marj, toplam maliyet,
-     * toplam satis); altta her tip kendi cercevesinde, degerler etiketli kucuk
-     * kutucuklarda, kapsam listesi indirilebilir baglanti.
+     * Kapsamin maliyet listeleri (B51, D-181): her biri belge satiri bilgisi.
      *
-     * $prefix: ayni sayfada iki kart olursa alan adlari karismasin (pencere).
+     * @return list<array{title: string, revision: string|null, file: string|null, url: string|null}>
      */
-    public function recordCard(?ProposalVersion $version, string $prefix = 'proposal_scope'): ?Component
+    public static function costInfos(ProposalVersionScope $scope): array
     {
-        if ($version === null || $version->scopes->isEmpty()) {
-            return null;
+        if (! CostLists::enabled()) {
+            return [];
         }
 
-        $currency = $version->currency_code;
-        $margin = ProposalVersionScopeService::margin($version->scopes);
-        $cost = null;
+        $infos = [];
 
-        foreach ($version->scopes as $scope) {
-            $value = self::number($scope->getAttribute('total_cost'));
-            $cost = $value === null ? $cost : ($cost ?? 0.0) + $value;
-        }
-
-        $blocks = [];
-
-        foreach ($version->scopes as $scope) {
-            /** @var ProposalVersionScope $scope */
-            $type = $scope->scope_type;
-            $typeValue = self::typeValue($scope);
-            $entries = [];
-
-            foreach (ProposalVersionScopeService::TYPE_FIELDS[$typeValue] ?? [] as $field) {
-                $value = self::number($scope->getAttribute($field));
-                $unit = self::QUANTITIES[$typeValue][$field] ?? ($field === 'power_mwe' ? 'MWe' : null);
-                $total = in_array($field, ['total_cost', 'total_sales'], true);
-
-                $entries[] = TextEntry::make($prefix.'_'.$typeValue.'_'.$field)
-                    ->label(__('business_case_scope.labels.'.$typeValue.'.'.$field))
-                    ->state($value === null ? '-' : ($unit !== null ? Number::format($value, maxPrecision: 3, locale: 'tr').' '.$unit : self::money($value, $currency)))
-                    ->weight($total ? FontWeight::Bold : FontWeight::Medium)
-                    ->color($total ? 'success' : null);
-            }
-
-            $info = DocumentLine::info($scope->scopeDocument, $scope->scopeDocumentRevision);
+        foreach ($scope->costDocuments as $row) {
+            /** @var ProposalVersionScopeDocument $row */
+            $info = DocumentLine::info($row->documentRevision?->document, $row->documentRevision);
 
             if ($info !== null) {
-                $entries[] = TextEntry::make($prefix.'_'.$typeValue.'_file')
-                    ->label(__('business_case_scope.fields.scope_document'))
-                    ->state(DocumentLine::text($info))
-                    ->icon(Heroicon::OutlinedDocumentArrowDown)
-                    ->iconColor('primary')
-                    ->color('primary')
-                    ->url($info['url'] ?? null)
-                    ->openUrlInNewTab()
-                    ->columnSpan(['default' => 2, 'md' => 3]);
+                $infos[] = $info;
             }
-
-            // Her tip kendi simgesi ve rengiyle kucuk bolum (D-163; Fieldset simge almaz).
-            $blocks[] = Section::make($type instanceof ProjectScopeType ? (string) $type->getLabel() : $typeValue)
-                ->key($prefix.'-'.$typeValue)
-                ->icon($type instanceof ProjectScopeType ? $type->getIcon() : Heroicon::OutlinedCube)
-                ->iconColor($type instanceof ProjectScopeType ? $type->getColor() : 'gray')
-                ->compact()
-                ->secondary()
-                // D-168: kart yarim genislikte; degerler uc sutunda.
-                ->columns(['default' => 2, 'md' => 3])
-                ->components($entries);
         }
 
-        return Section::make(__('proposal.sections.scope'))
-            ->key($prefix.'-card')
-            ->icon(Heroicon::OutlinedCube)
-            ->compact()
-            ->components([
-                Grid::make(['default' => 1, 'sm' => 3])->components([
-                    TextEntry::make($prefix.'_margin')
-                        ->label(__('proposal_version.fields.margin_pct'))
-                        ->state($margin === null ? '-' : '% '.Number::format($margin, precision: 2, locale: 'tr'))
-                        ->icon(Heroicon::OutlinedReceiptPercent)
-                        ->iconColor('success')
-                        ->badge()
-                        ->color('success'),
-                    TextEntry::make($prefix.'_total_cost')
-                        ->label(__('proposal_version.fields.scope_total_cost'))
-                        ->state(self::money($cost, $currency))
-                        ->icon(Heroicon::OutlinedArrowTrendingDown)
-                        ->iconColor('gray')
-                        ->weight(FontWeight::SemiBold),
-                    TextEntry::make($prefix.'_total_sales')
-                        ->label(__('proposal_version.fields.scope_total_sales'))
-                        ->state(self::money(ProposalVersionScopeService::totalSales($version->scopes), $currency))
-                        ->icon(Heroicon::OutlinedArrowTrendingUp)
-                        ->iconColor('success')
-                        ->weight(FontWeight::SemiBold),
-                ]),
-                ...$blocks,
-            ]);
+        return $infos;
     }
 
     /**
-     * Tipin alanlari, izgara sirasiyla (sol | sag).
+     * Tek bolum: duzenleme ve goruntulemede ayni baslik ("GES kapsami"), simge,
+     * renk, baslik eylemleri ve iki sutunlu izgara.
      *
-     * @return list<Component>
+     * @param  list<\Filament\Actions\Action>  $headerActions
+     * @param  list<Component>  $components
      */
-    private function typeFields(ProjectScopeType $type): array
+    private function section(ProjectScopeType $type, string $key, array $headerActions, array $components): Section
     {
-        $field = fn (string $name, string $step = '0.01'): TextInput => $this->amountInput($type, $name, $step);
+        return Section::make(__('business_case_scope.sections.'.$type->value))
+            ->key($key)
+            ->icon($type->getIcon())
+            ->iconColor($type->getColor())
+            ->afterHeader($headerActions)
+            ->compact()
+            ->columns(['default' => 1, 'md' => 2])
+            ->components($components);
+    }
 
+    /**
+     * Tipin alanlari, izgara sirasiyla (sol | sag): [alan, tur, yeni satir mi].
+     * Duzenleme ve goruntuleme ayni listeyi kullanir (D-186).
+     *
+     * @return list<array{0: string, 1: string, 2?: bool}>
+     */
+    private static function layout(ProjectScopeType $type): array
+    {
         return match ($type) {
-            ProjectScopeType::Tm => [
-                $field('total_cost'),
-                $field('total_sales'),
-                $field('unit_cost'),
+            ProjectScopeType::Tm, ProjectScopeType::Hes => [
+                ['total_cost', self::AMOUNT],
+                ['total_sales', self::AMOUNT],
+                ['unit_cost', self::AMOUNT],
             ],
             ProjectScopeType::Bes => [
-                $field('power_mwe', '0.001'),
-                $this->quantityInput($type, 'energy_mwh'),
-                $this->unitInput($type, 'unit_cost', 'total_cost'),
-                $field('total_cost'),
-                $this->unitInput($type, 'unit_sales', 'total_sales'),
-                $field('total_sales'),
-            ],
-            ProjectScopeType::Hes => [
-                $field('total_cost'),
-                $field('total_sales'),
-                $field('unit_cost'),
+                ['power_mwe', self::MEASURE],
+                ['energy_mwh', self::QUANTITY],
+                ['unit_cost', self::UNIT],
+                ['total_cost', self::AMOUNT],
+                ['unit_sales', self::UNIT],
+                ['total_sales', self::AMOUNT],
             ],
             ProjectScopeType::Ges => [
-                $this->quantityInput($type, 'capacity_mwp'),
-                $this->unitInput($type, 'unit_cost', 'total_cost')->columnStart(1),
-                $field('total_cost'),
-                $this->unitInput($type, 'unit_sales', 'total_sales'),
-                $field('total_sales'),
+                ['capacity_mwp', self::QUANTITY],
+                ['unit_cost', self::UNIT, true],
+                ['total_cost', self::AMOUNT],
+                ['unit_sales', self::UNIT],
+                ['total_sales', self::AMOUNT],
             ],
             ProjectScopeType::EnhEih => [
-                $this->quantityInput($type, 'length_km'),
-                $this->unitInput($type, 'unit_cost', 'total_cost')->columnStart(1),
-                $field('total_cost'),
-                $this->unitInput($type, 'unit_sales', 'total_sales'),
-                $field('total_sales'),
+                ['length_km', self::QUANTITY],
+                ['unit_cost', self::UNIT, true],
+                ['total_cost', self::AMOUNT],
+                ['unit_sales', self::UNIT],
+                ['total_sales', self::AMOUNT],
             ],
             ProjectScopeType::Res => [
-                $field('res_material_amount')->live(onBlur: true),
-                $field('res_construction_amount')->live(onBlur: true),
-                $field('res_assembly_amount')->live(onBlur: true),
-                TextEntry::make('scopes.res.total')
-                    ->label(__('business_case_scope.fields.total'))
-                    ->state(fn (Get $get): string => self::money(self::resTotal($get), $get('currency_code')))
-                    ->icon(Heroicon::OutlinedCalculator)
-                    ->iconColor('success')
-                    ->weight(FontWeight::SemiBold)
-                    ->dehydrated(false),
+                ['res_material_amount', self::AMOUNT],
+                ['res_construction_amount', self::AMOUNT],
+                ['res_assembly_amount', self::AMOUNT],
+                ['total', self::RES_TOTAL],
+            ],
+            // D-177: "Toplam Maliyet - Toplam Satis seklinde 2 input", altinda kapsam belgesi.
+            ProjectScopeType::Automation => [
+                ['total_cost', self::AMOUNT],
+                ['total_sales', self::AMOUNT],
             ],
         };
     }
 
     /**
-     * Kayitli kapsam listesi ve yeni yukleme (yeni revizyon olur).
+     * Tipin alanlari: $view yoksa girdi (duzenleme), varsa ayni yerde etiketli
+     * deger (goruntuleme).
      *
+     * @param  array{scope: ProposalVersionScope, currency: mixed, prefix: string}|null  $view
      * @return list<Component>
      */
-    private function fileFields(ProjectScopeType $type): array
+    private function typeComponents(ProjectScopeType $type, ?array $view = null): array
     {
+        $components = [];
+
+        foreach (self::layout($type) as $spec) {
+            [$field, $kind] = $spec;
+            $component = $view === null ? $this->input($type, $field, $kind) : $this->entry($type, $field, $kind, $view);
+
+            if (($spec[2] ?? false) === true) {
+                $component->columnStart(1);
+            }
+
+            $components[] = $component;
+        }
+
+        return $components;
+    }
+
+    private function input(ProjectScopeType $type, string $field, string $kind): Component
+    {
+        return match ($kind) {
+            self::MEASURE => $this->measureInput($type, $field),
+            self::QUANTITY => $this->quantityInput($type, $field),
+            self::UNIT => $this->unitInput($type, $field, str_replace('unit_', 'total_', $field)),
+            self::RES_TOTAL => TextEntry::make('scopes.res.total')
+                ->label(__('business_case_scope.fields.total'))
+                ->state(fn (Get $get): string => self::money(self::resTotal(static fn (string $name): mixed => $get('scopes.res.'.$name)), $get('currency_code')))
+                ->icon(Heroicon::OutlinedCalculator)
+                ->iconColor('success')
+                ->weight(FontWeight::SemiBold)
+                ->dehydrated(false),
+            default => $this->amountInput($type, $field),
+        };
+    }
+
+    /**
+     * Goruntulemede alanin degeri (D-180 tutar bicimi, olculer birimiyle).
+     *
+     * @param  array{scope: ProposalVersionScope, currency: mixed, prefix: string}  $view
+     */
+    private function entry(ProjectScopeType $type, string $field, string $kind, array $view): TextEntry
+    {
+        $scope = $view['scope'];
+
+        if ($kind === self::RES_TOTAL) {
+            return TextEntry::make($view['prefix'].'_total')
+                ->label(__('business_case_scope.fields.total'))
+                ->state(self::money(self::resTotal(static fn (string $name): mixed => $scope->getAttribute($name)), $view['currency']))
+                ->icon(Heroicon::OutlinedCalculator)
+                ->iconColor('success')
+                ->weight(FontWeight::SemiBold);
+        }
+
+        $value = self::number($scope->getAttribute($field));
+        $total = in_array($field, ['total_cost', 'total_sales'], true);
+
+        return TextEntry::make($view['prefix'].'_'.$field)
+            ->label(__('business_case_scope.labels.'.$type->value.'.'.$field))
+            ->state($value === null ? '-' : self::display($type, $field, $value, $view['currency']))
+            ->weight($total ? FontWeight::SemiBold : FontWeight::Medium);
+    }
+
+    /**
+     * Kapsam listesi ve maliyet listesi kutulari (D-185 iki kucuk kutu yan
+     * yana). Duzenlemede kayitli dosyalar carpili cip + "Yukle" (D-186: carpi
+     * dosyayi surumden cikarir, yeni dosya yeni belge); goruntulemede ayni kutu
+     * ciplerle. D-183: aciklama metinleri yok.
+     *
+     * @param  array{scope: ProposalVersionScope, currency: mixed, prefix: string}|null  $view
+     * @return list<Component>
+     */
+    private function fileComponents(ProjectScopeType $type, ?array $view = null): array
+    {
+        $scopeLabel = __('business_case_scope.fields.scope_file');
+        $costLabel = __('business_case_scope.fields.cost_files');
+
+        if ($view !== null) {
+            $scope = $view['scope'];
+            $info = DocumentLine::info($scope->scopeDocument, $scope->scopeDocumentRevision);
+
+            return [
+                CompactUpload::viewSlot(
+                    TextEntry::make($view['prefix'].'_scope_file')
+                        ->label($scopeLabel)
+                        ->state(CompactUpload::chips(array_values(array_filter([$info])), withRevision: false)),
+                )
+                    ->columnSpan(['default' => 1, 'md' => 1])
+                    ->columnStart(1),
+                CompactUpload::viewSlot(
+                    TextEntry::make($view['prefix'].'_cost_files')
+                        ->label($costLabel)
+                        ->state(CompactUpload::chips(self::costInfos($scope), withRevision: false)),
+                )
+                    ->visible(fn (): bool => CostLists::enabled())
+                    ->columnSpan(['default' => 1, 'md' => 1]),
+            ];
+        }
+
         $path = 'scopes.'.$type->value;
 
         return [
-            TextEntry::make($path.'.current_file')
-                ->label(__('business_case_scope.fields.current_file'))
-                ->state(fn (?Model $record): string => DocumentLine::text(self::recordFileInfo($record, $type)))
-                ->url(fn (?Model $record): ?string => self::recordFileInfo($record, $type)['url'] ?? null)
-                ->visible(fn (?Model $record): bool => self::recordFileInfo($record, $type) !== null)
-                ->icon(Heroicon::OutlinedDocumentArrowDown)
-                ->iconColor('primary')
-                ->color('primary')
-                ->dehydrated(false)
+            CompactUpload::editSlot(
+                $path.'.'.ProposalVersionScopeService::REMOVED_SCOPE_FILE_KEY,
+                $scopeLabel,
+                static fn (?Model $record): array => array_values(array_filter([self::recordScopeFile($record, $type)])),
+                FileUpload::make($path.'.scope_file')
+                    ->label($scopeLabel)
+                    ->disk('local')
+                    ->directory(self::UPLOAD_DIRECTORY)
+                    ->storeFileNamesIn($path.'.scope_file_name')
+                    ->acceptedFileTypes(self::SCOPE_FILE_TYPES)
+                    ->maxSize(UploadLimits::documentMaxKb()),
+                [Hidden::make($path.'.scope_file_name')],
+            )
                 ->columnSpan(['default' => 1, 'md' => 1])
                 ->columnStart(1),
-            // Iki sutunlu kapsam bolumunde yarim (D-157: tam satir yok).
-            FileUpload::make($path.'.scope_file')
-                ->label(__('business_case_scope.fields.scope_file'))
-                ->helperText(__('business_case_scope.help.scope_file'))
-                ->disk('local')
-                ->directory(self::UPLOAD_DIRECTORY)
-                ->storeFileNamesIn($path.'.scope_file_name')
-                ->acceptedFileTypes(self::SCOPE_FILE_TYPES)
-                ->maxSize(UploadLimits::documentMaxKb())
-                ->columnSpan(['default' => 1, 'md' => 1])
-                ->columnStart(1),
-            Hidden::make($path.'.scope_file_name'),
+            // D-181: kapsam listesinin hemen yaninda Maliyet listesi (ayni dosya
+            // turleri ve sinir, coklu dosya; D-186: her dosya yeni belge).
+            CompactUpload::editSlot(
+                $path.'.'.ProposalVersionScopeService::REMOVED_COST_FILES_KEY,
+                $costLabel,
+                static fn (?Model $record): array => self::recordCostFiles($record, $type),
+                FileUpload::make($path.'.'.ProposalVersionScopeService::COST_FILES_KEY)
+                    ->label($costLabel)
+                    ->multiple()
+                    ->disk('local')
+                    ->directory(self::UPLOAD_DIRECTORY)
+                    ->storeFileNamesIn($path.'.'.ProposalVersionScopeService::COST_FILES_NAME_KEY)
+                    ->acceptedFileTypes(self::SCOPE_FILE_TYPES)
+                    ->maxSize(UploadLimits::documentMaxKb()),
+                [Hidden::make($path.'.'.ProposalVersionScopeService::COST_FILES_NAME_KEY)],
+            )
+                ->visible(fn (): bool => CostLists::enabled())
+                ->columnSpan(['default' => 1, 'md' => 1]),
         ];
     }
 
-    private function amountInput(ProjectScopeType $type, string $field, string $step = '0.01'): TextInput
+    /**
+     * Duzenlenen teklifin guncel surumunde tipin kapsam listesi (cip bilgisi +
+     * revizyon kimligi, D-186 "x").
+     *
+     * @return array{revision_id: int, title: string, revision: string|null, file: string|null, url: string|null}|null
+     */
+    private static function recordScopeFile(?Model $record, ProjectScopeType $type): ?array
+    {
+        $scope = self::recordScope($record, $type);
+
+        if ($scope === null || $scope->scope_document_revision_id === null) {
+            return null;
+        }
+
+        $info = DocumentLine::info($scope->scopeDocument, $scope->scopeDocumentRevision);
+
+        return $info === null ? null : [...$info, 'revision_id' => (int) $scope->scope_document_revision_id];
+    }
+
+    /**
+     * Duzenlenen teklifin guncel surumunde tipin maliyet listeleri.
+     *
+     * @return list<array{revision_id: int, title: string, revision: string|null, file: string|null, url: string|null}>
+     */
+    private static function recordCostFiles(?Model $record, ProjectScopeType $type): array
+    {
+        $scope = self::recordScope($record, $type);
+
+        if ($scope === null || ! CostLists::enabled()) {
+            return [];
+        }
+
+        $files = [];
+
+        foreach ($scope->costDocuments as $row) {
+            /** @var ProposalVersionScopeDocument $row */
+            $info = DocumentLine::info($row->documentRevision?->document, $row->documentRevision);
+
+            if ($info !== null) {
+                $files[] = [...$info, 'revision_id' => (int) $row->document_revision_id];
+            }
+        }
+
+        return $files;
+    }
+
+    private static function recordScope(?Model $record, ProjectScopeType $type): ?ProposalVersionScope
+    {
+        $version = $record instanceof Proposal ? $record->currentVersion : null;
+
+        /** @var ProposalVersionScope|null $scope */
+        $scope = $version?->scopes->first(static fn (ProposalVersionScope $row): bool => self::typeValue($row) === $type->value);
+
+        return $scope;
+    }
+
+    /**
+     * Ozet satirindaki maliyet listesi adlari: formda yuklenenler (gecici dosya
+     * ya da ad alani) ya da kayitli ozetin verdigi metinler.
+     */
+    private static function costFileNames(callable $read, string $path): string
+    {
+        $names = [];
+        $stored = $read($path.ProposalVersionScopeService::COST_FILES_NAME_KEY);
+
+        foreach (is_array($stored) ? $stored : [$stored] as $name) {
+            if (is_scalar($name) && filled($name)) {
+                $names[] = (string) $name;
+            }
+        }
+
+        if ($names === []) {
+            $files = $read($path.ProposalVersionScopeService::COST_FILES_KEY);
+
+            foreach (is_array($files) ? $files : [$files] as $candidate) {
+                if ($candidate instanceof TemporaryUploadedFile) {
+                    $names[] = $candidate->getClientOriginalName();
+                } elseif (is_string($candidate) && $candidate !== '') {
+                    $names[] = basename($candidate);
+                }
+            }
+        }
+
+        return $names === [] ? __('business_case.values.none') : implode(', ', array_unique($names));
+    }
+
+    /** Tutar (D-180): Turkce maskeli giris, arkada teklifin para birimi simgesi. */
+    private function amountInput(ProjectScopeType $type, string $field): TextInput
+    {
+        return MoneyInput::make('scopes.'.$type->value.'.'.$field)
+            ->label(__('business_case_scope.labels.'.$type->value.'.'.$field))
+            ->live(onBlur: true);
+    }
+
+    /** Olcu (MWe / MWp / MWh / km): para degil, duz sayi. */
+    private function measureInput(ProjectScopeType $type, string $field): TextInput
     {
         return TextInput::make('scopes.'.$type->value.'.'.$field)
             ->label(__('business_case_scope.labels.'.$type->value.'.'.$field))
             ->numeric()
-            ->step($step)
+            ->step('0.001')
             ->minValue(0)
             ->live(onBlur: true);
     }
@@ -387,7 +620,7 @@ final class ProposalScopeSchema
     /** Miktar (MWp / MWh / km): degisince birim fiyatli toplamlar yeniden yazilir. */
     private function quantityInput(ProjectScopeType $type, string $field): TextInput
     {
-        return $this->amountInput($type, $field, '0.001')
+        return $this->measureInput($type, $field)
             ->afterStateUpdated(function (Set $set, Get $get) use ($type): void {
                 self::fillTotal($type, 'unit_cost', 'total_cost', $set, $get);
                 self::fillTotal($type, 'unit_sales', 'total_sales', $set, $get);
@@ -417,15 +650,21 @@ final class ProposalScopeSchema
             return;
         }
 
-        $set($path.$totalField, number_format($quantity * $unit, 2, '.', ''));
+        // D-180: MoneyInput sayiyi kendi Turkce metnine cevirir.
+        $set($path.$totalField, round($quantity * $unit, 2));
     }
 
-    private static function resTotal(Get $get): ?float
+    /**
+     * RES kalemlerinin toplami; $read alan adiyla degeri verir (form ya da kayit).
+     *
+     * @param  callable(string): mixed  $read
+     */
+    private static function resTotal(callable $read): ?float
     {
         $total = null;
 
         foreach (ProposalVersionScopeService::TYPE_FIELDS['res'] as $field) {
-            $value = self::number($get('scopes.res.'.$field));
+            $value = self::number($read($field));
 
             if ($value !== null) {
                 $total = ($total ?? 0.0) + $value;
@@ -435,23 +674,14 @@ final class ProposalScopeSchema
         return $total;
     }
 
-    /**
-     * Duzenlenen teklifin guncel surumundeki kapsam listesi.
-     *
-     * @return array{title: string, revision: string|null, file: string|null, url: string|null}|null
-     */
-    private static function recordFileInfo(?Model $record, ProjectScopeType $type): ?array
+    /** Olcu birimiyle ("12,5 MWp"), tutar para birimi simgesiyle (D-180). */
+    private static function display(ProjectScopeType $type, string $field, float $value, mixed $currency): string
     {
-        $version = $record instanceof Proposal ? $record->currentVersion : null;
+        $unit = self::QUANTITIES[$type->value][$field] ?? ($field === 'power_mwe' ? 'MWe' : null);
 
-        if ($version === null) {
-            return null;
-        }
-
-        /** @var ProposalVersionScope|null $scope */
-        $scope = $version->scopes->first(static fn (ProposalVersionScope $row): bool => self::typeValue($row) === $type->value);
-
-        return $scope === null ? null : DocumentLine::info($scope->scopeDocument, $scope->scopeDocumentRevision);
+        return $unit !== null
+            ? Number::format($value, maxPrecision: 3, locale: 'tr').' '.$unit
+            : self::money($value, $currency);
     }
 
     /** Gonderimden once gecici dosya nesnesi, sonra ad alani; hicbiri yoksa "Secilmedi". */
@@ -481,21 +711,15 @@ final class ProposalScopeSchema
         return $type instanceof BackedEnum ? (string) $type->value : (string) $type;
     }
 
+    /** Kayittaki sayi ya da tutar alaninin Turkce metni (D-180). */
     private static function number(mixed $value): ?float
     {
-        if ($value === null || $value === '' || ! is_numeric($value)) {
-            return null;
-        }
-
-        return (float) $value;
+        return Money::parse($value);
     }
 
+    /** Tutar + para birimi simgesi (D-180, Money::format). */
     private static function money(?float $amount, mixed $currency): string
     {
-        if ($amount === null) {
-            return '-';
-        }
-
-        return trim(Number::format($amount, precision: 2, locale: 'tr').' '.(is_string($currency) ? $currency : ''));
+        return Money::format($amount, $currency);
     }
 }

@@ -6,8 +6,10 @@ namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 
 use App\Enums\Acquisition\CostCategory;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\EstimateLine;
 use App\Services\Acquisition\EstimateLineService;
 use BackedEnum;
@@ -72,17 +74,17 @@ class LinesRelationManager extends RelationManager
                             ->preload()
                             ->required()
                             ->native(false),
-                        TextInput::make('unit_cost')
+                        // D-180: tahmin surumunun para birimiyle maskeli birim fiyatlar
+                        // (kolon 4 ondalikli; kurus basamagi 4'e kadar korunur).
+                        MoneyInput::make('unit_cost')
                             ->label(__('estimate_line.fields.unit_cost'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0)
+                            ->currency(fn (): ?string => $this->ownerCurrency())
+                            ->decimals(4)
                             ->required(),
-                        TextInput::make('unit_price')
+                        MoneyInput::make('unit_price')
                             ->label(__('estimate_line.fields.unit_price'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->currency(fn (): ?string => $this->ownerCurrency())
+                            ->decimals(4),
                         Select::make('parent_line_id')
                             ->label(__('estimate_line.fields.parent_line'))
                             ->relationship(
@@ -125,15 +127,12 @@ class LinesRelationManager extends RelationManager
                     ->label(__('estimate_line.fields.quantity')),
                 TextColumn::make('uom.symbol')
                     ->label(__('estimate_line.fields.uom')),
-                TextColumn::make('unit_cost')
-                    ->label(__('estimate_line.fields.unit_cost'))
-                    ->numeric(decimalPlaces: 2),
-                TextColumn::make('line_total_cost')
-                    ->label(__('estimate_line.fields.line_total_cost'))
-                    ->numeric(decimalPlaces: 2),
-                TextColumn::make('unit_price')
+                MoneyDisplay::column('unit_cost', $this->ownerCurrency(...), 4)
+                    ->label(__('estimate_line.fields.unit_cost')),
+                MoneyDisplay::column('line_total_cost', $this->ownerCurrency(...))
+                    ->label(__('estimate_line.fields.line_total_cost')),
+                MoneyDisplay::column('unit_price', $this->ownerCurrency(...), 4)
                     ->label(__('estimate_line.fields.unit_price'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
             ])
             ->headerActions([
@@ -176,5 +175,11 @@ class LinesRelationManager extends RelationManager
             ->defaultSort('sort_order')
             ->emptyStateHeading(__('estimate_line.relation.empty'))
             ->emptyStateIcon(Heroicon::OutlinedListBullet);
+    }
+
+    /** Tahmin surumunun para birimi (D-180: tutar simgesi). */
+    private function ownerCurrency(): ?string
+    {
+        return $this->getOwnerRecord()->getAttribute('currency_code');
     }
 }

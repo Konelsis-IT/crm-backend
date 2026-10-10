@@ -24,6 +24,7 @@ use App\Filament\Resources\Projects\RelationManagers\WorkstreamsRelationManager;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ExportActions;
+use App\Filament\Support\ProjectScopeSchema;
 use App\Filament\Support\ProjectWizard;
 use App\Filament\Support\ProjectWorkspace;
 use App\Models\Project\Project;
@@ -65,7 +66,7 @@ class ViewProject extends ViewRecord
         /** @var Project $project */
         $project = $this->getRecord();
 
-        return ($project->businessCode?->formatted_code ?? '').' · '.$project->name;
+        return ($project->businessCode?->formatted_code ?? '').' · '.$project->display_name;
     }
 
     public function content(Schema $schema): Schema
@@ -82,6 +83,8 @@ class ViewProject extends ViewRecord
                 ->icon(Heroicon::OutlinedSquares2x2)
                 ->schema([
                     Grid::make(['default' => 1, 'lg' => 2])->components([
+                        // D-174: proje tipi olculeri (deger girilmis tip yoksa kart cikmaz).
+                        ...array_filter([app(ProjectScopeSchema::class)->recordCard($project)]),
                         $workspace->gatesSummary($project),
                         Section::make(__('project.sections.focus_history'))
                             ->icon(Heroicon::OutlinedArrowsRightLeft)

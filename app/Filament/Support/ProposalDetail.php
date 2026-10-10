@@ -8,10 +8,13 @@ use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Parties\PartyResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Resources\Projects\ProjectResource;
+use App\Filament\Resources\Proposals\ProposalResource;
 use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
+use App\Services\Acquisition\ProposalVersionScopeService;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
+use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Infolists\Components\TextEntry;
@@ -57,33 +60,30 @@ final class ProposalDetail
             $badges[] = Text::make((string) $proposal->offer_status->getLabel())->badge()->color($proposal->offer_status->getColor())->icon(Heroicon::OutlinedFlag);
         }
 
-        if ($proposal->is_selected) {
-            $badges[] = Text::make(__('proposal.fields.is_selected'))->badge()->color('success')->icon(Heroicon::OutlinedCheckCircle);
-        }
+        // D-181: "Secili" rozeti kaldirildi; secili teklif kavrami yok.
 
+        // D-185: bagli kayit metinleri kirmizi degil; normal yazi rengi, gri tur
+        // simgesi (D-125), uzerine gelince alti cizili.
         $entries = [
             TextEntry::make('business_case')
                 ->label(__('proposal.fields.business_case'))
                 ->state($case === null ? '-' : trim(($caseCode ?? '').' · '.$case->title, ' ·'))
                 ->icon(Heroicon::OutlinedBriefcase)
-                ->iconColor('primary')
-                ->color($case !== null ? 'primary' : 'gray')
+                ->color($case !== null ? null : 'gray')
                 ->weight(FontWeight::SemiBold)
                 ->url($case !== null && Gate::allows('view', $case) ? BusinessCaseResource::getUrl('view', ['record' => $case]) : null),
             TextEntry::make('customer')
                 ->label(__('business_case.fields.primary_party'))
                 ->state($customer?->display_name ?? '-')
                 ->icon(Heroicon::OutlinedBuildingOffice2)
-                ->iconColor('primary')
-                ->color($customer !== null ? 'primary' : 'gray')
+                ->color($customer !== null ? null : 'gray')
                 ->weight(FontWeight::SemiBold)
                 ->url($customer !== null && Gate::allows('view', $customer) ? PartyResource::getUrl('view', ['record' => $customer]) : null),
             TextEntry::make('owner')
                 ->label(__('proposal.fields.owner'))
                 ->state($owner?->full_name ?? '-')
                 ->icon(Heroicon::OutlinedUserCircle)
-                ->iconColor('primary')
-                ->color($owner !== null ? 'primary' : 'gray')
+                ->color($owner !== null ? null : 'gray')
                 ->weight(FontWeight::SemiBold)
                 ->url($owner !== null && Gate::allows('view', $owner) ? PersonnelResource::getUrl('view', ['record' => $owner]) : null),
             TextEntry::make('total_price')
@@ -99,10 +99,10 @@ final class ProposalDetail
                 ->iconColor('gray'),
             TextEntry::make('project')
                 ->label(__('business_case.fields.project'))
-                ->state($project?->name ?? __('business_case.steps.no_project'))
+                ->state($project?->display_name ?? __('business_case.steps.no_project'))
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->iconColor($project !== null ? 'success' : 'gray')
-                ->color($project !== null ? 'primary' : 'gray')
+                ->color($project !== null ? null : 'gray')
                 ->weight(FontWeight::SemiBold)
                 ->url($project !== null ? ProjectResource::getUrl('view', ['record' => $project]) : null),
         ];
@@ -141,6 +141,12 @@ final class ProposalDetail
             ->icon($icon)
             ->iconColor($color);
 
+        // D-186: duzenlemedeki Teklif bilgileri gibi kapsam toplam satisi da burada
+        // (marj zaten kartta); kapsam bolumlerinde ayri toplam karti yok.
+        $scopeSales = SchemaReadiness::hasBatch('B43') && $version->scopes->isNotEmpty()
+            ? [$entry('scope_total_sales', __('proposal_version.fields.scope_total_sales'), Money::format(ProposalVersionScopeService::totalSales($version->scopes), $version->currency_code), Heroicon::OutlinedCalculator, 'success')]
+            : [];
+
         return Section::make($heading)
             ->icon(Heroicon::OutlinedDocumentDuplicate)
             ->compact()
@@ -153,6 +159,7 @@ final class ProposalDetail
                             ->badge()
                             ->color($version->status?->getColor() ?? 'gray'),
                         $entry('total_price', __('proposal_version.fields.total_price'), self::money($version), Heroicon::OutlinedBanknotes, 'success'),
+                        ...$scopeSales,
                         $entry('margin_pct', __('proposal_version.fields.margin_pct'), $version->margin_pct === null ? '-' : Number::format((float) $version->margin_pct, precision: 2, locale: 'tr').' %', Heroicon::OutlinedReceiptPercent),
                         $entry('validity_until', __('proposal_version.fields.validity_until'), $version->validity_until?->format('d.m.Y') ?? '-', Heroicon::OutlinedCalendarDays),
                         $entry('is_critical_route', __('proposal_version.fields.is_critical_route'), $version->is_critical_route ? __('export.values.yes') : __('export.values.no'), Heroicon::OutlinedExclamationTriangle, 'warning'),
@@ -233,11 +240,34 @@ final class ProposalDetail
 
         $prefix = 'v'.$version->getKey();
 
+        // D-186: kapsam, teklif sayfasi ve duzenleme ekraniyla ayni bolumlerle.
         return array_values(array_filter([
             $this->versionCard($proposal, $version, $prefix.'_version'),
-            SchemaReadiness::hasBatch('B43') ? app(ProposalScopeSchema::class)->recordCard($version, $prefix.'_scope') : null,
+            SchemaReadiness::hasBatch('B43') ? app(ProposalScopeSchema::class)->recordGrid($version, $prefix.'_scope') : null,
             app(ProposalFilesSchema::class)->versionCard($version, $prefix.'_document'),
         ]));
+    }
+
+    /**
+     * "Yeni teklif surumu" dugmesi (D-186, 9 Ekim 2026 kullanici karari:
+     * "Komple teklifte yeni surum secenegi olacak ... bu hamle teklif surumunu 2
+     * yapacaktir"). Teklif detayinda ve duzenleme ekraninin basliginda; duzenleme
+     * formunun aynisi olan NewProposalVersion sayfasini acar. Taslak teklifte,
+     * surumu olmayan teklifte ya da guncelleme yetkisi yoksa gorunmez.
+     */
+    public function newVersionAction(Proposal $proposal): ?Action
+    {
+        if (! SchemaReadiness::hasBatch('B43') || $proposal->current_version_id === null) {
+            return null;
+        }
+
+        return Action::make('new_proposal_version')
+            ->label(__('proposal.new_version.action'))
+            ->tooltip(__('proposal.new_version.tooltip', ['no' => (int) $proposal->versions()->max('version_no') + 1]))
+            ->icon(Heroicon::OutlinedDocumentDuplicate)
+            ->color(ActionColors::CREATE)
+            ->url(ProposalResource::getUrl('new-version', ['record' => $proposal]))
+            ->visible(fn (): bool => ! (bool) $proposal->getAttribute('is_draft') && Gate::allows('update', $proposal));
     }
 
     private static function versionLine(ProposalVersion $version): string
@@ -247,10 +277,7 @@ final class ProposalDetail
 
     private static function money(?ProposalVersion $version): string
     {
-        if ($version === null || $version->total_price === null) {
-            return '-';
-        }
-
-        return Number::format((float) $version->total_price, precision: 2, locale: 'tr').' '.($version->currency_code ?? '');
+        // D-180: tutar + para birimi simgesi (Money::format).
+        return Money::format($version?->total_price, $version?->currency_code);
     }
 }

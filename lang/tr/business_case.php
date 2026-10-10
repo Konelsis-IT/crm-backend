@@ -54,14 +54,14 @@ return [
         'case' => 'Potansiyel iş',
         'case_description' => 'İşveren, başlık ve iş bilgileri',
         'proposal' => 'Teklif',
-        'proposal_description' => 'İlk teklif ve sürümü (isteğe bağlı)',
+        'proposal_description' => 'İlk teklif ve sürümü',
         'project' => 'Proje',
-        'project_description' => 'Kazanılmış iş için hemen proje (isteğe bağlı)',
+        'project_description' => 'Kazanılmış iş için hemen proje',
     ],
 
     'steps' => [
         'no_proposal' => 'Henüz teklif yok',
-        'proposal_summary' => ':count teklif · seçili: :selected',
+        'proposal_summary' => ':count teklif · en son: :latest',
         'now_here' => 'Bu iş şu anda burada',
         'project_created' => 'Proje oluşturuldu: :code',
         'no_project' => 'Henüz proje yok',
@@ -140,12 +140,15 @@ return [
 
     // D-161: durum dugmesi (detayda sabit, duzenlemede degistirilir).
     'status' => [
-        'fixed' => 'Durum düzenleme ekranından değiştirilir',
-        'change' => 'Durumu değiştirmek için tıklayın',
+        'fixed' => 'Durum, düzenleme ekranının başındaki durum düğmesinden değiştirilir',
         'no_targets' => 'Bu durumdan elle geçiş yok',
-        'modal_heading' => 'Durumu değiştir',
-        'modal_description' => 'Şu anki durum: :status. Yeni durum hemen kaydedilir; formdaki diğer alanlar ve teklif sürümleri etkilenmez.',
-        'target' => 'Yeni durum',
+        // D-182: baslikta durum acilir dugmesi (detay ve duzenleme).
+        'no_permission' => 'Durumu değiştirme yetkiniz yok',
+        'menu_label' => ':status ▾',
+        'menu_tooltip' => 'Durumu değiştirin; seçtiğiniz durum hemen kaydedilir',
+        'confirm_heading' => 'Durum ":status" olsun mu?',
+        'confirm_description' => 'Potansiyel iş ":from" durumundan ":to" durumuna geçer; bu durumdan geri dönülmez. Gerekçe yazmak isteğe bağlıdır.',
+        'lost_note' => 'Potansiyel işin teklifleri "Kaçan fırsat" olur.',
     ],
 
     'messages' => [
@@ -165,8 +168,7 @@ return [
         'scope_types_first' => 'Proje kapsamı için önce potansiyel işte proje tipi seçilmelidir.',
         'scope_types_chain' => 'Seçilen tipe göre teklif öncesi kontrol listesi açılır; proje kapsamı (tutarlar ve kapsam listesi) teklif adımında girilir.',
         'proposal_step' => 'İşaretliyse potansiyel işle birlikte ilk teklif (kendi TKLF numarasıyla) ve taslak ilk sürümü açılır; potansiyel iş "Teklif hazırlanıyor" durumuna geçer. Sürüm bilgileri sonra teklif detayından değiştirilebilir.',
-        'proposal_title' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
-        'proposal_table' => 'Bu potansiyel işin teklifleri sayfanın altındaki "Teklifler" sekmesinde: yeni teklif, seçili yapma ve düzenleme oradan. Sürümler, dokümanlar ve işverene gönderim teklif detayında yönetilir; sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
+        'proposal_table' => 'Bu potansiyel işin teklifleri sayfanın altındaki "Teklifler" sekmesinde: yeni teklif ve düzenleme oradan; iş her zaman en son tekliften devam eder. Sürümler, dokümanlar ve işverene gönderim teklif detayında yönetilir; sürüm incelemeye alındığında veya gönderildiğinde potansiyel işin durumu kendiliğinden ilerler.',
         'project_step' => 'Yalnız kazanılmış ya da doğrudan yapılacak işler için: teklif sürümü onaylanır, potansiyel iş "Kazanıldı" durumuna yürütülür, Operasyona devir kaydı açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Normal akışta bu adımı boş bırakın; teklif kazanıldığında "Projeye dönüştür" ile yapılır.',
         'project_name' => 'Boş bırakılırsa potansiyel iş başlığı kullanılır.',
         'convert_requires_proposal' => 'Projeye dönüştürmek için önce teklif oluşturulmalıdır.',
@@ -180,7 +182,15 @@ return [
         'proposal_letter_file' => 'Teklif mektubu dosyası (yüklenirse teklif dokümanlarına eklenir).',
         'attach_references' => 'Dokümanlar bölümündeki sabit Referanslar belgesi bu teklife bağlanır.',
         'attach_catalog' => 'Dokümanlar bölümündeki sabit Genel katalog bu teklife bağlanır.',
-        'fixed_document_missing' => 'Referanslar belgesi ve Genel katalog Dokümanlar bölümüne REF / KAT türünde bir kez yüklenmelidir; yüklenince her teklifte otomatik önerilir.',
+    ],
+
+    // D-177: düzenleme ekranlarında "Proje tipi eklemek istiyorum".
+    'scope_add' => [
+        'section' => 'Proje tipi',
+        // D-185: etiket "Yeni proje tipi eklemek istiyorum"; açıklama metni kaldırıldı.
+        'checkbox' => 'Yeni proje tipi eklemek istiyorum',
+        'types' => 'Eklenecek proje tipi',
+        'none' => 'Proje tipi seçilmedi',
     ],
 
     'validation' => [

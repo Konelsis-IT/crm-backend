@@ -64,6 +64,9 @@ final class PermissionSubjects
         'ProjectIssue' => 'Project',
         'ProjectRisk' => 'Project',
         'ProjectPhoto' => 'Project',
+        'ProjectScope' => 'Project',
+        // D-175: proje tipi koordinatorleri
+        'ProjectTypeCoordinator' => 'Project',
         'ProjectChange' => 'Project',
         'ProjectDecision' => 'Project',
         'ProjectFocusHistory' => 'Project',
@@ -105,6 +108,9 @@ final class PermissionSubjects
         'ResponsibilityMatrixItem' => 'Proposal',
         'PricingScenario' => 'Proposal',
         'BoqItem' => 'Proposal',
+        // D-177 (B50): referanslar teklifin aracidir; kendi anahtari yoksa teklif yetkisi.
+        'ProjectReference' => 'Proposal',
+        'ProjectReferenceScopeType' => 'Proposal',
         'EstimateLine' => 'EstimateVersion',
         'ContractDocument' => 'Contract',
         'ContractParty' => 'Contract',

@@ -19,6 +19,7 @@ use App\Query\Ui\ChainGalleryQueries;
 use App\Services\Authorization\RoleResolver;
 use App\Services\Platform\FeatureFlags;
 use App\Support\DisplayTime;
+use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -218,9 +219,8 @@ class UiChainGallery extends Page
                     : __('proposal.steps.version', ['no' => $version->version_no, 'status' => (string) ($version->status?->getLabel() ?? '-')]),
                 'submitted' => $submittedAt?->format('d.m.Y'),
                 'days' => $submittedAt === null ? null : (int) $submittedAt->copy()->startOfDay()->diffInDays(Carbon::now($zone)->startOfDay()),
-                'price' => $version?->total_price === null
-                    ? '-'
-                    : Number::format((float) $version->total_price, precision: 2, locale: 'tr').' '.($version->currency_code ?? ''),
+                // D-180: tutar + para birimi simgesi.
+                'price' => Money::format($version?->total_price, $version?->currency_code),
             ],
             'project' => $project === null ? null : [
                 'code' => $project->businessCode?->formatted_code ?? '-',
@@ -584,7 +584,7 @@ class UiChainGallery extends Page
             [$label('type'), (string) ($types[$case->project_type_code] ?? ($case->project_type_code ?: '-')), Heroicon::OutlinedCube, null],
             [$label('scopes'), $scopes !== '' ? $scopes : '-', Heroicon::OutlinedSquares2x2, null],
             [$label('offer_type'), (string) ($case->offer_type?->getLabel() ?? '-'), Heroicon::OutlinedTag, null],
-            [$label('value'), $case->estimated_value === null ? '-' : Number::format((float) $case->estimated_value, precision: 2, locale: 'tr').' '.($case->currency_code ?? ''), Heroicon::OutlinedBanknotes, null],
+            [$label('value'), Money::format($case->estimated_value, $case->currency_code), Heroicon::OutlinedBanknotes, null],
             [$label('owner'), (string) ($case->owner?->full_name ?? '-'), Heroicon::OutlinedUserCircle, null],
             [$label('proposals'), __('ui_gallery.chain.card.proposal_count', ['count' => $case->proposals->count()]), Heroicon::OutlinedClipboardDocumentList, null],
         ];

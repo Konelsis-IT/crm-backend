@@ -13,6 +13,7 @@ use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\ChecklistSchema;
+use App\Filament\Support\DocumentBundleAction;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\DraftSupport;
 use App\Filament\Support\StatusButton;
@@ -126,14 +127,22 @@ class EditBusinessCase extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        /** @var BusinessCase $case */
+        $case = $this->getRecord();
+
         return [
-            // Durum yalniz bu dugmeyle degisir; form ve teklif surumu etkilenmez (D-161).
-            StatusButton::businessCase(editable: true),
             Action::make('save_now')
                 ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
                 ->icon(Heroicon::OutlinedCheck)
                 ->color(ActionColors::SAVE)
                 ->action('save'),
+            // D-182: durum "Degisiklikleri kaydet"in hemen yaninda acilir dugme
+            // (detaydaki menuyle ayni; burada ozellik anahtari yok, kodla gider).
+            // Secim hemen kaydedilir; formun diger alanlari ve teklif surumleri
+            // etkilenmez (D-161).
+            ...StatusButton::businessCaseHeader($case, gated: false),
+            // D-184: teklif duzenle ile ayni; "Tum belgeleri indir" yalniz simge.
+            DocumentBundleAction::businessCaseHeader($case),
             ViewAction::make(),
         ];
     }
@@ -149,15 +158,17 @@ class EditBusinessCase extends EditRecord
         $this->saveAsDraft = false;
     }
 
+    /** Taslak kaydi sihirbazda kalir; yalniz "Kaydet" detay sayfasina gider (D-178). */
     public function saveDraft(): void
     {
         $this->saveAsDraft = true;
-        $this->save(shouldRedirect: true);
+        $this->save(shouldRedirect: false);
     }
 
     protected function continueAfterChecklist(): void
     {
-        $this->save(shouldRedirect: true);
+        // Ozet penceresindeki "Taslak olarak kaydet" de sihirbazda kalir (D-178).
+        $this->save(shouldRedirect: ! $this->saveAsDraft);
     }
 
     protected function checklistRecord(): ?BusinessCase

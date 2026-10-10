@@ -44,6 +44,8 @@ return [
         'same_project_required' => 'Linked records must belong to the same project.',
         'project_component_duplicate' => 'This component is already defined for the project; it cannot be added twice.',
         'allocation_exceeded' => 'Allocation percentages cannot exceed 100 in total (currently :total).',
+        // D-175
+        'coordinator_not_active' => 'Only an active person can be selected as project type coordinator.',
     ],
 
     'actor_required' => 'A signed-in person is required for this action.',
@@ -131,5 +133,10 @@ return [
         'invalid_release_version' => 'Version ":version" is not valid. Write it as "2.4" or "2.4.1".',
         'release_already_published' => ':version is already the published version.',
         'release_downgrade' => ':version is older than the published :current. To roll back, run the command with the --geri-al option; features that came with :current are hidden again.',
+    ],
+    // D-176: download all documents.
+    'document' => [
+        'bundle_empty' => 'There are no documents on this record that you can download.',
+        'bundle_not_created' => 'The documents could not be written into a ZIP file. Please try again shortly.',
     ],
 ];

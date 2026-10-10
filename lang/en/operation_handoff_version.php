@@ -60,7 +60,7 @@ return [
     ],
 
     'help' => [
-        'proposal_version' => 'Leave blank to use the selected proposal\'s approved version.',
+        'proposal_version' => 'Leave blank to use the latest proposal\'s approved version.',
         'contract_version' => 'Leave blank to use the executed contract version (D-10).',
     ],
 ];

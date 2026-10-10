@@ -14,6 +14,19 @@ return [
         'content' => 'Güncel içerik',
         'body' => 'Belge içeriği',
         'file' => 'Dosya',
+        'linked_records' => 'Bağlı kayıtlar',
+    ],
+
+    // D-181: doküman sayfasındaki "Bağlı kayıtlar" satırlarının rolleri.
+    'usage' => [
+        'current_version' => 'Sürüm :no (güncel)',
+        'older_version' => 'Sürüm :no (önceki)',
+        'version' => 'Sürüm :no',
+        'via_proposal' => ':no teklifi üzerinden',
+        'checklist_item' => 'Kontrol listesi: :item',
+        'tender_source' => 'İhale belgesi',
+        'party_certificate' => 'Firma sertifikası',
+        'party_license' => 'Firma lisansı',
     ],
 
     'fields' => [
@@ -78,13 +91,32 @@ return [
     // Belge satiri (DocumentLine, D-155): "dosya.xlsx · Rev 02".
     'short' => [
         'revision' => 'Rev :code',
+        // D-185: kucuk yukleme dugmesi.
+        'upload' => 'Yükle',
+        // D-186: carpili dosya secimi, onizleme ve indirme simgesi.
+        'remove' => 'Kaldır',
+        'undo_remove' => 'Geri al',
+        'preview' => 'Önizle',
+        'download' => 'İndir',
+    ],
+
+    // D-186: Excel / Word onizleme sayfasi (ozellik documents.office_preview).
+    'preview' => [
+        'title' => ':name · Önizleme',
+        'download' => 'Dosyayı indir',
+        'sheet_limit' => 'Yalnız ilk :rows satır ve :columns sütun gösteriliyor; tamamı için dosyayı indirin.',
+        'paragraph_limit' => 'Belgenin yalnız başı gösteriliyor; tamamı için dosyayı indirin.',
+        'empty' => 'Bu sayfada gösterilecek içerik yok.',
+        'unavailable' => 'Bu dosya önizlenemiyor; lütfen indirin.',
+        'too_large' => 'Dosya önizleme için çok büyük; lütfen indirin.',
+        'note' => 'Önizleme yalnız içeriği gösterir; biçim, formül, görsel ve grafikler için dosyayı indirin.',
     ],
 
     'actions' => [
         'download_current' => 'Güncel dosyayı indir',
         'preview_current' => 'Güncel dosyayı önizle',
         'create_with_file' => 'Doküman ekle (dosya ile)',
-        'edit_details' => 'Bilgileri düzenle',
+        'edit_details' => 'Düzenle',
         'new_revision' => 'Yeni sürüm',
         'share' => 'Paylaş',
         'send_to_approval' => 'Onaya gönder',

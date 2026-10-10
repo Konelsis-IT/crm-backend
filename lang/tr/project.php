@@ -25,6 +25,7 @@ return [
         'photos' => 'Saha fotoğrafları',
         'summary' => 'Özet',
         'description' => 'Açıklama',
+        'scope' => 'Proje tipi ve ölçüleri',
     ],
 
     'fields' => [
@@ -51,6 +52,11 @@ return [
         'legal_entity' => 'Tüzel kişilik',
         'missing_items' => 'Eksikler',
         'name' => 'Ad',
+        // D-174: proje adi "Lisans adı", yeni "Kısa ad"; listede ikisi tek sütunda.
+        'short_name' => 'Kısa ad',
+        'license_name' => 'Lisans adı',
+        'names' => 'Kısa ad / Lisans adı',
+        'scope_types' => 'Proje tipi',
         'next_focus' => 'Sıradaki adım',
         'origin' => 'Kaynak',
         'planned_finish_on' => 'Planlanan bitiş',
@@ -59,7 +65,8 @@ return [
         'actual_dates' => 'Fiili tarihler',
         'primary_focus_workstream' => 'Birincil odak',
         'progress' => 'İlerleme',
-        'project_manager' => 'Proje yöneticisi',
+        // D-175: "Proje yöneticisi" yerine "Proje müdürü".
+        'project_manager' => 'Proje müdürü',
         'project_type' => 'Proje tipi',
         'reason' => 'Gerekçe',
         'site_address' => 'Saha adresi',
@@ -147,7 +154,7 @@ return [
         'open_workspace' => 'Çalışma alanını aç',
         'add_photo' => 'Fotoğraf ekle',
         'set_cover' => 'Kapak yap',
-        'edit_details' => 'Bilgileri düzenle',
+        'edit_details' => 'Düzenle',
         'edit_site' => 'Saha adresini düzenle',
         'edit_dates' => 'Plan tarihlerini düzenle',
         'quick_add' => 'Ekle',
@@ -169,7 +176,7 @@ return [
 
     'help' => [
         'create_direct_intro' => 'Bu form teklif süreci yaşanmamış, geçmişte yapılmış veya halen süren bir projeyi sisteme alır. Sistem PRJ kodunu otomatik verir; potansiyel iş "Operasyon" segmentinde açılır.',
-        'convert_intro' => 'Teklif seçili yapılır, sürüm gerekirse onaylanır, Operasyona devir kaydı otomatik açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Sözleşme daha sonra bağlanabilir.',
+        'convert_intro' => 'Teklifin en son sürümü kullanılır ve gerekirse onaylanır, Operasyona devir kaydı otomatik açılıp kabul edilir ve PRJ kodu ile proje oluşturulur. Sözleşme daha sonra bağlanabilir.',
         'force' => 'İşaretlenirse mevcut adımın eksik zorunlu beklentilerine rağmen ilerlenir; gerekçe zorunludur.',
         'approve_draft' => 'Seçilen sürüm taslak veya incelemedeyse dönüşüm sırasında otomatik onaylanır.',
         'initial_status' => 'Geçmişte bitmiş projeler için "Kapandı", süren projeler için "Aktif" seçin.',
@@ -182,15 +189,19 @@ return [
         'cover_replace' => 'Yeni bir görsel seçerseniz kapak olarak eklenir; mevcut fotoğraflar aşağıdaki tabloda yönetilir.',
         'contract_value_locked' => 'Sözleşme değeri devir/teklif kaynağından gelir; burada değiştirilmez.',
         'checklist' => '"+" ile ilgili kaydı hemen ekleyin, kalem ile düzenleyin ya da tabloya gidin.',
+        'short_name' => 'Listelerde, kartlarda ve diğer ekranlarda görünen ad. Boş bırakılırsa lisans adı görünür.',
+        'license_name' => 'Projenin lisanstaki (resmi) adı.',
+        'scope_types' => 'Seçilen her tip için projenin kendi ölçüleri (MWp, MWe / MWh, km, adet), sözleşme tutarı ve bütçesi açılır. Tekliften dönüşen projede tipler tekliften gelir.',
     ],
 
     'wizard' => [
         'identity' => 'Kimlik',
         'identity_description' => 'Proje adı, işveren ve tip',
+        'identity_description_named' => 'Kısa ad, lisans adı, işveren ve tip',
         'site' => 'Saha',
         'site_description' => 'Tam adres ve konum',
         'plan' => 'Plan ve yönetim',
-        'plan_description' => 'Yönetici, tarihler, durum',
+        'plan_description' => 'Proje müdürü, tarihler, durum',
         'photo' => 'Fotoğraf',
         'photo_description' => 'Kapak görseli (isteğe bağlı)',
         'photo_description_edit' => 'Kapak görseli ve saha fotoğrafları',

@@ -16,8 +16,10 @@ use App\Enums\Acquisition\OfferType;
 use App\Enums\Acquisition\ProjectScopeType;
 use App\Enums\Acquisition\ProposalDocumentRole;
 use App\Enums\Document\DocumentRevisionFileRole;
+use App\Enums\Platform\Feature;
 use App\Enums\Reference\ClassificationCode;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\OperationHandoffs\OperationHandoffResource;
 use App\Filament\Resources\Parties\PartyResource;
@@ -40,13 +42,18 @@ use App\Query\Personnel\PersonnelQueries;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Acquisition\ProposalVersionScopeService;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectConversionService;
+use App\Support\Acquisition\ScopeTypes;
 use App\Support\DisplayTime;
+use App\Support\Money;
+use App\Support\Projects\ProjectNames;
 use App\Support\UploadLimits;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -107,7 +114,8 @@ use Throwable;
  * - Potansiyel is adiminda teklif oncesi kontrol listesi ve belgeler
  *   (ChecklistSchema; kendi ozellik anahtarlari).
  * - Teklif adiminda baslik yarim genislikte, belgeler kucuk kutular halinde
- *   (ProposalFilesSchema); duzenlemede degisiklik yeni surumdur.
+ *   (ProposalFilesSchema). D-186: duzenleme surum artirmaz; yeni surum
+ *   "Yeni teklif surumu" dugmesiyle (proposalEditSteps $newVersion).
  * Grup uygulanmadiysa eski uc adim aynen calisir.
  */
 final class BusinessCaseWizard
@@ -123,6 +131,9 @@ final class BusinessCaseWizard
 
     /** @var list<string> B43 oncesi uc adim. */
     public const STEP_IDS = [self::STEP_CASE, self::STEP_PROPOSAL, self::STEP_PROJECT];
+
+    /** D-186: proje tipi secimi rozet boyunda cipler (resources/css/filament/konelsis.css). */
+    public const TYPE_CHIPS_CLASS = 'kc-type-chips';
 
     /** @var list<string> B43: dort adim. */
     public const CHAIN_STEP_IDS = [self::STEP_TENDER, self::STEP_CASE, self::STEP_PROPOSAL, self::STEP_PROJECT];
@@ -218,6 +229,8 @@ final class BusinessCaseWizard
                 ->searchable()
                 ->required()
                 ->native(false)
+                // D-180: tutar alanlarinin simgesi secimle birlikte degisir.
+                ->live()
                 ->columnSpan(FieldGrid::SHORT),
             // B29: teklif tipi kritikligin yerini alir; kritiklik kolonu ve verisi
             // veritabaninda kalir, form yalniz B29 yokken gosterir.
@@ -245,18 +258,31 @@ final class BusinessCaseWizard
                 ->columnSpan(FieldGrid::NORMAL),
             // D-163: tipler kendi simgesi ve rengiyle secim dugmesi (coklu secim);
             // secilen dugme tipin renginde dolar.
+            // D-177: secenekler ScopeTypes'tan (Otomasyon / Process B50 ve ozellikle);
+            // duzenlemede "Proje tipi eklemek istiyorum" acikken bu alan gizlidir,
+            // durumu yine kontrol listesini besler (asagidaki ekleme alanlari).
             ToggleButtons::make('scope_types')
                 ->label(__('business_case.fields.scope_types'))
                 // B43: kapsam teklif adiminda; burada kontrol listesi acilir.
                 ->helperText(fn (): string => self::b43() ? __('business_case.help.scope_types_chain') : __('business_case.help.scope_types'))
-                ->options(ProjectScopeType::class)
+                ->options(fn (?Model $record): array => self::scopeTypeOptions($record))
+                ->enum(ProjectScopeType::class)
                 ->multiple()
-                // 6 secenek iki satirda (16 Eylul 2026 kullanici karari): uc sutun.
-                ->columns(['default' => 2, 'md' => 3, 'xl' => 3])
+                // D-186: rozet boyunda satir ici secim cipleri (eskiden uc sutunlu
+                // buyuk dugmeler); secilen tip kendi renginde dolar.
+                ->inline()
+                ->extraAttributes(['class' => self::TYPE_CHIPS_CLASS], merge: true)
                 ->live()
-                ->visible($b29)
-                ->dehydrated($b29)
-                ->columnSpanFull(),
+                ->visible(fn (?Model $record): bool => self::b29() && ! self::addsScopeTypes($record))
+                ->dehydrated(fn (?Model $record): bool => self::b29() && ! self::addsScopeTypes($record))
+                ->columnSpan(FieldGrid::HALF),
+            ...$this->scopeTypeAddFields(
+                existing: static fn (?Model $record): array => $record instanceof BusinessCase ? self::caseScopeTypes($record) : [],
+                visible: static fn (?Model $record): bool => self::addsScopeTypes($record),
+                syncSelection: true,
+            ),
+            // D-183: potansiyel isteki "Referans listesi" alani kaldirildi; referanslar
+            // teklifin kapsam bolumlerinin basligindaki "Referanslar" dugmesinde.
             // Proje durumu (B43; D-157, 5 Ekim 2026 kullanici talimati: "Siniflandirma
             // alanina koyalim, dropdown olsun, Teklif tipi ile Proje tipi altinda 1
             // satirda, ayni Teklif tipi uzunlugunda, yanlari bos kalsin"). Yalniz GES
@@ -300,11 +326,8 @@ final class BusinessCaseWizard
                 ->searchable()
                 ->preload()
                 ->native(false),
-            TextInput::make('estimated_value')
+            MoneyInput::make('estimated_value')
                 ->label(__('business_case.fields.estimated_value'))
-                ->numeric()
-                ->step('0.01')
-                ->minValue(0)
                 ->columnSpan(FieldGrid::SHORT),
             // Kisitli (restricted) gizlilik sinifi is dosyasinda secilemez.
             Select::make('classification_id')
@@ -359,7 +382,6 @@ final class BusinessCaseWizard
             $this->caseStep(),
             Step::make(__('business_case.wizard.proposal'))
                 ->id(self::STEP_PROPOSAL)
-                ->description(__('business_case.wizard.proposal_description'))
                 ->icon(Heroicon::OutlinedClipboardDocumentList)
                 ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
                 ->columns(1)
@@ -369,7 +391,6 @@ final class BusinessCaseWizard
                 ]),
             Step::make(__('business_case.wizard.project'))
                 ->id(self::STEP_PROJECT)
-                ->description(__('business_case.wizard.project_description'))
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->completedIcon(Heroicon::OutlinedRocketLaunch)
                 ->columns(1)
@@ -394,7 +415,7 @@ final class BusinessCaseWizard
             // Musteri yaninda Ulke, Baslik alt satirda (16 Eylul 2026 kullanici
             // karari): Siniflandirma'dan Ulke cikinca kalan alanlar rahatlar.
             'identity' => ['label' => __('business_case.sections.identity'), 'icon' => Heroicon::OutlinedBriefcase, 'fields' => ['primary_party_id', 'country_code', 'title', 'short_description'], 'columns' => FieldGrid::HALF_COLUMNS],
-            'classification' => ['label' => __('business_case.sections.classification'), 'icon' => Heroicon::OutlinedTag, 'fields' => ['offer_type', 'development_kind', 'criticality', 'source_kind', 'classification_id', 'scope_types', 'license_status'], 'columns' => FieldGrid::HALF_COLUMNS],
+            'classification' => ['label' => __('business_case.sections.classification'), 'icon' => Heroicon::OutlinedTag, 'fields' => ['offer_type', 'development_kind', 'criticality', 'source_kind', 'classification_id', 'scope_types', 'existing_scope_types', 'add_scope_types', 'added_scope_types', 'license_status'], 'columns' => FieldGrid::HALF_COLUMNS],
             'commercial' => ['label' => __('business_case.sections.commercial'), 'icon' => Heroicon::OutlinedBanknotes, 'fields' => ['currency_code', 'estimated_value', 'legal_entity_id'], 'columns' => FieldGrid::HALF_COLUMNS],
             'ownership' => ['label' => __('business_case.sections.ownership'), 'icon' => Heroicon::OutlinedUsers, 'fields' => ['owner_employee_id', 'proposal_owner_employee_id'], 'columns' => FieldGrid::HALF_COLUMNS],
         ]);
@@ -461,20 +482,75 @@ final class BusinessCaseWizard
         $types = $standalone
             ? fn (Get $get): array => self::selectedScopeTypes(fn (string $path): mixed => data_get($this->caseSummaryData($get('business_case_id')), $path))
             : static fn (Get $get): array => self::selectedScopeTypes($get);
-        $whenProposal = static fn (Get $get): bool => (bool) $get('create_proposal');
+        // D-183: Teklif olustur ekraninda teklif alanlari potansiyel is secilir
+        // secilmez ayni ekranda acilir (Ileri gerekmez); secim yokken gizlidir.
+        $creating = $standalone && $editing === null;
+        $whenProposal = $creating
+            ? static fn (Get $get): bool => (bool) $get('create_proposal') && filled($get('business_case_id'))
+            : static fn (Get $get): bool => (bool) $get('create_proposal');
         $scope = app(ProposalScopeSchema::class);
 
-        return [
-            ...FieldGrid::group([
-                ...$this->proposalFields($standalone, $editing),
-                $scope->totalSalesEntry($types)->visible($whenProposal)->columnSpan(FieldGrid::NORMAL),
-                $scope->marginEntry($types)->visible($whenProposal)->columnSpan(FieldGrid::NORMAL),
-            ], [
-                'proposal' => ['label' => $editing !== null ? __('proposal.sections.main') : __('business_case.sections.proposal'), 'icon' => Heroicon::OutlinedClipboardDocumentList, 'fields' => [
+        // D-177: teklifte "Yeni proje tipi eklemek istiyorum" isaretlenince secilen
+        // yeni tipler de kapsam bolumlerini acar; kaydedince potansiyel ise ve
+        // teklifin guncel surumune eklenir (D-186: surum artmaz). D-186: Teklif
+        // olustur ekraninda da ayni bolum (secili potansiyel isin tipleri).
+        $typeSection = null;
+
+        if ($standalone && self::scopeTypeAddEnabled()) {
+            $caseTypes = $types;
+            $types = static fn (Get $get): array => array_values(array_unique([
+                ...$caseTypes($get),
+                ...((bool) $get('add_scope_types') ? ScopeTypes::values((array) $get('added_scope_types')) : []),
+            ]));
+            // D-186 (9 Ekim 2026 kullanici talimati: "Teklif bilgileri kismini w-3/4
+            // yapalim, Proje tipi de sagda w-1/4 olsun"): dar bolum, tek sutun.
+            $typeSection = Section::make(__('business_case.scope_add.section'))
+                ->key('proposal-scope-type-add')
+                ->icon(Heroicon::OutlinedTag)
+                ->compact()
+                ->columns(1)
+                ->columnSpan(['default' => 1, 'xl' => 1])
+                ->visible($whenProposal)
+                ->components($this->scopeTypeAddFields(
+                    existing: $caseTypes,
+                    visible: $whenProposal,
+                    syncSelection: false,
+                ));
+        }
+
+        $grouped = FieldGrid::group([
+            ...$this->proposalFields($standalone, $editing),
+            $scope->totalSalesEntry($types)->visible($whenProposal)->columnSpan(FieldGrid::NORMAL),
+            $scope->marginEntry($types)->visible($whenProposal)->columnSpan(FieldGrid::NORMAL),
+            // D-183: ayri "Referans listesi" alani yok; her kapsam bolumunun
+            // basliginda "Referanslar" ve indir simgesi (ProposalScopeSchema).
+        ], [
+            'proposal' => [
+                'label' => $editing !== null ? __('proposal.sections.main') : __('business_case.sections.proposal'),
+                'icon' => Heroicon::OutlinedClipboardDocumentList,
+                'fields' => [
                     'create_proposal', 'proposal_title', 'owner_employee_id', 'offer_status', 'total_price', 'scope_total_sales', 'scope_margin_pct',
                     'validity_until', 'is_critical_route', 'summary',
-                ]],
-            ]),
+                ],
+                ...($creating ? ['visible' => static fn (Get $get): bool => filled($get('business_case_id'))] : []),
+                ...($typeSection !== null ? ['columnSpan' => ['default' => 1, 'xl' => 3]] : []),
+            ],
+        ]);
+
+        // Teklif bilgileri (3/4) ve Proje tipi (1/4) yan yana; dar ekranda alt alta.
+        $infoRow = $grouped;
+
+        if ($typeSection !== null) {
+            $sections = array_values(array_filter($grouped, static fn (Component $component): bool => ! $component instanceof Hidden));
+            $hidden = array_values(array_filter($grouped, static fn (Component $component): bool => $component instanceof Hidden));
+            $infoRow = [
+                Grid::make(['default' => 1, 'xl' => 4])->components([...$sections, $typeSection]),
+                ...$hidden,
+            ];
+        }
+
+        return [
+            ...$infoRow,
             Text::make(__('business_case.help.scope_types_first'))
                 ->color('warning')
                 ->icon(Heroicon::OutlinedExclamationTriangle)
@@ -552,31 +628,58 @@ final class BusinessCaseWizard
     /**
      * Teklif olustur (B43, D-155; "Teklif olustur'a bastigimizda ... adimli olan
      * arayuz acilmalidir"): potansiyel is sihirbaziyla ayni dort adim. Ihale
-     * adimi secilen potansiyel isin ihalelerini gosterir; potansiyel is adiminda
-     * zorunlu secim ve ozet karti; teklif adimi ayni bolumler (kapsam, belgeler);
-     * proje adimi istenirse hemen donusum.
+     * adimi secilen potansiyel isin ihalelerini gosterir; proje adimi istenirse
+     * hemen donusum.
+     *
+     * D-183 (9 Ekim 2026 kullanici talimati: "Potansiyel is karti ve teklifin
+     * olusturma ekrani ayni ekrandi; bunu neden ayirdin? Ayirma."): sayfa Teklif
+     * adiminda acilir. Potansiyel is secimi, potansiyel is karti ve butun teklif
+     * alanlari bu adimda tek ekrandadir; secim yapilir yapilmaz teklif alanlari
+     * acilir ve potansiyel isten tureyen alanlar dolar (proposalAutofill).
+     * Potansiyel is adimi yalniz salt okunur ozettir (zorunlu secim orada yok).
      *
      * @return list<Step>
      */
     public function proposalCreateSteps(): array
     {
         $reader = fn (Get $get): Closure => fn (string $path): mixed => data_get($this->caseSummaryData($get('business_case_id')), $path);
-        $syncCase = function (Set $set, mixed $state): void {
-            $set('country_code', data_get($this->caseSummaryData($state), 'country_code'));
-            $set('currency_code', data_get($this->caseSummaryData($state), 'currency_code'));
-        };
+        $selected = static fn (Get $get): bool => filled($get('business_case_id'));
+        $caseUrl = static fn (Get $get): ?string => is_numeric($get('business_case_id'))
+            ? BusinessCaseResource::getUrl('view', ['record' => (int) $get('business_case_id')])
+            : null;
 
         return [
             app(TenderSchema::class)->infoStep(static fn (Get $get): ?int => is_numeric($get('business_case_id')) ? (int) $get('business_case_id') : null),
             Step::make(__('business_case.wizard.case'))
                 ->id(self::STEP_CASE)
-                ->description(__('proposal.wizard.case_description'))
                 ->icon(Heroicon::OutlinedBriefcase)
                 ->completedIcon(Heroicon::OutlinedBriefcase)
                 ->columns(1)
                 ->schema([
+                    Text::make(__('proposal.help.case_in_proposal_step'))
+                        ->color('gray')
+                        ->icon(Heroicon::OutlinedInformationCircle)
+                        ->visible(static fn (Get $get): bool => ! $selected($get)),
+                    $this->caseSummarySection('standalone', $reader)
+                        ->visible($selected),
+                    Actions::make([
+                        Action::make('open_case')
+                            ->label(__('deal_track.go_case'))
+                            ->icon(Heroicon::OutlinedBriefcase)
+                            ->color(ActionColors::VIEW)
+                            ->url($caseUrl),
+                    ])->visible($selected),
+                ]),
+            Step::make(__('business_case.wizard.proposal'))
+                ->id(self::STEP_PROPOSAL)
+                ->icon(Heroicon::OutlinedClipboardDocumentList)
+                ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
+                ->columns(1)
+                ->schema([
                     Section::make(__('proposal.sections.business_case'))
+                        ->key('proposal-case-select')
                         ->icon(Heroicon::OutlinedBriefcase)
+                        ->compact()
                         ->columns(FieldGrid::COLUMNS)
                         ->components([
                             Select::make('business_case_id')
@@ -587,29 +690,39 @@ final class BusinessCaseWizard
                                 ->preload()
                                 ->required()
                                 ->native(false)
-                                // ?business_case_id= ile acilirsa potansiyel is secili gelir.
+                                // ?business_case_id= ile acilirsa potansiyel is secili gelir;
+                                // o durumda alanlar CreateProposal::afterFill ile dolar.
                                 ->default(fn (): ?int => request()->integer('business_case_id') ?: null)
                                 ->live()
-                                ->afterStateHydrated($syncCase)
-                                ->afterStateUpdated($syncCase)
+                                // D-183: secim degisince potansiyel isten tureyen alanlar
+                                // hemen dolar; kullanicinin yazdigi deger ezilmez.
+                                ->afterStateUpdated(function (Set $set, Get $get, mixed $state, mixed $old): void {
+                                    foreach ($this->proposalAutofill($state, $get, $old) as $path => $value) {
+                                        $set($path, $value);
+                                    }
+                                })
                                 ->columnSpan(FieldGrid::HALF),
                             // Santiye il / ilce ve tutar bicimi potansiyel isin ulke / para birimine gore.
                             Hidden::make('country_code')->dehydrated(false),
                             Hidden::make('currency_code')->dehydrated(false),
                         ]),
-                    $this->caseSummarySection('standalone', $reader)
-                        ->visible(fn (Get $get): bool => filled($get('business_case_id'))),
+                    // D-183: potansiyel is karti teklif alanlarinin hemen ustunde (kompakt,
+                    // katlanabilir, acik gelir), basliginda "Potansiyel ise git".
+                    $this->caseSummarySection('proposal_top', $reader)
+                        ->collapsible()
+                        ->afterHeader([
+                            Action::make('open_case_from_proposal')
+                                ->label(__('deal_track.go_case'))
+                                ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                                ->color(ActionColors::VIEW)
+                                ->link()
+                                ->url($caseUrl),
+                        ])
+                        ->visible($selected),
+                    ...$this->proposalSections(standalone: true),
                 ]),
-            Step::make(__('business_case.wizard.proposal'))
-                ->id(self::STEP_PROPOSAL)
-                ->description(__('business_case.wizard.proposal_description'))
-                ->icon(Heroicon::OutlinedClipboardDocumentList)
-                ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
-                ->columns(1)
-                ->schema($this->proposalSections(standalone: true)),
             Step::make(__('business_case.wizard.project'))
                 ->id(self::STEP_PROJECT)
-                ->description(__('business_case.wizard.project_description'))
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->completedIcon(Heroicon::OutlinedRocketLaunch)
                 ->columns(1)
@@ -620,12 +733,13 @@ final class BusinessCaseWizard
     /**
      * Teklif duzenle (B43, D-155): teklif olusturla ayni dort adim, teklif
      * adiminda acilir. Ihale ve potansiyel is adimlari ozet ve baglanti, teklif
-     * adimi kayitli degerlerle dolu form ("degisiklik yeni surumdur" notuyla),
-     * proje adimi proje ya da "Projeye donustur".
+     * adimi kayitli degerlerle dolu form, proje adimi proje ya da "Projeye
+     * donustur". D-186: $newVersion ise ayni form "Yeni teklif surumu" icin
+     * (adim aciklamasi "Yeni surum (Surum N+1)"); Duzenle surum artirmaz.
      *
      * @return list<Step>
      */
-    public function proposalEditSteps(Proposal $proposal): array
+    public function proposalEditSteps(Proposal $proposal, bool $newVersion = false): array
     {
         /** @var BusinessCase $case */
         $case = $proposal->businessCase;
@@ -656,17 +770,41 @@ final class BusinessCaseWizard
                 ]),
             Step::make(__('business_case.wizard.proposal'))
                 ->id(self::STEP_PROPOSAL)
-                ->description(__('proposal.steps.version', ['no' => $proposal->currentVersion?->version_no ?? '-', 'status' => (string) ($proposal->currentVersion?->status?->getLabel() ?? '-')]))
+                // D-182: teklif duzenlemede gorunen durum Teklif durumudur (Verilen
+                // teklif...), surum durumu (Gonderildi...) degil. D-186: yeni surum
+                // ekraninda "Yeni surum (Surum N+1)".
+                ->description(fn (): string => $newVersion
+                    ? __('proposal.new_version.heading', ['no' => (int) $proposal->versions()->max('version_no') + 1])
+                    : __('proposal.steps.version', [
+                    'no' => $proposal->currentVersion?->version_no ?? '-',
+                    'status' => (string) ($proposal->offer_status?->getLabel() ?? $proposal->currentVersion?->status?->getLabel() ?? '-'),
+                ]))
                 ->icon(Heroicon::OutlinedClipboardDocumentList)
                 ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
                 ->columns(1)
-                ->schema($this->proposalSections(standalone: true, editing: $proposal)),
+                ->schema([
+                    // D-183 ("Teklif duzenle dedigimizde potansiyel is karti gorunuyordu,
+                    // detaylari goruyorduk"): Teklif bilgileri'nin ustunde potansiyel is
+                    // karti (kompakt, katlanabilir, acik gelir) ve "Potansiyel ise git".
+                    $this->caseSummarySection('proposal_top', $reader)
+                        ->collapsible()
+                        ->afterHeader([
+                            Action::make('open_case_from_proposal')
+                                ->label(__('deal_track.go_case'))
+                                ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                                ->color(ActionColors::VIEW)
+                                ->link()
+                                ->url(BusinessCaseResource::getUrl('view', ['record' => $case]))
+                                ->visible(Gate::allows('view', $case)),
+                        ]),
+                    ...$this->proposalSections(standalone: true, editing: $proposal),
+                ]),
             $this->projectStep($case, $proposal),
         ];
     }
 
     /**
-     * Teklif duzenle formunun dolu degerleri (B43): baslik, sorumlu, durum, guncel
+     * Teklif duzenle formunun dolu degerleri (B43): baslik, sorumlu, guncel
      * surumun alanlari, kapsamlari ve sabit belge secimleri.
      *
      * @return array<string, mixed>
@@ -683,7 +821,7 @@ final class BusinessCaseWizard
             'currency_code' => $version?->currency_code ?? $case?->currency_code,
             'proposal_title' => $proposal->title,
             'owner_employee_id' => $proposal->owner_employee_id,
-            'offer_status' => $proposal->offer_status?->value,
+            // D-182: Teklif durumu formda yok (baslik dugmesi).
             'total_price' => $version?->total_price === null ? null : (string) $version->total_price,
             'validity_until' => $version?->validity_until?->toDateString(),
             'is_critical_route' => (bool) $version?->is_critical_route,
@@ -691,6 +829,91 @@ final class BusinessCaseWizard
             'scopes' => ProposalScopeSchema::formData($version),
             ...ProposalFilesSchema::formData($proposal),
         ];
+    }
+
+    /**
+     * D-183 (9 Ekim 2026 kullanici talimati: "Teklif basligi potansiyel isten
+     * otomatik gelsin ... Doldurulabilir olanlar hizlica otomatik dolmalidir"):
+     * Teklif olustur ekraninda potansiyel is secilince (ya da ?business_case_id=
+     * ile secili gelince) potansiyel isten tureyen alanlar. Doner: yol => deger.
+     *
+     * - Ulke ve para birimi (gizli alanlar: santiye il / ilce, tutar simgesi):
+     *   her zaman isin degeri.
+     * - Teklif basligi = isin basligi; teklif sorumlusu = isin teklif sorumlusu,
+     *   yoksa giris yapan kisi (isin sahibi degil, D-175); GES kurulu gucu (MWp)
+     *   = isin GES kapsamindaki kurulu guc. Bu uc alan yalniz bossa ya da bir
+     *   onceki secimden otomatik gelmis degeri hala tasiyorsa yazilir; kullanicinin
+     *   yazdigi deger ezilmez.
+     * - Proje tipleri ve kapsam bolumleri ayrica yazilmaz: secili isin tiplerinden
+     *   canli acilir (proposalSections).
+     *
+     * $get: formun okuyucusu (Get ya da "yol => deger" closure'u).
+     *
+     * @return array<string, mixed>
+     */
+    public function proposalAutofill(mixed $caseId, callable $get, mixed $previousCaseId = null): array
+    {
+        $data = $this->caseSummaryData($caseId);
+        $previous = $previousCaseId !== null && (string) $previousCaseId !== (string) $caseId ? $this->caseSummaryData($previousCaseId) : [];
+
+        $values = [
+            'country_code' => $data['country_code'] ?? null,
+            'currency_code' => $data['currency_code'] ?? null,
+        ];
+
+        if ($data === []) {
+            return $values;
+        }
+
+        // Bos ya da onceki isten otomatik gelmis (degistirilmemis) deger yenilenir.
+        $replaceable = static function (string $path, mixed $previousValue) use ($get): bool {
+            $current = $get($path);
+
+            return blank($current) || ($previousValue !== null && (string) $current === (string) $previousValue);
+        };
+
+        if ($replaceable('proposal_title', $previous['title'] ?? null)) {
+            $values['proposal_title'] = $data['title'] ?? null;
+        }
+
+        if (self::b43()) {
+            $owner = $this->defaultProposalOwnerId($data);
+
+            if ($owner !== null && $replaceable('owner_employee_id', $previous === [] ? null : $this->defaultProposalOwnerId($previous))) {
+                $values['owner_employee_id'] = $owner;
+            }
+
+            $capacity = $data['ges_capacity_mw'] ?? null;
+            $current = $get('scopes.ges.capacity_mwp');
+            $previousCapacity = $previous['ges_capacity_mw'] ?? null;
+
+            if ($capacity !== null && (blank($current) || ($previousCapacity !== null && is_numeric($current) && (float) $current === $previousCapacity))) {
+                $values['scopes.ges.capacity_mwp'] = $capacity;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * D-183: yeni teklifin varsayilan sorumlusu. Potansiyel isin "Teklif
+     * sorumlusu" seciliyse o, yoksa giris yapan kisi; potansiyel isin sahibi
+     * hicbir zaman (D-175: is gelistirme sahibi teklif sahibi olmaz). Gizli
+     * hesap secenekte olmadigi icin yazilmaz.
+     *
+     * @param  array<string, mixed>  $caseData
+     */
+    private function defaultProposalOwnerId(array $caseData): ?int
+    {
+        $personnel = app(PersonnelQueries::class);
+
+        foreach ([$caseData['proposal_owner_employee_id'] ?? null, auth()->id()] as $candidate) {
+            if (is_numeric($candidate) && (int) $candidate > 0 && $personnel->name((int) $candidate) !== null) {
+                return (int) $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -854,7 +1077,7 @@ final class BusinessCaseWizard
                         ->iconColor('gray'),
                     TextEntry::make('currency')
                         ->label(__('business_case.fields.currency'))
-                        ->state($case->currency_code ?? '-')
+                        ->state(Money::label($case->currency_code))
                         ->icon(Heroicon::OutlinedCurrencyDollar)
                         ->iconColor('gray'),
                     TextEntry::make('legal_entity')
@@ -914,14 +1137,15 @@ final class BusinessCaseWizard
     }
 
     /**
-     * Adim 2 (duzenleme): tekliflerin ozeti. Tam tablo (ac, duzenle, secili
-     * yap, teklif olustur) sayfanin altindaki "Teklifler" sekmesindedir
-     * (D-143); burada ayrica gomulu tablo yok, iki kez gorunmesin (29 Eylul 2026).
+     * Adim 2 (duzenleme): tekliflerin ozeti. Tam tablo (ac, duzenle, teklif
+     * olustur) sayfanin altindaki "Teklifler" sekmesindedir (D-143); burada
+     * ayrica gomulu tablo yok, iki kez gorunmesin (29 Eylul 2026). D-181: ozet
+     * ve "Teklifi duzenle" en son teklifi kullanir (secili teklif kavrami yok).
      */
     public function proposalTableStep(BusinessCase $case): Step
     {
         $count = $case->proposals()->count();
-        $selected = $case->selectedOrLatestProposal();
+        $latest = $case->latestProposal();
 
         // B43 (D-155): teklif olustur / duzenle ayni adimli ekrana gider.
         $actions = self::b43() ? array_values(array_filter([
@@ -932,12 +1156,12 @@ final class BusinessCaseWizard
                     ->color(ActionColors::CREATE)
                     ->url(ProposalResource::getUrl('create', ['business_case_id' => $case->getKey()]))
                 : null,
-            $selected !== null && Gate::allows('update', $selected)
+            $latest !== null && Gate::allows('update', $latest)
                 ? Action::make('step_edit_proposal')
-                    ->label(__('proposal.actions.edit_selected', ['no' => $selected->proposal_no]))
+                    ->label(__('proposal.actions.edit_latest', ['no' => $latest->proposal_no]))
                     ->icon(Heroicon::OutlinedPencilSquare)
                     ->color(ActionColors::EDIT)
-                    ->url(ProposalResource::getUrl('edit', ['record' => $selected]))
+                    ->url(ProposalResource::getUrl('edit', ['record' => $latest]))
                 : null,
         ])) : [];
 
@@ -946,7 +1170,7 @@ final class BusinessCaseWizard
             ->id(self::STEP_PROPOSAL)
             ->description($count === 0
                 ? __('business_case.steps.no_proposal')
-                : __('business_case.steps.now_here').' · '.__('business_case.steps.proposal_summary', ['count' => $count, 'selected' => $selected?->proposal_no ?? '-']))
+                : __('business_case.steps.now_here').' · '.__('business_case.steps.proposal_summary', ['count' => $count, 'latest' => $latest?->proposal_no ?? '-']))
             ->icon(Heroicon::OutlinedClipboardDocumentList)
             ->completedIcon(Heroicon::OutlinedClipboardDocumentList)
             ->formWrapper(false)
@@ -955,8 +1179,8 @@ final class BusinessCaseWizard
                     ->icon(Heroicon::OutlinedInformationCircle)
                     ->info(),
                 ...($actions !== [] ? [Actions::make($actions)] : []),
-                // Olusturmada 2. adimda girilenler (22 Eylul 2026): secili teklifin ozeti.
-                ...($selected !== null ? [$this->recordProposalSummary($selected)] : []),
+                // Olusturmada 2. adimda girilenler (22 Eylul 2026): en son teklifin ozeti (D-181).
+                ...($latest !== null ? [$this->recordProposalSummary($latest)] : []),
             ]);
     }
 
@@ -976,7 +1200,7 @@ final class BusinessCaseWizard
             $components[] = Grid::make(['default' => 1, 'md' => 3])->components([
                 TextEntry::make('project_name')
                     ->label(__('business_case.fields.project'))
-                    ->state((string) $project->name)
+                    ->state((string) $project->display_name)
                     ->icon(Heroicon::OutlinedRocketLaunch)
                     ->iconColor('primary')
                     ->color('primary')
@@ -1062,8 +1286,8 @@ final class BusinessCaseWizard
      */
     public function convertAction(BusinessCase $case, string $name = 'convert_to_project', ?Proposal $proposal = null): Action
     {
-        // Teklif sayfasinda o teklif, is dosyasinda secili (yoksa en son) teklif donusur.
-        $target = static fn () => $proposal ?? $case->selectedOrLatestProposal();
+        // Teklif sayfasinda o teklif, potansiyel iste en son teklif donusur (D-181: secili teklif yok).
+        $target = static fn () => $proposal ?? $case->latestProposal();
 
         return Action::make($name)
             ->label(__('project.actions.convert'))
@@ -1172,9 +1396,7 @@ final class BusinessCaseWizard
                 ->url($proposalOwner !== null && Gate::allows('view', $proposalOwner) ? PersonnelResource::getUrl('view', ['record' => $proposalOwner]) : null),
             TextEntry::make('estimated_value')
                 ->label(__('business_case.fields.estimated_value'))
-                ->state($case->estimated_value === null
-                    ? '-'
-                    : Number::format((float) $case->estimated_value, precision: 2, locale: 'tr').' '.($case->currency_code ?? ''))
+                ->state(Money::format($case->estimated_value, $case->currency_code))
                 ->icon(Heroicon::OutlinedBanknotes)
                 ->iconColor('success')
                 ->weight(FontWeight::SemiBold),
@@ -1185,7 +1407,7 @@ final class BusinessCaseWizard
                 ->iconColor('gray'),
             TextEntry::make('project')
                 ->label(__('business_case.fields.project'))
-                ->state($project?->name ?? __('business_case.steps.no_project'))
+                ->state($project?->display_name ?? __('business_case.steps.no_project'))
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->iconColor($project !== null ? 'success' : 'gray')
                 ->color($project !== null ? 'primary' : 'gray')
@@ -1337,22 +1559,12 @@ final class BusinessCaseWizard
                 ->default(true)
                 ->inline(false)
                 ->visible(fn (Get $get): bool => $whenProposalB29($get) && $this->hasCatalogDocument()),
-            // Sabit belgelerden biri Dokumanlar'a hic yuklenmemisse tek uyari.
-            Text::make(__('business_case.help.fixed_document_missing'))
-                ->color('warning')
-                ->icon(Heroicon::OutlinedExclamationTriangle)
-                ->visible(fn (Get $get): bool => $whenProposalB29($get) && (! $this->hasReferenceDocument() || ! $this->hasCatalogDocument()))
-                ->columnSpanFull(),
+            // D-183: "sabit belge yuklenmedi" uyari metni kullanici istegiyle kaldirildi.
         ];
 
+        // D-186: "Kaydettiginizde ... yeni surum olusur" notu kaldirildi; Duzenle
+        // surum artirmaz, yeni surum "Yeni teklif surumu" dugmesiyle acilir.
         return [
-            // Duzenlemede kaydetmenin yeni surum acacagi bastan soylenir (D-155).
-            ...($editing !== null ? [
-                Callout::make(__('proposal.help.revision_notice', ['next' => ((int) ($editing->currentVersion?->version_no ?? 0)) + 1]))
-                    ->icon(Heroicon::OutlinedDocumentDuplicate)
-                    ->info()
-                    ->columnSpanFull(),
-            ] : []),
             // Teklif olustur ekraninda teklif her zaman olusur; anahtar gizli ve acik.
             $standalone
                 ? Hidden::make('create_proposal')->default(true)
@@ -1365,13 +1577,17 @@ final class BusinessCaseWizard
                     ->columnStart(1),
             TextInput::make('proposal_title')
                 ->label(__('business_case.fields.proposal_title'))
-                ->helperText(__('business_case.help.proposal_title'))
+                // D-185: "Bos birakilirsa potansiyel is basligi kullanilir" yardim metni
+                // kaldirildi (kullanici talebi); davranis ayni.
                 ->maxLength(255)
                 ->visible($whenProposal)
                 // B43 (D-155): baslik yarim genislik; tam satir hic yok (D-157).
                 ->columnSpan($b43 ? FieldGrid::HALF : FieldGrid::WIDE)
                 ->columnStart(1),
-            ...($b43 && $editing !== null ? [
+            // D-183: Teklif olustur ekraninda da teklif sorumlusu var; potansiyel is
+            // secilince proposalAutofill doldurur (isin teklif sorumlusu, yoksa
+            // giris yapan kisi; isin sahibi hicbir zaman, D-175).
+            ...($b43 && ($editing !== null || $standalone) ? [
                 Select::make('owner_employee_id')
                     ->label(__('proposal.fields.owner'))
                     ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
@@ -1379,12 +1595,9 @@ final class BusinessCaseWizard
                     ->native(false)
                     ->columnSpan(FieldGrid::NORMAL),
             ] : []),
-            TextInput::make('total_price')
+            MoneyInput::make('total_price')
                 ->label(__('proposal_version.fields.total_price'))
-                ->helperText($b43 ? __('proposal_version.help.total_price_from_scope') : null)
-                ->numeric()
-                ->step('0.01')
-                ->minValue(0)
+                // D-185: kapsam toplami yardim metni kaldirildi; bos tutar yine kapsamdan dolar.
                 ->visible($whenProposal),
             ...($b43 ? [] : [
                 TextInput::make('margin_pct')
@@ -1407,13 +1620,17 @@ final class BusinessCaseWizard
                 ->label(__('proposal_version.fields.summary'))
                 ->visible($whenProposal)
                 ->columnSpan(FieldGrid::LONG),
-            Select::make('offer_status')
-                ->label(__('proposal.fields.offer_status'))
-                ->options(OfferStatus::class)
-                ->default('to_be_submitted')
-                ->native(false)
-                ->visible($whenProposalB29)
-                ->dehydrated($b29),
+            // D-182: teklif duzenlemede Teklif durumu formda yok; baslikta
+            // "Degisiklikleri kaydet"in yanindaki acilir dugmeyle degisir.
+            ...($editing === null ? [
+                Select::make('offer_status')
+                    ->label(__('proposal.fields.offer_status'))
+                    ->options(OfferStatus::class)
+                    ->default('to_be_submitted')
+                    ->native(false)
+                    ->visible($whenProposalB29)
+                    ->dehydrated($b29),
+            ] : []),
             ...$documentFields,
         ];
     }
@@ -1441,7 +1658,8 @@ final class BusinessCaseWizard
                 ->visible(fn (Get $get): bool => ! $get('create_proposal'))
                 ->columnSpanFull(),
             TextInput::make('project_name')
-                ->label(__('business_case.fields.project_name'))
+                // D-174: projenin adi Lisans adidir.
+                ->label(ProjectNames::shortNameEnabled() ? __('project.fields.license_name') : __('business_case.fields.project_name'))
                 ->helperText(__('business_case.help.project_name'))
                 ->maxLength(255)
                 ->visible($whenConvert)
@@ -1580,9 +1798,9 @@ final class BusinessCaseWizard
                 ->columnSpan(FieldGrid::HALF_LONG)
                 ->columnStart(1),
             // Yarim genislikteki kapsam bolumunde 4/6 (D-157: tam satir yok).
+            // D-183: aciklama metni kullanici istegiyle kaldirildi.
             FileUpload::make($path.'.scope_file')
                 ->label(__('business_case_scope.fields.scope_file'))
-                ->helperText(__('business_case_scope.help.scope_file'))
                 ->disk('local')
                 ->directory(self::UPLOAD_DIRECTORY)
                 ->storeFileNamesIn($path.'.scope_file_name')
@@ -1596,11 +1814,12 @@ final class BusinessCaseWizard
 
     private function scopeAmountInput(ProjectScopeType $type, string $field, string $step = '0.01', bool $live = false): TextInput
     {
-        $input = TextInput::make('scopes.'.$type->value.'.'.$field)
+        // D-180: tutarlar MoneyInput (Turkce maske + para birimi simgesi);
+        // kurulu guc (MW) duz sayi kalir.
+        $input = ($field === 'capacity_mw'
+            ? TextInput::make('scopes.'.$type->value.'.'.$field)->numeric()->step($step)->minValue(0)
+            : MoneyInput::make('scopes.'.$type->value.'.'.$field))
             ->label(__('business_case_scope.fields.'.$field))
-            ->numeric()
-            ->step($step)
-            ->minValue(0)
             // Kisa alan (SHORT) etiketleri sikistirip harf harf sardiriyordu
             // (16 Eylul 2026 kullanici bildirimi, ornek: "MW başı maliyet",
             // "Fider başı maliyet"); tutar alanlari yarim genislikteki
@@ -1689,7 +1908,7 @@ final class BusinessCaseWizard
     }
 
     /**
-     * Kayitli kapsamin dolu tutarlari ("Maliyet: 1.000,00 TRY" ...).
+     * Kayitli kapsamin dolu tutarlari ("Maliyet: 1.000 [simge]" ..., D-180).
      *
      * @return list<string>
      */
@@ -1852,10 +2071,16 @@ final class BusinessCaseWizard
     {
         $version = $proposal->currentVersion;
         $documents = $version?->documents()->with('documentRevision.document')->get() ?? collect();
+        // D-176: bir rolde birden fazla belge olabilir; hepsinin basligi virgulle.
         $documentTitle = static function (ProposalDocumentRole $role) use ($documents): ?string {
-            $row = $documents->first(static fn (ProposalDocument $document): bool => $document->document_role === $role);
+            $titles = $documents
+                ->filter(static fn (ProposalDocument $document): bool => $document->document_role === $role)
+                ->map(static fn (ProposalDocument $row): ?string => $row->documentRevision?->document?->title ?? $row->documentRevision?->title)
+                ->filter()
+                ->unique()
+                ->implode(', ');
 
-            return $row?->documentRevision?->document?->title ?? $row?->documentRevision?->title;
+            return $titles !== '' ? $titles : null;
         };
 
         $data = [
@@ -1884,6 +2109,11 @@ final class BusinessCaseWizard
                 $type = $scope->scope_type instanceof BackedEnum ? (string) $scope->scope_type->value : (string) $scope->scope_type;
                 $info = DocumentLine::info($scope->scopeDocument, $scope->scopeDocumentRevision);
                 $data['scopes'][$type]['scope_file_name'] = $info === null ? null : DocumentLine::text($info);
+                // D-181: kayitli maliyet listeleri ozet satirinda adlariyla.
+                $data['scopes'][$type][ProposalVersionScopeService::COST_FILES_NAME_KEY] = array_map(
+                    static fn (array $cost): string => DocumentLine::text($cost),
+                    ProposalScopeSchema::costInfos($scope),
+                );
             }
 
             foreach (ProposalFilesSchema::DOCUMENTS as $key => $role) {
@@ -1932,6 +2162,16 @@ final class BusinessCaseWizard
         if (self::b43()) {
             $scopes['license_status'] = $case->getAttribute('license_status');
             $scopes['heat_score'] = $case->getAttribute('heat_score');
+
+            // D-183: GES kapsamindaki kurulu guc yeni teklifin MWp alanina gelir
+            // (B43 tasimasindaki eslesme: capacity_mw -> capacity_mwp).
+            foreach (self::b29() ? $case->scopes : [] as $scope) {
+                $capacity = $scope->getAttribute('capacity_mw');
+
+                if (self::scopeTypeValue($scope) === ProjectScopeType::Ges->value && is_numeric($capacity) && (float) $capacity > 0) {
+                    $scopes['ges_capacity_mw'] = (float) $capacity;
+                }
+            }
         }
 
         return $this->caseSummaries[$id] = [
@@ -2127,6 +2367,120 @@ final class BusinessCaseWizard
         ));
     }
 
+    /**
+     * "Proje tipi eklemek istiyorum" (D-177, 8 Ekim 2026 kullanici talimati:
+     * "hem potansiyel iste hem teklif duzenle kisminda, onu da ilk basta
+     * gorulmesin. Bir checkbox alani olsun ... Check edilince proje tipi alani
+     * ve ona bagli gelebilecek kapsamlar bu ekranda eklenebilir hale gelecek").
+     *
+     * Kayitli tipler rozet olarak gorunur; kutu isaretlenince yalniz kayitta
+     * olmayan tipler secilebilir (`added_scope_types`). Kayitli tip bu yoldan
+     * kaldirilmaz; kaydetmede servis yalniz ekler (AcquisitionIntakeService).
+     * $syncSelection: potansiyel iste secim `scope_types` durumuna da yazilir
+     * (kontrol listesi ve proje durumu alani canli guncellenir; alan gizli
+     * oldugu icin kaydedilmez).
+     *
+     * @param  Closure(mixed...): list<string>  $existing
+     * @param  Closure(mixed...): bool  $visible
+     * @return list<Component>
+     */
+    private function scopeTypeAddFields(Closure $existing, Closure $visible, bool $syncSelection): array
+    {
+        $types = static fn (Component $component): array => ScopeTypes::values((array) $component->evaluate($existing));
+
+        return [
+            TextEntry::make('existing_scope_types')
+                ->label(__('business_case.fields.scope_types'))
+                ->state(fn (TextEntry $component): array => array_values(array_filter(array_map(
+                    static fn (string $value): ?ProjectScopeType => ProjectScopeType::tryFrom($value),
+                    $types($component),
+                ))))
+                ->badge()
+                ->placeholder(__('business_case.scope_add.none'))
+                ->visible($visible)
+                ->dehydrated(false)
+                ->columnSpan(FieldGrid::WIDE),
+            Checkbox::make('add_scope_types')
+                ->label(__('business_case.scope_add.checkbox'))
+                // D-185: aciklama metni kaldirildi (kullanici talebi).
+                ->default(false)
+                ->live()
+                ->dehydrated(false)
+                ->visible($visible)
+                ->afterStateUpdated(function (Set $set, mixed $state, Checkbox $component) use ($types, $syncSelection): void {
+                    if ((bool) $state) {
+                        return;
+                    }
+
+                    $set('added_scope_types', []);
+
+                    if ($syncSelection) {
+                        $set('scope_types', $types($component));
+                    }
+                })
+                ->columnSpan(FieldGrid::WIDE)
+                ->columnStart(1),
+            // D-186 (9 Ekim 2026 kullanici talimati: "Eklenecek proje tipi alani gereksiz
+            // buyuk alan kapliyor ... Proje tipi'nde gorulen badge GES yazisi gibi kucuk
+            // compact secilebilir yapalim"): rozet boyunda satir ici secim cipleri
+            // (kc-type-chips); secilen tip kendi renginde dolar. Aciklama metni yok.
+            ToggleButtons::make('added_scope_types')
+                ->label(__('business_case.scope_add.types'))
+                ->options(fn (ToggleButtons $component): array => ScopeTypes::options($types($component)))
+                ->enum(ProjectScopeType::class)
+                ->multiple()
+                ->inline()
+                ->live()
+                ->extraAttributes(['class' => self::TYPE_CHIPS_CLASS], merge: true)
+                ->visible(fn (Get $get, ToggleButtons $component): bool => (bool) $component->evaluate($visible) && (bool) $get('add_scope_types'))
+                ->afterStateUpdated(function (Set $set, mixed $state, ToggleButtons $component) use ($types, $syncSelection): void {
+                    if ($syncSelection) {
+                        $set('scope_types', array_values(array_unique([...$types($component), ...ScopeTypes::values((array) $state)])));
+                    }
+                })
+                ->columnSpan(FieldGrid::HALF),
+        ];
+    }
+
+    /** D-177: duzenlenen potansiyel iste tip secimi onay kutusunun arkasinda mi? */
+    private static function addsScopeTypes(?Model $record): bool
+    {
+        return $record instanceof BusinessCase && self::scopeTypeAddEnabled();
+    }
+
+    /** "Proje tipi eklemek istiyorum" ozelligi acik ve zincir (B43) uygulandi mi? */
+    public static function scopeTypeAddEnabled(): bool
+    {
+        return self::b43() && FeatureFlags::enabled(Feature::ScopeTypeAdd);
+    }
+
+    /**
+     * Tip secenekleri (ScopeTypes); kayitli tipler (or. ozellik kapaliyken
+     * Otomasyon) secenekte kalir ki kayit dogrulamadan gecsin.
+     *
+     * @return array<string, string>
+     */
+    private static function scopeTypeOptions(?Model $record): array
+    {
+        $options = ScopeTypes::options();
+
+        foreach ($record instanceof BusinessCase ? self::caseScopeTypes($record) : [] as $value) {
+            $options[$value] ??= (string) ProjectScopeType::from($value)->getLabel();
+        }
+
+        return $options;
+    }
+
+    /**
+     * Potansiyel isin kayitli proje tipleri (deger listesi).
+     *
+     * @return list<string>
+     */
+    private static function caseScopeTypes(BusinessCase $case): array
+    {
+        return ScopeTypes::values($case->scopes->map(static fn (BusinessCaseScope $scope): string => self::scopeTypeValue($scope))->all());
+    }
+
     private static function scopeTypeValue(BusinessCaseScope $scope): string
     {
         $type = $scope->getAttribute('scope_type');
@@ -2204,22 +2558,16 @@ final class BusinessCaseWizard
         return (string) ($this->projectTypeNames[$code] ?? $code);
     }
 
+    /** Kayittaki sayi ya da tutar alaninin Turkce metni (D-180). */
     private static function number(mixed $value): ?float
     {
-        if ($value === null || $value === '' || ! is_numeric($value)) {
-            return null;
-        }
-
-        return (float) $value;
+        return Money::parse($value);
     }
 
+    /** Tutar + para birimi simgesi (D-180, Money::format). */
     private static function money(?float $amount, mixed $currency): string
     {
-        if ($amount === null) {
-            return '-';
-        }
-
-        return trim(Number::format($amount, precision: 2, locale: 'tr').' '.(is_string($currency) ? $currency : ''));
+        return Money::format($amount, $currency);
     }
 
     private static function quantity(float $value): string

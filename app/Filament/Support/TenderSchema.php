@@ -143,7 +143,6 @@ final class TenderSchema
 
         return Step::make(__('business_case.wizard.tender'))
             ->id(BusinessCaseWizard::STEP_TENDER)
-            ->description(__('business_case.wizard.tender_description'))
             ->icon(Heroicon::OutlinedMegaphone)
             ->completedIcon(Heroicon::OutlinedMegaphone)
             ->columns(1)
@@ -207,7 +206,6 @@ final class TenderSchema
     {
         return Step::make(__('business_case.wizard.tender'))
             ->id(BusinessCaseWizard::STEP_TENDER)
-            ->description(__('business_case.wizard.tender_description'))
             ->icon(Heroicon::OutlinedMegaphone)
             ->completedIcon(Heroicon::OutlinedMegaphone)
             ->columns(1)

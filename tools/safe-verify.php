@@ -343,7 +343,7 @@ function topLevelCalls(string $chain): array
     return $calls;
 }
 
-$compactFields = ['TextInput', 'Textarea', 'Select', 'FileUpload', 'RichEditor', 'MarkdownEditor', 'TagsInput', 'KeyValue', 'DatePicker', 'TimePicker', 'Toggle', 'Checkbox', 'ColorPicker', 'CheckboxList', 'Radio', 'ToggleButtons'];
+$compactFields = ['TextInput', 'MoneyInput', 'Textarea', 'Select', 'FileUpload', 'RichEditor', 'MarkdownEditor', 'TagsInput', 'KeyValue', 'DatePicker', 'TimePicker', 'Toggle', 'Checkbox', 'ColorPicker', 'CheckboxList', 'Radio', 'ToggleButtons'];
 $optionLists = ['CheckboxList', 'Radio', 'ToggleButtons'];
 
 foreach (phpFiles($root.'/app/Filament') as $file) {
@@ -373,6 +373,48 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
                 $field = preg_match('/::make\(([^)]*)\)/', $chain, $m) === 1 ? trim($m[1]) : '?';
                 $failures[] = sprintf('Compact fields (D-157): %s %s [%s] spans the full row; use FieldGrid::LONG / HALF_LONG / MODAL_LONG or a narrower width.', relative($root, $file), $fieldClass, $field);
             }
+        }
+    }
+}
+
+// 3d-3. Tutar girisi ve gosterimi (8 Ekim 2026 kullanici talimati, D-180) ---------
+// "1000 => 1.000, 1000,50 => 1.000,50 yazmali; yaninda para biriminin simgesi
+// gorulmeli; 50000 TRY gibi bir ifade hicbir yerde gorulmemeli." Tutar girisi
+// MoneyInput'tur (Turkce maske + simge, kayit duz sayi); gosterim Money::format /
+// MoneyDisplay. Denetim: tutar adli duz TextInput, numeric() alan MoneyInput
+// (maskeyi bozar), tutarin yanina ISO kodu eklenmesi ve "TRY" yer tutucusu.
+$moneyFieldName = '/(?:^|[._])(?:estimated_value|expected_value|contract_value(?:_snapshot)?|amount|price|[a-z0-9_]*_amount|[a-z0-9_]*_price|[a-z0-9_]*_cost|[a-z0-9_]*_sales)$/';
+
+foreach (phpFiles($root.'/app/Filament') as $file) {
+    $source = withoutPhpComments((string) file_get_contents($file));
+
+    foreach (dateInputChains($source, 'TextInput::make(') as $chain) {
+        if (preg_match('/^TextInput::make\(\s*[\'"]([^\'"]+)[\'"]/', $chain, $m) === 1 && preg_match($moneyFieldName, $m[1]) === 1) {
+            $failures[] = sprintf('Money inputs (D-180): %s TextInput [%s] is an amount; use App\Filament\Forms\Components\MoneyInput (Turkish mask + currency symbol).', relative($root, $file), $m[1]);
+        }
+    }
+
+    foreach (dateInputChains($source, 'MoneyInput::make(') as $chain) {
+        foreach (topLevelCalls($chain) as [$method]) {
+            if (in_array($method, ['numeric', 'integer', 'mask', 'stripCharacters'], true)) {
+                $field = preg_match('/::make\(([^)]*)\)/', $chain, $m) === 1 ? trim($m[1]) : '?';
+                $failures[] = sprintf('Money inputs (D-180): %s MoneyInput [%s] calls ->%s(); the field owns its mask and number handling.', relative($root, $file), $field, $method);
+            }
+        }
+    }
+}
+
+foreach ([$root.'/app/Filament', $root.'/app/Http', $root.'/app/Reports'] as $moneyDirectory) {
+    foreach (phpFiles($moneyDirectory) as $file) {
+        $source = withoutPhpComments((string) file_get_contents($file));
+
+        // Tutar metninin arkasina ISO kodu: ... .' '.$version->currency_code / .' '.($currency ?? '')
+        if (preg_match('/\.\s*[\'"] [\'"]\s*\.\s*\(?\s*\$[A-Za-z0-9_>?\-]*currency(?:_code)?\b/', $source) === 1) {
+            $failures[] = sprintf('Money display (D-180): %s appends an ISO currency code to a text; use App\Support\Money::format() (symbol, never "TRY").', relative($root, $file));
+        }
+
+        if (preg_match('/->(?:placeholder|suffix|prefix)\(\s*[\'"](?:TRY|USD|EUR|RON|GBP)[\'"]\s*\)/', $source) === 1) {
+            $failures[] = sprintf('Money display (D-180): %s shows a currency ISO code as placeholder/affix; use Money::symbol() / Money::label().', relative($root, $file));
         }
     }
 }
@@ -528,6 +570,65 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
     }
 }
 
+// 7b. Kayittan sonra detay sayfasi (D-178, user decision 2026-10-08) ---------------
+// "Bir duzenleme / olusturma ekranindan kaydet dedikten sonra detay sayfasina
+// route edilmelidir. Ayni edit / create sayfasinda kalmamalidir." Kural
+// HasColoredFormActions::getRedirectUrl() ile tek noktadan uygulanir (detay
+// sayfasi, yoksa liste). Paket sayfasindan (or. Shield) tureyen olustur /
+// duzenle sayfasi da ozelligi kullanir; hicbir sayfa null donup ayni sayfada
+// kalmaz; save(false) / shouldRedirect: false yalniz taslak kaydinda yazilir.
+$formActionsTrait = (string) @file_get_contents($root.'/app/Filament/Concerns/HasColoredFormActions.php');
+
+if (preg_match('/protected function getRedirectUrl\(\): string/', $formActionsTrait) !== 1) {
+    $failures[] = 'Save redirects (D-178): App\Filament\Concerns\HasColoredFormActions must define getRedirectUrl(): string (after a save: the record\'s view page, else the list).';
+}
+
+foreach (phpFiles($root.'/app/Filament') as $file) {
+    $source = withoutPhpComments((string) file_get_contents($file));
+    $path = relative($root, $file);
+
+    if (preg_match('/^(?:final\s+|abstract\s+)?class\s+\w+\s+extends\s+(\w+)\b/m', $source, $parent) === 1) {
+        $parentFqcn = null;
+
+        if (preg_match_all('/^use\s+([\w\\\\]+?)(?:\s+as\s+(\w+))?\s*;/m', $source, $imports, PREG_SET_ORDER) > 0) {
+            foreach ($imports as $import) {
+                $alias = ($import[2] ?? '') !== '' ? $import[2] : substr((string) strrchr('\\'.$import[1], '\\'), 1);
+
+                if ($alias === $parent[1]) {
+                    $parentFqcn = $import[1];
+                }
+            }
+        }
+
+        $parentShort = $parentFqcn !== null ? substr((string) strrchr('\\'.$parentFqcn, '\\'), 1) : $parent[1];
+
+        // Yalniz kaynak sayfalari (profil gibi kayitsiz sayfalar disarida).
+        if ($parentFqcn !== null
+            && str_starts_with($path, 'app/Filament/Resources/')
+            && ! str_starts_with($parentFqcn, 'App\\')
+            && ! str_starts_with($parentFqcn, 'Filament\\Resources\\Pages\\')
+            && preg_match('/^(?:Create|Edit)\w+$/', $parentShort) === 1
+            && ! str_contains($source, 'use HasColoredFormActions;')) {
+            $failures[] = sprintf('Save redirects (D-178): %s extends the package create/edit page %s without HasColoredFormActions; after a save it must open the record\'s detail page (and colour its buttons, D-148).', $path, $parentFqcn);
+        }
+    }
+
+    if (preg_match('/function\s+getRedirectUrl\(\)\s*:\s*\?string/', $source) === 1) {
+        $failures[] = sprintf('Save redirects (D-178): %s declares getRedirectUrl(): ?string; a create/edit page never stays on itself after a save (return the detail page, else the list).', $path);
+    }
+
+    if (preg_match_all('/shouldRedirect:\s*false|->save\(\s*false/', $source, $noRedirects, PREG_OFFSET_CAPTURE) > 0) {
+        foreach ($noRedirects[0] as [$match, $offset]) {
+            $before = substr($source, 0, (int) $offset);
+            $function = preg_match_all('/function\s+(\w+)\s*\(/', $before, $functions) > 0 ? (string) end($functions[1]) : '';
+
+            if (stripos($function, 'draft') === false) {
+                $failures[] = sprintf('Save redirects (D-178): %s calls %s in %s(); only a draft save ("Taslak olarak kaydet") stays on the page, every other save opens the detail page.', $path, $match, $function !== '' ? $function : '(file scope)');
+            }
+        }
+    }
+}
+
 // 8. Feature versions (D-151, user decision 2026-10-02) ---------------------------
 // Kod canliya dogrudan gider; yeni ozellik surumu yayinlanana kadar gorunmez.
 // Bu yuzden katalogdaki her ozelligin tanim satiri bir surum tasimalidir
@@ -562,6 +663,21 @@ if (preg_match("/const NEXT_RELEASE = '(\\d+\\.\\d+(?:\\.\\d+)?)';/", $featureSo
 
         if (version_compare($versionedFeatures[2][$index], $nextRelease[1], '>')) {
             $failures[] = sprintf('Feature versions: Feature::%s has version %s, above NEXT_RELEASE %s.', $case, $versionedFeatures[2][$index], $nextRelease[1]);
+        }
+    }
+}
+
+// Katalog satiri features tablosuna sigmali (D-184, 9 Ekim 2026: "D-177, D-183, D-184"
+// karar metni decision_ref VARCHAR(16)'ya sigmadi, katalog esitlemesi her istekte hata verdi).
+// Sinirlar B39 migration'indaki kolonlar: name 150, description 1000, decision_ref 16.
+preg_match_all("/^\\s*self::([A-Za-z]+) => \\['((?:[^'\\\\]|\\\\.)*)', '((?:[^'\\\\]|\\\\.)*)', '((?:[^'\\\\]|\\\\.)*)', '\\d+\\.\\d+(?:\\.\\d+)?'\\],\\r?$/m", $definitionPart, $featureRows, PREG_SET_ORDER);
+
+foreach ($featureRows as $featureRow) {
+    foreach ([2 => ['name', 150], 3 => ['description', 1000], 4 => ['decision_ref', 16]] as $index => [$column, $limit]) {
+        $length = mb_strlen(stripslashes($featureRow[$index]));
+
+        if ($length > $limit) {
+            $failures[] = sprintf('Feature catalog: Feature::%s %s is %d characters; the features.%s column holds %d.', $featureRow[1], $column, $length, $column, $limit);
         }
     }
 }

@@ -22,6 +22,11 @@ trait GuardsVersionChildren
 {
     protected function assertProposalVersionEditable(int|string|null $versionId): void
     {
+        // D-186: teklif "Duzenle" guncel surumu durumundan bagimsiz yerinde degistirir.
+        if (ProposalAmendment::allows($versionId)) {
+            return;
+        }
+
         $status = $this->versionStatus(ProposalVersion::class, ProposalVersionStatus::class, $versionId);
 
         if ($status === null || ! in_array($status, [ProposalVersionStatus::Draft, ProposalVersionStatus::Review], true)) {

@@ -21,6 +21,7 @@ use App\Models\Document\Document;
 use App\Models\Document\DocumentRevision;
 use App\Models\Document\DocumentShare;
 use App\Query\Approval\ApprovalQueries;
+use App\Query\Document\DocumentUsageQueries;
 use App\Services\Approval\ApprovalRequestService;
 use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentShareService;
@@ -116,7 +117,7 @@ final class DocumentWorkspace
                 ->iconColor('gray'),
             TextEntry::make('project')
                 ->label(__('document.fields.project'))
-                ->state($project?->name ?? '-')
+                ->state($project?->display_name ?? '-')
                 ->icon(Heroicon::OutlinedRocketLaunch)
                 ->iconColor($project !== null ? 'primary' : 'gray')
                 ->color($project !== null ? 'primary' : 'gray')
@@ -160,6 +161,56 @@ final class DocumentWorkspace
                             ->hidden(blank($document->description)),
                     ])->columnSpan(['default' => 1, 'lg' => 3]),
                 ]),
+            ]);
+    }
+
+    /**
+     * "Bagli kayitlar" (D-181, 9 Ekim 2026 kullanici: "Dokuman icinden ilgili
+     * yuklendigi teklife erisemiyorum"): belgenin bagli oldugu teklif (hangi
+     * rolde, hangi surumde), potansiyel is, sozlesme, ihale ve firma; her satir
+     * kaydin turunun simgesiyle detay sayfasina gider (D-125). Kisinin goremedigi
+     * kayit (gorme politikasi ya da kapali ozellik) listelenmez; bag yoksa kart
+     * hic cizilmez.
+     */
+    public function linkedRecordsCard(Document $document): ?Component
+    {
+        $entries = [];
+
+        foreach (app(DocumentUsageQueries::class)->forDocument($document) as $index => $usage) {
+            $record = $usage['record'];
+
+            if (! Gate::allows('view', $record)) {
+                continue;
+            }
+
+            $url = RecordLinks::detailUrl($record);
+
+            if ($url === null) {
+                continue;
+            }
+
+            $resource = RecordLinks::resourceFor($record);
+
+            $entries[] = TextEntry::make('linked_record_'.$index)
+                ->label($resource !== null ? $resource::getModelLabel() : class_basename($record))
+                ->state($usage['title'] !== '' ? $usage['title'] : '-')
+                ->helperText(implode('; ', $usage['roles']))
+                ->icon(RecordLinks::iconFor($record))
+                ->iconColor('primary')
+                ->color('primary')
+                ->weight(FontWeight::SemiBold)
+                ->url($url);
+        }
+
+        if ($entries === []) {
+            return null;
+        }
+
+        return Section::make(__('document.sections.linked_records'))
+            ->icon(Heroicon::OutlinedLink)
+            ->compact()
+            ->components([
+                Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])->components($entries),
             ]);
     }
 

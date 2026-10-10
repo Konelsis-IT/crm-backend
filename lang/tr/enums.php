@@ -440,6 +440,8 @@ return [
         'hes' => 'HES',
         'bes' => 'BESS',
         'enh_eih' => 'ENH/EİH',
+        // D-177 (B50)
+        'automation' => 'Otomasyon / Process',
     ],
     // D-155: potansiyel isin "Proje durumu" ve teklif oncesi kontrol listesi cevaplari.
     'license_status' => [
@@ -613,6 +615,10 @@ return [
         'catalog' => 'Genel katalog',
         'scope_list' => 'Kapsam listesi',
         'deviation_list' => 'Deviasyon listesi',
+    ],
+    // D-181: teklif kapsamina bagli belgeler.
+    'proposal_scope_document_role' => [
+        'cost_list' => 'Maliyet listesi',
     ],
     'compliance_state' => [
         'comply' => 'Uygun',
@@ -839,7 +845,7 @@ return [
         'cancelled' => 'İptal edildi',
     ],
     'team_role' => [
-        'project_manager' => 'Proje yöneticisi',
+        'project_manager' => 'Proje müdürü',
         'site_manager' => 'Şantiye şefi',
         'engineer' => 'Mühendis',
         'technician' => 'Teknisyen',

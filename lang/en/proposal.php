@@ -42,9 +42,18 @@ return [
 
     'help' => [
         'business_case' => 'The proposal is opened for this business case. Its summary appears below once selected.',
-        'documents' => 'Excel or any file can be uploaded. A new upload becomes a new revision of the same document; the old file is kept.',
+        'case_in_proposal_step' => 'The business case is chosen in the Proposal step; once chosen its summary also appears here.',
         'ai_soon_short' => 'KonelsisAI soon',
-        'revision_notice' => 'When you save, any change in the fields, scope or documents creates a new proposal version (Version :next). The previous version and its documents are kept.',
+    ],
+
+    // D-186: versioning is up to the staff; Edit never bumps the version.
+    'new_version' => [
+        'action' => 'New proposal version',
+        'tooltip' => 'Prepare Version :no from the current data; you can drop documents and add new ones',
+        'heading' => 'New version (Version :no)',
+        'breadcrumb' => 'New version',
+        'subheading' => 'Version :current is filled in. Saving creates Version :next; Version :current is kept as it is.',
+        'save' => 'Save new version',
     ],
 
     'relation' => [
@@ -53,9 +62,10 @@ return [
     ],
 
     'actions' => [
+        'general_catalog' => 'General catalogue',
+        'general_catalog_tooltip' => 'Open the general catalogue in a new tab',
         'change_status' => 'Change status',
         'set_status' => 'Set status to ":status"',
-        'select' => 'Mark as selected',
         'submit' => 'Submit for review',
         'review' => 'Record review decision',
         'publish' => 'Publish',
@@ -65,7 +75,7 @@ return [
         'add_evidence' => 'Add evidence',
         'accept' => 'Accept',
         'open_business_case' => 'Open business case',
-        'edit_selected' => 'Edit proposal (:no)',
+        'edit_latest' => 'Edit proposal (:no)',
     ],
 
     'versions' => [
@@ -84,21 +94,28 @@ return [
     ],
 
     'status' => [
-        'fixed' => 'The status is changed on the proposal edit screen',
-        'change' => 'Click to change the proposal status',
+        'fixed' => 'The offer status is changed with the offer status button at the top of the proposal edit screen',
         'no_targets' => 'No manual change from this status',
         'no_version' => 'No version',
-        'modal_heading' => 'Change the proposal status',
-        'modal_description' => 'Current status: :status (Version :no). No new version is created. The potential job status and the offer status (to be submitted / submitted) follow it.',
+        // D-182: offer status dropdown in the page header (detail and edit).
+        'no_offer_status' => 'No offer status',
+        'menu_label' => ':status ▾',
+        'menu_tooltip' => 'Change the offer status; the chosen status is saved at once, no new version is created',
+        'confirm_heading' => 'Set the proposal to ":status"?',
+        'confirm_description' => 'The offer status changes from ":from" to ":to"; there is no way back from this status. No new version is created.',
+        'approved_note' => 'If the proposal was not sent yet, the current version is marked as submitted; the potential job becomes Won.',
+        'lost_note' => 'When every proposal of the potential job is a lost opportunity, the potential job becomes Lost. A reason is optional.',
     ],
 
     'messages' => [
         'status_changed' => 'Status updated.',
+        'offer_status_changed' => 'Offer status saved as ":status".',
         'done' => 'Done.',
         'created' => 'Proposal created: :no',
         'draft_saved' => 'Proposal saved as a draft: :no',
         'new_version' => 'A new proposal version was created: Version :no',
-        'saved_no_version' => 'Saved. The proposal content did not change, so no new version was opened.',
+        // D-186: Edit updates the current version in place.
+        'saved_in_place' => 'Saved (Version :no updated).',
     ],
 
     'validation' => [

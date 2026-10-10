@@ -20,6 +20,7 @@ use App\Services\AbstractService;
 use App\Services\Acquisition\BusinessCaseService;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\Concerns\ChecksProjectScope;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
@@ -75,7 +76,14 @@ final class ProjectService extends AbstractService
      */
     public function createDirect(array $data): Project
     {
-        return $this->transactions->run(function () use ($data): Project {
+        [$data, $scopeTypes, $scopeRows, $syncScopes] = $this->extractScopes($data);
+
+        // D-174: proje tipi kodu (bilesen / asama sablonu) secilmediyse ilk proje tipinden turer.
+        if (blank($data['project_type_code'] ?? null) && $syncScopes) {
+            $data['project_type_code'] = ProjectScopeService::componentCodeFor($scopeTypes);
+        }
+
+        return $this->transactions->run(function () use ($data, $scopeTypes, $scopeRows, $syncScopes): Project {
             $profile = $data['criticality_profile'] ?? CriticalityProfile::Standard;
             $profile = $profile instanceof CriticalityProfile ? $profile : CriticalityProfile::from((string) $profile);
 
@@ -93,8 +101,40 @@ final class ProjectService extends AbstractService
                 'classification_id' => $data['classification_id'] ?? null,
             ]);
 
-            return $this->opener->openDirect($case, $code, [...$data, 'criticality_profile' => $profile]);
+            $project = $this->opener->openDirect($case, $code, [...$data, 'criticality_profile' => $profile]);
+
+            if ($syncScopes) {
+                app(ProjectScopeService::class)->sync($project, $scopeTypes, $scopeRows);
+            }
+
+            return $project;
         });
+    }
+
+    /**
+     * Formdan gelen proje tiplerini (scope_types + scopes, D-174) ayirir; kisa
+     * ad B48 uygulanmadiysa atilir (kolon yok).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: array<string, mixed>, 1: list<mixed>, 2: array<string, mixed>, 3: bool}
+     */
+    private function extractScopes(array $data): array
+    {
+        $ready = SchemaReadiness::hasBatch('B48');
+        $sync = $ready && array_key_exists('scope_types', $data);
+        $types = is_array($data['scope_types'] ?? null) ? array_values($data['scope_types']) : [];
+        $rows = is_array($data['scopes'] ?? null) ? $data['scopes'] : [];
+
+        unset($data['scope_types'], $data['scopes']);
+
+        if (! $ready) {
+            unset($data['short_name']);
+        } elseif (array_key_exists('short_name', $data)) {
+            $short = trim((string) $data['short_name']);
+            $data['short_name'] = $short === '' ? null : $short;
+        }
+
+        return [$data, $types, $rows, $sync];
     }
 
     /**
@@ -109,7 +149,19 @@ final class ProjectService extends AbstractService
             $data['cover_file_object_id'],
         );
 
-        return parent::update($record, $data);
+        [$data, $scopeTypes, $scopeRows, $syncScopes] = $this->extractScopes($data);
+
+        if (! $syncScopes) {
+            return parent::update($record, $data);
+        }
+
+        return $this->transactions->run(function () use ($record, $data, $scopeTypes, $scopeRows): Model {
+            /** @var Project $project */
+            $project = parent::update($record, $data);
+            app(ProjectScopeService::class)->sync($project, $scopeTypes, $scopeRows);
+
+            return $project;
+        });
     }
 
     public function changeStatus(Model|int|string $record, ProjectStatus $target, ?string $reason = null): Project

@@ -10,6 +10,7 @@ use App\Enums\Report\WorkWaitingKind;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Support\DomainNotifications;
+use App\Models\Project\Project;
 use App\Models\Report\WorkItem;
 use App\Query\Personnel\PersonnelQueries;
 use App\Query\Report\WorkItemQueries;
@@ -17,6 +18,7 @@ use App\Services\Platform\SchemaReadiness;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Services\Report\WorkItemPresenter;
 use App\Services\Report\WorkItemService;
+use App\Support\Projects\ProjectNames;
 use App\Support\WorkDurationFormat;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -83,7 +85,7 @@ final class WorkItemTable
                 ->weight('medium')
                 ->searchable(query: fn (Builder $query, string $search): Builder => app(WorkItemQueries::class)->applySearch($query, $search))
                 ->description(fn (WorkItem $record): ?string => $record->parent !== null ? __('work_item.table.parent_of', ['title' => $record->parent->title]) : null),
-            TextColumn::make('project.name')
+            TextColumn::make('project.display_name')
                 ->label(__('work_item.table.project'))
                 ->placeholder('–')
                 ->toggleable(),
@@ -207,8 +209,10 @@ final class WorkItemTable
             SelectFilter::make('project_id')
                 ->label(__('work_item.filters.project'))
                 ->relationship('project', 'name')
+                // D-174: kisa ad (yoksa lisans adi); iki adla da aranir.
+                ->getOptionLabelFromRecordUsing(fn (Project $record): string => ProjectNames::optionLabel($record))
                 ->multiple()
-                ->searchable()
+                ->searchable(ProjectNames::searchColumns())
                 ->preload(),
             SelectFilter::make('category_code')
                 ->label(__('work_item.filters.category'))
@@ -241,7 +245,9 @@ final class WorkItemTable
     private static function groups(bool $forPersonnel): array
     {
         $groups = [
-            Group::make('project.name')->label(__('work_item.table.project'))->collapsible(),
+            Group::make('project.name')->label(__('work_item.table.project'))
+                ->getTitleFromRecordUsing(fn (WorkItem $record): string => $record->project?->display_name ?? '–')
+                ->collapsible(),
         ];
 
         if (! $forPersonnel) {

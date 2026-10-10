@@ -106,7 +106,7 @@ class DelayEventResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('delay_event.fields.project'))
                     ->limit(30),
                 TextColumn::make('detected_at')

@@ -71,6 +71,19 @@ class DatabaseSeeder extends Seeder
         // D-171: haftalik ziyaret plani 07.10.2026 (sekiz hafta) ve yedi gorusme raporu;
         // D-170 taraflarindan ve islerinden sonra (notlar o islere baglanir).
         WeeklyVisitPlan20261007Seeder::class,
+        // D-174: devam eden 13 proje (08.10.2026; kisa ad, isveren, ulke, proje tipleri).
+        // B48'den sonra calisir; D-170 birlestirmelerinden sonra (Aksa hedef tarafta).
+        Projects20261008Seeder::class,
+        // D-175: proje mudurleri (Ersin Ozdemir yerine kullanicinin verdigi kisiler, yalniz
+        // hala Ersin ise), "Giresun Ada DGES" / "Mercan Kimya GES" ad duzeltmeleri, is kaydi
+        // sahipleri ve GES proje tipi koordinatoru (B49). Projects20261008Seeder'dan sonra.
+        ProjectManagers20261008Seeder::class,
+        // D-177: referans listesi (bes Excel, 429 referans, proje tipleriyle). B50'den sonra
+        // calisir; B50 yoksa satirlar sonraki kuruluma kalir.
+        References20261008Seeder::class,
+        // D-181: teklif kapsamindaki Maliyet listesi icin "MLY Maliyet Listesi" dokuman
+        // turu (yalniz yoksa eklenir). B51 ile ayni kurulumda.
+        CostListDocumentType20261009Seeder::class,
     ];
 
     /**

@@ -29,7 +29,8 @@ class BusinessCaseExporter extends KonelsisExporter
             self::text('offer_type', __('business_case.fields.offer_type')),
             self::text('scopes.scope_type', __('business_case.fields.scope_types')),
             self::text('owner.full_name', __('business_case.fields.owner')),
-            self::decimal('estimated_value', __('business_case.fields.estimated_value')),
+            // D-180: tutar + para birimi simgesi (ISO kodu degil).
+            self::money('estimated_value', __('business_case.fields.estimated_value')),
         ];
     }
 }

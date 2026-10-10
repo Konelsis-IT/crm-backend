@@ -7,11 +7,15 @@ namespace App\Filament\Resources\Proposals\Pages;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
+use App\Filament\Concerns\RemovesProposalFiles;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\BusinessCaseWizard;
+use App\Filament\Support\DocumentBundleAction;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\DraftSupport;
+use App\Filament\Support\ProposalDetail;
+use App\Filament\Support\ProposalFilesSchema;
 use App\Filament\Support\StatusButton;
 use App\Models\Acquisition\Proposal;
 use App\Services\Acquisition\AcquisitionIntakeService;
@@ -32,9 +36,13 @@ use Livewire\Attributes\Url;
  * Teklif duzenle. B43 (D-155, 5 Ekim 2026 kullanici talimati: "Teklif
  * duzenle ekrani bambaska bir sekilde aciliyor ... Duzenle - Olustur kisminda
  * ayni ekrani gormeliler"): teklif olusturla ayni dort adim, teklif adiminda
- * acilir. Kaydetmede alanlarda, kapsamda ya da belgelerde gercek degisiklik
- * varsa yeni surum acilir (AcquisitionIntakeService::reviseProposal); eski surum
- * ve belgeleri saklanir. Grup uygulanmadiysa eski tek bolumlu form.
+ * acilir. Grup uygulanmadiysa eski tek bolumlu form.
+ *
+ * D-186 (9 Ekim 2026 kullanici karari: "surumleme isi artik personeldedir"):
+ * kaydetme guncel surumu yerinde degistirir; hangi degisiklik olursa olsun
+ * surum artmaz (AcquisitionIntakeService::updateProposal). Belgeler ciplerin
+ * "x"i ile cikarilir, yeni dosyalar eklenir. Yeni surum yalniz "Yeni teklif
+ * surumu" dugmesiyle (NewProposalVersion sayfasi, bu sinifin alt sinifi).
  */
 class EditProposal extends EditRecord
 {
@@ -44,6 +52,7 @@ class EditProposal extends EditRecord
         hasFormWrapper as protected wizardHasFormWrapper;
         getFormContentComponent as protected wizardFormContentComponent;
     }
+    use RemovesProposalFiles;
 
     protected static string $resource = ProposalResource::class;
 
@@ -52,6 +61,12 @@ class EditProposal extends EditRecord
 
     /** Bu kaydetme taslak olarak yazilir (B43). */
     public bool $saveAsDraft = false;
+
+    /** D-186: bu sayfa "Yeni teklif surumu" mu (alt sinif true doner)? */
+    protected function isNewVersion(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {
@@ -76,7 +91,7 @@ class EditProposal extends EditRecord
         /** @var Proposal $proposal */
         $proposal = $this->getRecord();
 
-        return app(BusinessCaseWizard::class)->proposalEditSteps($proposal);
+        return app(BusinessCaseWizard::class)->proposalEditSteps($proposal, $this->isNewVersion());
     }
 
     public function getStartStep(): int
@@ -96,33 +111,47 @@ class EditProposal extends EditRecord
 
     protected function getStepDraftMethods(): array
     {
-        return DraftSupport::enabled() ? [BusinessCaseWizard::STEP_PROPOSAL => 'saveDraft'] : [];
+        // D-186: yeni surum taslak olarak yarim birakilmaz (ikinci kayit N+2 acardi).
+        return DraftSupport::enabled() && ! $this->isNewVersion() ? [BusinessCaseWizard::STEP_PROPOSAL => 'saveDraft'] : [];
     }
 
     protected function getHeaderActions(): array
     {
+        /** @var Proposal $proposal */
+        $proposal = $this->getRecord();
+
         return [
-            // Guncel surumun durumu; yeni surum acilmaz (D-161).
-            StatusButton::proposal(editable: true),
             ...(BusinessCaseWizard::b43() ? [
                 Action::make('save_now')
-                    ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
+                    ->label($this->isNewVersion()
+                        ? __('proposal.new_version.save')
+                        : __('filament-panels::resources/pages/edit-record.form.actions.save.label'))
                     ->icon(Heroicon::OutlinedCheck)
                     ->color(ActionColors::SAVE)
                     ->action('save'),
             ] : []),
+            // D-182: Teklif durumu "Degisiklikleri kaydet"in hemen yaninda acilir
+            // dugme; secim hemen kaydedilir, yeni surum acilmaz. Formda ayrica
+            // Teklif durumu alani yok (tek yer burasi). Yeni surum ekraninda yok.
+            ...($this->isNewVersion() ? [] : StatusButton::offerStatusHeader($proposal)),
+            // D-186: "Yeni teklif surumu" (surum N+1, ayni form dolu gelir).
+            ...($this->isNewVersion() ? [] : array_filter([app(ProposalDetail::class)->newVersionAction($proposal)])),
+            // D-184: "Tum belgeleri indir" baslikta da (yalniz simge, ipucunda adi);
+            // Dokumanlar sekmesindeki dugme kalir.
+            DocumentBundleAction::proposalHeader($proposal),
             ViewAction::make(),
         ];
     }
 
+    /** Taslak kaydi sihirbazda kalir; yalniz "Kaydet" detay sayfasina gider (D-178). */
     public function saveDraft(): void
     {
         $this->saveAsDraft = true;
-        $this->save(shouldRedirect: true);
+        $this->save(shouldRedirect: false);
         $this->saveAsDraft = false;
     }
 
-    /** B43: guncel surumun alanlari, kapsamlari ve belge secimleri forma yuklenir. */
+    /** B43: guncel surumun alanlari, kapsamlari ve belgeleri forma yuklenir. */
     protected function mutateFormDataBeforeFill(array $data): array
     {
         if (! BusinessCaseWizard::b43()) {
@@ -144,6 +173,10 @@ class EditProposal extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // D-182: Teklif durumu yalniz baslik dugmesiyle degisir; kaydetme onu
+        // hicbir zaman eski degerle ezmez.
+        unset($data['offer_status']);
+
         return [...$data, ...DraftSupport::attributes($this->saveAsDraft, BusinessCaseWizard::STEP_PROPOSAL)];
     }
 
@@ -154,14 +187,21 @@ class EditProposal extends EditRecord
                 return app(ProposalService::class)->update($record, $data);
             }
 
-            /** @var Proposal $record */
-            [$proposal, $version] = app(AcquisitionIntakeService::class)->reviseProposal($record, $data);
+            $service = app(AcquisitionIntakeService::class);
 
-            DomainNotifications::success(match (true) {
-                $this->saveAsDraft => __('proposal.messages.draft_saved', ['no' => $proposal->proposal_no ?? '-']),
-                $version !== null => __('proposal.messages.new_version', ['no' => $version->version_no]),
-                default => __('proposal.messages.saved_no_version'),
-            });
+            /** @var Proposal $record */
+            if ($this->isNewVersion()) {
+                $version = $service->newProposalVersion($record, $data);
+                DomainNotifications::success(__('proposal.messages.new_version', ['no' => $version->version_no]));
+
+                return $record->refresh();
+            }
+
+            $proposal = $service->updateProposal($record, $data);
+
+            DomainNotifications::success($this->saveAsDraft
+                ? __('proposal.messages.draft_saved', ['no' => $proposal->proposal_no ?? '-'])
+                : __('proposal.messages.saved_in_place', ['no' => $proposal->currentVersion?->version_no ?? '-']));
 
             return $proposal;
         } catch (AbstractException $exception) {
@@ -171,13 +211,14 @@ class EditProposal extends EditRecord
         }
     }
 
-    /** Yeni surum ve belgelerle form yenilenir (yuklenen dosya kutulari bosalir). */
+    /** Guncel surum ve belgelerle form yenilenir (taslak kaydinda sayfa acik kalir). */
     protected function afterSave(): void
     {
         if (! BusinessCaseWizard::b43()) {
             return;
         }
 
+        ProposalFilesSchema::flushCache();
         $this->record = $this->getRecord()->fresh() ?? $this->getRecord();
         $this->fillForm();
     }

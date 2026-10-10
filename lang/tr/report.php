@@ -42,6 +42,30 @@ return [
         ],
     ],
 
+    // Rapor yazılırken iş panosundan daha önce oluşmuş işi seçme (D-179).
+    'pick' => [
+        'label' => 'Panodan iş ekle',
+        'placeholder' => 'İş arayın ya da seçin',
+        'help' => 'İş panosundaki işleriniz; bu dönemin işleri önce gelir. Seçtiğiniz iş aşağıya iş kalemi olarak eklenir.',
+        'empty' => 'Eşleşen iş yok.',
+        'groups' => [
+            'period' => 'Bu dönemin işleri',
+            'open' => 'Açık işler',
+            'other' => 'Diğer işler',
+        ],
+        'added' => 'Rapora eklendi: :title',
+        'exists' => 'Bu iş raporda zaten var.',
+        'not_found' => 'İş bulunamadı ya da size ait değil.',
+    ],
+
+    // Rapor yazılırken tek tıkla eklenen öneriler (D-179).
+    'suggest' => [
+        'title' => 'Öneriler (:count bekliyor)',
+        'help' => 'Bu dönemin işleri ve iş panosu önerileri. Ekle ile tek tıkla rapora girer; eklenenler işaretlenir.',
+        'add' => 'Ekle',
+        'added' => 'Eklendi',
+    ],
+
     // Rapora özel PDF ve Excel (D-167).
     'pdf' => [
         'page' => 'Sayfa',

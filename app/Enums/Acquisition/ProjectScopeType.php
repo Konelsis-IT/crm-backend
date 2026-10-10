@@ -20,6 +20,11 @@ use Filament\Support\Icons\Heroicon;
  * teklif surumunun kapsamidir (proposal_version_scopes). BES ekranda "BESS"
  * adini tasir (deger `bes` kalir); BESS ve ENH/EIH'in de kendi alanlari vardir.
  * Tipin hangi teklif oncesi kontrol listesine baktigi checklistTemplate()'tedir.
+ *
+ * D-177 (B50, 8 Ekim 2026 kullanici talimati): "Otomasyon / Process" tipi
+ * (`automation`). Kapsaminda Toplam maliyet - Toplam satis ve kapsam belgesi
+ * vardir. Tip B50 uygulanip `acquisition.scope_automation` ozelligi acik
+ * olmadikca secim listelerinde cikmaz (App\Support\Acquisition\ScopeTypes).
  */
 enum ProjectScopeType: string implements HasColor, HasIcon, HasLabel
 {
@@ -31,6 +36,7 @@ enum ProjectScopeType: string implements HasColor, HasIcon, HasLabel
     case Hes = 'hes';
     case Bes = 'bes';
     case EnhEih = 'enh_eih';
+    case Automation = 'automation';
 
     /**
      * Bu tipin kendi tutar alanlari var mi. B29'da yalniz GES / RES / TM / HES;
@@ -39,7 +45,7 @@ enum ProjectScopeType: string implements HasColor, HasIcon, HasLabel
     public function hasFields(): bool
     {
         return match ($this) {
-            self::Ges, self::Res, self::Tm, self::Hes, self::Bes, self::EnhEih => true,
+            self::Ges, self::Res, self::Tm, self::Hes, self::Bes, self::EnhEih, self::Automation => true,
         };
     }
 
@@ -61,6 +67,8 @@ enum ProjectScopeType: string implements HasColor, HasIcon, HasLabel
             self::Hes => 'success',
             self::Bes => 'gray',
             self::EnhEih => 'gray',
+            // D-177: panolardaki renk sinifi da bulunan ayri bir ton.
+            self::Automation => 'danger',
         };
     }
 
@@ -79,6 +87,7 @@ enum ProjectScopeType: string implements HasColor, HasIcon, HasLabel
             self::Hes => Heroicon::OutlinedBeaker,
             self::Bes => Heroicon::OutlinedBattery100,
             self::EnhEih => Heroicon::OutlinedArrowsRightLeft,
+            self::Automation => Heroicon::OutlinedCpuChip,
         };
     }
 }

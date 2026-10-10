@@ -577,23 +577,25 @@
 
         const children = [];
         let placed = false;
+        let otherIndex = 0;
 
-        others.forEach((card, index) => {
-            if (isTarget && !placed && dropAt.index === index) {
-                children.push(h('div', { key: 'drop', className: 'kw-drop' }, t('drop_here')));
-                placed = true;
+        // D-172: suruklenen kart ayni anahtarla yerinde (soluk) kalir. Eskiden listeden
+        // cikarilip 'ghost-' anahtarli kopyayla degistiriliyordu; suruklenen dugum DOM'dan
+        // kalkinca tarayici suruklemeyi hemen kesiyordu (ilk denemede tasinamama hatasi).
+        cards.forEach((card) => {
+            const dragging = !!(drag && card.id === drag.id);
+
+            if (!dragging) {
+                if (isTarget && !placed && dropAt.index === otherIndex) {
+                    children.push(h('div', { key: 'drop', className: 'kw-drop' }, t('drop_here')));
+                    placed = true;
+                }
+
+                otherIndex++;
             }
 
-            children.push(h(CardView, { key: card.id, card, type, isNew: newIds.indexOf(card.id) !== -1, handlers, dragStart, dragEnd }));
+            children.push(h(CardView, { key: card.id, card, type, ghost: dragging, isNew: newIds.indexOf(card.id) !== -1, handlers, dragStart, dragEnd }));
         });
-
-        if (drag) {
-            const own = cards.find((card) => card.id === drag.id);
-
-            if (own && !isTarget) {
-                children.splice(cards.indexOf(own), 0, h(CardView, { key: 'ghost-' + own.id, card: own, type, ghost: true, handlers, dragStart, dragEnd }));
-            }
-        }
 
         if (isTarget && !placed) {
             children.push(h('div', { key: 'drop', className: 'kw-drop' }, t('drop_here')));
@@ -1536,7 +1538,10 @@
         /* ---- surukle-birak ---- */
 
         const dragStart = (event, card) => {
-            setDrag({ id: card.id, from: card.status });
+            // D-172: durum surukleme basladiktan sonra degisir; dragstart icinde yeniden
+            // cizim surukleme dugumunu degistirirse tarayici surukleyi iptal eder.
+            const next = { id: card.id, from: card.status };
+            window.setTimeout(() => setDrag(next), 0);
             event.dataTransfer.effectAllowed = 'move';
 
             try {

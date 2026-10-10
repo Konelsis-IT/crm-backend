@@ -5,21 +5,22 @@ declare(strict_types=1);
 namespace App\Services\Acquisition;
 
 use App\Enums\Acquisition\ProjectScopeType;
+use App\Enums\Acquisition\ProposalScopeDocumentRole;
 use App\Exceptions\RecordNotFoundException;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\ProposalVersion;
 use App\Models\Acquisition\ProposalVersionScope;
-use App\Models\Document\Document;
-use App\Models\Document\DocumentRevision;
+use App\Models\Acquisition\ProposalVersionScopeDocument;
 use App\Query\Document\FixedDocumentQueries;
 use App\Services\AbstractService;
 use App\Services\Acquisition\Concerns\GuardsVersionChildren;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
-use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentService;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
+use App\Support\Acquisition\CostLists;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -37,10 +38,21 @@ use Illuminate\Support\Str;
  * - HES: Maliyet (toplam), Satis (toplam); Maliyet/Jenerator-Turbin.
  * - RES: Respark malzeme / insaat / montaj (degismedi).
  *
- * Kapsam listesi (Excel) Dokumanlar'da `KPS` turunde belgedir: satir onceki
- * surumden belge tasiyorsa yeni yukleme ayni belgenin yeni revizyonudur; her
- * surum baktigi revizyonu (scope_document_revision_id) saklar, eski surum eski
+ * Kapsam listesi (Excel) Dokumanlar'da `KPS` turunde belgedir; her surum
+ * baktigi revizyonu (scope_document_revision_id) saklar, eski surum eski
  * dosyayi gostermeye devam eder.
+ *
+ * Maliyet listesi (B51, D-181): kapsam listesinin yaninda, tip basina bir ya
+ * da birden fazla `MLY` belgesi (proposal_version_scope_documents). Yeni surum
+ * onceki surumun satirlarini ayni revizyonla tasir (belge kopyalanmaz). Tasima
+ * B51 varken hep yapilir; yukleme yalniz ozellik acikken (CostLists) islenir.
+ *
+ * D-186 (9 Ekim 2026 kullanici karari: teklifte belge revizyonu yok, surumleme
+ * personelde): yuklenen her dosya yeni belgedir ("ayni ad = yeni revizyon"
+ * kurali teklifte kalkti). Formdaki `removed_scope_file` / `removed_cost_files`
+ * (cipin "x"i ile isaretlenen revizyon kimlikleri) o belgeyi surumden ayirir;
+ * Document kaydi Dokumanlar'da kalir.
+ * Duzenle ayni surumu yerinde, "Yeni teklif surumu" onceki surumden tasiyarak yazar.
  *
  * Marj (margin()): toplam maliyeti ve toplam satisi olan tiplerin
  * (Σ satis - Σ maliyet) / Σ satis orani. RES kalemleri maliyet / satis
@@ -57,6 +69,17 @@ final class ProposalVersionScopeService extends AbstractService
     /** Kapsam listesi belgesinin dokuman turu kodu. */
     private const SCOPE_DOCUMENT_TYPE_CODE = 'KPS';
 
+    /** D-181: formda tipin maliyet listesi dosyalari (coklu) ve ozgun adlari. */
+    public const COST_FILES_KEY = 'cost_files';
+
+    public const COST_FILES_NAME_KEY = 'cost_files_name';
+
+    /** D-186: formda kaldirilmak uzere isaretlenen kapsam listesi revizyonu (dizi). */
+    public const REMOVED_SCOPE_FILE_KEY = 'removed_scope_file';
+
+    /** D-186: formda kaldirilmak uzere isaretlenen maliyet listesi revizyonlari (dizi). */
+    public const REMOVED_COST_FILES_KEY = 'removed_cost_files';
+
     /**
      * @var array<string, list<string>>
      */
@@ -67,6 +90,8 @@ final class ProposalVersionScopeService extends AbstractService
         'tm' => ['total_cost', 'total_sales', 'unit_cost'],
         'hes' => ['total_cost', 'total_sales', 'unit_cost'],
         'res' => ['res_material_amount', 'res_construction_amount', 'res_assembly_amount'],
+        // D-177 (B50): Otomasyon / Process yalniz toplam maliyet ve toplam satis tasir.
+        'automation' => ['total_cost', 'total_sales'],
     ];
 
     /** @var list<string> Her tipte bulunan ortak alanlar. */
@@ -78,16 +103,16 @@ final class ProposalVersionScopeService extends AbstractService
         ActivityRecorder $activities,
         private readonly ActorContext $actor,
         private readonly DocumentService $documents,
-        private readonly DocumentRevisionService $revisions,
         private readonly FixedDocumentQueries $fixedDocuments,
+        private readonly ProposalVersionScopeDocumentService $scopeDocuments,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
 
     /**
      * Surumun kapsamlarini formdaki tiplerle yazar. $previous verilirse (yeni
-     * surum) dosya yuklenmeyen tipin kapsam listesi onceki surumden aynen
-     * tasinir; yuklenen dosya ayni belgenin yeni revizyonu olur.
+     * surum) dosya yuklenmeyen tipin kapsam listesi onceki surumden tasinir
+     * (D-186: carpi ile cikarilmadiysa); yuklenen dosya yeni belgedir.
      *
      * @param  list<mixed>  $types  potansiyel iste secili proje tipleri
      * @param  array<string, array<string, mixed>>  $rows  tip => alanlar (+ scope_file, scope_file_name)
@@ -118,59 +143,28 @@ final class ProposalVersionScopeService extends AbstractService
                 $attributes['scope_document_revision_id'] = $revisionId;
 
                 if ($current === null) {
-                    $this->create([
+                    /** @var ProposalVersionScope $scope */
+                    $scope = $this->create([
                         ...$attributes,
                         'proposal_version_id' => $version->getKey(),
                         'scope_type' => $type,
                     ]);
-
-                    continue;
+                } else {
+                    /** @var ProposalVersionScope $scope */
+                    $scope = $this->update($current, $attributes);
                 }
 
-                $this->update($current, $attributes);
+                // D-181 (B51): kapsamin maliyet listeleri.
+                $this->syncCostDocuments($case, $type, $scope, $current === null ? $source : null, $input);
             }
 
             foreach ($existing as $type => $scope) {
                 if (! in_array($type, $selected, true)) {
+                    $this->removeScopeDocuments($scope);
                     $this->delete($scope);
                 }
             }
         });
-    }
-
-    /**
-     * Formdaki kapsamlar kayitli surumden farkli mi (yeni surum karari).
-     * Yuklenen dosya her zaman degisikliktir.
-     *
-     * @param  list<mixed>  $types
-     * @param  array<string, array<string, mixed>>  $rows
-     */
-    public function differs(?ProposalVersion $version, array $types, array $rows): bool
-    {
-        $selected = self::normaliseTypes($types);
-        $existing = $version !== null ? $this->keyed($version) : [];
-
-        if (array_diff($selected, array_keys($existing)) !== [] || array_diff(array_keys($existing), $selected) !== []) {
-            return true;
-        }
-
-        foreach ($selected as $type) {
-            $input = is_array($rows[$type] ?? null) ? $rows[$type] : [];
-
-            if (self::firstString($input['scope_file'] ?? null) !== null) {
-                return true;
-            }
-
-            $scope = $existing[$type];
-
-            foreach (self::attributesFor($type, $input) as $field => $value) {
-                if (! self::sameValue($scope->getAttribute($field), $value)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -336,8 +330,10 @@ final class ProposalVersionScopeService extends AbstractService
     }
 
     /**
-     * Kapsam listesi: yeni dosya yoksa kaynagin belgesi ve revizyonu aynen;
-     * dosya varsa kaynagin belgesine yeni revizyon ya da yeni belge.
+     * Kapsam listesi (D-186): yeni dosya yeni KPS belgesidir ve kapsamin
+     * listesi olur; dosya yoksa kaynagin belgesi ve revizyonu tasinir, cipin
+     * "x"i ile isaretlendiyse (removed_scope_file) kapsamin listesi bosalir.
+     * Eski belge Dokumanlar'da kalir.
      *
      * @param  array<string, mixed>  $input
      * @return array{0: int|null, 1: int|null}
@@ -347,30 +343,18 @@ final class ProposalVersionScopeService extends AbstractService
         $tempPath = self::firstString($input['scope_file'] ?? null);
 
         if ($tempPath === null) {
+            $revisionId = $source?->scope_document_revision_id === null ? null : (int) $source->scope_document_revision_id;
+            if ($revisionId !== null && in_array($revisionId, self::removedIds($input, self::REMOVED_SCOPE_FILE_KEY), true)) {
+                return [null, null];
+            }
+
             return [
                 $source?->scope_document_id === null ? null : (int) $source->scope_document_id,
-                $source?->scope_document_revision_id === null ? null : (int) $source->scope_document_revision_id,
+                $revisionId,
             ];
         }
 
         $originalName = self::originalName($input['scope_file_name'] ?? null, $tempPath);
-
-        /** @var Document|null $document */
-        $document = $source?->scopeDocument;
-
-        if ($document !== null) {
-            /** @var DocumentRevision $revision */
-            $revision = $this->revisions->create([
-                'document_id' => $document->getKey(),
-                'title' => $document->title,
-                'language' => 'tr',
-                'purpose' => 'for_review',
-                'file_temp_path' => $tempPath,
-                'file_original_name' => $originalName,
-            ]);
-
-            return [(int) $document->getKey(), (int) $revision->getKey()];
-        }
 
         $typeId = $this->fixedDocuments->documentTypeId(self::SCOPE_DOCUMENT_TYPE_CODE) ?? throw RecordNotFoundException::make();
         $suffix = ProjectScopeType::from($type)->getLabel().' kapsam listesi';
@@ -388,16 +372,152 @@ final class ProposalVersionScopeService extends AbstractService
         return [(int) $document->getKey(), $document->refresh()->displayRevision()?->getKey()];
     }
 
-    private static function sameValue(mixed $stored, mixed $incoming): bool
+    /**
+     * Kapsamin maliyet listeleri (B51, D-181; D-186).
+     *
+     * - $carryFrom verilirse (yeni surum): onceki surumun kapsam satirindaki
+     *   tutulan maliyet listeleri ayni revizyonla bu kapsama baglanir.
+     * - $carryFrom yoksa satirlar zaten bu kapsamdadir (Duzenle, yerinde):
+     *   carpi ile cikarilan satir kapsamdan ayrilir (belge Dokumanlar'da kalir).
+     * - Yuklenen her dosya yeni MLY belgesidir (teklifte revizyon yok, D-186).
+     *
+     * @param  array<string, mixed>  $input
+     */
+    private function syncCostDocuments(BusinessCase $case, string $type, ProposalVersionScope $scope, ?ProposalVersionScope $carryFrom, array $input): void
     {
-        $left = self::number($stored);
-        $right = self::number($incoming);
-
-        if ($left !== null || $right !== null) {
-            return $left !== null && $right !== null && abs($left - $right) < 0.005;
+        if (! SchemaReadiness::hasBatch('B51')) {
+            return;
         }
 
-        return trim((string) $stored) === trim((string) $incoming);
+        $uploads = CostLists::enabled() ? self::costUploads($input) : [];
+        $removed = self::removedIds($input, self::REMOVED_COST_FILES_KEY);
+        $inPlace = $carryFrom === null;
+
+        if ($inPlace && $uploads === [] && $removed === []) {
+            return;
+        }
+
+        // Tur dosya tasinmadan once dogrulanir (tasima geri alinamaz).
+        $typeId = $uploads === []
+            ? null
+            : ($this->fixedDocuments->documentTypeId(ProposalScopeDocumentRole::CostList->documentTypeCode()) ?? throw RecordNotFoundException::make());
+
+        /** @var list<ProposalVersionScopeDocument> $rows */
+        $rows = ($carryFrom ?? $scope)->costDocuments()->get()->all();
+        $sortOrder = $inPlace && $rows !== []
+            ? max(array_map(static fn (ProposalVersionScopeDocument $row): int => (int) $row->sort_order, $rows)) + 1
+            : 0;
+
+        foreach ($rows as $row) {
+            $kept = ! in_array((int) $row->document_revision_id, $removed, true);
+
+            if ($inPlace && ! $kept) {
+                $this->scopeDocuments->delete($row);
+            } elseif (! $inPlace && $kept) {
+                $this->linkCostRevision($scope, (int) $row->document_revision_id, $sortOrder);
+            }
+        }
+
+        foreach ($uploads as $upload) {
+            $this->linkCostRevision($scope, $this->newCostDocument($case, $type, (int) $typeId, $upload), $sortOrder);
+        }
+    }
+
+    /**
+     * Formda kaldirilmak uzere isaretlenen revizyon kimlikleri (D-186, cipin "x"i).
+     *
+     * @param  array<string, mixed>  $input
+     * @return list<int>
+     */
+    private static function removedIds(array $input, string $key): array
+    {
+        $ids = [];
+
+        foreach ((array) ($input[$key] ?? []) as $value) {
+            if (is_numeric($value) && (int) $value > 0) {
+                $ids[] = (int) $value;
+            }
+        }
+
+        return $ids;
+    }
+
+    /** Kaldirilan kapsamin belge satirlari (kapsam satiri RESTRICT ile korunur). */
+    private function removeScopeDocuments(ProposalVersionScope $scope): void
+    {
+        if (! SchemaReadiness::hasBatch('B51')) {
+            return;
+        }
+
+        foreach (ProposalVersionScopeDocument::query()->where('proposal_version_scope_id', $scope->getKey())->get() as $row) {
+            $this->scopeDocuments->delete($row);
+        }
+    }
+
+    /**
+     * Formdaki maliyet listesi dosyalari: [gecici yol, ozgun ad].
+     *
+     * @param  array<string, mixed>  $input
+     * @return list<array{path: string, name: string|null}>
+     */
+    private static function costUploads(array $input): array
+    {
+        $uploads = [];
+
+        foreach (self::strings($input[self::COST_FILES_KEY] ?? null) as $path) {
+            $uploads[] = ['path' => $path, 'name' => self::originalName($input[self::COST_FILES_NAME_KEY] ?? null, $path)];
+        }
+
+        return $uploads;
+    }
+
+    /**
+     * Yeni MLY belgesi + ilk revizyon; revizyon kimligini doner.
+     *
+     * @param  array{path: string, name: string|null}  $upload
+     */
+    private function newCostDocument(BusinessCase $case, string $type, int $typeId, array $upload): int
+    {
+        $suffix = ProjectScopeType::from($type)->getLabel().' maliyet listesi';
+
+        $document = $this->documents->createWithInitialRevision([
+            'document_type_id' => $typeId,
+            'title' => Str::limit((string) $case->title, 255 - mb_strlen(' – '.$suffix), '').' – '.$suffix,
+            'owner_personnel_id' => $this->actor->personnelId() ?? $case->owner_employee_id,
+            'default_language' => 'tr',
+            'file_temp_path' => $upload['path'],
+            'file_original_name' => $upload['name'],
+        ]);
+
+        return (int) ($document->refresh()->displayRevision()?->getKey() ?? throw RecordNotFoundException::make());
+    }
+
+    private function linkCostRevision(ProposalVersionScope $scope, int $revisionId, int &$sortOrder): void
+    {
+        $this->scopeDocuments->create([
+            'proposal_version_scope_id' => $scope->getKey(),
+            'document_revision_id' => $revisionId,
+            'document_role' => ProposalScopeDocumentRole::CostList->value,
+            'sort_order' => $sortOrder++,
+        ]);
+    }
+
+    /**
+     * Doldurulmus butun yollar (FileUpload tek dosyada metin, coklu dosyada dizi).
+     *
+     * @return list<string>
+     */
+    private static function strings(mixed $value): array
+    {
+        $paths = [];
+
+        foreach (is_array($value) ? $value : [$value] as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                $paths[] = trim($candidate);
+            }
+        }
+
+        return array_values(array_unique($paths));
     }
 
     private static function number(mixed $value): ?float

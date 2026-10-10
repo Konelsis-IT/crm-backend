@@ -108,10 +108,11 @@ class EditTenderNotice extends EditRecord
         ];
     }
 
+    /** Taslak kaydi sihirbazda kalir; yalniz "Kaydet" detay sayfasina gider (D-178). */
     public function saveDraft(): void
     {
         $this->saveAsDraft = true;
-        $this->save(shouldRedirect: true);
+        $this->save(shouldRedirect: false);
         $this->saveAsDraft = false;
     }
 

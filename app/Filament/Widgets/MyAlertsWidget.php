@@ -171,7 +171,7 @@ class MyAlertsWidget extends TableWidget
     private function subject(BusinessAlert $record, bool $seesAll): ?string
     {
         $parts = array_filter([
-            $record->project?->name ?? ($seesAll ? $record->owner?->full_name : null),
+            $record->project?->display_name ??($seesAll ? $record->owner?->full_name : null),
             $record->state === AlertState::Acknowledged ? $record->state->getLabel() : null,
         ]);
 

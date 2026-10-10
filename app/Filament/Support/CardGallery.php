@@ -24,6 +24,7 @@ use App\Query\Project\ProjectStepReadiness;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
 use App\Support\DisplayTime;
+use App\Support\Money;
 use App\Support\RoleLabels;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -101,7 +102,8 @@ final class CardGallery
 
         return $this->card(
             variant: $variant,
-            title: (string) $project->name,
+            // D-174: kartta kisa ad (yoksa lisans adi).
+            title: (string) $project->display_name,
             subtitle: trim(($project->businessCode?->formatted_code ?? '').' · '.($customer?->display_name ?? ''), ' ·'),
             mediaUrl: $project->coverPhoto?->previewUrl('thumbnail'),
             mediaIcon: Heroicon::OutlinedRocketLaunch,
@@ -137,10 +139,12 @@ final class CardGallery
             mediaIcon: Heroicon::OutlinedUserCircle,
             mediaColor: 'gray',
             status: Text::make($personnel->status->getLabel())->badge()->color($personnel->status->getColor()),
-            badges: array_values(array_filter([
+            // D-175: "GES koordinatoru" rozeti birimden hemen sonra; satir tek kalsin diye en cok MAX_BADGES.
+            badges: array_slice(array_values(array_filter([
                 $personnel->orgUnit !== null ? Text::make((string) $personnel->orgUnit->name)->badge()->color('gray')->icon(Heroicon::OutlinedBuildingOffice2) : null,
+                ...app(ProjectTypeCoordinatorSchema::class)->personnelBadges($personnel),
                 ...array_map(fn (string $name): Text => Text::make($name)->badge()->color('info'), $competencies),
-            ])),
+            ])), 0, self::MAX_BADGES),
             entries: [
                 $this->entry('phone', __('ui_gallery.entries.phone'), $personnel->phone ?: '-', Heroicon::OutlinedPhone, 'success', ContactLinks::tel($personnel->phone)),
                 $this->entry('email', __('ui_gallery.entries.email'), $personnel->email ?: '-', Heroicon::OutlinedEnvelope, 'primary', ContactLinks::mailto($personnel->email)),
@@ -179,6 +183,8 @@ final class CardGallery
             status: Text::make($personnel->status->getLabel())->badge()->color($personnel->status->getColor()),
             badges: array_values(array_filter([
                 $personnel->orgUnit !== null ? Text::make((string) $personnel->orgUnit->name)->badge()->color('gray')->icon(Heroicon::OutlinedBuildingOffice2) : null,
+                // D-175: proje tipi koordinatorlugu ("GES koordinatoru").
+                ...app(ProjectTypeCoordinatorSchema::class)->personnelBadges($personnel),
                 ...$personnel->competencies
                     ->map(fn ($competency): Text => Text::make((string) $competency->name)->badge()->color($competency->category?->getColor() ?? 'gray'))
                     ->all(),
@@ -424,7 +430,7 @@ final class CardGallery
             ])),
             entries: [
                 $this->entry('owner', __('ui_gallery.entries.owner'), $document->owner?->full_name ?? '-', Heroicon::OutlinedUserCircle, 'primary', $document->owner !== null ? RecordLinks::detailUrl($document->owner, checkRecord: false) : null),
-                $this->entry('project', __('ui_gallery.entries.project'), $document->project?->name ?? '-', Heroicon::OutlinedRocketLaunch, $document->project !== null ? 'primary' : 'gray', $document->project !== null ? RecordLinks::detailUrl($document->project, checkRecord: false) : null),
+                $this->entry('project', __('ui_gallery.entries.project'), $document->project?->display_name ?? '-', Heroicon::OutlinedRocketLaunch, $document->project !== null ? 'primary' : 'gray', $document->project !== null ? RecordLinks::detailUrl($document->project, checkRecord: false) : null),
                 $this->entry('file', __('ui_gallery.entries.file'), $file !== null ? $file->original_name.' · '.$file->humanSize() : (($revision?->isAuthored() ?? false) ? __('document_revision.values.authored') : '-'), Heroicon::OutlinedPaperClip, 'gray'),
                 $this->entry('updated', __('ui_gallery.entries.updated'), DisplayTime::format($document->updated_at), Heroicon::OutlinedClock, 'gray'),
             ],
@@ -734,12 +740,9 @@ final class CardGallery
         return $iconOnly ? $action->iconButton()->tooltip(__('ui_gallery.actions.edit')) : $action;
     }
 
+    /** Tutar + para birimi simgesi (D-180, Money::format). */
     private function money(mixed $amount, ?string $currency): string
     {
-        if ($amount === null) {
-            return '-';
-        }
-
-        return Number::format((float) $amount, precision: 0, locale: 'tr').' '.($currency ?? '');
+        return Money::format($amount, $currency);
     }
 }

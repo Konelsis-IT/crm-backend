@@ -8,11 +8,14 @@ use App\Filament\Resources\Projects\RelationManagers\Concerns\OpensFromChecklist
 use App\Enums\Project\ExposureKind;
 use App\Enums\Project\ExposureStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Project\CommercialExposure;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Project\CommercialExposureService;
+use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
@@ -58,19 +61,18 @@ class ExposuresRelationManager extends RelationManager
                             ->label(__('commercial_exposure.fields.description'))
                             ->required()
                             ->columnSpan(FieldGrid::LONG),
-                        TextInput::make('exposure_amount')
+                        // D-180: Turkce maskeli tutar, para birimi simgesiyle.
+                        MoneyInput::make('exposure_amount')
                             ->label(__('commercial_exposure.fields.exposure_amount'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0)
                             ->required(),
                         Select::make('currency_code')
                             ->label(__('commercial_exposure.fields.currency'))
                             ->options(fn (): array => app(ReferenceOptions::class)->currencies())
-                            ->default('TRY')
+                            ->default(fn (): string => Money::defaultCurrency())
                             ->searchable()
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
                         TextInput::make('probability')
                             ->label(__('commercial_exposure.fields.probability'))
                             ->numeric()
@@ -139,9 +141,8 @@ class ExposuresRelationManager extends RelationManager
                 TextColumn::make('description')
                     ->label(__('commercial_exposure.fields.description'))
                     ->limit(40),
-                TextColumn::make('exposure_amount')
-                    ->label(__('commercial_exposure.fields.exposure_amount'))
-                    ->numeric(decimalPlaces: 2),
+                MoneyDisplay::column('exposure_amount')
+                    ->label(__('commercial_exposure.fields.exposure_amount')),
                 TextColumn::make('probability')
                     ->label(__('commercial_exposure.fields.probability'))
                     ->placeholder('-'),

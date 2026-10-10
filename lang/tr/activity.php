@@ -27,6 +27,9 @@ return [
     // Ekran alan başlıkları ve değişiklik özetindeki alan adları
     'fields' => [
         'proje' => 'Proje',
+        // D-175
+        'proje_tipi' => 'Proje tipi',
+        'personnel_id' => 'Personel',
         'termin' => 'Termin',
         'kimden_bekleniyor' => 'İşin bekleme sebebi',
         'talep_eden' => 'Talep eden',
@@ -141,6 +144,7 @@ return [
         'neden' => 'Neden',
         'not' => 'Not',
         'dosya' => 'Dosya',
+        'dosya_sayisi' => 'Dosya sayısı',
         'surum' => 'Sürüm',
         'onceki_surum' => 'Önceki sürüm',
         'acilan_ozellikler' => 'Açılan özellikler',
@@ -248,6 +252,7 @@ return [
         'business_case_checklist_answer' => 'Kontrol listesi cevabı',
         'business_case_document' => 'Potansiyel iş belgesi',
         'proposal_version_scope' => 'Teklif kapsamı',
+        'proposal_version_scope_document' => 'Teklif kapsamı belgesi',
         'business_code' => 'İş kodu (POTIS/PRJ)',
         'opportunity' => 'Fırsat',
         'opportunity_stage_history' => 'Fırsat aşama geçmişi',
@@ -287,6 +292,13 @@ return [
         'stage_dependency' => 'Onay kapısı bağımlılığı',
         'stage_requirement_definition' => 'Onay kapısı gereksinim tanımı',
         'project' => 'Proje',
+        // D-174
+        'project_scope' => 'Proje tipi',
+        // D-175
+        'project_type_coordinator' => 'Proje tipi koordinatörü',
+        // D-177
+        'project_reference' => 'Referans',
+        'project_reference_scope_type' => 'Referansın proje tipi',
         'project_component' => 'Proje bileşeni',
         'project_workstream' => 'Adım (departman)',
         'workstream_dependency' => 'Adım bağımlılığı',
@@ -558,6 +570,9 @@ return [
         'proposal_version_scope.created' => 'Teklif kapsamı eklendi',
         'proposal_version_scope.updated' => 'Teklif kapsamı güncellendi',
         'proposal_version_scope.deleted' => 'Teklif kapsamı kaldırıldı',
+        'proposal_version_scope_document.created' => 'Teklif kapsamına maliyet listesi bağlandı',
+        'proposal_version_scope_document.updated' => 'Teklif kapsamı belgesi güncellendi',
+        'proposal_version_scope_document.deleted' => 'Teklif kapsamından maliyet listesi kaldırıldı',
         'proposal_version.superseded' => 'Teklif sürümünün yerini yeni sürüm aldı',
         'tender_notice.linked' => 'İhale potansiyel işe bağlandı',
         'business_code.created' => 'İş kodu (POTIS/PRJ) oluşturuldu',
@@ -598,7 +613,8 @@ return [
         'proposal_version.deleted' => 'Teklif sürümü silindi',
         'proposal_document.created' => 'Teklif dokümanı oluşturuldu',
         'proposal_document.updated' => 'Teklif dokümanı güncellendi',
-        'proposal_document.deleted' => 'Teklif dokümanı silindi',
+        // D-186: yalniz teklif baglantisi kalkar; belge Dokumanlar'da kalir.
+        'proposal_document.deleted' => 'Belge tekliften kaldırıldı',
         'compliance_item.created' => 'Uygunluk maddesi oluşturuldu',
         'compliance_item.updated' => 'Uygunluk maddesi güncellendi',
         'compliance_item.deleted' => 'Uygunluk maddesi silindi',
@@ -745,6 +761,21 @@ return [
         'project_issue.deleted' => 'Proje issue silindi',
         'project.created_direct' => 'Proje doğrudan oluşturuldu',
         'project.converted' => 'Teklif projeye dönüştürüldü',
+        // D-174
+        'project_scope.created' => 'Proje tipi eklendi',
+        'project_scope.updated' => 'Proje tipi bilgileri güncellendi',
+        'project_scope.deleted' => 'Proje tipi kaldırıldı',
+        // D-175
+        'project_type_coordinator.created' => 'Proje tipi koordinatörü atandı',
+        'project_type_coordinator.ended' => 'Proje tipi koordinatörlüğü sona erdi',
+        // D-177
+        'project_reference.created' => 'Referans eklendi',
+        'project_reference.updated' => 'Referans güncellendi',
+        'project_reference.deleted' => 'Referans silindi',
+        'project_reference.archived' => 'Referans arşive alındı',
+        'project_reference.restored' => 'Referans arşivden çıkarıldı',
+        'project_reference_scope_type.created' => 'Referansa proje tipi eklendi',
+        'project_reference_scope_type.deleted' => 'Referanstan proje tipi kaldırıldı',
         'project.focus_advanced' => 'Proje sonraki adıma geçti',
         'project_photo.created' => 'Saha fotoğrafı eklendi',
         'project_photo.updated' => 'Saha fotoğrafı güncellendi',
@@ -787,6 +818,11 @@ return [
         'opportunity.stage_changed' => 'Fırsat aşaması değişti',
         'proposal.selected' => 'Seçili teklif değişti',
         'proposal.offer_status_synced' => 'Teklif durumu iş akışından güncellendi',
+        // D-182: teklif durumu baslik menusunden degisti.
+        'proposal.offer_status_changed' => 'Teklif durumu değişti',
+        // D-176: Tum belgeleri indir (ZIP).
+        'proposal.documents_downloaded' => 'Teklifin tüm belgeleri indirildi',
+        'business_case.documents_downloaded' => 'Potansiyel işin tüm belgeleri indirildi',
         'proposal_version.status_changed' => 'Teklif sürümü durumu değişti',
         'estimate_version.status_changed' => 'Tahmin sürümü durumu değişti',
         'pricing_scenario.selected' => 'Fiyat senaryosu seçildi',

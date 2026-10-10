@@ -24,7 +24,6 @@ use App\Services\Acquisition\HandoffItemService;
 use App\Services\Acquisition\HandoffReviewService;
 use App\Services\Acquisition\OperationHandoffService;
 use App\Services\Acquisition\OperationHandoffVersionService;
-use App\Services\Acquisition\ProposalService;
 use App\Services\Acquisition\ProposalVersionService;
 use App\Services\Audit\ActivityInput;
 use App\Services\Audit\ActivityRecorder;
@@ -34,7 +33,8 @@ use App\Services\Support\TransactionRunner;
  * Tekliften projeye dogrudan donusum (D-68).
  *
  * Kanonik zinciri (teklif -> devir -> kabul -> PRJ) atlamaz, tek
- * transaction'da kendisi yurutur: teklif secilir, surum gerekirse onaylanir,
+ * transaction'da kendisi yurutur: surum gerekirse onaylanir (D-181: teklif
+ * "secili" yapilmaz, secili teklif kavrami yok; verilen teklifin en son surumu),
  * business case `won` asamasina yurutulur, Operasyona devir kaydi ve surumu
  * acilir, kontrol listesi tamamlanir (sozlesme yoksa CONTRACT maddesi D-10
  * istisnasiyla muaf), surum gonderilir ve Proje Grubu kabulu yazilir;
@@ -44,7 +44,7 @@ final class ProjectConversionService
 {
     /** Girdi dizisinden projeye kopyalanan alanlar. */
     private const OVERRIDE_KEYS = [
-        'name', 'project_manager_employee_id', 'site_location', 'planned_start_on', 'planned_finish_on',
+        'name', 'short_name', 'project_manager_employee_id', 'site_location', 'planned_start_on', 'planned_finish_on',
         'description', 'site_address_line1', 'site_address_line2', 'site_district', 'site_city',
         'site_postal_code', 'site_country_code', 'site_latitude', 'site_longitude', 'site_note',
     ];
@@ -53,7 +53,6 @@ final class ProjectConversionService
         private readonly TransactionRunner $transactions,
         private readonly ActivityRecorder $activities,
         private readonly BusinessCaseService $businessCases,
-        private readonly ProposalService $proposals,
         private readonly ProposalVersionService $proposalVersions,
         private readonly OperationHandoffService $handoffs,
         private readonly OperationHandoffVersionService $handoffVersions,
@@ -81,10 +80,6 @@ final class ProjectConversionService
 
             if (in_array($case->acquisition_stage, [AcquisitionStage::Lost, AcquisitionStage::Cancelled], true)) {
                 throw GuardNotSatisfiedException::make(['reason' => 'kaybedilmis veya iptal edilmis is projeye donusturulemez']);
-            }
-
-            if (! $proposal->is_selected) {
-                $this->proposals->select($proposal);
             }
 
             $version = $this->resolveVersion($proposal, $data['proposal_version_id'] ?? null);

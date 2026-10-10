@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Documents\Tables;
 
 use App\Enums\Document\DocumentStatus;
+use App\Models\Project\Project;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\Projects\ProjectNames;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
@@ -39,7 +41,7 @@ final class DocumentTable
                     ->label(__('document.fields.owner_org_unit'))
                     ->placeholder('-')
                     ->toggleable(),
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('document.fields.project'))
                     ->placeholder('-')
                     ->toggleable()
@@ -67,7 +69,9 @@ final class DocumentTable
                 SelectFilter::make('project_id')
                     ->label(__('document.fields.project'))
                     ->relationship('project', 'name')
-                    ->searchable()
+                    // D-174: kisa ad (yoksa lisans adi).
+                    ->getOptionLabelFromRecordUsing(fn (Project $record): string => ProjectNames::optionLabel($record))
+                    ->searchable(ProjectNames::searchColumns())
                     ->preload()
                     ->visible(fn (): bool => SchemaReadiness::hasBatch('B17')),
             ])

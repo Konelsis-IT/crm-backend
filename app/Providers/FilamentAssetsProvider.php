@@ -45,6 +45,12 @@ use Illuminate\Support\ServiceProvider;
  *   Ileri ozeti. `loadedOnRequest()`: filament.acquisition.checklist-scripts
  *   yalniz potansiyel is olustur / duzenle sayfalarinda yukler.
  *
+ * - konelsis-dash.css ve dash-*.js (D-173): UI Deneme'deki departman panolari
+ *   ve pano bilesen katalogu (React). `loadedOnRequest()`:
+ *   resources/views/filament/dashboards/app.blade.php stili,
+ *   filament.dashboards.scripts betikleri yalniz o iki sayfada yukler.
+ *   cost-lab.js (D-187): UI Deneme > Maliyet kalemleri; ayni cekirdek ve stil.
+ *
  * - report-copy.js (D-167): raporun bicimli metnini panoya zengin metin + duz
  *   metin olarak yazar (ReportActions::copy). Her panel sayfasinda (kucuk).
  *
@@ -86,6 +92,15 @@ final class FilamentAssetsProvider extends ServiceProvider
             // Teklif oncesi kontrol listesi tahtasi (D-157): yalniz potansiyel is olustur / duzenle.
             Css::make('konelsis-checklist', resource_path('css/filament/konelsis-checklist.css'))->loadedOnRequest(),
             Js::make('checklist-board', resource_path('js/acquisition/checklist-board.js'))->loadedOnRequest(),
+            // Departman panolari (D-173, kullanici onayi 8 Ekim 2026: "tamamen React ile"):
+            // yalniz UI Deneme > Departman panolari ve Pano bilesenleri sayfalarinda.
+            Css::make('konelsis-dash', resource_path('css/filament/konelsis-dash.css'))->loadedOnRequest(),
+            Js::make('dash-core', resource_path('js/dashboards/dash-core.js'))->loadedOnRequest(),
+            Js::make('dash-widgets', resource_path('js/dashboards/dash-widgets.js'))->loadedOnRequest(),
+            Js::make('dash-app', resource_path('js/dashboards/dash-app.js'))->loadedOnRequest(),
+            Js::make('dash-catalog', resource_path('js/dashboards/dash-catalog.js'))->loadedOnRequest(),
+            // Maliyet kalemleri denemesi (D-187): yalniz UI Deneme > Maliyet kalemleri.
+            Js::make('cost-lab', resource_path('js/dashboards/cost-lab.js'))->loadedOnRequest(),
             // Masaustu (Windows) bildirimi + bildirim sesi (D-126, kullanici onayi
             // 25 Eylul 2026): her panel sayfasinda; ayarlari AlertFeed verir.
             Js::make('konelsis-alerts', resource_path('js/konelsis-alerts.js')),

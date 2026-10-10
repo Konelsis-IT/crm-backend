@@ -10,6 +10,8 @@ use App\Filament\Resources\Parties\PartyResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Models\Project\Project;
 use App\Query\Project\ProjectStepReadiness;
+use App\Support\Money;
+use App\Support\Projects\ProjectNames;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Callout;
@@ -125,6 +127,14 @@ final class ProjectWorkspace
         }
 
         $entries = [
+            // D-174: baslik kisa ad; lisans adi ayri alan.
+            TextEntry::make('license_name')
+                ->label(__('project.fields.license_name'))
+                ->state((string) $project->name)
+                ->icon(Heroicon::OutlinedDocumentCheck)
+                ->iconColor('gray')
+                ->weight(FontWeight::Medium)
+                ->visible(ProjectNames::shortNameEnabled()),
             TextEntry::make('customer_party')
                 ->label(__('project.fields.customer_party'))
                 ->state($customer?->display_name ?? '-')
@@ -163,6 +173,9 @@ final class ProjectWorkspace
                 ->badge()
                 ->color($focus !== null ? 'primary' : 'gray')
                 ->icon(Heroicon::OutlinedPlayCircle),
+            app(ProjectScopeSchema::class)->typesEntry($project),
+            // D-175: tiplerin koordinatorleri, tip rozetlerinin yaninda.
+            app(ProjectTypeCoordinatorSchema::class)->projectEntry($project),
             $address,
         ];
 
@@ -174,7 +187,7 @@ final class ProjectWorkspace
         ];
 
         $media = $coverUrl !== null
-            ? Image::make($coverUrl, (string) $project->name)->imageHeight('12rem')
+            ? Image::make($coverUrl, (string) $project->display_name)->imageHeight('12rem')
             : Icon::make(Heroicon::OutlinedPhoto)->color('gray');
 
         return Section::make(__('project.sections.header'))
@@ -186,7 +199,7 @@ final class ProjectWorkspace
                     ->components([
                         Group::make([$media])->columnSpan(1),
                         Group::make([
-                            Text::make((string) $project->name)->size(TextSize::Large)->weight(FontWeight::Bold),
+                            Text::make((string) $project->display_name)->size(TextSize::Large)->weight(FontWeight::Bold),
                             Flex::make($badges),
                             Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])->components($entries),
                             TextEntry::make('description')
@@ -331,12 +344,9 @@ final class ProjectWorkspace
             ->components([Flex::make($lines)]);
     }
 
+    /** Tutar + para birimi simgesi (D-180, Money::format). */
     private function money(mixed $amount, ?string $currency): string
     {
-        if ($amount === null) {
-            return '-';
-        }
-
-        return Number::format((float) $amount, precision: 2, locale: 'tr').' '.($currency ?? '');
+        return Money::format($amount, $currency);
     }
 }

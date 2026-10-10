@@ -94,7 +94,8 @@ enum ReportSubjectKind: string implements HasIcon, HasLabel
         return match ($this) {
             self::None => null,
             self::Personnel => (string) $model->getAttribute('full_name'),
-            self::Project => (string) $model->getAttribute('name'),
+            // D-174: kisa ad (yoksa lisans adi).
+            self::Project => (string) $model->getAttribute('display_name'),
             self::Component => (string) ($model->getAttribute('name_tr') ?? $model->getAttribute('code')),
             self::Proposal => trim((string) $model->getAttribute('proposal_no').' · '.(string) $model->getAttribute('title'), ' ·'),
             self::BusinessCase => (string) $model->getAttribute('title'),

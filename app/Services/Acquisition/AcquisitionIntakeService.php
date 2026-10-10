@@ -6,7 +6,6 @@ namespace App\Services\Acquisition;
 
 use App\Enums\Acquisition\AcquisitionStage;
 use App\Enums\Acquisition\ProposalDocumentRole;
-use App\Enums\Acquisition\ProposalVersionStatus;
 use App\Exceptions\Acquisition\GuardNotSatisfiedException;
 use App\Exceptions\RecordNotFoundException;
 use App\Models\Acquisition\BusinessCase;
@@ -14,19 +13,16 @@ use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalDocument;
 use App\Models\Acquisition\ProposalVersion;
 use App\Models\Acquisition\TenderNotice;
-use App\Models\Document\Document;
-use App\Models\Document\DocumentRevision;
 use App\Query\Document\FixedDocumentQueries;
+use App\Services\Acquisition\Concerns\ProposalAmendment;
 use App\Services\Audit\ActorContext;
-use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentService;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Project\ProjectConversionService;
 use App\Services\Support\TransactionRunner;
+use App\Support\Acquisition\ScopeTypes;
 use BackedEnum;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
-use Throwable;
 
 /**
  * Is alim girisi (D-72): "Is dosyasi -> Teklif -> Proje" sihirbazinin tek
@@ -55,11 +51,18 @@ use Throwable;
  * - Teklif belgelerine sartname uygunlugu, deviasyon listesi, marka listesi ve
  *   sorumluluk matrisi eklendi (Excel ya da herhangi bir dosya; madde madde
  *   giris yok).
- * - Teklif duzenleme (reviseProposal): alanlarda, kapsamda ya da belgelerde
- *   gercek degisiklik yeni surumdur. Onceki surum ve belgeleri saklanir; yeni
- *   yuklenen belge ayni belgenin yeni revizyonu olur, yuklenmeyen belge yeni
- *   surume aynen tasinir. Taslak teklif (is_draft) bitirilene kadar ayni
- *   surum uzerinde calisir.
+ *
+ * D-186 (9 Ekim 2026 kullanici karari: "Belgedeki revizyon mantigini en azindan
+ * teklif icin kaldiriyoruz ... surumleme isi artik personeldedir"):
+ * - Duzenle (updateProposal): guncel surum yerinde degisir (alanlar, kapsam,
+ *   belgeler); surum numarasi hicbir degisiklikte artmaz, surumun durumu ne
+ *   olursa olsun (ProposalAmendment).
+ * - Yeni teklif surumu (newProposalVersion): personel dugmeye basinca N+1 acilir;
+ *   onceki surumun alanlari formdaki duzeltmelerle, kapsam ve belgeler carpi
+ *   ile cikarilmadiysa tasinir, yeni dosyalar eklenir.
+ * - Teklif belgelerinde revizyon yok: yuklenen her dosya yeni belgedir; carpi
+ *   (cipin "x"i, formda `{anahtar}_removed`) ya da Dokumanlar'daki cop kutusu belgeyi surumden
+ *   ayirir, Document kaydi Dokumanlar'da kalir (silinmez).
  */
 final class AcquisitionIntakeService
 {
@@ -76,9 +79,6 @@ final class AcquisitionIntakeService
 
     /** @var list<string> Teklif surumune yazilan alanlar (B43: marj kapsamdan hesaplanir). */
     private const VERSION_KEYS = ['total_price', 'margin_pct', 'validity_until', 'is_critical_route', 'summary'];
-
-    /** @var list<string> Duzenlemede "degisti mi" diye bakilan, kullanicinin girdigi surum alanlari. */
-    private const VERSION_INPUT_KEYS = ['total_price', 'validity_until', 'is_critical_route', 'summary'];
 
     /** @var list<string> Donusumde projeye aktarilan alanlar. */
     private const PROJECT_KEYS = [
@@ -116,6 +116,9 @@ final class AcquisitionIntakeService
         'responsibility_matrix' => ['SRM', 'Sorumluluk matrisi', ProposalDocumentRole::ResponsibilityMatrix],
     ];
 
+    /** D-186: formda kaldirilmak uzere isaretlenen belgelerin anahtar eki (`{anahtar}_removed`: revizyon kimlikleri). */
+    public const REMOVED_SUFFIX = '_removed';
+
     public function __construct(
         private readonly TransactionRunner $transactions,
         private readonly BusinessCaseService $businessCases,
@@ -124,7 +127,6 @@ final class AcquisitionIntakeService
         private readonly ProjectConversionService $conversion,
         private readonly ProposalDocumentService $proposalDocuments,
         private readonly DocumentService $documents,
-        private readonly DocumentRevisionService $revisions,
         private readonly FixedDocumentQueries $fixedDocuments,
         private readonly ActorContext $actor,
         private readonly TenderNoticeService $tenders,
@@ -171,6 +173,15 @@ final class AcquisitionIntakeService
             $tender = array_intersect_key($data, array_flip(['tender_mode', 'tender_notice_id', 'tender']));
             unset($data['tender_mode'], $data['tender_notice_id'], $data['tender']);
 
+            // D-177 "Proje tipi eklemek istiyorum": yeni tipler kayitli tiplere eklenir;
+            // kayitli tip bu yoldan kaldirilmaz (tip secimi gizliyken gelmez).
+            $added = ScopeTypes::values((array) ($data['added_scope_types'] ?? []));
+            unset($data['added_scope_types'], $data['add_scope_types']);
+
+            if ($added !== [] && ! array_key_exists('scope_types', $data)) {
+                $data['scope_types'] = [...ScopeTypes::values($case->scopes()->pluck('scope_type')->all()), ...$added];
+            }
+
             /** @var BusinessCase $updated */
             $updated = $this->businessCases->update($case, $data);
 
@@ -208,50 +219,64 @@ final class AcquisitionIntakeService
             /** @var BusinessCase $case */
             $case = $this->businessCases->show($businessCaseId);
 
-            return $this->openProposal($case, $data, (bool) ($data['convert_now'] ?? false));
+            // D-183: Teklif olustur ekranindaki "Teklif sorumlusu" (formda dolu gelir).
+            // Potansiyel is sihirbazindaki owner_employee_id isin sahibidir; o yol
+            // (create) bu parametreyi vermez.
+            $owner = is_numeric($data['owner_employee_id'] ?? null) && (int) $data['owner_employee_id'] > 0 ? (int) $data['owner_employee_id'] : null;
+
+            // D-186: Teklif olustur ekraninda da "Yeni proje tipi eklemek istiyorum"
+            // (Proje tipi bolumu); eklenen tip once potansiyel ise eklenir.
+            $data = $this->addScopeTypes($case, $data);
+
+            return $this->openProposal($case, $data, (bool) ($data['convert_now'] ?? false), $owner);
         });
     }
 
     /**
-     * Teklif duzenle (B43): koke yazilanlar (baslik, sorumlu, teklif durumu,
-     * taslak) her zaman guncellenir; surum alanlari, kapsam ya da belgeler
-     * gercekten degistiyse yeni surum acilir (ProposalVersionService::revise).
-     * Taslak teklif ayni (taslak / incelemedeki) surum uzerinde guncellenir.
+     * Teklif "Duzenle" (D-186, 9 Ekim 2026 kullanici karari: "Eger kisi dogrudan
+     * teklif detayinda duzenleye basarsa o zaman istedigi herhangi bir
+     * degisiklikte teklif surumu yukselmeyecektir. Beraberinde yine belgeyi
+     * duzenleme adiminda silebilir, ek dosyalar yukleyebilir, ozgurdur").
+     *
+     * Koke yazilanlar (baslik, sorumlu, taslak) ve guncel surumun alanlari,
+     * kapsamlari ve belgeleri ayni surumde, surumun durumundan bagimsiz
+     * guncellenir (ProposalAmendment); yeni surum hicbir zaman acilmaz. Surumu
+     * olmayan eski teklifte ilk surum acilir. Teklif durumu (offer_status)
+     * buradan degismez (D-182, sayfa formu gondermez).
      *
      * @param  array<string, mixed>  $data
-     * @return array{0: Proposal, 1: ProposalVersion|null} teklif ve (acildiysa) yeni surum
      */
-    public function reviseProposal(Proposal $proposal, array $data): array
+    public function updateProposal(Proposal $proposal, array $data): Proposal
     {
-        return $this->transactions->run(function () use ($proposal, $data): array {
+        return $this->transactions->run(function () use ($proposal, $data): Proposal {
             /** @var Proposal $proposal */
             $proposal = $this->proposals->show($proposal->getKey());
             /** @var BusinessCase $case */
             $case = $proposal->businessCase;
             /** @var ProposalVersion|null $current */
             $current = $proposal->currentVersion;
-            $wasDraft = (bool) $proposal->getAttribute('is_draft');
 
-            $this->proposals->update($proposal, [
-                'title' => filled($data['proposal_title'] ?? null) ? (string) $data['proposal_title'] : $proposal->title,
-                ...(array_key_exists('owner_employee_id', $data) && filled($data['owner_employee_id']) ? ['owner_employee_id' => (int) $data['owner_employee_id']] : []),
-                ...$this->proposalExtras($data),
-            ]);
+            $this->updateProposalRoot($proposal, $data);
+            $data = $this->addScopeTypes($case, $data);
 
             $types = $this->scopeTypes($case, $data);
             $rows = is_array($data['scopes'] ?? null) ? $data['scopes'] : [];
             $versionData = $this->versionData($case, $data);
 
-            $changed = $current === null
-                || $this->versionInputsDiffer($current, $data)
-                || (SchemaReadiness::hasBatch('B43') && $this->scopes->differs($current, $types, $rows))
-                || $this->documentsChanged($current, $data);
+            if ($current === null) {
+                /** @var ProposalVersion $version */
+                $version = $this->proposalVersions->create([...$versionData, 'proposal_id' => $proposal->getKey()]);
 
-            if (! $changed) {
-                return [$proposal->refresh(), null];
+                if (SchemaReadiness::hasBatch('B43')) {
+                    $this->scopes->sync($version, $case, $types, $rows);
+                }
+
+                $this->syncVersionDocuments($case, $version, null, $data);
+
+                return $proposal->refresh();
             }
 
-            if ($current !== null && $wasDraft && in_array($current->status, [ProposalVersionStatus::Draft, ProposalVersionStatus::Review], true)) {
+            ProposalAmendment::run((int) $current->getKey(), function () use ($case, $current, $types, $rows, $versionData, $data): void {
                 $this->proposalVersions->update($current, $versionData);
 
                 if (SchemaReadiness::hasBatch('B43')) {
@@ -259,75 +284,165 @@ final class AcquisitionIntakeService
                 }
 
                 $this->syncVersionDocuments($case, $current, null, $data);
+                $this->proposalVersions->refreshHash($current);
+            });
 
-                return [$proposal->refresh(), null];
-            }
-
-            $version = $this->proposalVersions->revise($proposal, $versionData);
-
-            if (SchemaReadiness::hasBatch('B43')) {
-                $this->scopes->sync($version, $case, $types, $rows, $current);
-            }
-
-            $this->syncVersionDocuments($case, $version, $current, $data);
-
-            return [$proposal->refresh(), $version];
+            return $proposal->refresh();
         });
     }
 
     /**
-     * Teklif sayfasinin Dokumanlar sekmesinden belge yukleme (D-158, 5 Ekim 2026
-     * kullanici talimati: "Belgeyi yukleyebilmeliyim, her yeni yuklediğimde surum
-     * guncellenmelidir ... belge revize olmadiysa dokuman kismini cogaltmanin
-     * manasi yok").
+     * "Yeni teklif surumu" (D-186, 9 Ekim 2026 kullanici karari: "Personel 'Yeni
+     * teklif surumu' action butonuna tiklarsa onceki bilgilerin tamami klasik bir
+     * duzenleme ekrani gibi gelecek ve var olan belgeleri de isterse carpi butonu
+     * ile kaldirip yeni surume yeni belgeleri yukleyebilecektir. Ancak bu hamle
+     * teklif surumunu 2 yapacaktir").
      *
-     * Rolde belge varsa ayni belgenin yeni revizyonu, yoksa yeni belge acilir.
-     * Teklif duzenle ile ayni kural: yeni surum acilir (taslak teklifte ayni
-     * surum guncellenir); surum alanlari, kapsam ve diger belgeler onceki
-     * surumden aynen tasinir (belge kopyalanmaz, ayni revizyon yeni surume baglanir).
+     * Surum N+1 acilir ve guncel olur (ProposalVersionService::revise; onceki
+     * surum "Yerini aldi"). Alanlar formdan; kapsam tipleri, degerleri, kapsam
+     * ve maliyet listeleri ile belgeler onceki surumden tasinir, carpi ile
+     * cikarilanlar tasinmaz, yeni dosyalar yeni belge olarak eklenir. Teklif
+     * durumu (offer_status) degismez.
      *
-     * @return array{0: Proposal, 1: ProposalVersion|null} teklif ve (acildiysa) yeni surum
+     * @param  array<string, mixed>  $data
      */
-    public function uploadProposalDocument(Proposal $proposal, ProposalDocumentRole $role, string $tempPath, ?string $originalName): array
+    public function newProposalVersion(Proposal $proposal, array $data): ProposalVersion
     {
-        $key = $this->uploadKeyFor($role) ?? throw RecordNotFoundException::make();
-        $data = [$key.'_file' => $tempPath, $key.'_file_name' => $originalName];
-
-        return $this->transactions->run(function () use ($proposal, $data): array {
+        return $this->transactions->run(function () use ($proposal, $data): ProposalVersion {
             /** @var Proposal $proposal */
             $proposal = $this->proposals->show($proposal->getKey());
             /** @var BusinessCase $case */
             $case = $proposal->businessCase;
-            /** @var ProposalVersion|null $current */
-            $current = $proposal->currentVersion;
+            /** @var ProposalVersion $previous */
+            $previous = $proposal->currentVersion ?? throw RecordNotFoundException::make();
 
-            if ($current === null) {
+            $this->updateProposalRoot($proposal, $data);
+            $data = $this->addScopeTypes($case, $data);
+
+            $types = $this->scopeTypes($case, $data);
+            $rows = is_array($data['scopes'] ?? null) ? $data['scopes'] : [];
+
+            $version = $this->proposalVersions->revise($proposal, $this->versionData($case, $data));
+
+            if (SchemaReadiness::hasBatch('B43')) {
+                $this->scopes->sync($version, $case, $types, $rows, $previous);
+            }
+
+            $this->syncVersionDocuments($case, $version, $previous, $data);
+
+            return $version->refresh();
+        });
+    }
+
+    /**
+     * Teklif kokune yazilanlar: baslik, sorumlu, taslak isaretleri.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function updateProposalRoot(Proposal $proposal, array $data): void
+    {
+        $this->proposals->update($proposal, [
+            'title' => filled($data['proposal_title'] ?? null) ? (string) $data['proposal_title'] : $proposal->title,
+            ...(array_key_exists('owner_employee_id', $data) && filled($data['owner_employee_id']) ? ['owner_employee_id' => (int) $data['owner_employee_id']] : []),
+            ...$this->proposalExtras($data),
+        ]);
+    }
+
+    /**
+     * D-177 "Yeni proje tipi eklemek istiyorum": secilen yeni tipler once
+     * potansiyel ise eklenir (yalniz ekler); kapsamlari bu kaydetmede teklif
+     * surumune yazilir. Form anahtarlari veriden cikarilir.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function addScopeTypes(BusinessCase $case, array $data): array
+    {
+        $added = ScopeTypes::values((array) ($data['added_scope_types'] ?? []));
+        unset($data['added_scope_types'], $data['add_scope_types']);
+
+        if ($added !== [] && SchemaReadiness::hasBatch('B43')) {
+            $this->businessCases->addScopeTypes($case, $added);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Dokumanlar sekmesinden bir ya da birden fazla dosya (D-176, 8 Ekim 2026
+     * kullanici talimati: "bir belge tipine orn. sartnamede 2 belge
+     * yuklenecekti ... birden fazla yuklenebilir").
+     *
+     * D-186: her dosya bu turde yeni belgedir ve guncel surume eklenir; teklif
+     * surumu degismez (surumleme personelde, "Yeni teklif surumu").
+     *
+     * @param  list<array{path: string, name: string|null}>  $files
+     */
+    public function uploadProposalDocuments(Proposal $proposal, ProposalDocumentRole $role, array $files): Proposal
+    {
+        $key = $this->uploadKeyFor($role) ?? throw RecordNotFoundException::make();
+        $paths = [];
+        $names = [];
+
+        foreach ($files as $file) {
+            $path = trim((string) ($file['path'] ?? ''));
+
+            if ($path !== '') {
+                $paths[] = $path;
+                $names[$path] = $file['name'] ?? null;
+            }
+        }
+
+        if ($paths === []) {
+            throw RecordNotFoundException::make();
+        }
+
+        $data = [$key.'_file' => $paths, $key.'_file_name' => $names];
+
+        return $this->transactions->run(function () use ($proposal, $data): Proposal {
+            /** @var Proposal $proposal */
+            $proposal = $this->proposals->show($proposal->getKey());
+            /** @var BusinessCase $case */
+            $case = $proposal->businessCase;
+            /** @var ProposalVersion $current */
+            $current = $proposal->currentVersion ?? throw RecordNotFoundException::make();
+
+            ProposalAmendment::run((int) $current->getKey(), function () use ($case, $current, $data): void {
+                $this->syncVersionDocuments($case, $current, null, $data);
+                $this->proposalVersions->refreshHash($current);
+            });
+
+            return $proposal->refresh();
+        });
+    }
+
+    /**
+     * Belgeyi tekliften kaldirma (D-186, 9 Ekim 2026 kullanici talimati:
+     * "Dokumanlar relation kisminda ... Indir ve Cop kutusu butonu olsun"):
+     * guncel surumun belge satiri (proposal_documents baglantisi) kaldirilir;
+     * Document kaydi ve dosyalari Dokumanlar'da kalir (arsiv kurali, silme yok).
+     * Teklif surumu degismez.
+     */
+    public function detachProposalDocument(Proposal $proposal, ProposalDocument $row): Proposal
+    {
+        return $this->transactions->run(function () use ($proposal, $row): Proposal {
+            /** @var Proposal $proposal */
+            $proposal = $this->proposals->show($proposal->getKey());
+            $currentId = $proposal->current_version_id;
+
+            if ($currentId === null || (int) $row->proposal_version_id !== (int) $currentId) {
                 throw RecordNotFoundException::make();
             }
 
-            if ((bool) $proposal->getAttribute('is_draft') && in_array($current->status, [ProposalVersionStatus::Draft, ProposalVersionStatus::Review], true)) {
-                $this->syncVersionDocuments($case, $current, null, $data);
+            /** @var ProposalVersion $current */
+            $current = $proposal->currentVersion;
 
-                return [$proposal->refresh(), null];
-            }
+            ProposalAmendment::run((int) $currentId, function () use ($row, $current): void {
+                $this->proposalDocuments->delete($row);
+                $this->proposalVersions->refreshHash($current);
+            });
 
-            $version = $this->proposalVersions->revise($proposal, [
-                'total_price' => $current->total_price,
-                'margin_pct' => $current->margin_pct,
-                'validity_until' => self::dateString($current->validity_until),
-                'is_critical_route' => (bool) $current->is_critical_route,
-                'summary' => $current->summary,
-            ]);
-
-            // Kapsam aynen tasinir: bos satirlarla senkron onceki surumun degerlerini ve kapsam listesini alir.
-            if (SchemaReadiness::hasBatch('B43')) {
-                $types = $current->scopes()->pluck('scope_type')->all();
-                $this->scopes->sync($version, $case, $types, [], $current);
-            }
-
-            $this->syncVersionDocuments($case, $version, $current, $data);
-
-            return [$proposal->refresh(), $version];
+            return $proposal->refresh();
         });
     }
 
@@ -359,12 +474,13 @@ final class AcquisitionIntakeService
      *
      * @param  array<string, mixed>  $data
      */
-    private function openProposal(BusinessCase $case, array $data, bool $convertNow): Proposal
+    private function openProposal(BusinessCase $case, array $data, bool $convertNow, ?int $ownerId = null): Proposal
     {
         /** @var Proposal $proposal */
         $proposal = $this->proposals->create([
             'business_case_id' => $case->getKey(),
             'title' => filled($data['proposal_title'] ?? null) ? (string) $data['proposal_title'] : null,
+            ...($ownerId !== null ? ['owner_employee_id' => $ownerId] : []),
             ...$this->proposalExtras($data),
         ]);
 
@@ -500,68 +616,6 @@ final class AcquisitionIntakeService
     }
 
     /**
-     * Kullanicinin girdigi surum alanlari kayitli surumden farkli mi
-     * (hesaplanan marj karsilastirilmaz; kapsam degisikligi ayrica bakilir).
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function versionInputsDiffer(ProposalVersion $version, array $data): bool
-    {
-        foreach (self::VERSION_INPUT_KEYS as $key) {
-            if (! array_key_exists($key, $data)) {
-                continue;
-            }
-
-            $stored = $version->getAttribute($key);
-            $incoming = $data[$key];
-
-            $same = match ($key) {
-                'total_price' => self::sameNumber($stored, $incoming),
-                'validity_until' => self::dateString($stored) === self::dateString($incoming),
-                'is_critical_route' => (bool) $stored === (bool) $incoming,
-                default => trim((string) $stored) === trim((string) $incoming),
-            };
-
-            if (! $same) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Yeni dosya yuklendiyse ya da Referanslar / Genel katalog secimi
-     * degistiyse belgeler degismistir.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function documentsChanged(?ProposalVersion $version, array $data): bool
-    {
-        foreach (array_keys($this->uploadedDocuments()) as $key) {
-            if ($this->firstString($data[$key.'_file'] ?? null) !== null) {
-                return true;
-            }
-        }
-
-        if (! SchemaReadiness::hasBatch('B29')) {
-            return false;
-        }
-
-        $roles = $version === null ? [] : $version->documents()->pluck('document_role')
-            ->map(static fn (mixed $role): string => $role instanceof BackedEnum ? (string) $role->value : (string) $role)
-            ->all();
-
-        foreach (['attach_references' => ProposalDocumentRole::References, 'attach_catalog' => ProposalDocumentRole::Catalog] as $key => $role) {
-            if (array_key_exists($key, $data) && (bool) $data[$key] !== in_array($role->value, $roles, true)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Teklif adiminin belgeleri (B29, D-101): firmanin beklentileri (BEK) ve
      * teklif mektubu (TKM) yeni belge + ilk revizyon olarak acilir; Referanslar
      * belgesi (REF) ve Genel katalog (KAT) Dokumanlar'daki sabit belgenin
@@ -578,15 +632,17 @@ final class AcquisitionIntakeService
     }
 
     /**
-     * Surumun belgeleri.
+     * Surumun belgeleri (D-186: teklifte belge revizyonu yok).
      *
-     * - $previous verilirse (yeni surum): onceki surumun belgeleri aynen tasinir;
-     *   formda yeni dosyasi olan rol, onceki belgenin yeni revizyonu olur.
-     *   Referanslar / Genel katalog formdaki secime gore tasinir ya da birakilir.
-     * - $previous yoksa ve surumde zaten belge varsa (taslak teklifin kendi
-     *   surumu): yeni dosya ayni belgeye yeni revizyon olarak eklenip satir yeni
-     *   revizyona tasinir; secimi kaldirilan sabit belge satiri cikar.
-     * - Surum bossa (ilk surum): yeni belgeler ve secilen sabit belgeler baglanir.
+     * - $previous verilirse (Yeni teklif surumu): onceki surumun belgeleri ayni
+     *   revizyonla yeni surume baglanir; formda carpi ile isaretlenenler
+     *   (`{anahtar}_removed`) baglanmaz. Referanslar / Genel
+     *   katalog formdaki secime gore tasinir ya da birakilir.
+     * - $previous yoksa (Duzenle, belge yukleme, ilk surum): satirlar zaten bu
+     *   surumdedir; carpi ile cikarilan satir ve secimi kaldirilan sabit belge
+     *   satiri surumden ayrilir (Document kaydi Dokumanlar'da kalir).
+     * - Yuklenen her dosya kendi turunde yeni belge + ilk revizyondur (D-176:
+     *   bir turde birden fazla belge; "ayni ad = yeni revizyon" kurali kalkti).
      *
      * @param  array<string, mixed>  $data
      */
@@ -598,9 +654,14 @@ final class AcquisitionIntakeService
 
         $uploads = $this->uploads($data);
         $typeIds = $this->documentTypeIds($uploads);
+        $removed = $this->removedRevisions($data);
 
         /** @var list<ProposalDocument> $sourceRows */
-        $sourceRows = ($previous ?? $version)->documents()->with('documentRevision.document')->orderBy('sort_order')->orderBy('id')->get()->all();
+        $sourceRows = ($previous ?? $version)->documents()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->all();
         $inPlace = $previous === null;
         $sortOrder = $inPlace && $sourceRows !== []
             ? max(array_map(static fn (ProposalDocument $row): int => (int) $row->sort_order, $sourceRows)) + 1
@@ -625,33 +686,20 @@ final class AcquisitionIntakeService
                 continue;
             }
 
-            $upload = $uploads[$roleValue] ?? null;
+            // D-186: cipin "x"i ile isaretlenmeyen belge tutulur.
+            $keep = ! in_array((int) $row->document_revision_id, $removed[$roleValue] ?? [], true);
 
-            if ($upload !== null && ! isset($handled[$roleValue])) {
-                $handled[$roleValue] = true;
-                $revisionId = $this->newRevisionFor($row->documentRevision?->document, $upload)
-                    ?? $this->newDocumentRevision($case, $typeIds[$roleValue], $upload);
-
-                if ($inPlace) {
-                    $this->proposalDocuments->update($row, ['document_revision_id' => $revisionId]);
-                } else {
-                    $this->linkRevision($version, $revisionId, $role, $sortOrder);
-                }
-
-                continue;
-            }
-
-            if (! $inPlace) {
+            if ($inPlace && ! $keep) {
+                $this->proposalDocuments->delete($row);
+            } elseif (! $inPlace && $keep) {
                 $this->linkRevision($version, (int) $row->document_revision_id, $role, $sortOrder);
             }
         }
 
-        foreach ($uploads as $roleValue => $upload) {
-            if (isset($handled[$roleValue])) {
-                continue;
+        foreach ($uploads as $roleValue => $list) {
+            foreach ($list as $upload) {
+                $this->linkRevision($version, $this->newDocumentRevision($case, $typeIds[$roleValue], $upload), ProposalDocumentRole::from($roleValue), $sortOrder);
             }
-
-            $this->linkRevision($version, $this->newDocumentRevision($case, $typeIds[$roleValue], $upload), ProposalDocumentRole::from($roleValue), $sortOrder);
         }
 
         foreach (['attach_references' => ProposalDocumentRole::References, 'attach_catalog' => ProposalDocumentRole::Catalog] as $key => $role) {
@@ -669,47 +717,67 @@ final class AcquisitionIntakeService
     }
 
     /**
-     * Formda dosyasi olan roller: rol degeri => [anahtar, gecici yol, ozgun ad, tur kodu, baslik eki].
+     * Formda dosyasi olan roller: rol degeri => dosyalar [anahtar, gecici yol,
+     * ozgun ad, tur kodu, baslik eki]. D-176: kutu coklu dosya alir; her dosya
+     * ayri yuklemedir.
      *
      * @param  array<string, mixed>  $data
-     * @return array<string, array{key: string, path: string, name: string|null, type: string, suffix: string}>
+     * @return array<string, list<array{key: string, path: string, name: string|null, type: string, suffix: string}>>
      */
     private function uploads(array $data): array
     {
         $uploads = [];
 
         foreach ($this->uploadedDocuments() as $key => [$typeCode, $suffix, $role]) {
-            $path = $this->firstString($data[$key.'_file'] ?? null);
-
-            if ($path === null) {
-                continue;
+            foreach ($this->strings($data[$key.'_file'] ?? null) as $path) {
+                $uploads[$role->value][] = [
+                    'key' => $key,
+                    'path' => $path,
+                    'name' => $this->originalName($data[$key.'_file_name'] ?? null, $path),
+                    'type' => $typeCode,
+                    'suffix' => $suffix,
+                ];
             }
-
-            $uploads[$role->value] = [
-                'key' => $key,
-                'path' => $path,
-                'name' => $this->originalName($data[$key.'_file_name'] ?? null, $path),
-                'type' => $typeCode,
-                'suffix' => $suffix,
-            ];
         }
 
         return $uploads;
     }
 
     /**
+     * Formda kaldirilmak uzere isaretlenen belgeler (D-186, cipin "x"i): rol
+     * degeri => revizyon kimlikleri.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, list<int>>
+     */
+    private function removedRevisions(array $data): array
+    {
+        $removed = [];
+
+        foreach ($this->uploadedDocuments() as $key => [, , $role]) {
+            foreach ((array) ($data[$key.self::REMOVED_SUFFIX] ?? []) as $value) {
+                if (is_numeric($value) && (int) $value > 0) {
+                    $removed[$role->value][] = (int) $value;
+                }
+            }
+        }
+
+        return $removed;
+    }
+
+    /**
      * Belge turleri dosya tasinmadan ONCE dogrulanir: disk tasima islemi geri
      * alinamaz, eksik tur ikinci belgede cikarsa ilk dosya yetim kalirdi.
      *
-     * @param  array<string, array{key: string, path: string, name: string|null, type: string, suffix: string}>  $uploads
+     * @param  array<string, list<array{key: string, path: string, name: string|null, type: string, suffix: string}>>  $uploads
      * @return array<string, int>
      */
     private function documentTypeIds(array $uploads): array
     {
         $ids = [];
 
-        foreach ($uploads as $roleValue => $upload) {
-            $ids[$roleValue] = $this->fixedDocuments->documentTypeId($upload['type']) ?? throw RecordNotFoundException::make();
+        foreach ($uploads as $roleValue => $list) {
+            $ids[$roleValue] = $this->fixedDocuments->documentTypeId($list[0]['type']) ?? throw RecordNotFoundException::make();
         }
 
         return $ids;
@@ -719,30 +787,6 @@ final class AcquisitionIntakeService
     private function uploadedDocuments(): array
     {
         return SchemaReadiness::hasBatch('B43') ? [...self::UPLOADED_DOCUMENTS, ...self::B43_DOCUMENTS] : self::UPLOADED_DOCUMENTS;
-    }
-
-    /**
-     * Var olan belgeye yeni revizyon (eski dosya silinmez); belge yoksa null.
-     *
-     * @param  array{key: string, path: string, name: string|null, type: string, suffix: string}  $upload
-     */
-    private function newRevisionFor(?Document $document, array $upload): ?int
-    {
-        if ($document === null) {
-            return null;
-        }
-
-        /** @var DocumentRevision $revision */
-        $revision = $this->revisions->create([
-            'document_id' => $document->getKey(),
-            'title' => $document->title,
-            'language' => 'tr',
-            'purpose' => 'for_review',
-            'file_temp_path' => $upload['path'],
-            'file_original_name' => $upload['name'],
-        ]);
-
-        return (int) $revision->getKey();
     }
 
     /**
@@ -780,50 +824,30 @@ final class AcquisitionIntakeService
         ]);
     }
 
-    private static function sameNumber(mixed $left, mixed $right): bool
+    /**
+     * Doldurulmus butun yollar (FileUpload tek dosyada metin, coklu dosyada dizi).
+     *
+     * @return list<string>
+     */
+    private function strings(mixed $value): array
     {
-        $a = is_numeric($left) ? (float) $left : null;
-        $b = is_numeric($right) ? (float) $right : null;
+        $paths = [];
 
-        if ($a === null || $b === null) {
-            return $a === $b;
+        foreach (is_array($value) ? $value : [$value] as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                $paths[] = trim($candidate);
+            }
         }
 
-        return abs($a - $b) < 0.005;
-    }
-
-    private static function dateString(mixed $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse($value instanceof \DateTimeInterface ? $value->format('Y-m-d') : (string) $value)->toDateString();
-        } catch (Throwable) {
-            return (string) $value;
-        }
-    }
-
-    /** Filament FileUpload tek dosyada metin, coklu dosyada dizi verir; ilk dolu yolu alir. */
-    private function firstString(mixed $value): ?string
-    {
-        if (is_array($value)) {
-            $value = reset($value);
-        }
-
-        if (! is_string($value) || trim($value) === '') {
-            return null;
-        }
-
-        return trim($value);
+        return array_values(array_unique($paths));
     }
 
     /** storeFileNamesIn tek dosyada metin, coklu dosyada yol => ad dizisi verir. */
     private function originalName(mixed $value, string $tempPath): ?string
     {
         if (is_array($value)) {
-            $value = $value[$tempPath] ?? reset($value);
+            // Coklu yuklemede ad yola gore okunur; tek elemanli dizi eski bicimdir.
+            $value = $value[$tempPath] ?? (count($value) === 1 ? reset($value) : null);
         }
 
         return is_string($value) && trim($value) !== '' ? trim($value) : null;

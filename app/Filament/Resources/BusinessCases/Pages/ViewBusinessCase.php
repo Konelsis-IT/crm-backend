@@ -11,6 +11,7 @@ use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\ChecklistSchema;
 use App\Filament\Support\DealTrack;
+use App\Filament\Support\DocumentBundleAction;
 use App\Services\Platform\FeatureFlags;
 use App\Filament\Support\ExportActions;
 use App\Filament\Support\StatusButton;
@@ -88,8 +89,9 @@ class ViewBusinessCase extends ViewRecord
         $wizard = app(BusinessCaseWizard::class);
 
         return [
-            // Durum: rengiyle sabit dugme; duzenleme ekraninda degistirilir (D-161).
-            StatusButton::businessCase(editable: false),
+            // Durum (D-178, D-182): durum acilir dugmesi yeni durumu burada
+            // kaydeder; ozellik kapaliyken D-161'deki sabit dugme.
+            ...StatusButton::businessCaseHeader($case),
             // "Duzenle" potansiyel is adimini acar (D-160: hangi ekranda basildiysa
             // onun adimi; teklif / proje adimi degil).
             EditAction::make()
@@ -104,6 +106,9 @@ class ViewBusinessCase extends ViewRecord
                 ->visible(fn (): bool => $this->getRecord()->project !== null)
                 ->url(fn (): string => ProjectResource::getUrl('view', ['record' => $this->getRecord()->project])),
             $wizard->convertAction($case),
+            // D-184: teklifle ayni duzen; "Tum belgeleri indir" baslikta yalniz simge
+            // (Belgeler kartindaki dugme kalir).
+            DocumentBundleAction::businessCaseHeader($case),
             ExportActions::record(BusinessCaseExporter::class),
         ];
     }

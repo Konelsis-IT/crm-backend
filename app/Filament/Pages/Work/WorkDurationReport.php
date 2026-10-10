@@ -9,7 +9,9 @@ use App\Enums\Platform\Feature;
 use App\Filament\Clusters\WorkReports;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Models\Personnel\Personnel;
+use App\Models\Project\Project;
 use App\Models\Report\WorkItem;
+use App\Support\Projects\ProjectNames;
 use App\Query\Report\WorkAnalysisQueries;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Support\DisplayTime;
@@ -109,7 +111,7 @@ class WorkDurationReport extends Page implements HasTable
                         : null)
                     ->url(fn (WorkItem $record): string => WorkItemResource::getUrl('view', ['record' => $record]))
                     ->summarize($this->summary(fn (array $s): ?string => __('work_item.duration.summary_cards', ['count' => $s['count']]))),
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('work_item.duration.columns.project'))
                     ->placeholder('–')
                     ->toggleable(),
@@ -174,6 +176,8 @@ class WorkDurationReport extends Page implements HasTable
                     ->collapsible(),
                 Group::make('project.name')
                     ->label(__('work_item.duration.groups.project'))
+                    // D-174: kisa ad (yoksa lisans adi).
+                    ->getTitleFromRecordUsing(fn (WorkItem $record): string => $record->project?->display_name ?? '–')
                     ->collapsible(),
                 Group::make('orgUnit.name')
                     ->label(__('work_item.duration.groups.unit'))
@@ -208,7 +212,8 @@ class WorkDurationReport extends Page implements HasTable
                 SelectFilter::make('project_id')
                     ->label(__('work_item.duration.filters.project'))
                     ->relationship('project', 'name')
-                    ->searchable()
+                    ->getOptionLabelFromRecordUsing(fn (Project $record): string => ProjectNames::optionLabel($record))
+                    ->searchable(ProjectNames::searchColumns())
                     ->preload(),
                 SelectFilter::make('category_code')
                     ->label(__('work_item.duration.filters.category'))

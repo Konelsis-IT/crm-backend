@@ -12,7 +12,9 @@ use App\Filament\Resources\ContractVersions\RelationManagers\DocumentsRelationMa
 use App\Filament\Resources\ContractVersions\RelationManagers\MilestonesRelationManager;
 use App\Filament\Resources\ContractVersions\RelationManagers\ObligationsRelationManager;
 use App\Filament\Resources\ContractVersions\RelationManagers\PartiesRelationManager;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\ContractVersion;
 use App\Query\Reference\ReferenceOptions;
 use App\Enums\Platform\Feature;
@@ -82,12 +84,11 @@ class ContractVersionResource extends Resource
                             ->options(fn (): array => app(ReferenceOptions::class)->currencies())
                             ->searchable()
                             ->required()
-                            ->native(false),
-                        TextInput::make('contract_value')
-                            ->label(__('contract_version.fields.contract_value'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->native(false)
+                            ->live(),
+                        // D-180: Turkce maskeli tutar, para birimi simgesiyle.
+                        MoneyInput::make('contract_value')
+                            ->label(__('contract_version.fields.contract_value')),
                         DatePicker::make('effective_from')
                             ->label(__('contract_version.fields.effective_from'))
                             ->displayFormat('d.m.Y'),
@@ -113,11 +114,10 @@ class ContractVersionResource extends Resource
                 TextColumn::make('status')
                     ->label(__('contract_version.fields.status'))
                     ->badge(),
-                TextColumn::make('contract_value')
+                MoneyDisplay::column('contract_value')
                     ->label(__('contract_version.fields.contract_value'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
-                TextColumn::make('currency_code')
+                MoneyDisplay::currencyColumn()
                     ->label(__('contract_version.fields.currency')),
                 TextColumn::make('effective_from')
                     ->label(__('contract_version.fields.effective_from'))

@@ -14,7 +14,9 @@ use App\Filament\Resources\ProposalVersions\RelationManagers\DeviationsRelationM
 use App\Filament\Resources\ProposalVersions\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\ProposalVersions\RelationManagers\EstimateVersionsRelationManager;
 use App\Filament\Resources\ProposalVersions\RelationManagers\ResponsibilityItemsRelationManager;
+use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\ProposalVersion;
 use App\Query\Document\DocumentQueries;
 use App\Query\Reference\ReferenceOptions;
@@ -93,12 +95,11 @@ class ProposalVersionResource extends Resource
                             ->options(fn (): array => app(ReferenceOptions::class)->currencies())
                             ->searchable()
                             ->required()
-                            ->native(false),
-                        TextInput::make('total_price')
-                            ->label(__('proposal_version.fields.total_price'))
-                            ->numeric()
-                            ->step('0.01')
-                            ->minValue(0),
+                            ->native(false)
+                            ->live(),
+                        // D-180: Turkce maskeli tutar, para birimi simgesiyle.
+                        MoneyInput::make('total_price')
+                            ->label(__('proposal_version.fields.total_price')),
                         TextInput::make('margin_pct')
                             ->label(__('proposal_version.fields.margin_pct'))
                             ->numeric()
@@ -134,11 +135,10 @@ class ProposalVersionResource extends Resource
                 TextColumn::make('status')
                     ->label(__('proposal_version.fields.status'))
                     ->badge(),
-                TextColumn::make('currency_code')
+                MoneyDisplay::currencyColumn()
                     ->label(__('proposal_version.fields.currency')),
-                TextColumn::make('total_price')
+                MoneyDisplay::column('total_price')
                     ->label(__('proposal_version.fields.total_price'))
-                    ->numeric(decimalPlaces: 2)
                     ->placeholder('-'),
                 TextColumn::make('margin_pct')
                     ->label(__('proposal_version.fields.margin_pct'))

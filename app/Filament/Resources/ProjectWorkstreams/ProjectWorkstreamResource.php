@@ -102,7 +102,7 @@ class ProjectWorkstreamResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('project.name')
+                TextColumn::make('project.display_name')
                     ->label(__('project_workstream.fields.project'))
                     ->limit(30),
                 TextColumn::make('group.name_tr')

@@ -9,25 +9,33 @@ use App\Enums\Acquisition\LicenseStatus;
 use App\Enums\Acquisition\OfferType;
 use App\Enums\Acquisition\ProjectScopeType;
 use App\Enums\Platform\Feature;
+use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\ChecklistBoard;
 use App\Filament\Infolists\Components\ChecklistBoardEntry;
+use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\BusinessCaseChecklistAnswer;
 use App\Models\Acquisition\BusinessCaseDocument;
+use App\Services\Acquisition\BusinessCaseDocumentService;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\Acquisition\ChecklistTemplates;
 use App\Support\UploadLimits;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -112,27 +120,25 @@ final class ChecklistSchema
             ->collapsible()
             ->columns(FieldGrid::HALF_COLUMNS)
             ->components([
-                TextEntry::make('case_documents_current')
-                    ->label(__('business_case.fields.case_documents_current'))
-                    ->state(fn (?Model $record): array => self::generalDocumentLines($record))
-                    ->listWithLineBreaks()
-                    ->icon(Heroicon::OutlinedDocumentText)
-                    ->iconColor('primary')
-                    ->visible(fn (?Model $record): bool => self::generalDocumentLines($record) !== [])
-                    ->dehydrated(false)
+                // D-185: teklif belgeleriyle ayni kucuk kutu (CompactUpload): kayitli
+                // belgeler notr cip (madde adi ipucunda), altinda kucuk "Yukle" dugmesi.
+                CompactUpload::slot(
+                    CompactUpload::files(
+                        'case_documents_current',
+                        __('business_case.fields.case_documents'),
+                        static fn (?Model $record): array => self::generalDocumentInfos($record),
+                    ),
+                    FileUpload::make('case_document_files')
+                        ->label(__('business_case.fields.case_documents'))
+                        ->multiple()
+                        ->disk('local')
+                        ->directory(self::UPLOAD_DIRECTORY)
+                        ->storeFileNamesIn('case_document_files_name')
+                        ->maxSize(UploadLimits::documentMaxKb()),
+                    [Hidden::make('case_document_files_name')],
+                )
                     ->columnSpan(FieldGrid::HALF_LONG)
                     ->columnStart(1),
-                FileUpload::make('case_document_files')
-                    ->label(__('business_case.fields.case_documents'))
-                    ->multiple()
-                    ->disk('local')
-                    ->directory(self::UPLOAD_DIRECTORY)
-                    ->storeFileNamesIn('case_document_files_name')
-                    ->maxSize(UploadLimits::documentMaxKb())
-                    ->panelLayout('grid')
-                    ->columnSpan(FieldGrid::HALF_LONG)
-                    ->columnStart(1),
-                Hidden::make('case_document_files_name'),
             ]);
     }
 
@@ -386,25 +392,17 @@ final class ChecklistSchema
      */
     public function documentsCard(BusinessCase $case): ?Component
     {
-        if (! self::documentsEnabled() && ! self::enabled()) {
+        if (! self::documentsEnabled()) {
             return null;
         }
 
         $entries = [];
 
-        foreach ($case->caseDocuments as $row) {
-            /** @var BusinessCaseDocument $row */
-            if ($row->item_code !== null) {
-                continue;
-            }
-
-            if (! self::documentsEnabled()) {
-                continue;
-            }
-
+        // D-176: maddenin ilk belgesi tahtada; ayni maddeye eklenen diger belgeler burada.
+        foreach (self::cardDocuments($case) as $row) {
             $info = DocumentLine::info($row->document);
             $label = $row->item_code !== null
-                ? $row->item_code.'. '.ChecklistTemplates::label((string) $row->template_code, (string) $row->item_code)
+                ? mb_strtoupper((string) $row->template_code).' · '.$row->item_code.'. '.ChecklistTemplates::label((string) $row->template_code, (string) $row->item_code)
                 : __('business_case.fields.case_document');
 
             $entries[] = TextEntry::make('case_document_'.$row->getKey())
@@ -416,7 +414,10 @@ final class ChecklistSchema
                 ->url($info['url'] ?? null);
         }
 
-        if ($entries === []) {
+        $actions = [$this->addDocumentsAction($case), DocumentBundleAction::businessCase($case)];
+
+        // Belge yoksa ve kisi belge ekleyemiyor / indiremiyorsa kart cizilmez.
+        if ($entries === [] && ! Gate::allows('update', $case) && ! DocumentBundleAction::businessCaseAvailable($case)) {
             return null;
         }
 
@@ -425,7 +426,134 @@ final class ChecklistSchema
             ->icon(Heroicon::OutlinedPaperClip)
             ->compact()
             ->collapsible()
-            ->components([Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])->components($entries)]);
+            ->headerActions($actions)
+            ->components($entries === []
+                ? [Text::make(__('document_bundle.card.empty'))->color('gray')]
+                : [Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])->components($entries)]);
+    }
+
+    /**
+     * Potansiyel is sayfasinda "Belge ekle" (D-176): kontrol listesi maddesine ya
+     * da ek belgelere birden fazla dosya; her dosya ayri belge.
+     */
+    private function addDocumentsAction(BusinessCase $case): Action
+    {
+        return Action::make('add_case_documents')
+            ->label(__('document_bundle.actions.add_documents'))
+            ->icon(Heroicon::OutlinedArrowUpTray)
+            ->color(ActionColors::CREATE)
+            ->modalHeading(__('document_bundle.add.heading'))
+            ->modalDescription(__('document_bundle.add.help'))
+            ->modalWidth(Width::ThreeExtraLarge)
+            ->modalSubmitActionLabel(__('document_bundle.actions.add_documents'))
+            ->visible(fn (): bool => self::documentsEnabled() && Gate::allows('update', $case))
+            ->schema(fn (Schema $schema): Schema => $schema
+                ->columns(FieldGrid::MODAL_COLUMNS)
+                ->components([
+                    Select::make('target')
+                        ->label(__('document_bundle.add.target'))
+                        ->options(fn (): array => self::addTargets($case))
+                        ->default('extra')
+                        ->required()
+                        ->native(false)
+                        ->columnSpan(FieldGrid::MODAL_LONG),
+                    FileUpload::make('files')
+                        ->label(__('document_bundle.add.files'))
+                        ->multiple()
+                        ->disk('local')
+                        ->directory(self::UPLOAD_DIRECTORY)
+                        ->storeFileNamesIn('file_names')
+                        ->maxSize(UploadLimits::documentMaxKb())
+                        ->required()
+                        ->columnSpan(FieldGrid::MODAL_LONG)
+                        ->columnStart(1),
+                    Hidden::make('file_names'),
+                ]))
+            ->action(function (array $data, mixed $livewire) use ($case): void {
+                $target = (string) ($data['target'] ?? 'extra');
+                [$template, $item] = str_contains($target, ':') ? explode(':', $target, 2) : [null, null];
+                $names = $data['file_names'] ?? [];
+                $files = [];
+
+                $paths = is_array($data['files'] ?? null) ? $data['files'] : [$data['files'] ?? null];
+
+                foreach (array_filter($paths, static fn (mixed $path): bool => is_string($path) && trim($path) !== '') as $path) {
+                    $name = is_array($names) ? ($names[$path] ?? null) : null;
+                    $files[] = ['path' => $path, 'name' => is_string($name) && $name !== '' ? $name : null];
+                }
+
+                try {
+                    $rows = app(BusinessCaseDocumentService::class)->addDocuments($case, $template, $item, $files);
+                } catch (AbstractException $exception) {
+                    DomainNotifications::failure($exception);
+
+                    return;
+                }
+
+                DomainNotifications::success(__('document_bundle.add.added', ['count' => count($rows)]));
+
+                // Tahta, sicaklik ve kart yeni belgelerle yeniden cizilsin.
+                if (is_object($livewire) && method_exists($livewire, 'redirect')) {
+                    $livewire->redirect(BusinessCaseResource::getUrl('view', ['record' => $case]));
+                }
+            });
+    }
+
+    /**
+     * "Belgenin yeri" secenekleri: ek belge ve potansiyel isin listelerindeki
+     * ana maddeler ("GES · 1. Cagri Mektubu").
+     *
+     * @return array<string, string>
+     */
+    private static function addTargets(BusinessCase $case): array
+    {
+        $options = ['extra' => (string) __('document_bundle.add.extra')];
+
+        if (! self::enabled()) {
+            return $options;
+        }
+
+        foreach (ChecklistTemplates::forScopeTypes($case->scopes->pluck('scope_type')->all()) as $template) {
+            foreach (ChecklistTemplates::itemCodes($template) as $item) {
+                $options[$template.':'.$item] = mb_strtoupper($template).' · '.$item.'. '.ChecklistTemplates::label($template, $item);
+            }
+        }
+
+        return $options;
+    }
+
+    /**
+     * Belgeler kartinin satirlari (D-176): ek belgeler ve kontrol listesi
+     * maddelerinin tahtada gorunmeyen (ilkinden sonraki) belgeleri. Her belge
+     * bir kez gorunur (D-158).
+     *
+     * @return list<BusinessCaseDocument>
+     */
+    private static function cardDocuments(BusinessCase $case): array
+    {
+        $rows = [];
+        $firstShown = [];
+        // Tahta yalniz kontrol listesi acik ve listesi secili maddeleri cizer (viewBoard);
+        // tahtada olmayan maddenin ilk belgesi de burada gorunur.
+        $boardTemplates = self::enabled() ? ChecklistTemplates::forScopeTypes($case->scopes->pluck('scope_type')->all()) : [];
+
+        // Iliski sirasi (sort_order, id) tahtanin "ilk belge" sirasiyla aynidir (itemDocument).
+        foreach ($case->caseDocuments as $row) {
+            /** @var BusinessCaseDocument $row */
+            if ($row->item_code !== null && in_array((string) $row->template_code, $boardTemplates, true)) {
+                $key = $row->template_code.':'.$row->item_code;
+
+                if (! isset($firstShown[$key])) {
+                    $firstShown[$key] = true;
+
+                    continue;
+                }
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 
     /**
@@ -626,25 +754,34 @@ final class ChecklistSchema
     }
 
     /**
-     * Kayittaki ek belgelerin satirlari.
+     * Kayittaki ek belgeler (D-185: cip olarak; madde adi basliga eklenir,
+     * cipin ipucunda gorunur).
      *
-     * @return list<string>
+     * @return list<array{title: string, revision: string|null, file: string|null, url: string|null}>
      */
-    private static function generalDocumentLines(?Model $record): array
+    private static function generalDocumentInfos(?Model $record): array
     {
         if (! $record instanceof BusinessCase || ! SchemaReadiness::hasBatch('B43')) {
             return [];
         }
 
-        $lines = [];
+        $infos = [];
 
-        foreach ($record->caseDocuments as $row) {
-            /** @var BusinessCaseDocument $row */
-            if ($row->item_code === null) {
-                $lines[] = DocumentLine::text(DocumentLine::info($row->document), withTitle: true);
+        // D-176: maddelerin tahtada gorunmeyen ek belgeleri de (madde adiyla) listelenir.
+        foreach (self::cardDocuments($record) as $row) {
+            $info = DocumentLine::info($row->document);
+
+            if ($info === null) {
+                continue;
             }
+
+            if ($row->item_code !== null) {
+                $info['title'] = mb_strtoupper((string) $row->template_code).' · '.$row->item_code.'. '.ChecklistTemplates::label((string) $row->template_code, (string) $row->item_code).' · '.$info['title'];
+            }
+
+            $infos[] = $info;
         }
 
-        return $lines;
+        return $infos;
     }
 }

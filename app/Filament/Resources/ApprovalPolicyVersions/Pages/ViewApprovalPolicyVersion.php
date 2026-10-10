@@ -10,8 +10,10 @@ use App\Filament\Resources\ApprovalPolicyVersions\ApprovalPolicyVersionResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\MoneyDisplay;
 use App\Models\Approval\ApprovalPolicyVersion;
 use App\Services\Approval\ApprovalPolicyVersionService;
+use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Infolists\Components\IconEntry;
@@ -53,14 +55,21 @@ class ViewApprovalPolicyVersion extends ViewRecord
                     IconEntry::make('reapproval_on_change')->label(__('approval_policy_version.fields.reapproval_on_change'))->boolean(),
                     TextEntry::make('sla_minutes')->label(__('approval_policy_version.fields.sla_minutes'))->placeholder('-')->suffix(' dk'),
                     TextEntry::make('risk_level')->label(__('approval_policy_version.fields.risk_level'))->badge()->placeholder('-'),
-                    TextEntry::make('applies_min_amount')->label(__('approval_policy_version.fields.applies_min_amount'))->placeholder('-'),
-                    TextEntry::make('applies_max_amount')->label(__('approval_policy_version.fields.applies_max_amount'))->placeholder('-'),
-                    TextEntry::make('currency_code')->label(__('approval_policy_version.fields.currency_code'))->placeholder('-'),
+                    // D-180: tutar + simge; para birimi bossa kurumunki.
+                    MoneyDisplay::entry('applies_min_amount', $this->policyCurrency(...))->label(__('approval_policy_version.fields.applies_min_amount'))->placeholder('-'),
+                    MoneyDisplay::entry('applies_max_amount', $this->policyCurrency(...))->label(__('approval_policy_version.fields.applies_max_amount'))->placeholder('-'),
+                    MoneyDisplay::currencyEntry()->label(__('approval_policy_version.fields.currency_code'))->placeholder('-'),
                     TextEntry::make('publisher.full_name')->label(__('approval_policy_version.fields.publisher'))->placeholder('-'),
                     TextEntry::make('published_at')->label(__('approval_policy_version.fields.published_at'))->dateTime('d.m.Y H:i')->placeholder('-'),
                     TextEntry::make('change_summary')->label(__('approval_policy_version.fields.change_summary'))->placeholder('-')->columnSpan(2),
                 ])),
         ]);
+    }
+
+    /** Esik tutarlarinin para birimi (D-180): surumde yoksa kurumun para birimi. */
+    private function policyCurrency(?ApprovalPolicyVersion $record): string
+    {
+        return Money::code($record?->getAttribute('currency_code')) ?? Money::defaultCurrency();
     }
 
     protected function getHeaderActions(): array

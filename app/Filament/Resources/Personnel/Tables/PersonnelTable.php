@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\Tables;
 
+use App\Enums\Acquisition\ProjectScopeType;
 use App\Enums\Personnel\PersonnelStatus;
 use App\Filament\Resources\Personnel\Actions\PersonnelStatusActions;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Support\BrandIcons;
 use App\Filament\Support\PersonnelAvatar;
+use App\Filament\Support\ProjectTypeCoordinatorSchema;
 use App\Models\Personnel\Personnel;
 use App\Support\ContactLinks;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Support\Facades\Auth;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -90,6 +93,15 @@ final class PersonnelTable
                 ->color('gray')
                 ->sortable()
                 ->placeholder('-'),
+            // D-175: proje tipi koordinatorlugu ("GES koordinatoru"), tipin simgesi ve rengiyle.
+            TextColumn::make('project_type_coordinator')
+                ->label(__('project_type_coordinator.fields.personnel_roles'))
+                ->state(fn (Personnel $record): array => app(ProjectTypeCoordinatorSchema::class)->personnelTypes($record))
+                ->formatStateUsing(fn (mixed $state): string => $state instanceof ProjectScopeType ? ProjectTypeCoordinatorSchema::badgeLabel($state) : (string) $state)
+                ->badge()
+                ->placeholder('-')
+                ->visible(fn (): bool => ProjectNames::coordinatorsEnabled())
+                ->toggleable(),
             TextColumn::make('competencies.name')
                 ->label(__('personnel.fields.competencies'))
                 ->badge()

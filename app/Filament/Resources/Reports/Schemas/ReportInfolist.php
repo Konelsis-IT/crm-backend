@@ -206,7 +206,7 @@ final class ReportInfolist
                             ->where('status', $status)
                             ->map(fn (ReportItem $item): array => [
                                 'title' => (string) $item->title,
-                                'project' => $item->project?->name,
+                                'project' => $item->project?->display_name,
                                 'hours' => ReportFieldComponents::formatNumber($item->work_hours, __('report.values.hours')),
                                 'description' => $item->description,
                                 'tag' => self::itemTag($item),

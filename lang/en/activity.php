@@ -12,6 +12,9 @@ return [
 
     'fields' => [
         'proje' => 'Project',
+        // D-175
+        'proje_tipi' => 'Project type',
+        'personnel_id' => 'Person',
         'termin' => 'Due',
         'kimden_bekleniyor' => 'Waiting reason',
         'talep_eden' => 'Requested by',
@@ -57,6 +60,7 @@ return [
         'neden' => 'Reason',
         'not' => 'Note',
         'dosya' => 'File',
+        'dosya_sayisi' => 'Number of files',
         'mesaj' => 'Message',
         'surum' => 'Version',
         'onceki_surum' => 'Previous version',
@@ -181,6 +185,7 @@ return [
         'business_case_checklist_answer' => 'Checklist answer',
         'business_case_document' => 'Potential job document',
         'proposal_version_scope' => 'Proposal scope',
+        'proposal_version_scope_document' => 'Proposal scope document',
         'business_code' => 'Business code (POTIS/PRJ)',
         'opportunity' => 'Opportunity',
         'opportunity_stage_history' => 'Opportunity stage history',
@@ -220,6 +225,13 @@ return [
         'stage_dependency' => 'Stage dependency',
         'stage_requirement_definition' => 'Stage requirement definition',
         'project' => 'Project',
+        // D-174
+        'project_scope' => 'Project type',
+        // D-175
+        'project_type_coordinator' => 'Project type coordinator',
+        // D-177
+        'project_reference' => 'Reference',
+        'project_reference_scope_type' => 'Reference project type',
         'project_component' => 'Project component',
         'project_workstream' => 'Workstream',
         'workstream_dependency' => 'Workstream dependency',
@@ -489,6 +501,9 @@ return [
         'proposal_version_scope.created' => 'Proposal scope added',
         'proposal_version_scope.updated' => 'Proposal scope updated',
         'proposal_version_scope.deleted' => 'Proposal scope removed',
+        'proposal_version_scope_document.created' => 'Cost list linked to proposal scope',
+        'proposal_version_scope_document.updated' => 'Proposal scope document updated',
+        'proposal_version_scope_document.deleted' => 'Cost list removed from proposal scope',
         'proposal_version.superseded' => 'Proposal version superseded by a new version',
         'tender_notice.linked' => 'Tender linked to a potential job',
         'business_code.created' => 'Business code (POTIS/PRJ) created',
@@ -529,7 +544,8 @@ return [
         'proposal_version.deleted' => 'Proposal version deleted',
         'proposal_document.created' => 'Proposal document created',
         'proposal_document.updated' => 'Proposal document updated',
-        'proposal_document.deleted' => 'Proposal document deleted',
+        // D-186: only the proposal link is removed; the document stays in Documents.
+        'proposal_document.deleted' => 'Document removed from the proposal',
         'compliance_item.created' => 'Compliance item created',
         'compliance_item.updated' => 'Compliance item updated',
         'compliance_item.deleted' => 'Compliance item deleted',
@@ -676,6 +692,21 @@ return [
         'project_issue.deleted' => 'Project issue deleted',
         'project.created_direct' => 'Project created directly',
         'project.converted' => 'Proposal converted to project',
+        // D-174
+        'project_scope.created' => 'Project type added',
+        'project_scope.updated' => 'Project type details updated',
+        'project_scope.deleted' => 'Project type removed',
+        // D-175
+        'project_type_coordinator.created' => 'Project type coordinator assigned',
+        'project_type_coordinator.ended' => 'Project type coordinator role ended',
+        // D-177
+        'project_reference.created' => 'Reference added',
+        'project_reference.updated' => 'Reference updated',
+        'project_reference.deleted' => 'Reference deleted',
+        'project_reference.archived' => 'Reference archived',
+        'project_reference.restored' => 'Reference restored from archive',
+        'project_reference_scope_type.created' => 'Project type added to reference',
+        'project_reference_scope_type.deleted' => 'Project type removed from reference',
         'project.focus_advanced' => 'Project moved to the next step',
         'project_photo.created' => 'Site photo added',
         'project_photo.updated' => 'Site photo updated',
@@ -718,6 +749,11 @@ return [
         'opportunity.stage_changed' => 'Opportunity stage changed',
         'proposal.selected' => 'Selected proposal changed',
         'proposal.offer_status_synced' => 'Offer status updated from the workflow',
+        // D-182: offer status changed from the header menu.
+        'proposal.offer_status_changed' => 'Offer status changed',
+        // D-176: download all documents (ZIP).
+        'proposal.documents_downloaded' => 'All proposal documents downloaded',
+        'business_case.documents_downloaded' => 'All business case documents downloaded',
         'proposal_version.status_changed' => 'Proposal version status changed',
         'estimate_version.status_changed' => 'Estimate version status changed',
         'pricing_scenario.selected' => 'Pricing scenario selected',

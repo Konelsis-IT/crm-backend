@@ -14,6 +14,19 @@ return [
         'content' => 'Current content',
         'body' => 'Document body',
         'file' => 'File',
+        'linked_records' => 'Linked records',
+    ],
+
+    // D-181: roles in the "Linked records" rows of the document page.
+    'usage' => [
+        'current_version' => 'Version :no (current)',
+        'older_version' => 'Version :no (older)',
+        'version' => 'Version :no',
+        'via_proposal' => 'through proposal :no',
+        'checklist_item' => 'Checklist: :item',
+        'tender_source' => 'Tender document',
+        'party_certificate' => 'Company certificate',
+        'party_license' => 'Company licence',
     ],
 
     'fields' => [
@@ -77,13 +90,32 @@ return [
 
     'short' => [
         'revision' => 'Rev :code',
+        // D-185: compact upload button.
+        'upload' => 'Upload',
+        // D-186: removable file picker, preview and download icon.
+        'remove' => 'Remove',
+        'undo_remove' => 'Undo',
+        'preview' => 'Preview',
+        'download' => 'Download',
+    ],
+
+    // D-186: Excel / Word preview page (feature documents.office_preview).
+    'preview' => [
+        'title' => ':name · Preview',
+        'download' => 'Download file',
+        'sheet_limit' => 'Only the first :rows rows and :columns columns are shown; download the file for the rest.',
+        'paragraph_limit' => 'Only the beginning of the document is shown; download the file for the rest.',
+        'empty' => 'There is nothing to show on this sheet.',
+        'unavailable' => 'This file cannot be previewed; please download it.',
+        'too_large' => 'The file is too large to preview; please download it.',
+        'note' => 'The preview shows the content only; download the file for formatting, formulas, images and charts.',
     ],
 
     'actions' => [
         'download_current' => 'Download current file',
         'preview_current' => 'Preview current file',
         'create_with_file' => 'Add document (with file)',
-        'edit_details' => 'Edit details',
+        'edit_details' => 'Edit',
         'new_revision' => 'New revision',
         'share' => 'Share',
         'send_to_approval' => 'Send for approval',

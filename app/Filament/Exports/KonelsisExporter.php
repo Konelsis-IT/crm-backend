@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Exports;
 
 use App\Support\DisplayTime;
+use App\Support\Money;
 use Carbon\CarbonInterface;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\ExportColumn;
@@ -111,6 +112,20 @@ abstract class KonelsisExporter extends Exporter
         return ExportColumn::make($name)
             ->label($label)
             ->formatStateUsing(fn (mixed $state): ?string => is_numeric($state) ? number_format((float) $state, 2, ',', '.') : null);
+    }
+
+    /**
+     * Tutar (D-180): ekrandaki gibi "1.000,50" + kaydin para birimi simgesi;
+     * ISO kodu yazilmaz. Hucre metindir (D-110 "tablo gorundugu gibi"),
+     * Excel ve PDF ayni metni gosterir.
+     */
+    protected static function money(string $name, string $label, string $currencyAttribute = 'currency_code'): ExportColumn
+    {
+        return ExportColumn::make($name)
+            ->label($label)
+            ->formatStateUsing(fn (mixed $state, mixed $record): ?string => Money::parse($state) === null
+                ? null
+                : Money::format($state, data_get($record, $currencyAttribute), ''));
     }
 
     /** Ekranda gorunen deger: enum etiketi, sayi, metin. */

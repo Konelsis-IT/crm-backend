@@ -156,7 +156,8 @@ class VersionsRelationManager extends RelationManager
                     ->label(__('operation_handoff_version.fields.comment'))
                     ->columnSpan(FieldGrid::MODAL_LONG),
                 TextInput::make('project_name')
-                    ->label(__('operation_handoff_version.fields.project_name'))
+                    // D-174: projenin adi Lisans adidir.
+                    ->label(\App\Support\Projects\ProjectNames::shortNameEnabled() ? __('project.fields.license_name') : __('operation_handoff_version.fields.project_name'))
                     ->maxLength(255),
                 Select::make('project_manager_employee_id')
                     ->label(__('operation_handoff_version.fields.project_manager'))

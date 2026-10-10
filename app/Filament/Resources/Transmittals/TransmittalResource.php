@@ -15,6 +15,8 @@ use App\Filament\Resources\Transmittals\Pages\ViewTransmittal;
 use App\Filament\Resources\Transmittals\RelationManagers\ItemsRelationManager;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\Transmittal;
+use App\Models\Project\Project;
+use App\Support\Projects\ProjectNames;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
@@ -76,7 +78,9 @@ class TransmittalResource extends Resource
                     Select::make('project_id')
                         ->label(__('transmittal.fields.project'))
                         ->relationship('project', 'name')
-                        ->searchable()
+                        // D-174: kisa ad (yoksa lisans adi).
+                        ->getOptionLabelFromRecordUsing(fn (Project $record): string => ProjectNames::optionLabel($record))
+                        ->searchable(ProjectNames::searchColumns())
                         ->preload()
                         ->native(false)
                         ->visible(fn (): bool => SchemaReadiness::hasBatch('B17')),

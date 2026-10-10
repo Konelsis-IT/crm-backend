@@ -86,7 +86,7 @@ final class ReportService extends AbstractService
         $data['payload'] = $this->suggestions->resolve($template, $data['payload'], $data['period_start'] ?? null, (int) $me->getKey(), null);
         $this->assertAuthor($template, $data, $me);
         $this->assertPeriodUnique($template, $data, (int) $me->getKey(), null);
-        $items = $this->extractItems($template, $data);
+        $items = $this->guardItemLinks($this->extractItems($template, $data), $me);
 
         return $this->transactions->run(function () use ($data, $me, $template, $items): Report {
             /** @var Report $report */
@@ -130,7 +130,13 @@ final class ReportService extends AbstractService
         $data = $this->normalize($template, $data);
         $data['payload'] = $this->suggestions->resolve($template, $data['payload'], $data['period_start'] ?? null, (int) $report->author_personnel_id, $report);
         $this->assertPeriodUnique($template, $data, (int) $report->author_personnel_id, (int) $report->getKey());
-        $items = $this->extractItems($template, $data);
+        $items = $this->guardItemLinks(
+            $this->extractItems($template, $data),
+            $report->author ?? $this->actorPersonnel(),
+            SchemaReadiness::hasBatch('B36')
+                ? $report->items()->whereNotNull('work_item_id')->pluck('work_item_id')->map(static fn ($id): int => (int) $id)->all()
+                : [],
+        );
 
         return $this->transactions->run(function () use ($report, $data, $template, $items): Report {
             /** @var Report $updated */
@@ -694,6 +700,56 @@ final class ReportService extends AbstractService
         }
 
         return $items;
+    }
+
+    /**
+     * D-179: rapor kalemi yalniz yazarin gorebildigi is panosu kartina
+     * baglanir (secim kutusu da yalniz onun kartlarini sunar); baska karta
+     * isaret eden satirin bagi kalkar, metni kalir. Raporda zaten kayitli
+     * baglar ($trusted) korunur. Ayni karta bagli ikinci satir yazilmaz.
+     *
+     * @param  list<array<string, mixed>>|null  $items
+     * @param  list<int>  $trusted
+     * @return list<array<string, mixed>>|null
+     */
+    private function guardItemLinks(?array $items, Personnel $author, array $trusted = []): ?array
+    {
+        if ($items === null || ! SchemaReadiness::hasBatch('B36')) {
+            return $items;
+        }
+
+        $ids = [];
+
+        foreach ($items as $row) {
+            if (filled($row['work_item_id'] ?? null) && ! in_array((int) $row['work_item_id'], $trusted, true)) {
+                $ids[] = (int) $row['work_item_id'];
+            }
+        }
+
+        $allowed = [...$trusted, ...($ids === [] ? [] : $this->suggestions->visibleWorkItemIds($author, $ids))];
+        $seen = [];
+        $guarded = [];
+
+        foreach ($items as $row) {
+            $id = filled($row['work_item_id'] ?? null) ? (int) $row['work_item_id'] : null;
+
+            if ($id !== null && ! in_array($id, $allowed, true)) {
+                $row['work_item_id'] = null;
+                $id = null;
+            }
+
+            if ($id !== null) {
+                if (isset($seen[$id])) {
+                    continue;
+                }
+
+                $seen[$id] = true;
+            }
+
+            $guarded[] = $row;
+        }
+
+        return $guarded;
     }
 
     /**
