@@ -11,7 +11,7 @@ return [
         'main' => 'Teklif bilgileri',
         'business_case' => 'Potansiyel iş',
         'header' => 'Teklif kartı',
-        'current_version' => 'Güncel sürüm',
+        'current_version' => 'Sürüm',
         // D-155: proje kapsami ve teklif belgeleri.
         'scope' => 'Proje kapsamı',
         'documents' => 'Teklif belgeleri',
@@ -31,7 +31,7 @@ return [
     'fields' => [
         'business_case' => 'Potansiyel iş',
         'created_at' => 'Oluşturulma',
-        'current_version' => 'Güncel sürüm',
+        'current_version' => 'Sürüm',
         'is_selected' => 'Seçili',
         'offer_status' => 'Teklif durumu',
         'owner' => 'Sahip',
@@ -56,6 +56,8 @@ return [
         'heading' => 'Yeni sürüm (Sürüm :no)',
         'breadcrumb' => 'Yeni sürüm',
         'subheading' => 'Sürüm :current bilgileri dolu geldi. Kaydedince Sürüm :next oluşur; Sürüm :current olduğu gibi saklanır.',
+        // D-195 (B55): yeni sürüm Verilecek başlar, önceki sürüm kendi teklif durumunu korur.
+        'subheading_offer' => 'Sürüm :current bilgileri dolu geldi. Kaydedince Sürüm :next ":offer" olarak oluşur; Sürüm :current kendi teklif durumuyla (:status) olduğu gibi saklanır.',
         'save' => 'Yeni sürümü kaydet',
     ],
 
@@ -87,6 +89,10 @@ return [
         'item' => 'Sürüm :no · :status · :date',
         'current' => 'Sürüm :no · :status · güncel',
         'modal_description' => ':status · :date. Pencere kapanınca sayfada güncel sürüm görünmeye devam eder.',
+        // D-195 (B55): her sürümün kendi teklif durumu menüde rozet olarak görünür.
+        'item_offer' => 'Sürüm :no · :date',
+        'current_offer' => 'Sürüm :no · :date · güncel',
+        'modal_description_offer' => 'Teklif durumu: :offer · Sürüm durumu: :status · :date. Pencere kapanınca sayfada güncel sürüm görünmeye devam eder.',
         'close' => 'Kapat',
         'scope_totals' => 'Toplamlar',
         'no_documents' => 'Bu sürümde belge yok.',
@@ -106,6 +112,8 @@ return [
         'no_offer_status' => 'Teklif durumu yok',
         'menu_label' => ':status ▾',
         'menu_tooltip' => 'Teklif durumunu değiştirin; seçtiğiniz durum hemen kaydedilir, yeni sürüm açılmaz',
+        // D-195 (B55): düğme güncel sürümün kendi teklif durumunu değiştirir.
+        'menu_tooltip_version' => 'Güncel sürümün (Sürüm :no) teklif durumunu değiştirin; seçtiğiniz durum hemen kaydedilir, yeni sürüm açılmaz. Önceki sürümler kendi durumlarını korur',
         'confirm_heading' => 'Teklif ":status" olsun mu?',
         'confirm_description' => 'Teklif durumu ":from" iken ":to" olur; bu durumdan geri dönülmez. Yeni sürüm açılmaz.',
         'approved_note' => 'Teklif henüz gönderilmediyse güncel sürüm Gönderildi olarak işaretlenir; potansiyel iş Kazanıldı olur.',

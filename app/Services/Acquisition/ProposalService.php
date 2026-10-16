@@ -94,7 +94,23 @@ final class ProposalService extends AbstractService
     {
         unset($data['proposal_no'], $data['business_case_id'], $data['current_version_id'], $data['status'], $data['is_selected']);
 
-        return parent::update($record, $data);
+        if (! array_key_exists('offer_status', $data) || ! SchemaReadiness::hasBatch('B55')) {
+            return parent::update($record, $data);
+        }
+
+        // D-195: formdan gelen teklif durumu (potansiyel isin Teklifler sekmesi)
+        // guncel surume de yazilir; kopya ile surum ayrismaz.
+        return $this->transactions->run(function () use ($record, $data): Model {
+            /** @var Proposal $proposal */
+            $proposal = parent::update($record, $data);
+
+            if ($proposal->current_version_id !== null) {
+                app(ProposalVersionService::class)->setOfferStatus((int) $proposal->current_version_id, $proposal->offer_status, 'offer_status_changed');
+                $proposal->unsetRelation('currentVersion');
+            }
+
+            return $proposal;
+        });
     }
 
     /**
@@ -108,6 +124,10 @@ final class ProposalService extends AbstractService
      * (ProposalVersionStatus: Gonderildi'den yalniz "Yerini aldi"). Potansiyel is
      * kaybedildi / iptal edildiyse Onaylandi sunulmaz (is Kazanildi olamaz).
      *
+     * D-195 (B55): kaynak guncel surumun kendi teklif durumudur
+     * (Proposal::currentOfferStatus); yeni surum Verilecek basladigi icin yeniden
+     * Verilen / Onaylandi / Kacan firsat secilebilir.
+     *
      * @return list<OfferStatus>
      */
     public function offerTargets(Proposal $proposal): array
@@ -116,7 +136,7 @@ final class ProposalService extends AbstractService
             return [];
         }
 
-        $targets = match ($proposal->offer_status) {
+        $targets = match ($proposal->currentOfferStatus()) {
             null, OfferStatus::ToBeSubmitted => [OfferStatus::Submitted, OfferStatus::Approved, OfferStatus::Lost],
             OfferStatus::Submitted => [OfferStatus::Approved, OfferStatus::Lost],
             OfferStatus::Approved, OfferStatus::Lost => [],
@@ -142,6 +162,9 @@ final class ProposalService extends AbstractService
      * - Kacan firsat: yalniz teklif durumu; isin butun teklifleri kacan firsat
      *   olduysa potansiyel is Kaybedildi olur (KksProposalSeeder::closeIfAllLost
      *   kurali). $reason etkinlik gecmisine yazilir.
+     *
+     * D-195 (B55): degisen, guncel surumun kendi teklif durumudur; teklifteki
+     * kopya ayni anda yazilir. Onceki surumlerin durumuna dokunulmaz.
      */
     public function changeOfferStatus(Proposal $proposal, OfferStatus $target, ?string $reason = null): Proposal
     {
@@ -150,7 +173,7 @@ final class ProposalService extends AbstractService
         return $this->transactions->run(function () use ($proposal, $target, $reason): Proposal {
             /** @var Proposal $locked */
             $locked = $this->lockForUpdate($proposal);
-            $from = $locked->offer_status;
+            $from = $locked->currentOfferStatus();
 
             if (! in_array($target, $this->offerTargets($locked), true)) {
                 throw InvalidTransitionException::make(['from' => $from?->getLabel() ?? '-', 'to' => $target->getLabel()]);
@@ -158,12 +181,7 @@ final class ProposalService extends AbstractService
 
             // Once teklif durumu: surumun Gonderildi'ye yurumesi Onaylandi'yi
             // "Verilen"e cevirmesin (syncOfferStatus yalniz Verilecek'i degistirir).
-            $locked->forceFill(['offer_status' => $target]);
-            $this->saveWithoutVersion($locked);
-            $this->recordActivity($locked, 'offer_status_changed', [
-                'teklif_durumu' => ['onceki' => $from?->value, 'yeni' => $target->value],
-                'gerekce' => $reason,
-            ]);
+            $this->writeOfferStatus($locked, $target, 'offer_status_changed', ['gerekce' => $reason]);
 
             if (in_array($target, [OfferStatus::Submitted, OfferStatus::Approved], true)) {
                 $this->submitCurrentVersion($locked);
@@ -237,10 +255,17 @@ final class ProposalService extends AbstractService
         }
     }
 
-    /** Isin butun teklifleri kacan firsatsa potansiyel is Kaybedildi (D-182). */
+    /**
+     * Isin butun teklifleri kacan firsatsa potansiyel is Kaybedildi (D-182).
+     * D-195: her teklifin guncel surumunun durumu sayilir.
+     */
     private function closeCaseIfAllLost(Proposal $proposal, ?string $reason): void
     {
-        $statuses = Proposal::query()->where('business_case_id', $proposal->business_case_id)->pluck('offer_status');
+        $statuses = Proposal::query()
+            ->where('business_case_id', $proposal->business_case_id)
+            ->when(SchemaReadiness::hasBatch('B55'), fn ($query) => $query->with('currentVersion'))
+            ->get()
+            ->map(static fn (Proposal $item): ?OfferStatus => $item->currentOfferStatus());
 
         if ($statuses->isEmpty() || $statuses->contains(static fn (?OfferStatus $status): bool => $status !== OfferStatus::Lost)) {
             return;
@@ -262,6 +287,9 @@ final class ProposalService extends AbstractService
      * baglandi). $onlyFrom verilirse yalniz o durumlardaki teklifler degisir.
      * B29 uygulanmadiysa hicbir sey yapilmaz.
      *
+     * D-195 (B55): karsilastirilan ve yazilan, guncel surumun kendi durumudur;
+     * teklifteki kopya birlikte yazilir, onceki surumler degismez.
+     *
      * @param  iterable<Proposal>  $proposals
      * @param  list<OfferStatus>|null  $onlyFrom  null: hedeften farkli her durum
      */
@@ -273,18 +301,69 @@ final class ProposalService extends AbstractService
 
         $this->transactions->run(function () use ($proposals, $target, $onlyFrom): void {
             foreach ($proposals as $proposal) {
-                $current = $proposal->offer_status;
+                $current = $proposal->currentOfferStatus();
 
                 if ($current === $target || ($onlyFrom !== null && $current !== null && ! in_array($current, $onlyFrom, true))) {
                     continue;
                 }
 
-                $proposal->forceFill(['offer_status' => $target]);
-                $this->saveWithoutVersion($proposal);
-                $this->recordActivity($proposal, 'offer_status_synced', [
-                    'teklif_durumu' => ['onceki' => $current?->value, 'yeni' => $target->value],
-                ]);
+                $this->writeOfferStatus($proposal, $target, 'offer_status_synced');
             }
         });
+    }
+
+    /**
+     * Teklifteki kopya guncel surumun kendi teklif durumunu alir (D-195, B55):
+     * "Yeni teklif surumu" (yeni surum Verilecek baslar) ve guncel surumun
+     * degistigi onay yolu. Surumun durumu bos ise ya da kopya zaten aynisiysa
+     * hicbir sey yazilmaz. B55 uygulanmadiysa hicbir sey yapilmaz.
+     */
+    public function followCurrentVersion(Proposal $proposal, ProposalVersion $version, string $operation = 'offer_status_synced'): void
+    {
+        $target = $version->offer_status;
+
+        if (! SchemaReadiness::hasBatch('B55') || $target === null || (int) $proposal->current_version_id !== (int) $version->getKey()) {
+            return;
+        }
+
+        $this->transactions->run(function () use ($proposal, $version, $target, $operation): void {
+            $from = $proposal->offer_status;
+            $proposal->unsetRelation('currentVersion');
+
+            if ($from === $target) {
+                return;
+            }
+
+            $proposal->forceFill(['offer_status' => $target]);
+            $this->saveWithoutVersion($proposal);
+            $this->recordActivity($proposal, $operation, [
+                'teklif_durumu' => ['onceki' => $from?->value, 'yeni' => $target->value],
+                'surum' => $version->version_no,
+            ]);
+        });
+    }
+
+    /**
+     * Teklif durumunu yazar (D-195): teklifteki kopya (proposals.offer_status)
+     * ve B55 ile guncel surumun kendi durumu birlikte. Teklif icin
+     * "proposal.{islem}", surum icin "proposal_version.{islem}" kaydedilir.
+     *
+     * @param  array<string, mixed>  $context  kayda eklenecek bilgiler (gerekce)
+     */
+    private function writeOfferStatus(Proposal $proposal, OfferStatus $target, string $operation, array $context = []): void
+    {
+        $from = $proposal->currentOfferStatus();
+        $proposal->forceFill(['offer_status' => $target]);
+        $this->saveWithoutVersion($proposal);
+        $this->recordActivity($proposal, $operation, [
+            'teklif_durumu' => ['onceki' => $from?->value, 'yeni' => $target->value],
+            ...$context,
+        ]);
+
+        if (SchemaReadiness::hasBatch('B55') && $proposal->current_version_id !== null) {
+            app(ProposalVersionService::class)->setOfferStatus((int) $proposal->current_version_id, $target, $operation, $context);
+        }
+
+        $proposal->unsetRelation('currentVersion');
     }
 }

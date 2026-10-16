@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\DepartmentHandoffVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Acquisition\ReviewDecision;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\DepartmentHandoffVersions\DepartmentHandoffVersionResource;
@@ -20,6 +21,8 @@ use Filament\Support\Icons\Heroicon;
 
 class ViewDepartmentHandoffVersion extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = DepartmentHandoffVersionResource::class;
 
     protected function getHeaderActions(): array

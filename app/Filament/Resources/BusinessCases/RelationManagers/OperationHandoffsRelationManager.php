@@ -12,6 +12,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\OperationHandoff;
 use App\Services\Acquisition\OperationHandoffService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
@@ -48,6 +49,7 @@ class OperationHandoffsRelationManager extends RelationManager
                         Select::make('prepared_by_employee_id')
                             ->label(__('operation_handoff.fields.prepared_by'))
                             ->relationship('preparer', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),

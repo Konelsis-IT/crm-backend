@@ -10,11 +10,11 @@ return [
 
     'fields' => [
         'created_at' => 'Oluşturulma',
-        'dependency_type' => 'Bağımlılık türü',
-        'is_hard' => 'Hard bağımlılık',
+        'dependency_type' => 'Tür',
+        'is_hard' => 'Zorunlu',
         'name' => 'Ad',
         'predecessor' => 'Öncül',
-        'predecessor_package' => 'Predecessor package',
+        'predecessor_package' => 'Öncül paket',
         'reason' => 'Gerekçe',
     ],
 

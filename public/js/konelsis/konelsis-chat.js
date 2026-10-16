@@ -95,6 +95,14 @@
 
     const locale = config.locale === 'en' ? 'en-GB' : 'tr-TR';
 
+    // Turkce arama (D-214): buyuk / kucuk harf, I-i-I-i ve isaretler (s/s, g/g...) ayirt edilmez;
+    // sunucudaki aramayla (utf8mb4_general_ci) ayni sonuc.
+    function foldSearch(text) {
+        const value = String(text === undefined || text === null ? '' : text).toLocaleLowerCase('tr-TR').replace(/ı/g, 'i');
+
+        return typeof value.normalize === 'function' ? value.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : value;
+    }
+
     function sameDay(a, b) {
         return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
     }
@@ -494,15 +502,15 @@
         const [confirming, setConfirming] = useState(null);
 
         const filtered = useMemo(() => {
-            const needle = term.trim().toLocaleLowerCase(locale);
+            const needle = foldSearch(term.trim());
 
             if (! needle) {
                 return conversations;
             }
 
-            return conversations.filter((item) => (item.title || '').toLocaleLowerCase(locale).includes(needle)
-                || (item.subtitle || '').toLocaleLowerCase(locale).includes(needle)
-                || (item.last_message && (item.last_message.preview || '').toLocaleLowerCase(locale).includes(needle)));
+            return conversations.filter((item) => foldSearch(item.title).includes(needle)
+                || foldSearch(item.subtitle).includes(needle)
+                || (item.last_message && foldSearch(item.last_message.preview).includes(needle)));
         }, [conversations, term]);
 
         const pinned = filtered.filter((item) => item.pinned);

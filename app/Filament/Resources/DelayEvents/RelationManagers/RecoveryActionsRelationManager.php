@@ -11,6 +11,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Project\RecoveryAction;
 use App\Services\Project\RecoveryActionService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -52,6 +53,7 @@ class RecoveryActionsRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('recovery_action.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->required()

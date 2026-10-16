@@ -78,7 +78,10 @@ final class AcquisitionIntakeService
     ];
 
     /** @var list<string> Teklif surumune yazilan alanlar (B43: marj kapsamdan hesaplanir). */
-    private const VERSION_KEYS = ['total_price', 'margin_pct', 'validity_until', 'is_critical_route', 'summary'];
+    // 14 Ekim 2026 kullanici: "Teklif duzenleme ve direk olusturma adiminda para
+    // birimi degistirilebilmelidir." Bos gelirse surum servisi isin / onceki
+    // surumun para birimini alir.
+    private const VERSION_KEYS = ['total_price', 'margin_pct', 'validity_until', 'is_critical_route', 'summary', 'currency_code'];
 
     /** @var list<string> Donusumde projeye aktarilan alanlar. */
     private const PROJECT_KEYS = [
@@ -302,7 +305,9 @@ final class AcquisitionIntakeService
      * surum "Yerini aldi"). Alanlar formdan; kapsam tipleri, degerleri, kapsam
      * ve maliyet listeleri ile belgeler onceki surumden tasinir, carpi ile
      * cikarilanlar tasinmaz, yeni dosyalar yeni belge olarak eklenir. Teklif
-     * durumu (offer_status) degismez.
+     * durumu: B55 oncesi degismez; B55 ile (D-195) yeni surum "Verilecek teklif"
+     * baslar ve teklifin durumu da Verilecek olur, onceki surum kendi durumunu
+     * korur (ProposalVersionService::revise).
      *
      * @param  array<string, mixed>  $data
      */
@@ -584,6 +589,10 @@ final class AcquisitionIntakeService
     {
         $values = array_intersect_key($data, array_flip(self::VERSION_KEYS));
         $values['is_critical_route'] = (bool) ($data['is_critical_route'] ?? false);
+
+        if (blank($values['currency_code'] ?? null)) {
+            unset($values['currency_code']);
+        }
 
         if (! SchemaReadiness::hasBatch('B43')) {
             return $values;

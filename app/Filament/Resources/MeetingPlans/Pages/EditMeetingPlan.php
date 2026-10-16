@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MeetingPlans\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 /** Yalniz planli gorusme duzenlenir (MeetingPlanPolicy::update). */
 class EditMeetingPlan extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = MeetingPlanResource::class;

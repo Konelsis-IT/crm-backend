@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkItems;
 
+use App\Enums\Report\WorkItemPriority;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
 use App\Exceptions\AbstractException;
 use App\Filament\Pages\Work\WorkBoard;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
+use App\Models\Personnel\Personnel;
 use App\Models\Report\WorkItem;
-use App\Query\Personnel\PersonnelQueries;
+use App\Filament\Support\PersonnelSelect;
 use App\Query\Report\WorkItemQueries;
 use App\Services\Report\WorkItemService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
@@ -33,7 +38,7 @@ final class WorkItemActions
         return Action::make('changeStatus')
             ->label(__('work_item.actions.change_status'))
             ->icon(Heroicon::OutlinedArrowsRightLeft)
-            ->color('primary')
+            ->color(ActionColors::SEND)
             ->visible(fn (WorkItem $record): bool => auth()->user()?->can('update', $record) ?? false)
             ->fillForm(fn (WorkItem $record): array => [
                 'status' => $record->status?->value,
@@ -59,7 +64,7 @@ final class WorkItemActions
                     ->required(fn (Get $get): bool => self::value($get('status')) === WorkItemStatus::Waiting->value),
                 Select::make('waiting_personnel_id')
                     ->label(__('work_item.fields.waiting_personnel'))
-                    ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                    ->tap(PersonnelSelect::all())
                     ->searchable()
                     ->native(false)
                     ->visible(fn (Get $get): bool => self::value($get('status')) === WorkItemStatus::Waiting->value && self::value($get('waiting_kind')) === WorkWaitingKind::Personnel->value),
@@ -85,6 +90,13 @@ final class WorkItemActions
                     ->label(__('work_item.fields.status_note'))
                     ->rows(2)
                     ->maxLength(1000),
+                // D-216: "Talebi tamamlandı olarak kapat?" (bagli talep acik ve kisi kapatabiliyorsa).
+                Toggle::make('close_request')
+                    ->label(fn (WorkItem $record): string => __('work_item.request_link.close_question', ['no' => $record->linkedWorkRequest?->request_no]))
+                    ->helperText(fn (WorkItem $record): string => __($record->linkedWorkRequest?->needsApproval() ? 'work_item.request_link.close_help_approval' : 'work_item.request_link.close_help'))
+                    ->default(true)
+                    ->visible(fn (Get $get, WorkItem $record): bool => self::value($get('status')) === WorkItemStatus::Done->value
+                        && app(WorkItemService::class)->canCloseLinkedRequest($record, auth()->user() instanceof Personnel ? auth()->user() : null)),
             ])
             ->action(function (WorkItem $record, array $data): void {
                 try {
@@ -101,11 +113,39 @@ final class WorkItemActions
         return Action::make('toggleCritical')
             ->label(fn (WorkItem $record): string => $record->is_critical ? __('work_item.actions.unmark_critical') : __('work_item.actions.mark_critical'))
             ->icon(fn (WorkItem $record): Heroicon => $record->is_critical ? Heroicon::OutlinedMinusCircle : Heroicon::OutlinedExclamationTriangle)
-            ->color(fn (WorkItem $record): string => $record->is_critical ? 'gray' : 'danger')
-            ->visible(fn (WorkItem $record): bool => auth()->user()?->can('update', $record) ?? false)
+            // Kirmizi yalniz silme icindir (14 Ekim 2026); kritik isareti uyari rengi.
+            ->color(fn (WorkItem $record): string => $record->is_critical ? ActionColors::NEUTRAL : 'warning')
+            ->visible(fn (WorkItem $record): bool => ! WorkItemQueries::extendedUi() && (auth()->user()?->can('update', $record) ?? false))
             ->action(function (WorkItem $record): void {
                 try {
                     app(WorkItemService::class)->setCritical($record, ! $record->is_critical);
+                } catch (AbstractException $exception) {
+                    DomainNotifications::failure($exception);
+                }
+            });
+    }
+
+    /** Kritiklik (D-219, dort seviye): dugme isin simdiki seviyesini gosterir. */
+    public static function setPriority(): Action
+    {
+        return Action::make('setPriority')
+            ->label(fn (WorkItem $record): string => __('work_item.actions.priority_label', ['level' => $record->priorityLevel()->getLabel()]))
+            ->icon(fn (WorkItem $record): Heroicon => $record->priorityLevel()->getIcon())
+            // Kirmizi yalniz silme icindir (14 Ekim 2026); kritiklik uyari rengi.
+            ->color('warning')
+            ->visible(fn (WorkItem $record): bool => WorkItemQueries::extendedUi() && (auth()->user()?->can('update', $record) ?? false))
+            ->modalWidth('md')
+            ->fillForm(fn (WorkItem $record): array => ['priority' => $record->priorityLevel()->value])
+            ->schema([
+                ToggleButtons::make('priority')
+                    ->label(__('work_item.fields.priority'))
+                    ->options(WorkItemPriority::class)
+                    ->inline()
+                    ->required(),
+            ])
+            ->action(function (WorkItem $record, array $data): void {
+                try {
+                    app(WorkItemService::class)->setPriority($record, self::value($data['priority']));
                 } catch (AbstractException $exception) {
                     DomainNotifications::failure($exception);
                 }

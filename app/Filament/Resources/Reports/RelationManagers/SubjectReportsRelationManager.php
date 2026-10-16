@@ -8,6 +8,7 @@ use App\Enums\Report\ReportSubjectKind;
 use App\Filament\Resources\Reports\Pages\CreateReport;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\CodeLine;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
 use App\Query\Report\ReportQueries;
@@ -60,8 +61,11 @@ class SubjectReportsRelationManager extends RelationManager
             ->heading($this->getOwnerRecord() instanceof Personnel ? __('report.relation.about_personnel') : __('report.plural'))
             ->description(__('report.relation.help'))
             ->columns([
-                TextColumn::make('report_no')->label(__('report.fields.report_no'))->badge()->color('gray'),
-                TextColumn::make('title')->label(__('report.fields.title'))->weight('semibold')->wrap(),
+                // Rapor no ayri sutun degil, basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('title')->label(__('report.fields.title'))->weight('semibold')->wrap(),
+                    'report_no',
+                ),
                 TextColumn::make('template_code')
                     ->label(__('report.fields.template'))
                     ->formatStateUsing(fn (Report $record): string => $record->templateName()),

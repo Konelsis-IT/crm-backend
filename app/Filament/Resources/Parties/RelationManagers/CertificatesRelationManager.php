@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Parties\RelationManagers;
 
 use App\Enums\Party\PartyCredentialStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Party\PartyCertificate;
@@ -86,11 +87,13 @@ class CertificatesRelationManager extends RelationManager
             ->heading(__('party_certificate.relation.title'))
             ->recordTitleAttribute('certificate_no')
             ->columns([
-                TextColumn::make('certificate_type')
-                    ->label(__('party_certificate.fields.certificate_type')),
-                TextColumn::make('certificate_no')
-                    ->label(__('party_certificate.fields.certificate_no'))
-                    ->searchable(),
+                // Belge no ayri sutun degil, turun altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('certificate_type')
+                        ->label(__('party_certificate.fields.certificate_type'))
+                        ->searchable(['certificate_type', 'certificate_no']),
+                    'certificate_no',
+                ),
                 TextColumn::make('issuer')
                     ->label(__('party_certificate.fields.issuer'))
                     ->placeholder('-'),

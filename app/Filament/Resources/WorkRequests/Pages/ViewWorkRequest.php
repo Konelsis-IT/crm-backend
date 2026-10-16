@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkRequests\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Filament\Support\ActionColors;
 use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
@@ -24,11 +25,11 @@ use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ExportActions;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Approval\ApprovalRequest;
 use App\Models\WorkRequest\WorkRequest;
 use App\Livewire\WorkRequestThread;
 use App\Query\Personnel\OrganizationQueries;
-use App\Query\Personnel\PersonnelQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\WorkRequest\WorkRequestService;
@@ -58,17 +59,11 @@ use Throwable;
  */
 class ViewWorkRequest extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = WorkRequestResource::class;
 
     private const HALF = ['default' => 1, 'md' => 2];
-
-    public function getTitle(): string
-    {
-        /** @var WorkRequest $request */
-        $request = $this->getRecord();
-
-        return $request->request_no.' · '.$request->title;
-    }
 
     public function infolist(Schema $schema): Schema
     {
@@ -242,11 +237,11 @@ class ViewWorkRequest extends ViewRecord
                 ->schema([
                     Select::make('assignee_personnel_id')
                         ->label(__('work_request.fields.assignee'))
-                        ->options(fn (): array => app(WorkRequestQueries::class)
+                        ->tap(PersonnelSelect::rows(fn (): array => app(WorkRequestQueries::class)
                             ->unitMembers((int) $this->getRecord()->target_org_unit_id)
                             ->sortBy('full_name')
                             ->pluck('full_name', 'id')
-                            ->all())
+                            ->all()))
                         ->required()
                         ->searchable()
                         ->native(false),
@@ -270,7 +265,7 @@ class ViewWorkRequest extends ViewRecord
                         ->native(false),
                     Select::make('target_personnel_id')
                         ->label(__('work_request.fields.target_personnel'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->searchable()
                         ->native(false)
                         ->visible(fn (Get $get): bool => FormState::value($get('target_kind')) === RequestTargetKind::Personnel->value)
@@ -309,18 +304,13 @@ class ViewWorkRequest extends ViewRecord
                 ->schema([
                     Select::make('approver_personnel_id')
                         ->label(__('work_request.fields.approver'))
-                        ->options(function (): array {
+                        // Talep eden ve muhatap onayci olamaz.
+                        ->tap(PersonnelSelect::excluding(function (): array {
                             /** @var WorkRequest $request */
                             $request = $this->getRecord();
-                            $options = app(PersonnelQueries::class)->personnelOptions();
-                            unset($options[(int) $request->requester_personnel_id]);
 
-                            if ($request->target_personnel_id !== null) {
-                                unset($options[(int) $request->target_personnel_id]);
-                            }
-
-                            return $options;
-                        })
+                            return array_filter([(int) $request->requester_personnel_id, (int) $request->target_personnel_id]);
+                        }))
                         ->required()
                         ->searchable()
                         ->native(false),
@@ -356,7 +346,7 @@ class ViewWorkRequest extends ViewRecord
                 }
             })
             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-            ->color('primary');
+            ->color(ActionColors::VIEW);
     }
 
     /**

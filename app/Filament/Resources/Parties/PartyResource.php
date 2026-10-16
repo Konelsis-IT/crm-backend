@@ -29,14 +29,15 @@ use App\Filament\Resources\Parties\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\RolesRelationManager;
 use App\Filament\Resources\Parties\Schemas\PartyInfolist;
 use App\Filament\Resources\WorkRequests\RelationManagers\RelatedWorkRequestsRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Party\CommunicationPoint;
 use App\Models\Party\Party;
 use App\Models\Party\PartyActivityArea;
 use App\Query\Party\ActivityAreaQueries;
 use App\Query\Party\PartyQueries;
-use App\Query\Personnel\PersonnelQueries;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Party\PartyService;
 use App\Enums\Platform\Feature;
@@ -280,7 +281,7 @@ class PartyResource extends Resource
                                 ->native(false),
                             Select::make('approved_by_personnel_id')
                                 ->label(__('party_role.fields.approved_by'))
-                                ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                                ->tap(PersonnelSelect::all())
                                 ->searchable()
                                 ->native(false),
                             DatePicker::make('valid_from')
@@ -507,21 +508,22 @@ class PartyResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('party_no')
-                    ->label(__('party.fields.party_no'))
-                    ->searchable()
-                    ->sortable(),
                 // Uzun adlar diger sutunlari itmesin (21 Eylul 2026 kullanici karari):
                 // 25 karakter, tam ad ustune gelince gorunur; Excel'e tam ad yazilir.
-                // D-170: uzun ad (unvan) gorunen addan farkliysa altinda kisaltilmis
-                // ve ipucunda tam haliyle gorunur; arama iki adda da yapilir.
-                TextColumn::make('display_name')
-                    ->label(__('party.fields.display_name'))
-                    ->limit(25)
-                    ->description(fn (Party $record): ?string => self::shortened($record->longNameIfDifferent(), 40))
-                    ->tooltip(fn (Party $record): ?string => self::nameTooltip($record))
-                    ->searchable(query: fn (Builder $query, string $search): Builder => app(PartyQueries::class)->searchByName($query, $search))
-                    ->sortable(),
+                // D-170: uzun ad (unvan) gorunen addan farkliysa ipucunda tam haliyle
+                // gorunur. Taraf no ayri sutun degil (14 Ekim 2026, kullanici: "kod |
+                // uzun isim gibi"): kisa adin altinda "kod | uzun ad"; arama ad ve
+                // koddan yapilir.
+                CodeLine::under(
+                    TextColumn::make('display_name')
+                        ->label(__('party.fields.display_name'))
+                        ->limit(25)
+                        ->tooltip(fn (Party $record): ?string => self::nameTooltip($record))
+                        ->searchable(query: fn (Builder $query, string $search): Builder => app(PartyQueries::class)->searchByName($query, $search))
+                        ->sortable(),
+                    'party_no',
+                    fn (Party $record): ?string => self::shortened($record->longNameIfDifferent(), 40),
+                ),
                 TextColumn::make('party_kind')
                     ->label(__('party.fields.party_kind'))
                     ->badge(),

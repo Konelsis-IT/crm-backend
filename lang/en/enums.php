@@ -843,6 +843,82 @@ return [
         'installed' => 'Installed',
         'cancelled' => 'Cancelled',
     ],
+    // D-189 purchasing
+    'catalog_item_kind' => [
+        'product' => 'Product',
+        'service' => 'Service',
+        'general_expense' => 'General expense',
+        'admin_staff' => 'Administrative staff',
+    ],
+    'usage_area' => [
+        'office' => 'In-house',
+        'field' => 'Site',
+    ],
+    'cost_line_type' => [
+        'product_service' => 'Product/Service',
+        'admin_staff' => 'Administrative staff',
+        'general_expense' => 'General expenses',
+    ],
+    'catalog_match_status' => [
+        'matched' => 'In catalog',
+        'new' => 'New',
+        'similar' => 'Similar?',
+    ],
+    'price_state' => [
+        'firm' => 'Price settled',
+        'open' => 'Not settled',
+    ],
+    'purchase_need_source' => [
+        'proposal_cost' => 'Proposal cost',
+        'office_request' => 'Purchase request',
+        'manual' => 'Purchasing',
+    ],
+    'purchase_request_status' => [
+        'open' => 'Open',
+        'in_progress' => 'In progress',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
+    'purchase_quotation_status' => [
+        'draft' => 'Awaiting prices',
+        'received' => 'Received',
+        'selected' => 'Selected',
+        'rejected' => 'Rejected',
+        'ordered' => 'Ordered',
+        'cancelled' => 'Cancelled',
+    ],
+    'purchase_order_status' => [
+        'draft' => 'Draft',
+        'awaiting_approval' => 'Awaiting approval',
+        'approved' => 'Approved',
+        'ordered' => 'Ordered',
+        'in_transit' => 'In transit',
+        'delivered' => 'Delivered',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
+    'quotation_ai_status' => [
+        'pending' => 'Konelsis AI is reading',
+        'completed' => 'Read by Konelsis AI',
+        'failed' => 'Konelsis AI could not read',
+    ],
+    'quotation_document_ai_status' => [
+        'pending' => 'Reading',
+        'quotation' => 'Quotation document',
+        'not_quotation' => 'Not a quotation',
+        'failed' => 'Could not be read',
+    ],
+    'purchase_need_status' => [
+        'awaiting_project' => 'Awaiting project approval',
+        'open' => 'Awaiting order',
+        'quoting' => 'Collecting quotes',
+        'recommended' => 'Quote recommended',
+        'awaiting_approval' => 'Awaiting approval',
+        'approved' => 'Approved',
+        'ordered' => 'Ordered',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
     'team_role' => [
         'project_manager' => 'Project manager',
         'site_manager' => 'Site manager',
@@ -1328,6 +1404,33 @@ return [
         'supply_item' => 'Supply item',
         'work_request' => 'Request',
         'meeting_plan' => 'Meeting',
+        'purchase_need' => 'Purchase need',
+    ],
+    // D-219 (B57)
+    'work_item_priority' => [
+        'low' => 'Low',
+        'normal' => 'Normal',
+        'high' => 'High',
+        'critical' => 'Critical',
+    ],
+    'work_discipline' => [
+        'construction' => 'Construction',
+        'mechanical' => 'Mechanical',
+        'electrical' => 'Electrical',
+        'auxiliary' => 'Auxiliary systems',
+        'scada' => 'SCADA',
+        'enh' => 'Power line',
+        'acceptance' => 'Acceptance / Commissioning',
+    ],
+    'recurrence_frequency' => [
+        'daily' => 'Daily',
+        'weekly' => 'Weekly',
+        'monthly' => 'Monthly',
+    ],
+    'recurring_work_kind' => [
+        'report' => 'Report',
+        'mailbox' => 'Mailbox',
+        'task' => 'Routine task',
     ],
     // Social Media (B31, D-106)
     'social_profile_kind' => [

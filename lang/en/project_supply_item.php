@@ -63,4 +63,19 @@ return [
     'filters' => [
         'my_step' => 'Projects currently focused on procurement',
     ],
+
+    // D-196: the project page reads the purchasing records (ProjectPurchasing).
+    'purchasing' => [
+        'needs_title' => 'Purchasing',
+        'needs_empty' => 'No purchase requests for this project.',
+        'orders_title' => 'Logistics',
+        'orders_empty' => 'This project has no orders.',
+        'software_title' => 'Software',
+        'software_empty' => 'No software items for this project.',
+    ],
+
+    'legacy' => [
+        'title' => 'Earlier supply records',
+        'description' => 'Records entered before the purchasing module; view only.',
+    ],
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkItems\Schemas;
 
+use App\Enums\Report\WorkItemPriority;
 use App\Enums\Report\WorkItemStatus;
 use App\Models\Activity\PersonnelActivity;
 use App\Models\Report\WorkItem;
@@ -38,15 +39,52 @@ final class WorkItemInfolist
                         ->columnSpan(['default' => 1, 'xl' => 2])
                         ->columns(['default' => 1, 'md' => 3])
                         ->components([
-                            TextEntry::make('title')->label(__('work_item.fields.title'))->weight('semibold')->columnSpanFull(),
+                            // Isin adi sayfanin alt basliginda, is kodu (B56, D-204) ust gezinme
+                            // satirinda; kartta tekrar yazilmaz (D-205). Ise yazilan aciklama
+                            // (kart notu) kartin basinda, kilitli textarea gorunumunde (LongText).
+                            TextEntry::make('note')->label(__('work_item.fields.note'))->placeholder('–')->columnSpanFull(),
                             TextEntry::make('status')->label(__('work_item.fields.status'))->badge(),
                             TextEntry::make('is_critical')
                                 ->label(__('work_item.fields.is_critical'))
                                 ->formatStateUsing(fn (bool $state): string => $state ? __('work_item.values.critical') : __('work_item.values.no'))
                                 ->badge()
-                                ->color(fn (bool $state): string => $state ? 'danger' : 'gray'),
+                                ->color(fn (bool $state): string => $state ? 'danger' : 'gray')
+                                ->visible(fn (): bool => ! WorkItemQueries::extendedUi()),
+                            // D-219: dort seviyeli kritiklik.
+                            TextEntry::make('priority_level')
+                                ->label(__('work_item.fields.priority'))
+                                ->state(fn (WorkItem $record): WorkItemPriority => $record->priorityLevel())
+                                ->badge()
+                                ->visible(fn (): bool => WorkItemQueries::extendedUi()),
                             TextEntry::make('source')->label(__('work_item.fields.source'))->badge(),
                             TextEntry::make('personnel.full_name')->label(__('work_item.fields.personnel'))->icon(Heroicon::OutlinedUser),
+                            // D-219: diger sorumlular ve Tum ekip.
+                            TextEntry::make('assignee_names')
+                                ->label(__('work_item.fields.assignees'))
+                                ->state(fn (WorkItem $record): ?string => $record->assignees->isEmpty() ? null : $record->assignees->pluck('full_name')->implode(', '))
+                                ->icon(Heroicon::OutlinedUserGroup)
+                                ->placeholder('–')
+                                ->visible(fn (): bool => WorkItemQueries::extendedUi()),
+                            TextEntry::make('for_everyone')
+                                ->label(__('work_item.fields.for_everyone'))
+                                ->formatStateUsing(fn ($state): string => $state ? __('work_item.values.for_everyone') : __('work_item.values.no'))
+                                ->badge()
+                                ->color(fn ($state): string => $state ? 'info' : 'gray')
+                                ->visible(fn (WorkItem $record): bool => WorkItemQueries::extendedUi() && (bool) $record->getAttribute('for_everyone')),
+                            TextEntry::make('discipline')
+                                ->label(__('work_item.fields.discipline'))
+                                ->badge()
+                                ->color('gray')
+                                ->placeholder('–')
+                                ->visible(fn (): bool => WorkItemQueries::extendedUi()),
+                            TextEntry::make('legacy_no')
+                                ->label(__('work_item.fields.legacy_no'))
+                                ->fontFamily('mono')
+                                ->visible(fn (WorkItem $record): bool => WorkItemQueries::extendedUi() && filled($record->getAttribute('legacy_no'))),
+                            TextEntry::make('recurringWork.title')
+                                ->label(__('work_item.fields.recurring_work'))
+                                ->icon(Heroicon::OutlinedArrowPath)
+                                ->visible(fn (WorkItem $record): bool => WorkItemQueries::extendedUi() && $record->getAttribute('recurring_work_id') !== null),
                             TextEntry::make('orgUnit.name')->label(__('work_item.fields.org_unit'))->placeholder('–'),
                             TextEntry::make('category_label')
                                 ->label(__('work_item.fields.category'))
@@ -86,7 +124,6 @@ final class WorkItemInfolist
                                 ->color('primary')
                                 ->placeholder('–')
                                 ->columnSpan(['default' => 1, 'md' => 2]),
-                            TextEntry::make('note')->label(__('work_item.fields.note'))->placeholder('–')->columnSpanFull(),
                         ]),
                     Section::make(__('work_item.sections.durations'))
                         ->icon(Heroicon::OutlinedClock)
@@ -121,6 +158,7 @@ final class WorkItemInfolist
                 ->collapsible()
                 ->components([
                     RepeatableEntry::make('history')
+                        ->label(__('work_item.sections.history'))
                         ->hiddenLabel()
                         ->state(fn (WorkItem $record): array => app(WorkItemQueries::class)
                             ->activitiesFor((int) $record->getKey())
@@ -138,10 +176,10 @@ final class WorkItemInfolist
                             TableColumn::make(__('work_item.history.changes')),
                         ])
                         ->schema([
-                            TextEntry::make('at'),
-                            TextEntry::make('by'),
-                            TextEntry::make('action')->weight('medium'),
-                            TextEntry::make('changes')->color('gray')->placeholder('–'),
+                            TextEntry::make('at')->label(__('work_item.history.at')),
+                            TextEntry::make('by')->label(__('work_item.history.by')),
+                            TextEntry::make('action')->label(__('work_item.history.action'))->weight('medium'),
+                            TextEntry::make('changes')->label(__('work_item.history.changes'))->color('gray')->placeholder('–'),
                         ])
                         ->placeholder(__('work_item.history.empty')),
                 ]),

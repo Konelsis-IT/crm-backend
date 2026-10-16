@@ -13,17 +13,19 @@ use App\Filament\Resources\Proposals\Pages\ListProposals;
 use App\Filament\Resources\Proposals\Pages\NewProposalVersion;
 use App\Filament\Resources\Proposals\Pages\ViewProposal;
 use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManager;
+use App\Filament\Resources\Proposals\RelationManagers\CostItemsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\Proposals\RelationManagers\VersionsRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
-use App\Filament\Support\RecordLinks;
 use App\Models\Acquisition\Proposal;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
@@ -93,6 +95,7 @@ class ProposalResource extends Resource
                         Select::make('owner_employee_id')
                             ->label(__('proposal.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -117,31 +120,27 @@ class ProposalResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with(['businessCase.codes', ...($b29() ? ['businessCase.scopes'] : [])]))
             ->columns([
-                TextColumn::make('proposal_no')
-                    ->label(__('proposal.fields.proposal_no'))
-                    ->searchable()
-                    ->sortable(),
-                // Bagli potansiyel isin kodu (D-132): teklif hangi POTIS'e ait, listede gorunur.
-                TextColumn::make('case_code')
-                    ->label(__('proposal.fields.case_code'))
-                    ->state(fn (Proposal $record): ?string => $record->businessCase?->caseCode()?->formatted_code)
-                    ->badge()
-                    ->color('warning')
-                    ->icon(fn (Proposal $record) => $record->businessCase !== null ? RecordLinks::iconFor($record->businessCase) : null)
-                    ->url(fn (Proposal $record): ?string => $record->businessCase !== null ? RecordLinks::detailUrl($record->businessCase) : null)
-                    ->placeholder('-'),
-                TextColumn::make('title')
-                    ->label(__('proposal.fields.title'))
-                    ->limit(40)
-                    // B43: taslak teklif basligin altinda yazar; D-162: simge ve amber satir.
-                    ->description(fn (Proposal $record): ?string => DraftSupport::titleDescription($record))
-                    ->icon(fn (Proposal $record): ?Heroicon => DraftSupport::titleIcon($record))
-                    ->iconColor('warning')
-                    ->tooltip(fn (Proposal $record): ?string => DraftSupport::titleTooltip($record))
-                    ->searchable(),
-                TextColumn::make('businessCase.title')
-                    ->label(__('proposal.fields.business_case'))
-                    ->limit(30),
+                // Teklif no ve potansiyel isin POTIS kodu (D-132) ayri sutun degil,
+                // basliklarin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('proposal.fields.title'))
+                        ->limit(40)
+                        // D-162: taslak simgesi ve amber satir; B43: taslak notu kodun yaninda.
+                        ->icon(fn (Proposal $record): ?Heroicon => DraftSupport::titleIcon($record))
+                        ->iconColor('warning')
+                        ->tooltip(fn (Proposal $record): ?string => DraftSupport::titleTooltip($record))
+                        ->searchable(['title', 'proposal_no'])
+                        ->sortable(),
+                    'proposal_no',
+                    fn (Proposal $record): ?string => DraftSupport::titleDescription($record),
+                ),
+                CodeLine::under(
+                    TextColumn::make('businessCase.title')
+                        ->label(__('proposal.fields.business_case'))
+                        ->limit(30),
+                    fn (Proposal $record): ?string => $record->businessCase?->caseCode()?->formatted_code,
+                ),
                 TextColumn::make('status')
                     ->label(__('proposal.fields.status'))
                     ->badge(),
@@ -196,6 +195,9 @@ class ProposalResource extends Resource
             // Gorusme notlari (B41, D-137): bu teklifin konusuldugu gorusmeler.
             MeetingNotesRelationManager::class,
             DocumentsRelationManager::class,
+            // Maliyet kalemleri (B52, D-189): guncel surumun maliyet listesi kalemleri,
+            // katalog eslesmesi ve satin almaya gonderme (canViewForRecord ozellik + B52).
+            CostItemsRelationManager::class,
             ...(SchemaReadiness::hasBatch('B10A') ? [SubjectReportsRelationManager::class] : []),
         ];
     }

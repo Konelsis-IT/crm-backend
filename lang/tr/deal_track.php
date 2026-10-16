@@ -48,7 +48,9 @@ return [
         'last_meeting' => 'Son görüşme',
         'outcome' => 'Sonuç',
         'offer_status' => 'Teklif durumu',
-        'version' => 'Güncel sürüm',
+        'version' => 'Sürüm',
+        // D-195 (B55): önceki sürüm kendi teklif durumuyla.
+        'previous_version' => 'Önceki sürüm',
         'sent' => 'Gönderim',
         'validity' => 'Geçerlilik',
         'price' => 'Tutar',

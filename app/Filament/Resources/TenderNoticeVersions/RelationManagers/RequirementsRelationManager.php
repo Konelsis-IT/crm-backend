@@ -7,11 +7,13 @@ namespace App\Filament\Resources\TenderNoticeVersions\RelationManagers;
 use App\Enums\Acquisition\TenderComplianceState;
 use App\Enums\Acquisition\TenderRequirementType;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\TenderRequirement;
 use App\Services\Acquisition\TenderRequirementService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -73,6 +75,7 @@ class RequirementsRelationManager extends RelationManager
                         Select::make('evaluated_by_personnel_id')
                             ->label(__('tender_requirement.fields.evaluated_by'))
                             ->relationship('evaluator', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -93,14 +96,16 @@ class RequirementsRelationManager extends RelationManager
             ->heading(__('tender_requirement.relation.title'))
             ->recordTitleAttribute('requirement_code')
             ->columns([
-                TextColumn::make('requirement_code')
-                    ->label(__('tender_requirement.fields.requirement_code')),
                 TextColumn::make('requirement_type')
                     ->label(__('tender_requirement.fields.requirement_type'))
                     ->badge(),
-                TextColumn::make('description')
-                    ->label(__('tender_requirement.fields.description'))
-                    ->limit(50),
+                // Gereklilik kodu ayri sutun degil, aciklamanin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('tender_requirement.fields.description'))
+                        ->limit(50),
+                    'requirement_code',
+                ),
                 IconColumn::make('is_mandatory')
                     ->label(__('tender_requirement.fields.is_mandatory'))
                     ->boolean(),

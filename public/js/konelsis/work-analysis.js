@@ -35,12 +35,12 @@
     function PickerPanel(props) {
         const { options, value, allLabel, searchable, onPick, t } = props;
         const [query, setQuery] = useState('');
-        const q = query.toLocaleLowerCase('tr-TR');
+        const q = KW.fold(query);
 
         return h(Fragment, null,
             searchable ? h('div', { className: 'kw-search' }, '🔍 ', h('input', { value: query, autoFocus: true, placeholder: t('search'), onChange: (event) => setQuery(event.target.value) })) : null,
             allLabel ? h(Opt, { radio: true, on: value === null, onClick: () => onPick(null) }, allLabel) : null,
-            options.filter((row) => !q || String(row.label).toLocaleLowerCase('tr-TR').indexOf(q) !== -1).slice(0, 80)
+            options.filter((row) => !q || KW.fold(row.label).indexOf(q) !== -1).slice(0, 80)
                 .map((row) => h(Opt, { key: row.value, radio: true, on: row.value === value, onClick: () => onPick(row.value) }, row.label)),
         );
     }

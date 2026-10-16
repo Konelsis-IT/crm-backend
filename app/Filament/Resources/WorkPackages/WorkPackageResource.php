@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WorkPackages;
 
 use App\Enums\Project\WorkPackageStatus;
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\WorkPackages\Pages\EditWorkPackage;
 use App\Filament\Resources\WorkPackages\Pages\ListWorkPackages;
 use App\Filament\Resources\WorkPackages\Pages\ViewWorkPackage;
 use App\Filament\Resources\WorkPackages\RelationManagers\DependenciesRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WorkPackage;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -35,8 +36,6 @@ class WorkPackageResource extends Resource
     protected static ?string $model = WorkPackage::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedArchiveBox;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 12;
 
@@ -84,6 +83,7 @@ class WorkPackageResource extends Resource
                         Select::make('owner_personnel_id')
                             ->label(__('work_package.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -114,11 +114,13 @@ class WorkPackageResource extends Resource
                 TextColumn::make('project.display_name')
                     ->label(__('work_package.fields.project'))
                     ->limit(30),
-                TextColumn::make('package_code')
-                    ->label(__('work_package.fields.package_code')),
-                TextColumn::make('name')
-                    ->label(__('work_package.fields.name'))
-                    ->limit(40),
+                // Paket kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('work_package.fields.name'))
+                        ->limit(40),
+                    'package_code',
+                ),
                 TextColumn::make('workstream.group.name_tr')
                     ->label(__('work_package.fields.workstream')),
                 TextColumn::make('status')

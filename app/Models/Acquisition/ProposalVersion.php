@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Acquisition;
 
+use App\Enums\Acquisition\OfferStatus;
 use App\Enums\Acquisition\ProposalVersionStatus;
 use App\Enums\Acquisition\SubmissionChannel;
 use App\Models\Acquisition\BrandItem;
@@ -31,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'validity_until', 'is_critical_route', 'project_group_opinion_document_revision_id', 'summary',
     'prepared_by_personnel_id', 'approved_by_personnel_id', 'approved_at', 'submitted_at', 'submitted_channel',
     'submission_evidence_document_revision_id',
+    // D-195 (B55): her surumun kendi teklif durumu (Verilecek / Verilen / Onaylandi / Kacan firsat).
+    'offer_status',
 ])]
 #[UsePolicy(ProposalVersionPolicy::class)]
 class ProposalVersion extends Model
@@ -45,6 +48,7 @@ class ProposalVersion extends Model
         return [
             'version_no' => 'integer',
             'status' => ProposalVersionStatus::class,
+            'offer_status' => OfferStatus::class,
             'total_price' => 'decimal:4',
             'margin_pct' => 'decimal:4',
             'validity_until' => 'date',

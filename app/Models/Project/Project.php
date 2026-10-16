@@ -16,6 +16,8 @@ use App\Models\Document\FileObject;
 use App\Models\Party\Party;
 use App\Models\Party\PartyLicense;
 use App\Models\Personnel\Personnel;
+use App\Models\Procurement\PurchaseNeed;
+use App\Models\Procurement\PurchaseOrder;
 use App\Models\Project\CbsNode;
 use App\Models\Project\CommercialClarification;
 use App\Models\Project\CommercialExposure;
@@ -280,6 +282,18 @@ class Project extends Model
     public function supplyItems(): HasMany
     {
         return $this->hasMany(ProjectSupplyItem::class, 'project_id');
+    }
+
+    /** Projenin satin alinacaklari (D-189/D-192; proje sayfasindaki Satin alma ve Yazilim tablolari, D-196). */
+    public function purchaseNeeds(): HasMany
+    {
+        return $this->hasMany(PurchaseNeed::class, 'project_id');
+    }
+
+    /** Projeye yazilmis siparisler (D-192; proje sayfasindaki Lojistik tablosu, D-196). */
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class, 'project_id');
     }
 
     public function teamMembers(): HasMany

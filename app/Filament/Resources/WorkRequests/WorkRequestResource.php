@@ -13,12 +13,15 @@ use App\Filament\Resources\WorkRequests\Pages\EditWorkRequest;
 use App\Filament\Resources\WorkRequests\Pages\ListWorkRequests;
 use App\Filament\Resources\WorkRequests\Pages\ViewWorkRequest;
 use App\Filament\Resources\WorkRequests\RelationManagers\ActivitiesRelationManager;
+use App\Filament\Resources\WorkRequests\RelationManagers\LinkedWorkItemsRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Personnel\Personnel;
 use App\Models\WorkRequest\WorkRequest;
 use App\Query\Personnel\OrganizationQueries;
-use App\Query\Personnel\PersonnelQueries;
 use App\Query\Project\ProjectCatalogQueries;
+use App\Query\WorkRequest\ManagementPriorityQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
@@ -42,6 +45,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 /**
@@ -151,7 +155,7 @@ class WorkRequestResource extends Resource
                             ->native(false),
                         Select::make('target_personnel_id')
                             ->label(__('work_request.fields.target_personnel'))
-                            ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                            ->tap(PersonnelSelect::all())
                             ->searchable()
                             ->native(false)
                             ->visible($isPersonnel)
@@ -191,7 +195,7 @@ class WorkRequestResource extends Resource
                         ->columnSpan(FieldGrid::NORMAL),
                     Select::make('approver_personnel_id')
                         ->label(__('work_request.fields.approver'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->searchable()
                         ->native(false)
                         ->visible(fn (Get $get): bool => SchemaReadiness::hasBatch('B11D') && (bool) $get('requires_approval'))
@@ -265,20 +269,24 @@ class WorkRequestResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('request_no')
-                    ->label(__('work_request.fields.request_no'))
-                    ->searchable()
-                    ->badge()
-                    ->color('gray'),
-                TextColumn::make('title')
-                    ->label(__('work_request.fields.title'))
-                    ->searchable()
-                    ->weight('semibold')
-                    ->description(fn (WorkRequest $record): ?string => filled($record->description) ? Str::limit((string) $record->description, 90) : null)
-                    ->wrap(),
+                // Talep no basligin altinda kucuk yazi, aciklama ozeti yaninda
+                // (CodeLine, 14 Ekim 2026); baslik ve talep no ile aranir.
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('work_request.fields.title'))
+                        ->searchable(['title', 'request_no'])
+                        ->weight('semibold')
+                        ->wrap(),
+                    'request_no',
+                    fn (WorkRequest $record): ?string => filled($record->description) ? Str::limit((string) $record->description, 90) : null,
+                ),
+                // D-216: ust yonetimin actigi acik talep "Yönetim" isaretiyle ve listenin ustunde.
                 TextColumn::make('priority')
                     ->label(__('work_request.fields.priority'))
-                    ->badge(),
+                    ->badge()
+                    ->description(fn (WorkRequest $record): ?string => $record->status->isActive() && app(ManagementPriorityQueries::class)->isManagement($record->requester_personnel_id)
+                        ? __('work_request.values.management')
+                        : null),
                 TextColumn::make('status')
                     ->label(__('work_request.fields.status'))
                     ->badge(),
@@ -318,13 +326,15 @@ class WorkRequestResource extends Resource
             ])
             ->toolbarActions([])
             ->modifyQueryUsing(fn ($query) => $query->with(['requester', 'requesterOrgUnit', 'targetPersonnel', 'targetOrgUnit', 'assignee']))
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort(fn (Builder $query): Builder => app(WorkRequestQueries::class)->listOrder($query));
     }
 
     public static function getRelations(): array
     {
-        // Hareket gecmisi talep kartinin altinda tablo olarak (12 Eylul 2026).
+        // Hareket gecmisi talep kartinin altinda tablo olarak (12 Eylul 2026);
+        // ustunde talebe bagli isler (D-216).
         return [
+            LinkedWorkItemsRelationManager::class,
             ActivitiesRelationManager::class,
         ];
     }

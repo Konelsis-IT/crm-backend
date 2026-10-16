@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Documents\Tables;
 
 use App\Enums\Document\DocumentStatus;
+use App\Filament\Support\CodeLine;
 use App\Models\Project\Project;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\Projects\ProjectNames;
@@ -21,15 +22,16 @@ final class DocumentTable
     {
         return $table
             ->columns([
-                TextColumn::make('document_no')
-                    ->label(__('document.fields.document_no'))
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('title')
-                    ->label(__('document.fields.title'))
-                    ->searchable()
-                    ->sortable()
-                    ->limit(60),
+                // Dokuman no ayri sutun degil, basligin altinda kucuk yazi (CodeLine,
+                // 14 Ekim 2026); arama baslik ve numaradan yapilir.
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('document.fields.title'))
+                        ->searchable(['title', 'document_no'])
+                        ->sortable()
+                        ->limit(60),
+                    'document_no',
+                ),
                 TextColumn::make('documentType.name')
                     ->label(__('document.fields.document_type'))
                     ->badge()

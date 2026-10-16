@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkItems\Tables;
 
+use App\Enums\Report\WorkDiscipline;
+use App\Enums\Report\WorkItemPriority;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\WorkItems\WorkItemResource;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Project\Project;
 use App\Models\Report\WorkItem;
-use App\Query\Personnel\PersonnelQueries;
+use App\Filament\Support\PersonnelSelect;
 use App\Query\Report\WorkItemQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Reports\Work\WorkCategoryCatalog;
@@ -51,7 +54,8 @@ final class WorkItemTable
     {
         return $table
             ->columns(self::columns($forPersonnel))
-            ->defaultSort('work_at', 'desc')
+            // D-216: ust yonetimin talep ettigi acik isler once, sonra en yeni.
+            ->defaultSort(fn (Builder $query): Builder => app(WorkItemQueries::class)->listOrder($query))
             ->searchable()
             ->filters(self::filters($forPersonnel), layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns($forPersonnel ? 3 : 4)
@@ -79,12 +83,20 @@ final class WorkItemTable
                 ->label(__('work_item.table.date'))
                 ->dateTime('d.m.Y H:i')
                 ->sortable(),
-            TextColumn::make('title')
-                ->label(__('work_item.table.item'))
-                ->wrap()
-                ->weight('medium')
-                ->searchable(query: fn (Builder $query, string $search): Builder => app(WorkItemQueries::class)->applySearch($query, $search))
-                ->description(fn (WorkItem $record): ?string => $record->parent !== null ? __('work_item.table.parent_of', ['title' => $record->parent->title]) : null),
+            // Is kodu (B56, D-204) is sutununun altinda kucuk yazi; ana is bilgisi yaninda (CodeLine).
+            CodeLine::under(
+                TextColumn::make('title')
+                    ->label(__('work_item.table.item'))
+                    ->wrap()
+                    ->weight('medium')
+                    ->searchable(query: fn (Builder $query, string $search): Builder => app(WorkItemQueries::class)->applySearch($query, $search)),
+                fn (WorkItem $record): ?string => $record->getAttribute('item_no'),
+                fn (WorkItem $record): ?string => implode(' | ', array_filter([
+                    // D-216: ust yonetimin talep ettigi acik is.
+                    app(WorkItemPresenter::class)->management($record) ? __('work_item.request_link.management') : null,
+                    $record->parent !== null ? __('work_item.table.parent_of', ['title' => $record->parent->title]) : null,
+                ])) ?: null,
+            ),
             TextColumn::make('project.display_name')
                 ->label(__('work_item.table.project'))
                 ->placeholder('–')
@@ -111,6 +123,8 @@ final class WorkItemTable
         if (! $forPersonnel) {
             $columns[] = TextColumn::make('personnel.full_name')
                 ->label(__('work_item.table.personnel'))
+                // D-219: diger sorumlular ve Tum ekip alt satirda.
+                ->description(fn (WorkItem $record): ?string => self::sharedLine($record))
                 ->toggleable();
         }
 
@@ -122,7 +136,23 @@ final class WorkItemTable
                 ->badge()
                 ->color('danger')
                 ->placeholder('–')
+                ->visible(fn (): bool => ! WorkItemQueries::extendedUi())
                 ->toggleable(),
+            // D-219: dort seviyeli kritiklik.
+            TextColumn::make('priority')
+                ->label(__('work_item.table.priority'))
+                ->state(fn (WorkItem $record): WorkItemPriority => $record->priorityLevel())
+                ->badge()
+                ->sortable(query: fn (Builder $query, string $direction): Builder => app(WorkItemQueries::class)->orderByPriority($query, $direction))
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->toggleable(),
+            TextColumn::make('discipline')
+                ->label(__('work_item.table.discipline'))
+                ->badge()
+                ->color('gray')
+                ->placeholder('–')
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('requester')
                 ->label(__('work_item.table.requester'))
                 ->state(fn (WorkItem $record): ?string => $record->requesterLabel())
@@ -231,7 +261,20 @@ final class WorkItemTable
             Filter::make('critical')
                 ->label(__('work_item.filters.critical'))
                 ->toggle()
+                ->visible(fn (): bool => ! WorkItemQueries::extendedUi())
                 ->query(fn (Builder $query): Builder => app(WorkItemQueries::class)->applyCritical($query)),
+            // D-219: kritiklik ve is grubu suzgecleri.
+            SelectFilter::make('priority')
+                ->label(__('work_item.filters.priority'))
+                ->options(WorkItemPriority::class)
+                ->multiple()
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->query(fn (Builder $query, array $data): Builder => app(WorkItemQueries::class)->applyPriorities($query, array_map(fn ($value): string => $value instanceof \BackedEnum ? (string) $value->value : (string) $value, (array) ($data['values'] ?? [])))),
+            SelectFilter::make('discipline')
+                ->label(__('work_item.filters.discipline'))
+                ->options(WorkDiscipline::class)
+                ->multiple()
+                ->visible(fn (): bool => WorkItemQueries::extendedUi()),
             Filter::make('long_waiting')
                 ->label(__('work_item.filters.long_waiting'))
                 ->toggle()
@@ -290,7 +333,7 @@ final class WorkItemTable
                         ->required(fn (Get $get): bool => self::statusValue($get('status')) === WorkItemStatus::Waiting->value),
                     Select::make('waiting_personnel_id')
                         ->label(__('work_item.fields.waiting_personnel'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->searchable()
                         ->native(false)
                         ->visible(fn (Get $get): bool => self::statusValue($get('status')) === WorkItemStatus::Waiting->value && self::statusValue($get('waiting_kind')) === WorkWaitingKind::Personnel->value),
@@ -336,10 +379,26 @@ final class WorkItemTable
                     }
                 })
                 ->deselectRecordsAfterCompletion(),
+            // D-219: toplu kritiklik (dort seviye).
+            BulkAction::make('setPriority')
+                ->label(__('work_item.actions.set_priority'))
+                ->icon(Heroicon::OutlinedFire)
+                ->color('warning')
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->schema([
+                    Select::make('priority')
+                        ->label(__('work_item.fields.priority'))
+                        ->options(WorkItemPriority::class)
+                        ->required()
+                        ->native(false),
+                ])
+                ->action(fn (Collection $records, array $data) => self::runBulk($records, fn (WorkItem $record) => app(WorkItemService::class)->setPriority($record, self::statusValue($data['priority']))))
+                ->deselectRecordsAfterCompletion(),
             BulkAction::make('markCritical')
                 ->label(__('work_item.actions.mark_critical'))
                 ->icon(Heroicon::OutlinedExclamationTriangle)
-                ->color('danger')
+                // Kirmizi yalniz silme icindir (14 Ekim 2026).
+                ->color('warning')
                 ->action(fn (Collection $records) => self::runBulk($records, fn (WorkItem $record) => app(WorkItemService::class)->setCritical($record, true)))
                 ->deselectRecordsAfterCompletion(),
             BulkAction::make('unmarkCritical')
@@ -349,6 +408,26 @@ final class WorkItemTable
                 ->action(fn (Collection $records) => self::runBulk($records, fn (WorkItem $record) => app(WorkItemService::class)->setCritical($record, false)))
                 ->deselectRecordsAfterCompletion(),
         ])->label(__('work_item.actions.bulk'));
+    }
+
+    /** Personel sutununun alt satiri (D-219): diger sorumlular ya da Tum ekip. */
+    private static function sharedLine(WorkItem $record): ?string
+    {
+        if (! WorkItemQueries::extendedUi()) {
+            return null;
+        }
+
+        $parts = [];
+
+        if ((bool) $record->getAttribute('for_everyone')) {
+            $parts[] = __('work_item.values.for_everyone');
+        }
+
+        if ($record->relationLoaded('assignees') && $record->assignees->isNotEmpty()) {
+            $parts[] = '+ '.$record->assignees->pluck('full_name')->implode(', ');
+        }
+
+        return $parts === [] ? null : implode(' · ', $parts);
     }
 
     /**

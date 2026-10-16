@@ -27,39 +27,34 @@ final class ReferenceOptions
     }
 
     /**
-     * Para birimi listesi; anahtar ISO kodu (kaydedilen deger degismez),
-     * etiket simge + ad ("[TL simgesi] Turk lirasi", "lei Rumen leyi") —
-     * D-180 (8 Ekim 2026): ISO kodu ("TRY") ekranda hic gorulmez; 10 Eylul
-     * 2026'daki "yalniz kod" etiketinin yerini alir.
+     * Secilebilen para birimleri; anahtar ISO kodu (kaydedilen deger
+     * degismez), etiket simge + ad ("[TL simgesi] Turk lirasi", "lei Rumen
+     * leyi"; D-180: ISO kodu ekranda gorulmez).
+     *
+     * Yalniz config `konelsis.currencies` listesi (TRY, USD, EUR, RON):
+     * 16 Eylul 2026 kullanici karari (D-101) potansiyel is ve teklif icindi;
+     * 15 Ekim 2026'da kullanici ("Ben sana para birimi ile ilgili sadece belli
+     * para birimleri gorunecek demistim") butun ekranlara genisletti (D-213):
+     * her para birimi secimi bu listeyi kullanir. Liste veritabanindaki kod
+     * sirasiyla; kesisim bos kalirsa (liste tanimsiz ya da kodlar yuklenmemis)
+     * tum para birimleri doner.
      *
      * @return array<string, string>
      */
     public function currencies(): array
     {
-        return Currency::query()
+        $allowed = array_map(
+            static fn (mixed $code): string => strtoupper(trim((string) $code)),
+            (array) config('konelsis.currencies', []),
+        );
+
+        $all = Currency::query()
             ->orderBy('code')
             ->get(['code', 'name_tr'])
             ->mapWithKeys(static fn (Currency $currency): array => [
                 (string) $currency->code => Money::label((string) $currency->code, $currency->name_tr),
             ])
             ->all();
-    }
-
-    /**
-     * Is dosyasi ve teklifte kullanilan para birimleri (16 Eylul 2026
-     * kullanici karari, D-101): yalniz config `konelsis.offer_currencies`
-     * listesindekiler, veritabanindaki kod sirasiyla. Kesisim bos kalirsa
-     * (liste tanimsiz ya da kodlar yuklenmemis) tum para birimleri doner.
-     *
-     * @return array<string, string>
-     */
-    public function offerCurrencies(): array
-    {
-        $all = $this->currencies();
-        $allowed = array_map(
-            static fn (mixed $code): string => strtoupper(trim((string) $code)),
-            (array) config('konelsis.offer_currencies', []),
-        );
 
         $filtered = array_intersect_key($all, array_flip($allowed));
 

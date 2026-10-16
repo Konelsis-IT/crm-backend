@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Platform\Feature;
 use App\Filament\Exports\BusinessCaseExporter;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
@@ -37,15 +38,9 @@ use Filament\Support\Icons\Heroicon;
  */
 class ViewBusinessCase extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = BusinessCaseResource::class;
-
-    public function getTitle(): string
-    {
-        /** @var BusinessCase $case */
-        $case = $this->getRecord();
-
-        return ($case->caseCode()?->formatted_code ?? '').' · '.$case->title;
-    }
 
     public function content(Schema $schema): Schema
     {

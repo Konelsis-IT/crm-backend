@@ -104,8 +104,7 @@ class ComponentsRelationManager extends RelationManager
             ->heading(__('project_component.relation.title'))
             ->recordTitleAttribute('scope_state')
             ->columns([
-                TextColumn::make('definition.code')
-                    ->label(__('project_component.fields.code')),
+                // Bilesen tanimi katalog kaydidir; kodu gosterilmez (D-130).
                 TextColumn::make('definition.name_tr')
                     ->label(__('project_component.fields.definition')),
                 TextColumn::make('scope_state')

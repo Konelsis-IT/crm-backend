@@ -13,6 +13,7 @@ use App\Models\Project\ProjectStageRequirement;
 use App\Query\Document\DocumentQueries;
 use App\Services\Project\ProjectStageRequirementService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -55,6 +56,7 @@ class RequirementsRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('project_stage_requirement.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),

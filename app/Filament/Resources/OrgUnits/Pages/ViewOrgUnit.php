@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\OrgUnits\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\Personnel\SelfParentNotAllowedException;
 use App\Exceptions\StaleRecordException;
 use App\Filament\Resources\OrgUnits\OrgUnitResource;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ViewOrgUnit extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = OrgUnitResource::class;
 
     protected function getHeaderActions(): array

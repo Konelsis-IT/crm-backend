@@ -5,7 +5,7 @@ return [
     'plural' => 'Dernekler',
 
     'fields' => [
-        'name' => 'Dernek / oda adı',
+        'name' => 'Ad',
         'contacts' => 'Kişi',
     ],
 ];

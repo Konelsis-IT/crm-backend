@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ContractVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
@@ -82,10 +83,12 @@ class MilestonesRelationManager extends RelationManager
             ->heading(__('contract_milestone.relation.title'))
             ->recordTitleAttribute('milestone_code')
             ->columns([
-                TextColumn::make('milestone_code')
-                    ->label(__('contract_milestone.fields.milestone_code')),
-                TextColumn::make('name')
-                    ->label(__('contract_milestone.fields.name')),
+                // Kilometre tasi kodu ayri sutun degil, adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('contract_milestone.fields.name')),
+                    'milestone_code',
+                ),
                 TextColumn::make('planned_on')
                     ->label(__('contract_milestone.fields.planned_on'))
                     ->date('d.m.Y')

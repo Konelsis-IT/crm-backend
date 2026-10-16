@@ -9,9 +9,9 @@ return [
     ],
 
     'fields' => [
-        'affects_baseline' => 'Baseline\'ı etkiler',
+        'affects_baseline' => 'Temel planı etkiler',
         'change_no' => 'Değişiklik no',
-        'change_type' => 'Değişiklik türü',
+        'change_type' => 'Tür',
         'created_at' => 'Oluşturulma',
         'currency' => 'Para birimi',
         'description' => 'Açıklama',

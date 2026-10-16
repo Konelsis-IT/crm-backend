@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WorkRequests\Pages;
 
 use App\Filament\Exports\WorkRequestExporter;
+use App\Filament\Resources\PurchaseNeeds\PurchaseNeedActions;
 use App\Filament\Resources\WorkRequests\WorkRequestResource;
 use App\Filament\Support\ExportActions;
 use App\Query\WorkRequest\WorkRequestQueries;
@@ -31,6 +32,9 @@ class ListWorkRequests extends ListRecords
         return [
             ExportActions::table(WorkRequestExporter::class),
             CreateAction::make()->label(__('work_request.actions.create')),
+            // D-191: satin alma talebi genel taleplerden ayridir (sat-03) ama Talepler'den
+            // de dogrudan acilir; ayni form, Siparis kalemleri > Satin alma talepleri'ne duser.
+            PurchaseNeedActions::createNeed(manual: false),
         ];
     }
 

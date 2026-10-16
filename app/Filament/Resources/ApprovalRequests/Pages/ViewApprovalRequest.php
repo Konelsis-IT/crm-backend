@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalRequests\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Approval\ApprovalDecisionKind;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ApprovalRequests\ApprovalRequestResource;
@@ -33,6 +34,8 @@ use Throwable;
  */
 class ViewApprovalRequest extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ApprovalRequestResource::class;
 
     /**
@@ -54,12 +57,10 @@ class ViewApprovalRequest extends ViewRecord
         }
     }
 
-    public function getTitle(): string
+    /** Konu, ozet kartinda onaylanan kayda baglanti olarak yaziyor; alt baslik tekrar etmez (D-205). */
+    protected function recordSubheading(): ?string
     {
-        /** @var ApprovalRequest $request */
-        $request = $this->getRecord();
-
-        return (string) $request->subject_label;
+        return null;
     }
 
     public function infolist(Schema $schema): Schema

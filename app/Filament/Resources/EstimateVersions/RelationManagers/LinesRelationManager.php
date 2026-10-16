@@ -7,6 +7,7 @@ namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 use App\Enums\Acquisition\CostCategory;
 use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
@@ -115,14 +116,16 @@ class LinesRelationManager extends RelationManager
             ->heading(__('estimate_line.relation.title'))
             ->recordTitleAttribute('line_code')
             ->columns([
-                TextColumn::make('line_code')
-                    ->label(__('estimate_line.fields.line_code')),
                 TextColumn::make('cost_type')
                     ->label(__('estimate_line.fields.cost_type'))
                     ->badge(),
-                TextColumn::make('description')
-                    ->label(__('estimate_line.fields.description'))
-                    ->limit(40),
+                // Kod basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('estimate_line.fields.description'))
+                        ->limit(40),
+                    'line_code',
+                ),
                 TextColumn::make('quantity')
                     ->label(__('estimate_line.fields.quantity')),
                 TextColumn::make('uom.symbol')

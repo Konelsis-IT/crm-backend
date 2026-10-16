@@ -94,10 +94,7 @@ class ComponentDefinitionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('component_definition.fields.code'))
-                    ->searchable()
-                    ->sortable(),
+                // Katalog kodu tabloda gosterilmez (D-130; CodeLine, 14 Ekim 2026).
                 TextColumn::make('name_tr')
                     ->label(__('component_definition.fields.name_tr'))
                     ->searchable(),
@@ -122,7 +119,7 @@ class ComponentDefinitionResource extends Resource
                     }),
             ])
             ->toolbarActions([])
-            ->defaultSort('code');
+            ->defaultSort('name_tr');
     }
 
     public static function getPages(): array

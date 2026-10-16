@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\DepartmentHandoffs;
 
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\DepartmentHandoffs\Pages\EditDepartmentHandoff;
 use App\Filament\Resources\DepartmentHandoffs\Pages\ListDepartmentHandoffs;
 use App\Filament\Resources\DepartmentHandoffs\Pages\ViewDepartmentHandoff;
@@ -31,8 +30,6 @@ class DepartmentHandoffResource extends Resource
     protected static ?string $model = DepartmentHandoff::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 16;
 

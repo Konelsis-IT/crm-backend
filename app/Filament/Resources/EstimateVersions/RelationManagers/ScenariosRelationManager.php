@@ -6,6 +6,7 @@ namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\CodeLine;
 use App\Filament\Forms\Components\MoneyInput;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -87,10 +88,12 @@ class ScenariosRelationManager extends RelationManager
             ->heading(__('pricing_scenario.relation.title'))
             ->recordTitleAttribute('scenario_code')
             ->columns([
-                TextColumn::make('scenario_code')
-                    ->label(__('pricing_scenario.fields.scenario_code')),
-                TextColumn::make('name')
-                    ->label(__('pricing_scenario.fields.name')),
+                // Kod basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('pricing_scenario.fields.name')),
+                    'scenario_code',
+                ),
                 TextColumn::make('target_margin_pct')
                     ->label(__('pricing_scenario.fields.target_margin_pct'))
                     ->suffix('%'),

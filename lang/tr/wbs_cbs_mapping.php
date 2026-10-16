@@ -10,7 +10,7 @@ return [
 
     'fields' => [
         'allocation_pct' => 'Dağılım (%)',
-        'cbs_node' => 'Maliyet kırılımı düğümü',
+        'cbs_node' => 'Maliyet kalemi',
         'cost_category' => 'Maliyet kategorisi',
         'created_at' => 'Oluşturulma',
         'name' => 'Ad',

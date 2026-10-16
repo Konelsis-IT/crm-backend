@@ -22,6 +22,7 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
@@ -57,6 +58,12 @@ class OrgUnitResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('org_unit.plural');
+    }
+
+    /** Sol menude yok; Personel listesindeki dugmeden acilir (D-206, 14 Ekim 2026). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
     }
 
     public static function canAccess(): bool
@@ -100,6 +107,7 @@ class OrgUnitResource extends Resource
                     Select::make('manager_personnel_id')
                         ->label(__('org_unit.fields.manager'))
                         ->relationship('manager', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->native(false),

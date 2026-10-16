@@ -13,7 +13,7 @@ return [
         'description' => 'Açıklama',
         'due_on' => 'Termin',
         'obligation_code' => 'Yükümlülük kodu',
-        'obligation_type' => 'Yükümlülük türü',
+        'obligation_type' => 'Tür',
         'reason' => 'Gerekçe',
         'responsible_party' => 'Sorumlu taraf',
         'status' => 'Durum',

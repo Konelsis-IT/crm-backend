@@ -6,7 +6,6 @@ namespace App\Filament\Support;
 
 use App\Models\Acquisition\Proposal;
 use App\Models\Acquisition\ProposalVersion;
-use App\Query\Personnel\PersonnelQueries;
 use App\Support\Projects\ProjectNames;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -65,7 +64,7 @@ final class ProjectConversionForm
                         ->columnSpan(FieldGrid::WIDE),
                     Select::make('project_manager_employee_id')
                         ->label(__('project.fields.project_manager'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->default(fn (): ?int => $case?->proposal_owner_employee_id ?? $case?->owner_employee_id)
                         ->searchable()
                         ->required()

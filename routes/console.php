@@ -21,3 +21,7 @@ Schedule::command('konelsis:social:remind')->dailyAt('09:00')->timezone('Europe/
 // Gorusme plani ve sonraki adim hatirlatmasi (B34, D-109): 1 gun once ve gunun sabahi;
 // kurum saatiyle 08:30. Sorumlu ve katilan personele zil bildirimi.
 Schedule::command('konelsis:meetings:remind')->dailyAt('08:30')->timezone('Europe/Istanbul')->withoutOverlapping();
+
+// Gorev ve sorumluluklar (B57, D-219): tekrarli islerin bu donemki isleri sorumlunun
+// panosuna acilir; kurum saatiyle 06:30 (gun basinda panoda hazir olsun).
+Schedule::command('konelsis:recurring-works')->dailyAt('06:30')->timezone('Europe/Istanbul')->withoutOverlapping();

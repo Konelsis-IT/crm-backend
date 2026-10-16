@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Reports\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Reports\ReportResource;
@@ -19,6 +20,7 @@ use Illuminate\Validation\ValidationException;
 /** Yazar taslagi ya da revizyon istenen raporu duzenler (ReportPolicy::update). */
 class EditReport extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = ReportResource::class;

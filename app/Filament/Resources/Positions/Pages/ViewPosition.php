@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Positions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\StaleRecordException;
 use App\Filament\Resources\Positions\PositionResource;
 use App\Filament\Support\DomainNotifications;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ViewPosition extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = PositionResource::class;
 
     protected function getHeaderActions(): array

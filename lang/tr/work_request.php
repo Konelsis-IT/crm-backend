@@ -5,6 +5,7 @@ return [
     'plural' => 'Talepler',
 
     'sections' => [
+        'work_items' => 'Bağlı işler',
         'approval' => 'Onay',
         'requester' => 'Kimden',
         'target' => 'Kime',
@@ -17,6 +18,7 @@ return [
     ],
 
     'fields' => [
+        'work_completed_at' => 'Kapanış',
         'attachments' => 'Ekler (dosya, fotoğraf)',
         'approval_policy' => 'Onay politikası',
         'approval_note' => 'Onaycıya not',
@@ -70,6 +72,7 @@ return [
     ],
 
     'help' => [
+        'work_items' => 'Talebe bağlı işler ve durumları. Talep bir kişiye düşünce onun İş panosuna iş açılır; talep kapanınca bağlı işler de kapanır.',
         'description_links' => 'Bağlantıları (örneğin bir sayfa ya da dosya adresi) doğrudan buraya yapıştırabilirsiniz; talepte tıklanabilir olur.',
         'send_to_approval' => 'Onay merciini seçin. Muhatap işi tamamladığında talep bu kişiye onaya gider; onaylanınca kapanır, reddedilirse muhataba geri döner. Onay mercii talep eden ya da muhatap olamaz.',
         'history' => 'Bu talep üzerinde kim, ne zaman, ne yaptı',
@@ -110,6 +113,8 @@ return [
     ],
 
     'values' => [
+        'no_work_items' => 'Bu talebe bağlı iş yok.',
+        'management' => 'Yönetim talebi',
         'unassigned' => 'Henüz atanmadı',
         'approval_required' => 'Onaya tabi',
         'no_history' => 'Henüz hareket yok.',

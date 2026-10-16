@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Projects;
 
+use App\Filament\NavigationGroup;
 use App\Enums\Project\CriticalityProfile;
 use App\Enums\Project\ProjectOrigin;
 use App\Enums\Project\ProjectStatus;
 use App\Exceptions\AbstractException;
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\Projects\Pages\ViewProject;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\ProjectTypeCoordinatorSchema;
 use App\Filament\Support\ProjectWizard;
@@ -42,6 +43,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use UnitEnum;
 
 /**
  * Projeler (D-67, D-68, D-72). Goruntuleme sayfasi calisma alanidir
@@ -55,7 +57,7 @@ class ProjectResource extends Resource
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedRocketLaunch;
 
-    protected static ?string $cluster = ProjectGroup::class;
+    protected static string | UnitEnum | null $navigationGroup = NavigationGroup::OperationsProject;
 
     protected static ?int $navigationSort = 10;
 
@@ -121,20 +123,21 @@ class ProjectResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('businessCode'))
             ->columns([
-                TextColumn::make('businessCode.formatted_code')
-                    ->label(__('project.fields.business_code'))
-                    ->badge()
-                    ->color('gray')
-                    ->searchable(),
                 // D-174: tek sutunda kisa ad, altinda lisans adi; iki adla da aranir.
-                TextColumn::make('name')
-                    ->label(fn (): string => ProjectNames::shortNameEnabled() ? __('project.fields.names') : __('project.fields.name'))
-                    ->formatStateUsing(fn (Project $record): string => $record->display_name)
-                    ->description(fn (Project $record): ?string => ProjectNames::licenseNameIfDifferent($record))
-                    ->limit(40)
-                    ->searchable(query: fn (Builder $query, string $search): Builder => app(ProjectCatalogQueries::class)->searchByName($query, $search))
-                    ->sortable(ProjectNames::schemaReady() ? ['short_name', 'name'] : ['name']),
+                // Proje kodu ayri sutun degil, adin altinda kucuk yazi (CodeLine,
+                // 14 Ekim 2026): "PRJ kodu | lisans adi"; kodla da aranir.
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(fn (): string => ProjectNames::shortNameEnabled() ? __('project.fields.names') : __('project.fields.name'))
+                        ->formatStateUsing(fn (Project $record): string => $record->display_name)
+                        ->limit(40)
+                        ->searchable(query: fn (Builder $query, string $search): Builder => app(ProjectCatalogQueries::class)->searchByName($query, $search))
+                        ->sortable(ProjectNames::schemaReady() ? ['short_name', 'name'] : ['name']),
+                    'businessCode.formatted_code',
+                    fn (Project $record): ?string => ProjectNames::licenseNameIfDifferent($record),
+                ),
                 // D-174: proje tipi rozetleri (tipin rengi ve simgesi, teklif listesindeki gibi).
                 TextColumn::make('scopes.scope_type')
                     ->label(__('project.fields.scope_types'))

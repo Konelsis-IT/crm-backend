@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProjectStageInstances;
 
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\ProjectStageInstances\Pages\EditProjectStageInstance;
 use App\Filament\Resources\ProjectStageInstances\Pages\ListProjectStageInstances;
 use App\Filament\Resources\ProjectStageInstances\Pages\ViewProjectStageInstance;
@@ -18,6 +17,7 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -35,8 +35,6 @@ class ProjectStageInstanceResource extends Resource
     protected static ?string $model = ProjectStageInstance::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedFlag;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 15;
 
@@ -70,6 +68,7 @@ class ProjectStageInstanceResource extends Resource
                         Select::make('owner_personnel_id')
                             ->label(__('project_stage_instance.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->required()
@@ -89,8 +88,7 @@ class ProjectStageInstanceResource extends Resource
                 TextColumn::make('project.display_name')
                     ->label(__('project_stage_instance.fields.project'))
                     ->limit(30),
-                TextColumn::make('stageNode.stage_code')
-                    ->label(__('project_stage_instance.fields.stage_code')),
+                // Asama kodu katalog kodudur, tabloda gosterilmez (D-130; CodeLine, 14 Ekim 2026).
                 TextColumn::make('stageNode.name_tr')
                     ->label(__('project_stage_instance.fields.name')),
                 TextColumn::make('owner.full_name')

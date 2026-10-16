@@ -20,6 +20,7 @@ use App\Models\Party\PartyRole;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Report\Report;
+use App\Query\Personnel\OrganizationQueries;
 use App\Query\Project\ProjectStepReadiness;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\ContactLinks;
@@ -142,6 +143,8 @@ final class CardGallery
             // D-175: "GES koordinatoru" rozeti birimden hemen sonra; satir tek kalsin diye en cok MAX_BADGES.
             badges: array_slice(array_values(array_filter([
                 $personnel->orgUnit !== null ? Text::make((string) $personnel->orgUnit->name)->badge()->color('gray')->icon(Heroicon::OutlinedBuildingOffice2) : null,
+                // D-218: ek gorevinin departmanlari (ornegin Teklif) ayni rozetle.
+                ...array_map(fn (string $name): Text => Text::make($name)->badge()->color('gray')->icon(Heroicon::OutlinedBuildingOffice2), app(OrganizationQueries::class)->extraUnitNamesOf((int) $personnel->getKey())),
                 ...app(ProjectTypeCoordinatorSchema::class)->personnelBadges($personnel),
                 ...array_map(fn (string $name): Text => Text::make($name)->badge()->color('info'), $competencies),
             ])), 0, self::MAX_BADGES),
@@ -183,6 +186,8 @@ final class CardGallery
             status: Text::make($personnel->status->getLabel())->badge()->color($personnel->status->getColor()),
             badges: array_values(array_filter([
                 $personnel->orgUnit !== null ? Text::make((string) $personnel->orgUnit->name)->badge()->color('gray')->icon(Heroicon::OutlinedBuildingOffice2) : null,
+                // D-218: ek gorevinin departmanlari (ornegin Teklif) ayni rozetle.
+                ...array_map(fn (string $name): Text => Text::make($name)->badge()->color('gray')->icon(Heroicon::OutlinedBuildingOffice2), app(OrganizationQueries::class)->extraUnitNamesOf((int) $personnel->getKey())),
                 // D-175: proje tipi koordinatorlugu ("GES koordinatoru").
                 ...app(ProjectTypeCoordinatorSchema::class)->personnelBadges($personnel),
                 ...$personnel->competencies
@@ -227,7 +232,7 @@ final class CardGallery
                 ->label(__('personnel.actions.start_chat'))
                 ->tooltip(__('personnel.actions.start_chat'))
                 ->icon(Heroicon::OutlinedChatBubbleLeftRight)
-                ->color('primary')
+                ->color(ActionColors::SEND)
                 ->link()
                 ->iconButton()
                 ->visible(fn (): bool => ! $personnel->is(auth()->user()))
@@ -256,10 +261,15 @@ final class CardGallery
 
         $entries = [];
 
-        // D-170: kurulusun kisa adi ve uzun adi (unvani) kartta birlikte durur.
+        // D-170: kurulusun kisa adi ve uzun adi (unvani). Kartin basligi gorunen addir
+        // (kisa ad, yoksa uzun ad); ayni ad kartta tekrar yazilmaz (D-205): kisa ad
+        // varsa farkli olan uzun ad, yoksa eksik kisa ad ("-") gorunur.
         if ($party->party_kind === PartyKind::Organization) {
-            $entries[] = $this->entry('trade_name', __('party.fields.trade_name'), $party->shortName() ?? '-', Heroicon::OutlinedTag, 'gray');
-            $entries[] = $this->entry('legal_name', __('party.fields.legal_name'), $party->longName() ?? (string) $party->display_name, Heroicon::OutlinedBuildingOffice2, 'gray');
+            if ($party->shortName() === null) {
+                $entries[] = $this->entry('trade_name', __('party.fields.trade_name'), '-', Heroicon::OutlinedTag, 'gray');
+            } elseif ($party->longNameIfDifferent() !== null) {
+                $entries[] = $this->entry('legal_name', __('party.fields.legal_name'), (string) $party->longNameIfDifferent(), Heroicon::OutlinedBuildingOffice2, 'gray');
+            }
         }
 
         $entries[] = $this->entry('address', __('ui_gallery.entries.address'), $address instanceof Address ? self::addressLine($address) : '-', Heroicon::OutlinedMapPin, 'danger');

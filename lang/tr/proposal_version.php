@@ -27,6 +27,9 @@ return [
         'version_no' => 'Sürüm no',
         'scope_total_cost' => 'Kapsam toplam maliyeti',
         'scope_total_sales' => 'Kapsam toplam satışı',
+        // D-195 (B55): her sürümün kendi teklif durumu; iş akışı durumu ayrı.
+        'offer_status' => 'Teklif durumu',
+        'workflow_status' => 'Sürüm durumu',
     ],
 
     // D-155: marj kapsamdan hesaplanir.

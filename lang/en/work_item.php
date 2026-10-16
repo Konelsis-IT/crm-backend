@@ -34,6 +34,7 @@ return [
     ],
 
     'fields' => [
+        'code' => 'Code',
         'title' => 'Title',
         'personnel' => 'Personnel',
         'org_unit' => 'Department',
@@ -63,6 +64,13 @@ return [
         'note' => 'Note',
         'status_note' => 'Status note',
         'source' => 'Source',
+        // D-219 (B57)
+        'priority' => 'Priority',
+        'assignees' => 'Co-owners',
+        'for_everyone' => 'Whole team',
+        'discipline' => 'Work group',
+        'legacy_no' => 'Former no',
+        'recurring_work' => 'Duty',
     ],
 
     'help' => [
@@ -73,6 +81,8 @@ return [
         'waiting' => 'Required when the status is Waiting; the waiting days are counted from it.',
         'durations' => 'Computed from the status history, never entered by hand.',
         'delete' => 'Only manually entered cards are deleted; change the status of an automatic card instead.',
+        'assignees' => 'People who carry the work with the owner; it appears on all their boards.',
+        'for_everyone' => 'Work given to the whole team: the selected department, or everyone when none is selected.',
     ],
 
     'values' => [
@@ -99,6 +109,7 @@ return [
         'due_passed' => 'due :date passed',
         'due_on' => 'due :date',
         'on_time' => 'on time',
+        'for_everyone' => 'Whole team',
     ],
 
     'widget' => [
@@ -115,6 +126,19 @@ return [
             'today' => 'Today (:count)',
             'tomorrow' => 'Tomorrow (:count)',
         ],
+        // D-217: scope choice.
+        'scopes' => [
+            'mine' => 'My work',
+            'assigned' => 'Work I assigned',
+            'all' => 'Whole company',
+        ],
+        'filters' => [
+            'project' => 'Project',
+            'unit' => 'Department',
+            'all_projects' => 'All projects',
+            'all_units' => 'All departments',
+        ],
+        'shared' => 'Shared work',
         'columns' => [
             'title' => 'Title',
             'project' => 'Project',
@@ -146,6 +170,8 @@ return [
         'parent_of' => 'Parent job: :title',
         'empty' => 'No work items match these filters',
         'empty_help' => 'Cards are entered on the Work board; your system actions come to the board as suggestions.',
+        'priority' => 'Priority',
+        'discipline' => 'Work group',
     ],
 
     'filters' => [
@@ -162,6 +188,8 @@ return [
         'source' => 'Source',
         'critical' => 'Critical only',
         'long_waiting' => 'Waiting > 7 days',
+        'priority' => 'Priority',
+        'discipline' => 'Work group',
     ],
 
     'ranges' => [
@@ -185,6 +213,51 @@ return [
         'open_matrix' => 'Open control matrix',
         'delete' => 'Delete card',
         'delete_heading' => 'Delete the card?',
+        'set_priority' => 'Set priority',
+        'priority_label' => 'Priority: :level',
+    ],
+
+    // D-216: request-linked work (activity notes, status dialog, list marker).
+    'request_link' => [
+        'moved' => 'Request :no moved to someone else.',
+        'closed' => 'Request :no closed (:status).',
+        'close_question' => 'Close the request as completed? (:no)',
+        'close_help' => 'Yes also completes the linked request; the requester is notified.',
+        'close_help_approval' => 'The request needs approval: yes sends it to the approver.',
+        'management' => 'Management request',
+        'management_hint' => 'Requested by top management; done before staff requests.',
+    ],
+
+    'notes' => [
+        'title' => 'Notes',
+        'help' => 'Dated updates on the work, newest first. Notes are not edited; a new one is written.',
+        'noted_at' => 'Date',
+        'noted_on' => 'Note date',
+        'body' => 'Note',
+        'source' => 'Source',
+        'source_placeholder' => 'Mail, WhatsApp, meeting...',
+        'author' => 'Author',
+        'imported' => 'Imported',
+        'add' => 'Add note',
+        'added' => 'Note added.',
+        'empty' => 'No notes on this work yet',
+    ],
+    'files' => [
+        'title' => 'Documents',
+        'help' => 'Documents of the work; click a row to open it in a new tab.',
+        'name' => 'Document',
+        'size' => 'Size',
+        'added_at' => 'Added',
+        'files' => 'Files',
+        'files_help' => 'You can choose several files; at most :size per file.',
+        'add' => 'Add documents',
+        'added' => ':count document(s) added.',
+        'download' => 'Download',
+        'remove' => 'Remove',
+        'remove_heading' => 'Remove the document from this work?',
+        'remove_help' => 'Only the link to this work is removed; the file stays where else it is used.',
+        'removed' => 'Document removed.',
+        'empty' => 'No documents on this work yet',
     ],
 
     'notifications' => [
@@ -327,6 +400,23 @@ return [
         'project_approval' => 'Project approval',
         'preliminary_acceptance' => 'Preliminary acceptance',
         'provisional_acceptance' => 'Provisional acceptance',
+        // D-217: chairman's work area.
+        'construction' => 'Construction',
+        'projects' => 'Projects',
+        'legal' => 'Legal',
+        'stock_market' => 'Stock market',
+        'finance' => 'Finance',
+        'hr_isg' => 'HR / OHS',
+        'service' => 'Service',
+        'it_media' => 'IT / Media',
+        'software_commissioning' => 'Software / Commissioning',
+        'new_investments' => 'New investments',
+        'existing_investments' => 'Existing investments',
+        'romania' => 'Romania',
+        'proposal' => 'Proposal',
+        'rents' => 'Rents',
+        'internal_order' => 'In-house order',
+        'purchasing' => 'Purchasing',
     ],
 
     'control' => [
@@ -622,6 +712,15 @@ return [
         'drop_here' => 'Drop here',
         'new_tag' => 'New',
         'critical_tag' => 'Critical',
+        // D-216: management priority and request-linked work.
+        'management_tag' => 'Management',
+        'management_hint' => 'Requested by top management; done before staff requests',
+        'request_tag_hint' => 'Linked request: :title',
+        'request_close_question' => 'Close the request as completed?',
+        'request_close_yes' => 'Yes, close it',
+        'request_close_no' => 'No, keep it open',
+        'request_close_approval' => 'The request needs approval: closing sends it to the approver.',
+        'request_closed' => 'Work completed, request :no closed.',
         'parent_of' => 'Parent job: :title',
         'children_n' => ':n child cards',
 
@@ -661,6 +760,26 @@ return [
         'day_title' => 'Turn into daily report',
         'day_cards' => 'Cards of the day',
         'cards_n' => ':n cards',
+        // D-219
+        'menu_priority' => 'Priority',
+        'field_priority' => 'Priority',
+        'field_discipline' => 'Work group',
+        'field_assignees' => 'Co-owners',
+        'field_assignees_help' => 'People working on it together; it appears on all their boards.',
+        'field_assignees_add' => 'Add person',
+        'field_for_everyone' => 'Whole team',
+        'field_for_everyone_help' => 'Work given to the whole department (everyone when no department is set).',
+        'for_everyone_tag' => 'Whole team',
+        'notes_n' => ':n notes',
+        'notes_hint' => 'Notes on the work page',
+        'files_n' => ':n documents',
+        'files_hint' => 'Documents on the work page',
+        'lanes_open_all' => 'Open all',
+        'lanes_close_all' => 'Close all',
+        'lane_open' => 'Open board',
+        'lane_close' => 'Close board',
+        'open_n' => ':n open',
+        'critical_n' => ':n critical',
         'summary' => 'Summary',
         'summary_help' => 'Optional; generated from the card titles when empty',
         'blockers' => 'Blockers',

@@ -11,6 +11,8 @@ use App\Filament\Resources\WorkItems\Pages\CreateWorkItem;
 use App\Filament\Resources\WorkItems\Pages\EditWorkItem;
 use App\Filament\Resources\WorkItems\Pages\ListWorkItems;
 use App\Filament\Resources\WorkItems\Pages\ViewWorkItem;
+use App\Filament\Resources\WorkItems\RelationManagers\WorkItemFilesRelationManager;
+use App\Filament\Resources\WorkItems\RelationManagers\WorkItemNotesRelationManager;
 use App\Filament\Resources\WorkItems\Schemas\WorkItemForm;
 use App\Filament\Resources\WorkItems\Schemas\WorkItemInfolist;
 use App\Filament\Resources\WorkItems\Tables\WorkItemTable;
@@ -89,6 +91,15 @@ class WorkItemResource extends Resource
     public static function table(Table $table): Table
     {
         return WorkItemTable::make($table);
+    }
+
+    public static function getRelations(): array
+    {
+        // D-219: isin notlari ve belgeleri detayin altinda.
+        return [
+            WorkItemNotesRelationManager::class,
+            WorkItemFilesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

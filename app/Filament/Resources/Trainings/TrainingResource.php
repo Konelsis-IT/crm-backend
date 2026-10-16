@@ -109,10 +109,7 @@ class TrainingResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('training.fields.code'))
-                    ->searchable()
-                    ->sortable(),
+                // D-130: katalog kodu tabloda gosterilmez (14 Ekim 2026, kod sutunu kaldirildi).
                 TextColumn::make('name')
                     ->label(__('training.fields.name'))
                     ->searchable()

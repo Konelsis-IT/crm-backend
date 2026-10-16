@@ -10,7 +10,7 @@ return [
 
     'fields' => [
         'code' => 'Kod',
-        'name' => 'Tip adı',
+        'name' => 'Ad',
         'discipline' => 'Disiplin',
         'numbering_prefix' => 'Numaralandırma öneki',
         'is_controlled' => 'Kontrollü doküman',

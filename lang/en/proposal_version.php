@@ -27,6 +27,9 @@ return [
         'version_no' => 'Version no',
         'scope_total_cost' => 'Scope total cost',
         'scope_total_sales' => 'Scope total sales',
+        // D-195 (B55): each version's own offer status; the workflow status is separate.
+        'offer_status' => 'Offer status',
+        'workflow_status' => 'Version status',
     ],
 
     'help' => [

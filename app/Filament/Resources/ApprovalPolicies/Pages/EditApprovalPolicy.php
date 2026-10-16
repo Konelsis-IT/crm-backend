@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalPolicies\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\ApprovalPolicies\ApprovalPolicyResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Approval\ApprovalPolicyService;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 
 class EditApprovalPolicy extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = ApprovalPolicyResource::class;
@@ -23,7 +24,7 @@ class EditApprovalPolicy extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

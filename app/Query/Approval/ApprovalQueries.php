@@ -17,6 +17,7 @@ use App\Models\Authorization\Role;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Onay ekranlarinin okuma sorgulari: onay kutusu sayaci, sekme suzgecleri,
@@ -214,5 +215,20 @@ final class ApprovalQueries
             ->get()
             ->map(fn (ApprovalStep $step): string => $step->sequence_no.'. '.$step->localizedName())
             ->all();
+    }
+
+    /**
+     * Gecerli ve baslayacak vekaletler (Personel listesindeki "Vekaletler"
+     * penceresi, D-206): baslangica gore sirali.
+     *
+     * @return Collection<int, Delegation>
+     */
+    public function openDelegations(): Collection
+    {
+        return Delegation::query()
+            ->with(['grantor:id,full_name', 'delegate:id,full_name'])
+            ->whereIn('status', [DelegationStatus::Pending->value, DelegationStatus::Active->value])
+            ->orderBy('valid_from')
+            ->get();
     }
 }

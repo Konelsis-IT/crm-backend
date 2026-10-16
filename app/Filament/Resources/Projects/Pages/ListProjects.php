@@ -8,6 +8,7 @@ use App\Filament\Concerns\InteractsWithCardView;
 use App\Filament\Contracts\HasCardView;
 use App\Filament\Exports\ProjectExporter;
 use App\Filament\Resources\Projects\ProjectResource;
+use App\Filament\Resources\Projects\ProjectTypeCoordinatorsAction;
 use App\Filament\Support\CardGallery;
 use App\Filament\Support\ExportActions;
 use App\Models\Project\Project;
@@ -36,6 +37,8 @@ class ListProjects extends ListRecords implements HasCardView
         return [
             $this->cardViewToggleAction(),
             ExportActions::table(ProjectExporter::class),
+            // D-206: koordinatorler ayri menu degil, bu listeden pencere olarak.
+            ProjectTypeCoordinatorsAction::make(),
             CreateAction::make()
                 ->label(__('project.actions.create_direct'))
                 ->icon(Heroicon::OutlinedRocketLaunch),

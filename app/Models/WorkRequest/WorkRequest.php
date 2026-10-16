@@ -20,6 +20,7 @@ use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\ComponentDefinition;
 use App\Models\Project\Project;
+use App\Models\Report\WorkItem;
 use App\Policies\WorkRequestPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -109,6 +110,12 @@ class WorkRequest extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(WorkRequestMessage::class, 'work_request_id')->orderBy('id');
+    }
+
+    /** Talebe bagli isler (D-216): is kartindaki "Bagli kayit: Talep". */
+    public function workItems(): HasMany
+    {
+        return $this->hasMany(WorkItem::class, 'linked_work_request_id');
     }
 
     /** Hareket kaydindaki metin kimlik. */

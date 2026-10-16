@@ -6,6 +6,7 @@ namespace App\Filament\Resources\EstimateVersions\RelationManagers;
 
 use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
@@ -89,11 +90,13 @@ class BoqItemsRelationManager extends RelationManager
             ->heading(__('boq_item.relation.title'))
             ->recordTitleAttribute('item_code')
             ->columns([
-                TextColumn::make('item_code')
-                    ->label(__('boq_item.fields.item_code')),
-                TextColumn::make('description')
-                    ->label(__('boq_item.fields.description'))
-                    ->limit(40),
+                // Kod basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('boq_item.fields.description'))
+                        ->limit(40),
+                    'item_code',
+                ),
                 TextColumn::make('quantity')
                     ->label(__('boq_item.fields.quantity')),
                 TextColumn::make('uom.symbol')

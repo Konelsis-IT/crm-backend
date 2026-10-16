@@ -85,6 +85,36 @@ final class ProjectTypeCoordinatorService extends AbstractService
         });
     }
 
+    /**
+     * Proje listesindeki "Proje tipi koordinatorleri" penceresi (D-206): her tipin
+     * koordinatoru tek kayitla; bos birakilan tipin koordinatoru kaldirilir,
+     * degismeyen tipe dokunulmaz. Hepsi tek islemde.
+     *
+     * @param  array<string, int|null>  $assignments  tip => personel (null = koordinator yok)
+     * @return int degisen tip sayisi
+     */
+    public function sync(array $assignments): int
+    {
+        return $this->transactions->run(function () use ($assignments): int {
+            $changed = 0;
+
+            foreach ($assignments as $type => $personnelId) {
+                $type = ProjectScopeType::from((string) $type);
+                $current = $this->currentRow($type);
+                $currentId = $current !== null ? (int) $current->getAttribute('personnel_id') : null;
+
+                if ($personnelId === $currentId) {
+                    continue;
+                }
+
+                $personnelId === null ? $this->remove($type) : $this->assign($type, $personnelId);
+                $changed++;
+            }
+
+            return $changed;
+        });
+    }
+
     /** Atama satiri silinmez (gecmis kalir); remove() kullanilir. */
     public function delete(Model|int|string $record): bool
     {

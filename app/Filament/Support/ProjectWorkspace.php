@@ -134,7 +134,8 @@ final class ProjectWorkspace
                 ->icon(Heroicon::OutlinedDocumentCheck)
                 ->iconColor('gray')
                 ->weight(FontWeight::Medium)
-                ->visible(ProjectNames::shortNameEnabled()),
+                // Kisa ad yoksa lisans adi zaten sayfanin alt basligi; tekrar yazilmaz (D-205).
+                ->visible(ProjectNames::shortNameEnabled() && (string) $project->name !== (string) $project->display_name),
             TextEntry::make('customer_party')
                 ->label(__('project.fields.customer_party'))
                 ->state($customer?->display_name ?? '-')

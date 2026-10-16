@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Enums\Acquisition\OfferStatus;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\Parties\PartyResource;
 use App\Filament\Resources\Personnel\PersonnelResource;
@@ -56,8 +57,11 @@ final class ProposalDetail
             Text::make((string) $proposal->status?->getLabel())->badge()->color($proposal->status?->getColor() ?? 'gray'),
         ];
 
-        if (SchemaReadiness::hasBatch('B29') && $proposal->offer_status !== null) {
-            $badges[] = Text::make((string) $proposal->offer_status->getLabel())->badge()->color($proposal->offer_status->getColor())->icon(Heroicon::OutlinedFlag);
+        // D-195: teklifin durumu guncel surumun kendi teklif durumudur.
+        $offer = SchemaReadiness::hasBatch('B29') ? $proposal->currentOfferStatus() : null;
+
+        if ($offer !== null) {
+            $badges[] = Text::make((string) $offer->getLabel())->badge()->color($offer->getColor())->icon(Heroicon::OutlinedFlag);
         }
 
         // D-181: "Secili" rozeti kaldirildi; secili teklif kavrami yok.
@@ -147,14 +151,26 @@ final class ProposalDetail
             ? [$entry('scope_total_sales', __('proposal_version.fields.scope_total_sales'), Money::format(ProposalVersionScopeService::totalSales($version->scopes), $version->currency_code), Heroicon::OutlinedCalculator, 'success')]
             : [];
 
+        // D-195 (B55): her surumun kendi teklif durumu (Verilecek / Verilen ...),
+        // surumun is akisi durumunun (Yerini aldi ...) yaninda.
+        $offerStatus = SchemaReadiness::hasBatch('B55') ? [
+            TextEntry::make($prefix.'_offer_status')
+                ->label(__('proposal_version.fields.offer_status'))
+                ->state($version->offer_status?->getLabel() ?? '-')
+                ->badge()
+                ->icon(Heroicon::OutlinedFlag)
+                ->color($version->offer_status?->getColor() ?? 'gray'),
+        ] : [];
+
         return Section::make($heading)
             ->icon(Heroicon::OutlinedDocumentDuplicate)
             ->compact()
             ->components([
                 Grid::make(['default' => 1, 'md' => 2, 'xl' => 3])
                     ->components([
+                        ...$offerStatus,
                         TextEntry::make($prefix.'_status')
-                            ->label(__('proposal_version.fields.status'))
+                            ->label(__($offerStatus !== [] ? 'proposal_version.fields.workflow_status' : 'proposal_version.fields.status'))
                             ->state($version->status?->getLabel() ?? '-')
                             ->badge()
                             ->color($version->status?->getColor() ?? 'gray'),
@@ -193,20 +209,30 @@ final class ProposalDetail
         }
 
         $actions = [];
+        // D-195 (B55): her surumun kendi teklif durumu numarasinin yaninda rozet
+        // ("Surum 1 · 05.10.2026  [Verilen teklif]"); surum durumu pencerede.
+        $b55 = SchemaReadiness::hasBatch('B55');
 
         foreach ($versions as $version) {
             /** @var ProposalVersion $version */
             $isCurrent = (int) $version->getKey() === (int) $proposal->current_version_id;
             $date = $version->created_at?->timezone(DisplayTime::zone())->format('d.m.Y') ?? '-';
             $status = (string) ($version->status?->getLabel() ?? '-');
+            $offer = $b55 ? $version->offer_status : null;
 
             $actions[] = Action::make('version_'.$version->getKey())
-                ->label(__($isCurrent ? 'proposal.versions.current' : 'proposal.versions.item', ['no' => $version->version_no, 'status' => $status, 'date' => $date]))
+                ->label($b55
+                    ? __($isCurrent ? 'proposal.versions.current_offer' : 'proposal.versions.item_offer', ['no' => $version->version_no, 'date' => $date])
+                    : __($isCurrent ? 'proposal.versions.current' : 'proposal.versions.item', ['no' => $version->version_no, 'status' => $status, 'date' => $date]))
+                ->badge($offer?->getLabel())
+                ->badgeColor($offer?->getColor() ?? 'gray')
                 ->icon($isCurrent ? Heroicon::OutlinedCheckCircle : Heroicon::OutlinedDocumentDuplicate)
                 ->color($isCurrent ? 'success' : 'gray')
                 ->disabled($isCurrent)
                 ->modalHeading(__('proposal.sections.version', ['no' => $version->version_no]).' · '.$proposal->proposal_no)
-                ->modalDescription(__('proposal.versions.modal_description', ['status' => $status, 'date' => $date]))
+                ->modalDescription($b55
+                    ? __('proposal.versions.modal_description_offer', ['offer' => (string) ($offer?->getLabel() ?? '-'), 'status' => $status, 'date' => $date])
+                    : __('proposal.versions.modal_description', ['status' => $status, 'date' => $date]))
                 ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
                 ->modalWidth(Width::SixExtraLarge)
                 ->modalSubmitAction(false)
@@ -267,12 +293,26 @@ final class ProposalDetail
             ->icon(Heroicon::OutlinedDocumentDuplicate)
             ->color(ActionColors::CREATE)
             ->url(ProposalResource::getUrl('new-version', ['record' => $proposal]))
-            ->visible(fn (): bool => ! (bool) $proposal->getAttribute('is_draft') && Gate::allows('update', $proposal));
+            ->visible(fn (): bool => ! (bool) $proposal->getAttribute('is_draft')
+                // D-195: Onaylandi ve Kacan firsat kapanistir (D-182); yeni surum teklifi
+                // Verilecek'e dondururdu, potansiyel is ise Kazanildi / Kaybedildi kalirdi.
+                && ! in_array($proposal->currentOfferStatus(), [OfferStatus::Approved, OfferStatus::Lost], true)
+                && Gate::allows('update', $proposal));
     }
 
-    private static function versionLine(ProposalVersion $version): string
+    /**
+     * "Surum 2 · Verilecek teklif": B55 ile surumun kendi teklif durumu (D-195),
+     * oncesinde surumun is akisi durumu ("Surum 2 · Taslak"). Teklif kartinda
+     * ve "Bu is nerede?" etiketlerinde kullanilir.
+     */
+    public static function versionLine(ProposalVersion $version): string
     {
-        return __('proposal.steps.version', ['no' => $version->version_no, 'status' => (string) ($version->status?->getLabel() ?? '-')]);
+        $offer = SchemaReadiness::hasBatch('B55') ? $version->offer_status : null;
+
+        return __('proposal.steps.version', [
+            'no' => $version->version_no,
+            'status' => (string) ($offer?->getLabel() ?? $version->status?->getLabel() ?? '-'),
+        ]);
     }
 
     private static function money(?ProposalVersion $version): string

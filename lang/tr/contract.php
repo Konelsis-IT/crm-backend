@@ -11,9 +11,9 @@ return [
     'fields' => [
         'business_case' => 'Potansiyel iş',
         'contract_no' => 'Sözleşme no',
-        'contract_type' => 'Sözleşme türü',
+        'contract_type' => 'Tür',
         'created_at' => 'Oluşturulma',
-        'current_version' => 'Güncel sürüm',
+        'current_version' => 'Sürüm',
         // D-167: müşteri yerine işveren.
         'customer_party' => 'İşveren',
         'effective_from' => 'Yürürlük başlangıcı',

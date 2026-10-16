@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Proposals\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
@@ -21,7 +22,6 @@ use App\Models\Acquisition\Proposal;
 use App\Services\Acquisition\AcquisitionIntakeService;
 use App\Services\Acquisition\ProposalService;
 use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Component;
@@ -46,6 +46,7 @@ use Livewire\Attributes\Url;
  */
 class EditProposal extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
     use HasSaveableWizard {
         form as protected wizardForm;
@@ -139,7 +140,7 @@ class EditProposal extends EditRecord
             // D-184: "Tum belgeleri indir" baslikta da (yalniz simge, ipucunda adi);
             // Dokumanlar sekmesindeki dugme kalir.
             DocumentBundleAction::proposalHeader($proposal),
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

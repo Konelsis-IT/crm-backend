@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ProposalVersions\RelationManagers;
 
 use App\Enums\Acquisition\ComplianceState;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\ComplianceItem;
@@ -84,11 +85,13 @@ class ComplianceItemsRelationManager extends RelationManager
             ->heading(__('compliance_item.relation.title'))
             ->recordTitleAttribute('requirement_code')
             ->columns([
-                TextColumn::make('requirement_code')
-                    ->label(__('compliance_item.fields.requirement_code')),
-                TextColumn::make('description')
-                    ->label(__('compliance_item.fields.description'))
-                    ->limit(50),
+                // Madde kodu ayri sutun degil, aciklamanin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('compliance_item.fields.description'))
+                        ->limit(50),
+                    'requirement_code',
+                ),
                 TextColumn::make('compliance_state')
                     ->label(__('compliance_item.fields.compliance_state'))
                     ->badge(),

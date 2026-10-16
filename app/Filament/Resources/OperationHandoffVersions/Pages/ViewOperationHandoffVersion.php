@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\OperationHandoffVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Acquisition\ReviewDecision;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\OperationHandoffVersions\OperationHandoffVersionResource;
@@ -22,6 +23,8 @@ use Filament\Support\Icons\Heroicon;
 
 class ViewOperationHandoffVersion extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = OperationHandoffVersionResource::class;
 
     protected function getHeaderActions(): array
@@ -64,7 +67,7 @@ class ViewOperationHandoffVersion extends ViewRecord
                 ->maxLength(255),
             Select::make('project_manager_employee_id')
                 ->label(__('operation_handoff_version.fields.project_manager'))
-                ->options(fn (): array => app(\App\Query\Personnel\PersonnelQueries::class)->personnelOptions())
+                ->tap(\App\Filament\Support\PersonnelSelect::all())
                 ->searchable()
                 ->native(false),
             TextInput::make('site_location')

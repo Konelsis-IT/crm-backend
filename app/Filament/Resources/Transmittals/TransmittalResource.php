@@ -21,6 +21,7 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -106,6 +107,7 @@ class TransmittalResource extends Resource
                     Select::make('issued_by_personnel_id')
                         ->label(__('transmittal.fields.issuer'))
                         ->relationship('issuer', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->native(false),

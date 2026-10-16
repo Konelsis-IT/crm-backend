@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Reports\Tables;
 use App\Enums\Report\ReportKind;
 use App\Enums\Report\ReportStatus;
 use App\Filament\Resources\Reports\ReportActions;
+use App\Filament\Support\CodeLine;
 use App\Models\Report\Report;
 use App\Reports\ReportTemplateRegistry;
 use Filament\Actions\ViewAction;
@@ -24,17 +25,17 @@ final class ReportTable
     {
         return $table
             ->columns([
-                TextColumn::make('report_no')
-                    ->label(__('report.fields.report_no'))
-                    ->searchable()
-                    ->badge()
-                    ->color('gray'),
-                TextColumn::make('title')
-                    ->label(__('report.fields.title'))
-                    ->searchable()
-                    ->weight('semibold')
-                    ->description(fn (Report $record): ?string => filled($record->summary) ? Str::limit((string) $record->summary, 90) : null)
-                    ->wrap(),
+                // Rapor no ayri sutun degil, basligin altinda kucuk yazi; ozet kodun
+                // yaninda (CodeLine, 14 Ekim 2026). Arama baslik ve numaradan yapilir.
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('report.fields.title'))
+                        ->searchable(['title', 'report_no'])
+                        ->weight('semibold')
+                        ->wrap(),
+                    'report_no',
+                    fn (Report $record): ?string => filled($record->summary) ? Str::limit((string) $record->summary, 90) : null,
+                ),
                 TextColumn::make('template_code')
                     ->label(__('report.fields.template'))
                     ->formatStateUsing(fn (Report $record): string => $record->templateName())

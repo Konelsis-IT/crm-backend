@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel;
 
+use App\Filament\Resources\Personnel\RelationManagers\RecurringWorksRelationManager;
 use App\Filament\NavigationGroup;
+use App\Filament\Resources\Delegations\DelegationResource;
+use App\Filament\Resources\OrgUnits\OrgUnitResource;
+use App\Filament\Resources\Positions\PositionResource;
 use App\Filament\Resources\Personnel\Pages\CreatePersonnelRecord;
 use App\Filament\Resources\Personnel\Pages\EditPersonnelRecord;
 use App\Filament\Resources\Personnel\Pages\ListPersonnelRecords;
@@ -63,6 +67,20 @@ class PersonnelResource extends Resource
         return FeatureFlags::enabled(Feature::Personnel)
             && SchemaReadiness::hasBatch('B02')
             && parent::canAccess();
+    }
+
+    /**
+     * Organizasyon birimleri, pozisyonlar ve vekaletler sol menude degil, Personel
+     * listesindeki dugmelerden acilir (D-206); o sayfalarda da Personel secili gorunur.
+     */
+    public static function getNavigationItemActiveRoutePattern(): string | array
+    {
+        return [
+            static::getRouteBaseName().'.*',
+            OrgUnitResource::getRouteBaseName().'.*',
+            PositionResource::getRouteBaseName().'.*',
+            DelegationResource::getRouteBaseName().'.*',
+        ];
     }
 
     public static function form(Schema $schema): Schema
@@ -126,6 +144,11 @@ class PersonnelResource extends Resource
         if (SchemaReadiness::hasBatch('B36')) {
             $relations[] = WorkItemsRelationManager::class;
             $relations[] = ControlReportsRelationManager::class;
+        }
+
+        // Gorev ve sorumluluklar (B57, D-219).
+        if (SchemaReadiness::hasBatch('B57')) {
+            $relations[] = RecurringWorksRelationManager::class;
         }
 
         return $relations;

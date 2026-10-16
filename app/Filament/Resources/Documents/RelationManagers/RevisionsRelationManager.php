@@ -19,6 +19,7 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
@@ -83,6 +84,7 @@ class RevisionsRelationManager extends RelationManager
                     Select::make('checked_by_personnel_id')
                         ->label(__('document_revision.fields.checker'))
                         ->relationship('checker', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->native(false),

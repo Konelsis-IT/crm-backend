@@ -1522,6 +1522,27 @@ body:has(#konelsis-chat-root) .fi-main {
 .kc-stat-orange .fi-wi-stats-overview-stat-value,
 .kc-stat-orange .fi-icon { color: var(--orange-500); }
 
+.kc-stat-success .fi-wi-stats-overview-stat-value,
+.kc-stat-success .fi-icon { color: var(--success-600); }
+
+.kc-stat-gray .fi-wi-stats-overview-stat-value,
+.kc-stat-gray .fi-icon { color: var(--gray-500); }
+
+/* Yeni pano taslagi (D-207): liste sekmeleri kaydirinca ustte sabit kalir
+ * (12 Ekim notlari: "ust sabit"). */
+.kc-sticky-tabs > .fi-tabs {
+    position: sticky;
+    top: 4rem;
+    z-index: 15;
+    background-color: #fff;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+}
+
+.kc-sticky-tabs > .fi-tabs:where(.dark, .dark *) {
+    background-color: var(--gray-900);
+}
+
 /* Gorevlerim ve islerim: sekmeler (tablo arac cubugu eylemleri). */
 .kc-tab.fi-link {
     padding-block: 0.375rem;
@@ -2032,6 +2053,54 @@ a.kc-file-chip__open:hover .kc-file-chip__name {
     color: var(--warning-400);
 }
 
+/* Acil satir (15 Ekim 2026, Satin alinacaklar): acik kirmizi zemin, solda kirmizi cizgi. */
+.fi-ta-row.kc-urgent-row {
+    background-color: color-mix(in oklab, var(--danger-50) 85%, transparent);
+}
+
+.fi-ta-row.kc-urgent-row > td:first-child {
+    box-shadow: inset 3px 0 0 var(--danger-500);
+}
+
+.fi-ta-row.kc-urgent-row.fi-clickable:hover {
+    background-color: var(--danger-100);
+}
+
+.fi-ta-row.kc-urgent-row:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--danger-500) 10%, transparent);
+}
+
+.fi-ta-row.kc-urgent-row.fi-clickable:where(.dark, .dark *):hover {
+    background-color: color-mix(in oklab, var(--danger-500) 16%, transparent);
+}
+
+/* Sicaklik satiri (15 Ekim 2026, Is Gelistirme): satir sicaklik renginde
+   (soguk mavi, ilik amber, sicak turuncu, yanan kirmizi; ChecklistTemplates::heatLevel). */
+.fi-ta-row.kc-heat-row--cold { --kc-heat: #3b82f6; }
+.fi-ta-row.kc-heat-row--warm { --kc-heat: #f59e0b; }
+.fi-ta-row.kc-heat-row--hot { --kc-heat: #f97316; }
+.fi-ta-row.kc-heat-row--burning { --kc-heat: #e11d48; }
+
+.fi-ta-row.kc-heat-row {
+    background-color: color-mix(in oklab, var(--kc-heat) 7%, transparent);
+}
+
+.fi-ta-row.kc-heat-row > td:first-child {
+    box-shadow: inset 3px 0 0 var(--kc-heat);
+}
+
+.fi-ta-row.kc-heat-row.fi-clickable:hover {
+    background-color: color-mix(in oklab, var(--kc-heat) 13%, transparent);
+}
+
+.fi-ta-row.kc-heat-row:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--kc-heat) 11%, transparent);
+}
+
+.fi-ta-row.kc-heat-row.fi-clickable:where(.dark, .dark *):hover {
+    background-color: color-mix(in oklab, var(--kc-heat) 18%, transparent);
+}
+
 /* Durum secicisi (D-161): secilmemis secenek de kendi renginde; secilince dolu. */
 .kc-status-picker input:not(:checked) + label.fi-btn.fi-color {
     color: var(--color-700);
@@ -2042,4 +2111,347 @@ a.kc-file-chip__open:hover .kc-file-chip__name {
 .kc-status-picker input:not(:checked) + label.fi-btn.fi-color:where(.dark, .dark *) {
     color: var(--color-300);
     background-color: color-mix(in oklab, var(--color-500) 12%, transparent);
+}
+
+/* Iki satirli secenek (D-192, TwoLineOption): ad ustte, kategori / departman altta silik. */
+.kc-opt {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    min-width: 0;
+}
+
+.kc-opt-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kc-opt-sub {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kc-opt-sub:where(.dark, .dark *) {
+    color: var(--gray-400);
+}
+
+/* Secili tek deger iki satir kalir (kullanicinin ornegi); satir araligi sik. */
+.fi-select-input-value-label .kc-opt {
+    line-height: 1.2;
+}
+
+/* Coklu secimin rozetleri sade kalir: yalniz ad (departman / kategori acilir listede). */
+.fi-select-input-value-badges-ctn .kc-opt {
+    display: inline;
+}
+
+.fi-select-input-value-badges-ctn .kc-opt-sub {
+    display: none;
+}
+
+/* Tablolarda kod basligin altinda kucuk yazi (CodeLine; kullanici 14 Ekim
+ * 2026: "kod'lari daha kucuk font ile baslik altinda tutalim"). */
+.fi-ta-text.kc-code-line > .fi-ta-text-description {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--gray-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.fi-ta-text.kc-code-line > .fi-ta-text-description:where(.dark, .dark *) {
+    color: var(--gray-400);
+}
+
+/* Detay sayfasinda aciklama / not: kilitli textarea gorunumu (LongText;
+ * kullanici 14 Ekim 2026: "textarea input'un disable hali gibi
+ * gorulmelidir"). Filament'in kilitli girdi kutusuyla ayni zemin ve cerceve. */
+.fi-in-text.kc-longtext {
+    display: block;
+    width: 100%;
+    min-height: 4.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    background-color: var(--gray-50);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 0 0 1px color-mix(in oklab, var(--gray-950) 10%, transparent);
+    overflow-wrap: anywhere;
+}
+
+.fi-in-text.kc-longtext:where(.dark, .dark *) {
+    background-color: transparent;
+    box-shadow: 0 0 0 1px color-mix(in oklab, #fff 10%, transparent);
+}
+
+.fi-in-text.kc-longtext,
+.fi-in-text.kc-longtext .fi-in-text-item,
+.fi-in-text.kc-longtext .fi-in-placeholder {
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    color: var(--gray-600);
+}
+
+.fi-in-text.kc-longtext:where(.dark, .dark *),
+.fi-in-text.kc-longtext .fi-in-text-item:where(.dark, .dark *),
+.fi-in-text.kc-longtext .fi-in-placeholder:where(.dark, .dark *) {
+    color: var(--gray-300);
+}
+
+/* Tablo bicimli tekrarlayan girdinin hucresinde kutu cizilmez. */
+.fi-in-table-repeatable .fi-in-text.kc-longtext {
+    display: revert;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/* Baglantiya gitmeden once onay penceresi (D-200, konelsis-link-guard.js).
+ * 14 Ekim 2026 tasarimi (kullanici: "fynoai icin attigim modal daha kaliteli
+ * ... icon ... baslik belli olmalidir ... filament modal'i gibi"): ortali simge
+ * dairesi, belirgin baslik, ortali aciklama, sag ustte kapat, esit genislikte
+ * dugmeler. Renkler (13 Ekim): Sayfada kal acik gri, Satirin detayina git
+ * yesil, git acik mavi; "cirtlak" olmayan tonlar. Acik zeminli dugmelerde koyu yazi
+ * (D-149 beyaz yazi kurali bu dugmelerde bilerek uygulanmaz). */
+.kc-lg-locked {
+    overflow: hidden;
+}
+
+.kc-lg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: color-mix(in oklab, var(--gray-950) 45%, transparent);
+    animation: kc-lg-fade 120ms ease-out;
+}
+
+.kc-lg-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 26rem;
+    border-radius: 1rem;
+    background-color: #fff;
+    padding: 1.75rem 1.5rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    animation: kc-lg-pop 140ms ease-out;
+}
+
+.kc-lg-dialog:where(.dark, .dark *) {
+    background-color: var(--gray-900);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5), 0 0 0 1px color-mix(in oklab, #fff 10%, transparent);
+}
+
+.kc-lg-close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: var(--gray-400);
+    cursor: pointer;
+}
+
+.kc-lg-close:hover {
+    background-color: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.kc-lg-close:where(.dark, .dark *):hover {
+    background-color: color-mix(in oklab, #fff 8%, transparent);
+    color: var(--gray-200);
+}
+
+.kc-lg-close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.kc-lg-icon {
+    margin: 0 auto 1rem;
+    display: flex;
+    width: 3.5rem;
+    height: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background-color: var(--info-50);
+    color: var(--info-600);
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--info-50) 55%, transparent);
+}
+
+.kc-lg-icon:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--info-400) 15%, transparent);
+    color: var(--info-300);
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--info-400) 7%, transparent);
+}
+
+.kc-lg-icon svg {
+    width: 1.625rem;
+    height: 1.625rem;
+}
+
+.kc-lg-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.5rem;
+    color: var(--gray-950);
+}
+
+.kc-lg-title:where(.dark, .dark *) {
+    color: #fff;
+}
+
+.kc-lg-body {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    color: var(--gray-500);
+    overflow-wrap: anywhere;
+}
+
+.kc-lg-body:where(.dark, .dark *) {
+    color: var(--gray-400);
+}
+
+/* Alan ve kayit adi tirnak yerine kalin (14 Ekim 2026). */
+.kc-lg-body strong {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.kc-lg-body strong:where(.dark, .dark *) {
+    color: var(--gray-100);
+}
+
+.kc-lg-actions {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+}
+
+/* Uc dugmede git dugmesi alt satirda tam genislik. */
+.kc-lg-actions-3 .kc-lg-btn-go {
+    grid-column: 1 / -1;
+}
+
+/* Yazisi sigmayan dugme (uzun tur adi, dar ekran): hepsi alt alta tam genislik. */
+.kc-lg-actions-stack {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.kc-lg-btn {
+    border-radius: 0.625rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    cursor: pointer;
+    transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.kc-lg-btn:focus-visible {
+    outline: 2px solid var(--info-500);
+    outline-offset: 2px;
+}
+
+.kc-lg-btn-stay {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+    box-shadow: inset 0 0 0 1px var(--gray-300);
+}
+
+.kc-lg-btn-stay:hover {
+    background-color: var(--gray-200);
+}
+
+.kc-lg-btn-row {
+    background-color: var(--success-100);
+    color: var(--success-800);
+    box-shadow: inset 0 0 0 1px var(--success-300);
+}
+
+.kc-lg-btn-row:hover {
+    background-color: var(--success-200);
+}
+
+.kc-lg-btn-go {
+    background-color: var(--info-100);
+    color: var(--info-700);
+    box-shadow: inset 0 0 0 1px var(--info-200);
+}
+
+.kc-lg-btn-go:hover {
+    background-color: var(--info-200);
+}
+
+.kc-lg-btn-stay:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, #fff 6%, transparent);
+    color: var(--gray-200);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--gray-400) 40%, transparent);
+}
+
+.kc-lg-btn-stay:where(.dark, .dark *):hover {
+    background-color: color-mix(in oklab, #fff 10%, transparent);
+}
+
+.kc-lg-btn-row:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--success-400) 15%, transparent);
+    color: var(--success-300);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--success-400) 30%, transparent);
+}
+
+.kc-lg-btn-go:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--info-400) 15%, transparent);
+    color: var(--info-300);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--info-400) 30%, transparent);
+}
+
+@keyframes kc-lg-fade {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes kc-lg-pop {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kc-lg-overlay,
+    .kc-lg-dialog {
+        animation: none;
+    }
+}
+
+/* Is kritikligi (D-219, 16 Ekim 2026: "kritikliği 4 seviyeye çıkar ... dashboard
+   ve iş panosunda kritikliği görelim"): Gorevlerim ve islerim satirinin solunda
+   seviye cizgisi; kritik satir hafif kirmizi. Dusuk / normal satir sade kalir. */
+.fi-ta-row.kc-priority-high > td:first-child {
+    box-shadow: inset 3px 0 0 var(--warning-500);
+}
+
+.fi-ta-row.kc-priority-critical > td:first-child {
+    box-shadow: inset 3px 0 0 var(--danger-500);
+}
+
+.fi-ta-row.kc-priority-critical {
+    background-color: color-mix(in oklab, var(--danger-50) 70%, transparent);
+}
+
+.fi-ta-row.kc-priority-critical:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--danger-500) 8%, transparent);
 }

@@ -10,7 +10,7 @@ return [
 
     'fields' => [
         'code' => 'Kod',
-        'name' => 'Eğitim adı',
+        'name' => 'Ad',
         'training_kind' => 'Tür',
         'provider' => 'Sağlayıcı',
         'planned_on' => 'Planlanan tarih',

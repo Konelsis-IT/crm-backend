@@ -200,7 +200,8 @@ final class ReportFormatter
                     'detail' => implode(' · ', $this->itemMeta($item, withHours: false, withDue: false)),
                     'status' => (string) $item->status->getLabel(),
                     'hours' => (string) (ReportFieldComponents::formatNumber($item->work_hours) ?? ''),
-                    'note' => (string) ($item->description ?? ''),
+                    // Kalem notu + kaynak kartin notu (ReportItem::displayDescription, 14 Ekim 2026).
+                    'note' => (string) ($item->displayDescription() ?? ''),
                 ];
             }
         }
@@ -348,7 +349,7 @@ final class ReportFormatter
                 ->bullets($rows->map(fn (ReportItem $item): array => [
                     'title' => (string) $item->title,
                     'rest' => ($meta = $this->itemMeta($item)) !== [] ? implode(' · ', $meta) : null,
-                    'detail' => filled($item->description) ? (string) $item->description : null,
+                    'detail' => $item->displayDescription(),
                 ])->all());
         }
     }

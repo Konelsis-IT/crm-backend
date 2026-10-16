@@ -7,6 +7,7 @@ namespace App\Filament\Concerns;
 use App\Filament\Support\ActionColors;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * Olustur / Duzenle sayfasinin alt dugmeleri (D-148): "Olustur" / "Kaydet"
@@ -67,5 +68,38 @@ trait HasColoredFormActions
     protected function getCancelFormAction(): Action
     {
         return ActionColors::cancel(parent::getCancelFormAction());
+    }
+
+    /**
+     * Duzenle sayfasinin basligindaki "Iptal" (14 Ekim 2026 kullanici talimati:
+     * "Tum duzenle ekranlarinda goruntule butonlari kaldirilmalidir. Yerine Iptal
+     * butonu getirilmelidir. Yani mantik kaydet - iptal gibi olacak."). Kaydetmeden
+     * cikar: gelinen sayfaya, yoksa kaydin detay sayfasina, o da yoksa listeye.
+     * Taslak, Ileri gibi ozel dugmeler yerinde kalir.
+     */
+    protected function cancelHeaderAction(): Action
+    {
+        return ActionColors::cancel(Action::make('cancel_edit')
+            ->label(__('filament-panels::resources/pages/edit-record.form.actions.cancel.label'))
+            ->icon(Heroicon::OutlinedXMark)
+            ->url(fn (): string => $this->cancelHeaderUrl()));
+    }
+
+    private function cancelHeaderUrl(): string
+    {
+        $previous = property_exists($this, 'previousUrl') ? $this->previousUrl : null;
+
+        if (filled($previous) && $previous !== url()->current() && ! str_contains((string) $previous, '/livewire')) {
+            return (string) $previous;
+        }
+
+        $resource = static::getResource();
+        $record = $this->getRecord();
+
+        if ($record !== null && $resource::hasPage('view') && $resource::canView($record)) {
+            return $this->getResourceUrl('view');
+        }
+
+        return $this->getResourceUrl();
     }
 }

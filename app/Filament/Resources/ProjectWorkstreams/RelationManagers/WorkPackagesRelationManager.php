@@ -7,11 +7,13 @@ namespace App\Filament\Resources\ProjectWorkstreams\RelationManagers;
 use App\Enums\Project\WorkPackageStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\WorkPackages\WorkPackageResource;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WorkPackage;
 use App\Services\Project\WorkPackageService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -68,6 +70,7 @@ class WorkPackagesRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('work_package.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -98,14 +101,20 @@ class WorkPackagesRelationManager extends RelationManager
             ->heading(__('work_package.relation.title'))
             ->recordTitleAttribute('package_code')
             ->columns([
-                TextColumn::make('package_code')
-                    ->label(__('work_package.fields.package_code')),
-                TextColumn::make('name')
-                    ->label(__('work_package.fields.name'))
-                    ->limit(40),
-                TextColumn::make('wbsNode.wbs_code')
-                    ->label(__('work_package.fields.wbs_node'))
-                    ->placeholder('-'),
+                // Paket kodu basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('work_package.fields.name'))
+                        ->limit(40),
+                    'package_code',
+                ),
+                // Is kirilimi dugumunun adi, kodu altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('wbsNode.name')
+                        ->label(__('work_package.fields.wbs_node'))
+                        ->placeholder('-'),
+                    'wbsNode.wbs_code',
+                ),
                 TextColumn::make('owner.full_name')
                     ->label(__('work_package.fields.owner')),
                 TextColumn::make('status')

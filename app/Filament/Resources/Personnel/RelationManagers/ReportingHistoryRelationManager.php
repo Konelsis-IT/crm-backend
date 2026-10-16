@@ -7,7 +7,7 @@ namespace App\Filament\Resources\Personnel\RelationManagers;
 use App\Filament\Support\RowDetail;
 use App\Enums\Personnel\ReportingRelationType;
 use App\Models\Personnel\ReportingRelationship;
-use App\Query\Personnel\PersonnelQueries;
+use App\Filament\Support\PersonnelSelect;
 use App\Services\Personnel\ReportingRelationshipService;
 use App\Support\DisplayTime;
 use BackedEnum;
@@ -77,7 +77,7 @@ class ReportingHistoryRelationManager extends RelationManager
                     ->schema(fn (Schema $schema): Schema => $schema->columns(1)->components([
                         Select::make('manager_personnel_id')
                             ->label(__('assignment.reporting.manager'))
-                            ->options(fn (): array => app(PersonnelQueries::class)->managerOptions((int) $this->getOwnerRecord()->getKey()))
+                            ->tap(PersonnelSelect::excluding(fn (): int => (int) $this->getOwnerRecord()->getKey()))
                             ->searchable()
                             ->required()
                             ->native(false),

@@ -128,10 +128,8 @@ class DocumentTypeResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('document_type.fields.code'))
-                    ->searchable()
-                    ->sortable(),
+                // D-130: tip kodu (numaralandirma oneki) tabloda gosterilmez
+                // (14 Ekim 2026, kod sutunu kaldirildi).
                 TextColumn::make('name')
                     ->label(__('document_type.fields.name'))
                     ->searchable()

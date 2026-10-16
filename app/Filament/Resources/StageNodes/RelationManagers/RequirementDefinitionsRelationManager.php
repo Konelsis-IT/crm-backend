@@ -85,10 +85,10 @@ class RequirementDefinitionsRelationManager extends RelationManager
         return $table
             ->modelLabel(__('stage_requirement_definition.label'))
             ->heading(__('stage_requirement_definition.relation.title'))
-            ->recordTitleAttribute('requirement_code')
+            // Gereksinim kodu katalog kodudur; tabloda ve kayit basliginda gosterilmez
+            // (D-130; CodeLine, 14 Ekim 2026).
+            ->recordTitleAttribute('name_tr')
             ->columns([
-                TextColumn::make('requirement_code')
-                    ->label(__('stage_requirement_definition.fields.requirement_code')),
                 TextColumn::make('name_tr')
                     ->label(__('stage_requirement_definition.fields.name_tr')),
                 TextColumn::make('evidence_type')

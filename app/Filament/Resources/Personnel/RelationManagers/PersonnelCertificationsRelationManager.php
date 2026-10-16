@@ -7,11 +7,13 @@ namespace App\Filament\Resources\Personnel\RelationManagers;
 use App\Enums\Personnel\CertificationStatus;
 use App\Exceptions\DuplicateRecordException;
 use App\Exceptions\StaleRecordException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\PersonnelCertification;
 use App\Services\Personnel\PersonnelCertificationService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -73,6 +75,7 @@ class PersonnelCertificationsRelationManager extends RelationManager
                     Select::make('verified_by_personnel_id')
                         ->label(__('certification.fields.verified_by'))
                         ->relationship('verifier', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->native(false),
@@ -93,12 +96,14 @@ class PersonnelCertificationsRelationManager extends RelationManager
             ->heading(__('certification.relation.title'))
             ->recordTitleAttribute('certificate_no')
             ->columns([
-                TextColumn::make('certification.name')
-                    ->label(__('certification.label'))
-                    ->searchable(),
-                TextColumn::make('certificate_no')
-                    ->label(__('certification.fields.certificate_no'))
-                    ->placeholder('-'),
+                // Belge no ayri sutun degil, sertifika adinin altinda kucuk yazi
+                // (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('certification.name')
+                        ->label(__('certification.label'))
+                        ->searchable(),
+                    'certificate_no',
+                ),
                 TextColumn::make('issued_on')
                     ->label(__('certification.fields.issued_on'))
                     ->date('d.m.Y')

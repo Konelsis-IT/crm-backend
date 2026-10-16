@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BusinessCases\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Acquisition\OfferType;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\ConfirmsChecklist;
@@ -23,7 +24,6 @@ use App\Services\Acquisition\AcquisitionIntakeService;
 use App\Services\Acquisition\BusinessCaseService;
 use App\Services\Platform\SchemaReadiness;
 use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
@@ -45,6 +45,7 @@ use Livewire\Attributes\Url;
  */
 class EditBusinessCase extends EditRecord
 {
+    use HasRecordHeading;
     use ConfirmsChecklist;
     use HasColoredFormActions;
     use HasSaveableWizard;
@@ -143,7 +144,7 @@ class EditBusinessCase extends EditRecord
             ...StatusButton::businessCaseHeader($case, gated: false),
             // D-184: teklif duzenle ile ayni; "Tum belgeleri indir" yalniz simge.
             DocumentBundleAction::businessCaseHeader($case),
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

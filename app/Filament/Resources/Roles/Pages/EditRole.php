@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Concerns\HasColoredFormActions;
+use App\Filament\Concerns\HasRecordHeading;
 use App\Filament\Resources\Roles\RoleResource;
 use BezhanSalleh\FilamentShield\Resources\Roles\Pages\EditRole as ShieldEditRole;
 
@@ -16,6 +17,7 @@ use BezhanSalleh\FilamentShield\Resources\Roles\Pages\EditRole as ShieldEditRole
 class EditRole extends ShieldEditRole
 {
     use HasColoredFormActions;
+    use HasRecordHeading;
 
     protected static string $resource = RoleResource::class;
 

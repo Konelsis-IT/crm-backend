@@ -7,12 +7,14 @@ namespace App\Filament\Resources\BusinessCases\RelationManagers;
 use App\Enums\Acquisition\OfferStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\Proposal;
 use App\Services\Acquisition\ProposalService;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
@@ -55,6 +57,7 @@ class ProposalsRelationManager extends RelationManager
                         Select::make('owner_employee_id')
                             ->label(__('proposal.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -64,7 +67,10 @@ class ProposalsRelationManager extends RelationManager
                             ->default('to_be_submitted')
                             ->native(false)
                             ->visible($b29)
-                            ->dehydrated($b29),
+                            ->dehydrated($b29)
+                            // D-195: duzenlemede durum yalniz durum dugmesiyle ve yalniz ileri
+                            // degisir (D-182); serbest secim guncel surumun durumunu geri alabiliyordu.
+                            ->hiddenOn('edit'),
                         Hidden::make('row_version')->hiddenOn('create'),
                 ])),
         ]);
@@ -79,11 +85,14 @@ class ProposalsRelationManager extends RelationManager
             ->heading(__('proposal.relation.title'))
             ->recordTitleAttribute('proposal_no')
             ->columns([
-                TextColumn::make('proposal_no')
-                    ->label(__('proposal.fields.proposal_no')),
-                TextColumn::make('title')
-                    ->label(__('proposal.fields.title'))
-                    ->limit(40),
+                // Teklif no ayri sutun degil, basligin altinda kucuk yazi (CodeLine,
+                // 14 Ekim 2026; teklif listesiyle ayni).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('proposal.fields.title'))
+                        ->limit(40),
+                    'proposal_no',
+                ),
                 TextColumn::make('status')
                     ->label(__('proposal.fields.status'))
                     ->badge(),

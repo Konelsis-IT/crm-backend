@@ -18,6 +18,7 @@ use App\Models\Project\ProjectPhoto;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Project\ProjectTeamMember;
 use App\Models\Project\ProjectWorkstream;
+use App\Support\Projects\ProjectPurchasing;
 use Illuminate\Support\Collection;
 
 /**
@@ -37,6 +38,10 @@ final class ProjectStepReadiness
 {
     /** @var array<string, int> */
     private array $countCache = [];
+
+    public function __construct(
+        private readonly ProjectPurchasingQueries $purchasing,
+    ) {}
 
     /**
      * Varsayilan siraya gore workstream'ler (grup default_sort_order).
@@ -230,6 +235,12 @@ final class ProjectStepReadiness
             ExpectationKind::WorkPackages => $project->workPackages()->count(),
             ExpectationKind::Progress => $project->progressSnapshots()->count(),
         };
+
+        // D-196: proje sayfasi satin alma kayitlarina bagliyken tedarik beklentileri
+        // Satin alinacaklar ve siparisleri de sayar (eski tedarik kalemleri yukarida).
+        if (ProjectPurchasing::enabled() && in_array($kind, ProjectPurchasingQueries::READINESS_KINDS, true)) {
+            $count += $this->purchasing->readinessCount($project, $kind);
+        }
 
         return $this->countCache[$cacheKey] = (int) $count;
     }

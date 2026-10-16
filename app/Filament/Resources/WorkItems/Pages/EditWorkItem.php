@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkItems\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\WorkItems\WorkItemActions;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class EditWorkItem extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = WorkItemResource::class;
@@ -54,6 +56,9 @@ class EditWorkItem extends EditRecord
             'requester_kind' => $record->requester_kind?->value,
             'link_kind' => $column !== null ? $record->link_kind?->value : null,
             'link_id' => $column !== null ? $record->getAttribute($column) : null,
+            // D-219: oncelik ve diger sorumlular.
+            'priority' => $record->priorityLevel()->value,
+            'assignee_ids' => $record->assigneeIds(),
         ];
     }
 

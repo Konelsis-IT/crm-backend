@@ -11,6 +11,7 @@ use App\Filament\Resources\EstimateVersions\Pages\ViewEstimateVersion;
 use App\Filament\Resources\EstimateVersions\RelationManagers\BoqItemsRelationManager;
 use App\Filament\Resources\EstimateVersions\RelationManagers\LinesRelationManager;
 use App\Filament\Resources\EstimateVersions\RelationManagers\ScenariosRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\EstimateVersion;
@@ -98,8 +99,13 @@ class EstimateVersionResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('proposalVersion.proposal.proposal_no')
-                    ->label(__('estimate_version.fields.proposal')),
+                // Teklifin adi; altinda TKLF kodu (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('proposalVersion.proposal.title')
+                        ->label(__('estimate_version.fields.proposal'))
+                        ->limit(40),
+                    'proposalVersion.proposal.proposal_no',
+                ),
                 TextColumn::make('proposalVersion.version_no')
                     ->label(__('estimate_version.fields.proposal_version')),
                 TextColumn::make('version_no')

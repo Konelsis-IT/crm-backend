@@ -7,6 +7,7 @@ namespace App\Filament\Resources\ContractVersions\RelationManagers;
 use App\Enums\Acquisition\ObligationStatus;
 use App\Enums\Acquisition\ObligationType;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\ContractObligation;
@@ -87,14 +88,16 @@ class ObligationsRelationManager extends RelationManager
             ->heading(__('contract_obligation.relation.title'))
             ->recordTitleAttribute('obligation_code')
             ->columns([
-                TextColumn::make('obligation_code')
-                    ->label(__('contract_obligation.fields.obligation_code')),
                 TextColumn::make('obligation_type')
                     ->label(__('contract_obligation.fields.obligation_type'))
                     ->badge(),
-                TextColumn::make('description')
-                    ->label(__('contract_obligation.fields.description'))
-                    ->limit(40),
+                // Yukumluluk kodu ayri sutun degil, aciklamanin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('contract_obligation.fields.description'))
+                        ->limit(40),
+                    'obligation_code',
+                ),
                 TextColumn::make('responsibleParty.display_name')
                     ->label(__('contract_obligation.fields.responsible_party'))
                     ->placeholder('-'),

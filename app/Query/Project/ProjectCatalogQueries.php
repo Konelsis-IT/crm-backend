@@ -83,7 +83,8 @@ final class ProjectCatalogQueries
     }
 
     /**
-     * Proje adi aramasi (D-174): lisans adi ve (B48 uygulandiysa) kisa ad.
+     * Proje adi aramasi (D-174): lisans adi ve (B48 uygulandiysa) kisa ad;
+     * proje kodu adin altinda durdugu icin (CodeLine, 14 Ekim 2026) PRJ kodu da.
      */
     public function searchByName(Builder $query, string $search): Builder
     {
@@ -95,6 +96,8 @@ final class ProjectCatalogQueries
             if (ProjectNames::schemaReady()) {
                 $inner->orWhere('short_name', 'like', $like);
             }
+
+            $inner->orWhereHas('businessCode', fn (Builder $code): Builder => $code->where('formatted_code', 'like', $like));
         });
     }
 

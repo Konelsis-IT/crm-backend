@@ -10,6 +10,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Document\DocumentReview;
 use App\Services\Document\DocumentReviewService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -60,6 +61,7 @@ class ReviewsRelationManager extends RelationManager
                     Select::make('reviewer_personnel_id')
                         ->label(__('document_review.fields.reviewer'))
                         ->relationship('reviewer', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->required()

@@ -9,6 +9,7 @@ use App\Enums\Document\DocumentDiscipline;
 use App\Enums\Document\RevisionPurpose;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Documents\DocumentResource;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\FileLinks;
@@ -17,6 +18,7 @@ use App\Services\Document\DocumentRevisionService;
 use App\Services\Document\DocumentService;
 use App\Support\UploadLimits;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\FileUpload;
@@ -95,6 +97,7 @@ class DocumentsRelationManager extends RelationManager
                     Select::make('owner_personnel_id')
                         ->label(__('document.fields.owner'))
                         ->relationship('owner', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->default(fn (): ?int => $this->getOwnerRecord()->project_manager_employee_id)
                         ->searchable()
                         ->preload()
@@ -141,13 +144,14 @@ class DocumentsRelationManager extends RelationManager
                 ));
             })
             ->columns([
-                TextColumn::make('document_no')
-                    ->label(__('document.fields.document_no'))
-                    ->searchable(),
-                TextColumn::make('title')
-                    ->label(__('document.fields.title'))
-                    ->limit(50)
-                    ->searchable(),
+                // Dokuman no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026); iki alanla da aranir.
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('document.fields.title'))
+                        ->limit(50)
+                        ->searchable(['title', 'document_no']),
+                    'document_no',
+                ),
                 TextColumn::make('documentType.name')
                     ->label(__('document.fields.document_type'))
                     ->badge()

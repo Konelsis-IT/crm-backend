@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Documents\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Filament\Exports\DocumentExporter;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Support\ActionColors;
@@ -27,15 +28,9 @@ use Filament\Support\Icons\Heroicon;
  */
 class ViewDocumentRecord extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = DocumentResource::class;
-
-    public function getTitle(): string
-    {
-        /** @var Document $document */
-        $document = $this->getRecord();
-
-        return $document->document_no.' · '.$document->title;
-    }
 
     public function content(Schema $schema): Schema
     {

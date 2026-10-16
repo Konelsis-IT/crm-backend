@@ -135,9 +135,7 @@ class FocusExpectationResource extends Resource
                     ->badge()
                     ->color('gray')
                     ->sortable(),
-                TextColumn::make('code')
-                    ->label(__('focus_expectation.fields.code'))
-                    ->searchable(),
+                // D-130: katalog kodu tabloda gosterilmez (14 Ekim 2026, kod sutunu kaldirildi).
                 TextColumn::make('name_tr')
                     ->label(__('focus_expectation.fields.name_tr'))
                     ->searchable(),

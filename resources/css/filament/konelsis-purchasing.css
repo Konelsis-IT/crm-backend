@@ -1,0 +1,219 @@
+/*
+ * Satin alma ekranlarinin kucuk stil ekleri (D-192, kullanici onayi 12 Ekim
+ * 2026: "Iki satirli secimler, kalem rozetleri ve PDF sablonu bu sekilde
+ * yapilir"). Kalemli formlarin kalem listesi (App\Filament\Support\PurchaseLines:
+ * kesik cizgili "Kalem ekle", kalem basligi ve rozetleri) ve satin alma
+ * tekliflerinin "Karsilastir" matrisi
+ * (resources/views/filament/purchasing/quotation-compare.blade.php).
+ * Siniflar `kcp-` on ekiyle konelsis.css'ten ayridir.
+ */
+
+/* Kalem listesi ------------------------------------------------------------ */
+.kcp-lines .fi-fo-repeater-item-header {
+    align-items: flex-start;
+    background: linear-gradient(90deg, rgb(240 249 255), rgb(255 255 255));
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+}
+
+.kcp-lines .fi-fo-repeater-item-header:where(.dark, .dark *) {
+    background: linear-gradient(90deg, rgb(12 74 110 / 0.25), transparent);
+}
+
+.kcp-lines .fi-fo-repeater-item-header-label {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.kcp-lines .fi-fo-repeater-add {
+    width: 100%;
+}
+
+.kcp-lines .fi-fo-repeater-add .kcp-add-line {
+    width: 100%;
+    justify-content: center;
+    border: 1px dashed rgb(56 189 248);
+    background: transparent;
+    box-shadow: none;
+}
+
+.kcp-lines .fi-fo-repeater-add .kcp-add-line:hover {
+    background: rgb(240 249 255);
+}
+
+.kcp-lines .fi-fo-repeater-add .kcp-add-line:where(.dark, .dark *):hover {
+    background: rgb(12 74 110 / 0.25);
+}
+
+.kcp-line-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.kcp-line-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.kcp-line-no {
+    flex: none;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    padding: 0 0.35rem;
+    border-radius: 9999px;
+    background: rgb(224 242 254);
+    color: rgb(3 105 161);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kcp-line-no:where(.dark, .dark *) {
+    background: rgb(12 74 110 / 0.6);
+    color: rgb(186 230 253);
+}
+
+.kcp-line-title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kcp-line-title-struck {
+    text-decoration: line-through;
+    color: var(--gray-500, #6b7280);
+}
+
+/* Rozetler ------------------------------------------------------------------ */
+.kcp-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.kcp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid;
+    border-radius: 0.375rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.1rem;
+    white-space: nowrap;
+}
+
+.kcp-badge-gray { border-color: rgb(125 211 252); color: rgb(12 74 110); background: rgb(240 249 255); }
+.kcp-badge-green { border-color: rgb(134 239 172); color: rgb(21 128 61); background: rgb(240 253 244); }
+.kcp-badge-amber { border-color: rgb(252 211 77); color: rgb(146 64 14); background: rgb(255 251 235); }
+.kcp-badge-red { border-color: rgb(252 165 165); color: rgb(185 28 28); background: rgb(254 242 242); }
+.kcp-badge-blue { border-color: rgb(147 197 253); color: rgb(29 78 216); background: rgb(239 246 255); }
+.kcp-badge-purple { border-color: rgb(216 180 254); color: rgb(126 34 206); background: rgb(250 245 255); }
+
+.kcp-badge:where(.dark, .dark *) { background: transparent; }
+.kcp-badge-gray:where(.dark, .dark *) { color: rgb(186 230 253); }
+.kcp-badge-green:where(.dark, .dark *) { color: rgb(134 239 172); }
+.kcp-badge-amber:where(.dark, .dark *) { color: rgb(252 211 77); }
+.kcp-badge-red:where(.dark, .dark *) { color: rgb(252 165 165); }
+.kcp-badge-blue:where(.dark, .dark *) { color: rgb(147 197 253); }
+.kcp-badge-purple:where(.dark, .dark *) { color: rgb(216 180 254); }
+
+/* Fiyat bilgileri karti: toplam satirinin ustunde cizgi --------------------- */
+.kcp-sum-total {
+    border-top: 1px solid var(--gray-200, #e5e7eb);
+    padding-top: 0.75rem;
+}
+
+.kcp-sum-total:where(.dark, .dark *) {
+    border-top-color: var(--gray-700, #374151);
+}
+
+/* Karsilastirma matrisi ------------------------------------------------------ */
+.kcp-matrix-wrap {
+    overflow-x: auto;
+}
+
+.kcp-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.kcp-matrix th,
+.kcp-matrix td {
+    border: 1px solid var(--gray-200, #e5e7eb);
+    padding: 0.45rem 0.6rem;
+    vertical-align: top;
+}
+
+.kcp-matrix th:where(.dark, .dark *),
+.kcp-matrix td:where(.dark, .dark *) {
+    border-color: var(--gray-700, #374151);
+}
+
+.kcp-matrix thead th {
+    background: var(--gray-50, #f9fafb);
+    text-align: left;
+    font-weight: 600;
+}
+
+.kcp-matrix thead th:where(.dark, .dark *) {
+    background: var(--gray-800, #1f2937);
+}
+
+.kcp-matrix .kcp-num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.kcp-matrix .kcp-sub {
+    display: block;
+    color: var(--gray-500, #6b7280);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.kcp-matrix .kcp-missing {
+    text-align: center;
+    color: var(--gray-400, #9ca3af);
+}
+
+.kcp-matrix .kcp-best {
+    background: rgb(240 253 244);
+    color: rgb(21 128 61);
+    font-weight: 600;
+}
+
+.kcp-matrix .kcp-best:where(.dark, .dark *) {
+    background: rgb(20 83 45 / 0.35);
+    color: rgb(134 239 172);
+}
+
+.kcp-matrix tfoot td {
+    font-weight: 700;
+    background: var(--gray-50, #f9fafb);
+}
+
+.kcp-matrix tfoot td:where(.dark, .dark *) {
+    background: var(--gray-800, #1f2937);
+}
+
+.kcp-matrix tfoot td.kcp-best {
+    background: rgb(220 252 231);
+}
+
+.kcp-matrix tfoot td.kcp-best:where(.dark, .dark *) {
+    background: rgb(20 83 45 / 0.5);
+}
+
+.kcp-matrix a {
+    color: var(--primary-600, #dc2626);
+    text-decoration: underline;
+}

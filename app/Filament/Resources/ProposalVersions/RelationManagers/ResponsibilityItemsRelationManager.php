@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ProposalVersions\RelationManagers;
 
 use App\Enums\Acquisition\ResponsiblePartyRole;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\ResponsibilityMatrixItem;
@@ -78,11 +79,13 @@ class ResponsibilityItemsRelationManager extends RelationManager
             ->heading(__('responsibility_matrix_item.relation.title'))
             ->recordTitleAttribute('scope_code')
             ->columns([
-                TextColumn::make('scope_code')
-                    ->label(__('responsibility_matrix_item.fields.scope_code')),
-                TextColumn::make('scope_description')
-                    ->label(__('responsibility_matrix_item.fields.scope_description'))
-                    ->limit(50),
+                // Kapsam kodu ayri sutun degil, tanimin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('scope_description')
+                        ->label(__('responsibility_matrix_item.fields.scope_description'))
+                        ->limit(50),
+                    'scope_code',
+                ),
                 TextColumn::make('responsible_party_role')
                     ->label(__('responsibility_matrix_item.fields.responsible_party_role'))
                     ->badge(),

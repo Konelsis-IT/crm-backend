@@ -13,7 +13,7 @@ return [
         'contract_no' => 'Contract no',
         'contract_type' => 'Contract type',
         'created_at' => 'Created at',
-        'current_version' => 'Current version',
+        'current_version' => 'Version',
         // D-167: employer instead of customer.
         'customer_party' => 'Employer',
         'effective_from' => 'Effective from',

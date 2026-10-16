@@ -10,7 +10,7 @@ return [
 
     'fields' => [
         'code' => 'Kod',
-        'name' => 'Sertifika adı',
+        'name' => 'Ad',
         'issuer' => 'Veren kurum',
         'validity_months' => 'Geçerlilik (ay)',
         'is_field_mandatory' => 'Saha görevi ön koşulu',

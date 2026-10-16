@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * Pano is kalemi (B10A): gunluk/haftalik/aylik raporun "is panosu" satiri.
@@ -57,5 +58,23 @@ class ReportItem extends Model
     public function carriedFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'carried_from_item_id');
+    }
+
+    /**
+     * Kalemin gorunen notu: kayitli aciklama ve kaynak kartin notu. Karta
+     * yazilan aciklama yalniz engellenen islerde rapora giriyordu (kullanici
+     * 14 Ekim 2026: "rapor detayin is hakkinda yazilan aciklama kisimlari
+     * detay ekraninda gelmiyor"); not aciklamada zaten varsa tekrar yazilmaz.
+     */
+    public function displayDescription(): ?string
+    {
+        $description = trim((string) $this->description);
+        $note = $this->work_item_id !== null ? Str::squish((string) $this->workItem?->note) : '';
+
+        if ($note === '' || str_contains(Str::squish($description), Str::limit($note, 200, '…'))) {
+            return $description === '' ? null : $description;
+        }
+
+        return $description === '' ? $note : $description.' · '.$note;
     }
 }

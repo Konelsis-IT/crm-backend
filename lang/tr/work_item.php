@@ -34,6 +34,7 @@ return [
     ],
 
     'fields' => [
+        'code' => 'Kod',
         'title' => 'İşin adı',
         'personnel' => 'Personel',
         'org_unit' => 'Departman',
@@ -63,6 +64,13 @@ return [
         'note' => 'Not',
         'status_note' => 'Durum notu',
         'source' => 'Kaynak',
+        // D-219 (B57)
+        'priority' => 'Kritiklik',
+        'assignees' => 'Diğer sorumlular',
+        'for_everyone' => 'Tüm ekip',
+        'discipline' => 'İş grubu',
+        'legacy_no' => 'Eski iş no',
+        'recurring_work' => 'Görev ve sorumluluk',
     ],
 
     'help' => [
@@ -73,6 +81,8 @@ return [
         'waiting' => 'Durum Bekleniyor ise zorunlu; bekleyen gün sayısı buradan hesaplanır.',
         'durations' => 'Durum geçmişinden hesaplanır, elle girilmez.',
         'delete' => 'Kart ve hareket geçmişi kalır; yalnız elle girilen kart silinir. Otomatik kartın durumunu değiştirin.',
+        'assignees' => 'İşi ana sorumluyla birlikte yürüten kişiler; iş hepsinin panosunda ve Görevlerim ve işlerim\'de görünür.',
+        'for_everyone' => 'Personelden bağımsız, tüm ekibe verilen iş: departman seçiliyse o departmanın, boşsa herkesin panosunda görünür.',
     ],
 
     'values' => [
@@ -99,6 +109,7 @@ return [
         'due_passed' => 'termin :date aşıldı',
         'due_on' => 'termin :date',
         'on_time' => 'zamanında',
+        'for_everyone' => 'Tüm ekip',
     ],
 
     'widget' => [
@@ -115,6 +126,20 @@ return [
             'today' => 'Bugün (:count)',
             'tomorrow' => 'Yarın (:count)',
         ],
+        // D-217: kapsam secimi.
+        'scopes' => [
+            'mine' => 'Benim işlerim',
+            'assigned' => 'Verdiğim işler',
+            'all' => 'Tüm şirket',
+        ],
+        // D-219: proje ve departman secimi.
+        'filters' => [
+            'project' => 'Proje',
+            'unit' => 'Departman',
+            'all_projects' => 'Tüm projeler',
+            'all_units' => 'Tüm departmanlar',
+        ],
+        'shared' => 'Ortak iş',
         'columns' => [
             'title' => 'Başlık',
             'project' => 'Proje',
@@ -146,6 +171,8 @@ return [
         'parent_of' => 'Ana iş: :title',
         'empty' => 'Bu süzgeçlerle iş yok',
         'empty_help' => 'Kartlar İş panosunda girilir; sistem hareketleriniz öneri olarak panoya gelir.',
+        'priority' => 'Kritiklik',
+        'discipline' => 'İş grubu',
     ],
 
     'filters' => [
@@ -162,6 +189,8 @@ return [
         'source' => 'Kaynak',
         'critical' => 'Yalnız kritik',
         'long_waiting' => 'Bekleyen > 7 gün',
+        'priority' => 'Kritiklik',
+        'discipline' => 'İş grubu',
     ],
 
     'ranges' => [
@@ -185,6 +214,52 @@ return [
         'open_matrix' => 'Kontrol matrisini aç',
         'delete' => 'Kartı sil',
         'delete_heading' => 'Kart silinsin mi?',
+        'set_priority' => 'Kritiklik belirle',
+        'priority_label' => 'Kritiklik: :level',
+    ],
+
+    // D-216: talebe bagli is (hareket notlari, durum penceresi, liste isareti).
+    'request_link' => [
+        'moved' => ':no talebi başka bir kişiye geçti.',
+        'closed' => ':no talebi kapandı (:status).',
+        'close_question' => 'Talebi tamamlandı olarak kapat? (:no)',
+        'close_help' => 'Evet seçilirse bağlı talep de tamamlanır; talep eden bilgilendirilir.',
+        'close_help_approval' => 'Talep onaya tabi: evet seçilirse onay mercine gider.',
+        'management' => 'Yönetim talebi',
+        'management_hint' => 'Üst yönetimin talebi; personel taleplerinden önce yapılır.',
+    ],
+
+    // D-219 (B57): isin notlari ve belgeleri.
+    'notes' => [
+        'title' => 'Notlar',
+        'help' => 'İşle ilgili gelişmeler tarihleriyle; en yenisi üstte. Not düzenlenmez, yenisi yazılır.',
+        'noted_at' => 'Tarih',
+        'noted_on' => 'Not tarihi',
+        'body' => 'Not',
+        'source' => 'Kaynak',
+        'source_placeholder' => 'Mail, WhatsApp, toplantı...',
+        'author' => 'Yazan',
+        'imported' => 'Aktarılan',
+        'add' => 'Not ekle',
+        'added' => 'Not eklendi.',
+        'empty' => 'Bu işe henüz not yazılmadı',
+    ],
+    'files' => [
+        'title' => 'Belgeler',
+        'help' => 'İşin belgeleri; satıra tıklayınca belge yeni sekmede açılır.',
+        'name' => 'Belge',
+        'size' => 'Boyut',
+        'added_at' => 'Eklenme',
+        'files' => 'Dosyalar',
+        'files_help' => 'Birden fazla dosya seçebilirsiniz; dosya başına en fazla :size.',
+        'add' => 'Belge ekle',
+        'added' => ':count belge eklendi.',
+        'download' => 'İndir',
+        'remove' => 'Kaldır',
+        'remove_heading' => 'Belge bu işten kaldırılsın mı?',
+        'remove_help' => 'Yalnız bu işle bağlantısı kalkar; dosya başka kayıtta kullanılıyorsa orada kalır.',
+        'removed' => 'Belge kaldırıldı.',
+        'empty' => 'Bu işe henüz belge eklenmedi',
     ],
 
     'notifications' => [
@@ -328,6 +403,23 @@ return [
         'project_approval' => 'Proje onay',
         'preliminary_acceptance' => 'Ön kabul',
         'provisional_acceptance' => 'Geçici kabul',
+        // D-217: Yonetim kurulu baskaninin calisma alani.
+        'construction' => 'İnşaat',
+        'projects' => 'Projeler',
+        'legal' => 'Hukuk',
+        'stock_market' => 'Borsa',
+        'finance' => 'Finans',
+        'hr_isg' => 'İK / İSG',
+        'service' => 'Servis',
+        'it_media' => 'IT / Medya',
+        'software_commissioning' => 'Yazılım / Devreye alma',
+        'new_investments' => 'Yeni yatırımlar',
+        'existing_investments' => 'Mevcut yatırımlar',
+        'romania' => 'Romanya',
+        'proposal' => 'Teklif',
+        'rents' => 'Kiralar',
+        'internal_order' => 'Şirket içi düzen',
+        'purchasing' => 'Satın alma',
     ],
 
     // Haftalik kontrol cizelgesi (App\Reports\Work\ControlSectionCatalog).
@@ -636,6 +728,15 @@ return [
         'drop_here' => 'Buraya bırak',
         'new_tag' => 'Yeni',
         'critical_tag' => 'Kritik',
+        // D-216: yonetim onceligi ve talebe bagli is.
+        'management_tag' => 'Yönetim',
+        'management_hint' => 'Üst yönetimin talebi; personel taleplerinden önce yapılır',
+        'request_tag_hint' => 'Bağlı talep: :title',
+        'request_close_question' => 'Talebi tamamlandı olarak kapat?',
+        'request_close_yes' => 'Evet, kapat',
+        'request_close_no' => 'Hayır, açık kalsın',
+        'request_close_approval' => 'Talep onaya tabi: kapatınca onay mercine gider.',
+        'request_closed' => 'İş tamamlandı, :no talebi kapatıldı.',
         'parent_of' => 'Ana iş: :title',
         'children_n' => ':n alt kart',
 
@@ -677,6 +778,26 @@ return [
         'day_title' => 'Günlük rapora dönüştür',
         'day_cards' => 'Günün kartları',
         'cards_n' => ':n kart',
+        // D-219
+        'menu_priority' => 'Kritiklik',
+        'field_priority' => 'Kritiklik',
+        'field_discipline' => 'İş grubu',
+        'field_assignees' => 'Diğer sorumlular',
+        'field_assignees_help' => 'İşi birlikte yürütenler; iş hepsinin panosunda görünür.',
+        'field_assignees_add' => 'Kişi ekle',
+        'field_for_everyone' => 'Tüm ekip',
+        'field_for_everyone_help' => 'Personelden bağımsız, departmanın tamamına (departman boşsa herkese) verilen iş.',
+        'for_everyone_tag' => 'Tüm ekip',
+        'notes_n' => ':n not',
+        'notes_hint' => 'İş sayfasındaki notlar',
+        'files_n' => ':n belge',
+        'files_hint' => 'İş sayfasındaki belgeler',
+        'lanes_open_all' => 'Tümünü aç',
+        'lanes_close_all' => 'Tümünü kapat',
+        'lane_open' => 'Panoyu aç',
+        'lane_close' => 'Panoyu kapat',
+        'open_n' => ':n açık',
+        'critical_n' => ':n kritik',
         'summary' => 'Özet',
         'summary_help' => 'İsteğe bağlı; boş kalırsa kart başlıklarından üretilir',
         'blockers' => 'Engeller',

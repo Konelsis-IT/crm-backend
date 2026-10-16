@@ -12,6 +12,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Party\PartyRole;
 use App\Services\Party\PartyRoleService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -65,6 +66,7 @@ class RolesRelationManager extends RelationManager
                         Select::make('approved_by_personnel_id')
                             ->label(__('party_role.fields.approved_by'))
                             ->relationship('approver', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),

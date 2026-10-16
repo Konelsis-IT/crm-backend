@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\DepartmentHandoffVersions;
 
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\DepartmentHandoffVersions\Pages\EditDepartmentHandoffVersion;
 use App\Filament\Resources\DepartmentHandoffVersions\Pages\ListDepartmentHandoffVersions;
 use App\Filament\Resources\DepartmentHandoffVersions\Pages\ViewDepartmentHandoffVersion;
@@ -32,8 +31,6 @@ class DepartmentHandoffVersionResource extends Resource
     protected static ?string $model = DepartmentHandoffVersion::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedDocumentDuplicate;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 17;
 

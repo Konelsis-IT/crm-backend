@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProjectStageInstances\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Project\StageInstanceStatus;
 use App\Enums\Project\StageReviewDecision;
 use App\Exceptions\AbstractException;
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ViewProjectStageInstance extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ProjectStageInstanceResource::class;
 
     protected function getHeaderActions(): array
@@ -98,7 +101,7 @@ class ViewProjectStageInstance extends ViewRecord
                 ->displayFormat('d.m.Y'),
             Select::make('risk_owner_personnel_id')
                 ->label(__('project_stage_instance.fields.risk_owner'))
-                ->options(fn (): array => app(\App\Query\Personnel\PersonnelQueries::class)->personnelOptions())
+                ->tap(\App\Filament\Support\PersonnelSelect::all())
                 ->searchable()
                 ->required()
                 ->native(false),

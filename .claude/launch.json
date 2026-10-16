@@ -12,6 +12,12 @@
       "runtimeExecutable": "php",
       "runtimeArgs": ["artisan", "serve", "--host=127.0.0.1", "--port=8003"],
       "port": 8003
+    },
+    {
+      "name": "ai-service-8002",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["C:/Users/user/Desktop/Projects/ai-service/artisan", "serve", "--host=127.0.0.1", "--port=8002"],
+      "port": 8002
     }
   ]
 }

@@ -12,6 +12,7 @@ use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\FormState;
+use App\Filament\Support\TwoLineSelect;
 use App\Models\Approval\ApprovalPolicyVersion;
 use App\Models\Approval\ApprovalStep;
 use App\Query\Approval\ApprovalQueries;
@@ -105,9 +106,10 @@ class StepsRelationManager extends RelationManager
                         ->label(fn (Get $get): string => FormState::value($get('resolver_type')) === ResolverType::Position->value
                             ? __('approval_step.fields.target_position')
                             : __('approval_step.fields.target_personnel'))
-                        ->options(fn (Get $get): array => FormState::value($get('resolver_type')) === ResolverType::Position->value
-                            ? app(PersonnelQueries::class)->positionOptions()
-                            : app(PersonnelQueries::class)->personnelOptions())
+                        // D-192: personel iki satirli (ad / silik departman); pozisyon tek satir.
+                        ->tap(TwoLineSelect::rows(fn (Get $get): array => FormState::value($get('resolver_type')) === ResolverType::Position->value
+                            ? array_map(static fn (string $label): array => [$label, null], app(PersonnelQueries::class)->positionOptions())
+                            : app(PersonnelQueries::class)->personnelRows()))
                         ->searchable()
                         ->native(false)
                         ->visible(fn (Get $get): bool => in_array(FormState::value($get('resolver_type')), [ResolverType::Personnel->value, ResolverType::Position->value], true))
@@ -144,16 +146,15 @@ class StepsRelationManager extends RelationManager
             ->modelLabel(__('approval_step.label'))
             ->heading(__('approval_step.relation.title'))
             ->description(__('approval_step.help.relation'))
-            ->recordTitleAttribute('step_code')
+            // Adim kodu katalog kodudur; tabloda ve kayit basliginda gosterilmez
+            // (D-130; CodeLine, 14 Ekim 2026).
+            ->recordTitleAttribute('name_tr')
             ->columns([
                 TextColumn::make('sequence_no')
                     ->label(__('approval_step.fields.sequence_no'))
                     ->badge()
                     ->color('gray')
                     ->sortable(),
-                TextColumn::make('step_code')
-                    ->label(__('approval_step.fields.step_code'))
-                    ->weight('semibold'),
                 TextColumn::make('name_tr')
                     ->label(__('approval_step.fields.name_tr')),
                 TextColumn::make('resolver_type')

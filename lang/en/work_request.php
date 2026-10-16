@@ -5,6 +5,7 @@ return [
     'plural' => 'Requests',
 
     'sections' => [
+        'work_items' => 'Linked work',
         'approval' => 'Approval',
         'requester' => 'From',
         'target' => 'To',
@@ -17,6 +18,7 @@ return [
     ],
 
     'fields' => [
+        'work_completed_at' => 'Closed',
         'attachments' => 'Attachments (files, photos)',
         'approval_policy' => 'Approval policy',
         'approval_note' => 'Note to approver',
@@ -70,6 +72,7 @@ return [
     ],
 
     'help' => [
+        'work_items' => 'Work linked to this request and its status. When the request reaches a person, a work item opens on their work board; closing the request closes it too.',
         'description_links' => 'You can paste links (for example a page or file address) directly here; they become clickable in the request.',
         'send_to_approval' => 'Select the approver. When the addressee completes the work the request goes to this person for approval; it closes on approval and returns to the addressee on rejection. The approver cannot be the requester or the addressee.',
         'history' => 'Who did what and when on this request; newest first.',
@@ -110,6 +113,8 @@ return [
     ],
 
     'values' => [
+        'no_work_items' => 'No work is linked to this request.',
+        'management' => 'Management request',
         'unassigned' => 'Not assigned yet',
         'approval_required' => 'Approval required',
         'no_history' => 'No activity yet.',

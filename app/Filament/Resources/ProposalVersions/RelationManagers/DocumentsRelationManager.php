@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ProposalVersions\RelationManagers;
 
 use App\Enums\Acquisition\ProposalDocumentRole;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\ProposalDocument;
@@ -78,11 +79,13 @@ class DocumentsRelationManager extends RelationManager
             ->heading(__('proposal_document.relation.title'))
             ->recordTitleAttribute('document_role')
             ->columns([
-                TextColumn::make('documentRevision.document.document_no')
-                    ->label(__('proposal_document.fields.document_revision')),
-                TextColumn::make('documentRevision.title')
-                    ->label(__('proposal_document.fields.title'))
-                    ->limit(40),
+                // Belge no ayri sutun degil, basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('documentRevision.title')
+                        ->label(__('proposal_document.fields.title'))
+                        ->limit(40),
+                    'documentRevision.document.document_no',
+                ),
                 TextColumn::make('document_role')
                     ->label(__('proposal_document.fields.document_role'))
                     ->badge(),

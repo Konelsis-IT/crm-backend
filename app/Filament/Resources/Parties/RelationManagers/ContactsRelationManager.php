@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Parties\RelationManagers;
 use App\Enums\Party\CommunicationChannelType;
 use App\Enums\Party\ContactRelationshipRole;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\BrandIcons;
 use App\Filament\Support\ChannelActions;
 use App\Filament\Support\DomainNotifications;
@@ -278,7 +279,7 @@ class ContactsRelationManager extends RelationManager
             ->label(__('communication_point.actions.group'))
             ->tooltip(__('communication_point.actions.group'))
             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
-            ->color('primary')
+            ->color(ActionColors::SEND)
             ->visible(fn (ContactRelationship $record): bool => SchemaReadiness::hasBatch('B27') && $record->communicationPoints->isNotEmpty());
     }
 

@@ -32,6 +32,14 @@
     /* Ortak                                                                */
     /* ------------------------------------------------------------------ */
 
+    // Turkce arama (D-214): buyuk / kucuk harf, I-i-I-i ve isaretler (s/s, g/g...) ayirt edilmez;
+    // sunucudaki aramayla (utf8mb4_general_ci) ayni sonuc.
+    function foldSearch(text) {
+        const value = String(text === undefined || text === null ? '' : text).toLocaleLowerCase('tr-TR').replace(/ı/g, 'i');
+
+        return typeof value.normalize === 'function' ? value.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : value;
+    }
+
     function sumObjects(a, b) {
         const out = Object.assign({}, a || {});
         Object.keys(b || {}).forEach((key) => { out[key] = (out[key] || 0) + b[key]; });
@@ -406,9 +414,9 @@
 
         const base = useMemo(() => (rows || []).filter((row) => (!mine || row.owner_id === me)), [rows, mine, me]);
         const filtered = useMemo(() => {
-            const q = query.trim().toLocaleLowerCase('tr-TR');
+            const q = foldSearch(query.trim());
             let list = base.filter((row) => (status === 'all' || demo.statusOf(row) === status)
-                && (!q || [row.no, row.title, row.party, row.party_full, row.potis || ''].join(' ').toLocaleLowerCase('tr-TR').indexOf(q) !== -1));
+                && (!q || foldSearch([row.no, row.title, row.party, row.party_full, row.potis || ''].join(' ')).indexOf(q) !== -1));
 
             if (sort.key) {
                 list = list.slice().sort((a, b) => {

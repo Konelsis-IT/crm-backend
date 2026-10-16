@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\DepartmentHandoffs\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Acquisition\HandoffStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\DepartmentHandoffs\DepartmentHandoffResource;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ViewDepartmentHandoff extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = DepartmentHandoffResource::class;
 
     protected function getHeaderActions(): array

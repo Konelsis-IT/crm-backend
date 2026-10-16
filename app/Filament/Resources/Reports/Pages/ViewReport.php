@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Reports\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Reports\Concerns\CopiesReportText;
 use App\Filament\Resources\Reports\ReportActions;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Report\Report;
 use App\Services\Report\ReportService;
 use Filament\Actions\Action;
@@ -28,16 +30,15 @@ use Illuminate\Support\Facades\Gate;
  */
 class ViewReport extends ViewRecord
 {
+    use HasRecordHeading;
     use CopiesReportText;
 
     protected static string $resource = ReportResource::class;
 
-    public function getTitle(): string
+    /** Ust kart raporun basligini yaziyor; alt baslik tekrar etmez (D-205). */
+    protected function recordSubheading(): ?string
     {
-        /** @var Report $report */
-        $report = $this->getRecord();
-
-        return $report->report_no.' · '.$report->title;
+        return null;
     }
 
     /**
@@ -75,7 +76,7 @@ class ViewReport extends ViewRecord
                 ->schema([
                     Select::make('reviewer_personnel_id')
                         ->label(__('report.fields.forward_to'))
-                        ->options(fn (): array => app(ReportQueries::class)->forwardOptions($this->getRecord()))
+                        ->tap(PersonnelSelect::rows(fn (): array => app(ReportQueries::class)->forwardOptions($this->getRecord())))
                         ->searchable()
                         ->required()
                         ->native(false),

@@ -10,6 +10,7 @@ use App\Enums\Report\ReportPeriodMode;
 use App\Enums\Report\ReportSubjectKind;
 use App\Filament\Forms\Components\CardPicker;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
 use App\Query\Project\ProjectCatalogQueries;
@@ -164,6 +165,12 @@ final class ReportForm
                 ->options(fn (Get $get): array => $viewer !== null
                     ? $queries->subjectOptions($kind, $viewer, $template($get)?->authorRule() === ReportAuthorRule::SubjectManager)
                     : [])
+                // D-192: kisi secimi iki satirli (ad / silik departman).
+                ->when($kind === ReportSubjectKind::Personnel, fn (Select $select): Select => $select->tap(PersonnelSelect::rows(
+                    fn (Get $get): array => $viewer !== null
+                        ? $queries->subjectOptions($kind, $viewer, $template($get)?->authorRule() === ReportAuthorRule::SubjectManager)
+                        : [],
+                )))
                 ->searchable()
                 ->native(false)
                 ->visible($matches)

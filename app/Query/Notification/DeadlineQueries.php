@@ -21,8 +21,21 @@ use App\Models\Project\ProjectStageInstance;
 use App\Models\Project\ProjectStageRequirement;
 use App\Models\Project\RecoveryAction;
 use App\Models\Project\WorkPackage;
+use App\Enums\Platform\Feature;
+use App\Enums\Procurement\PurchaseNeedStatus;
+use App\Enums\Procurement\PurchaseOrderStatus;
+use App\Enums\Procurement\PurchaseRequestStatus;
+use App\Filament\Support\RecordLinks;
+use App\Models\Personnel\OrgUnit;
+use App\Models\Procurement\PurchaseNeed;
+use App\Models\Procurement\PurchaseOrder;
+use App\Models\Procurement\PurchaseRequest;
+use App\Models\Report\WorkItem;
+use App\Query\Personnel\OrganizationQueries;
 use App\Services\Notification\DeadlineHit;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\Dashboard\Departments;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -38,7 +51,7 @@ use Throwable;
  */
 final class DeadlineQueries
 {
-    /** @var array<string, array{method: string, batch: string}> */
+    /** @var array<string, array{method: string, batch: string, feature?: Feature, module?: Feature}> */
     private const SOURCES = [
         'deadline.project_issue' => ['method' => 'projectIssues', 'batch' => 'B17'],
         'deadline.project_risk_review' => ['method' => 'projectRiskReviews', 'batch' => 'B17'],
@@ -51,6 +64,14 @@ final class DeadlineQueries
         'deadline.contract_milestone' => ['method' => 'contractMilestones', 'batch' => 'B16'],
         'deadline.contract_obligation' => ['method' => 'contractObligations', 'batch' => 'B16'],
         'deadline.certification' => ['method' => 'certifications', 'batch' => 'B13'],
+        // D-208 (14 Ekim 2026, kullanici: "Tabi bunlar sistem tarafindan otomatik
+        // olarak da yapilmalidir"): panonun acil kaynaklari sabah taramasina da girer.
+        // D-215: uyarilar 2.7'de, satin alma 2.8'de acilir; satin alma kaynaklari
+        // ekranlari acik degilken taranmaz (module).
+        'deadline.work_item' => ['method' => 'workItems', 'batch' => 'B36', 'feature' => Feature::BusinessAlertsWorkPurchasing],
+        'deadline.purchase_request' => ['method' => 'purchaseRequests', 'batch' => 'B53', 'feature' => Feature::BusinessAlertsWorkPurchasing, 'module' => Feature::PurchaseRequests],
+        'deadline.purchase_need' => ['method' => 'purchaseNeeds', 'batch' => 'B52', 'feature' => Feature::BusinessAlertsWorkPurchasing, 'module' => Feature::PurchaseNeeds],
+        'deadline.delivery' => ['method' => 'deliveries', 'batch' => 'B53', 'feature' => Feature::BusinessAlertsWorkPurchasing, 'module' => Feature::PurchaseOrders],
     ];
 
     /**
@@ -64,6 +85,14 @@ final class DeadlineQueries
 
         foreach (self::SOURCES as $trigger => $source) {
             if (! SchemaReadiness::hasBatch($source['batch'])) {
+                continue;
+            }
+
+            if (isset($source['feature']) && ! FeatureFlags::enabled($source['feature'])) {
+                continue;
+            }
+
+            if (isset($source['module']) && ! FeatureFlags::enabled($source['module'])) {
                 continue;
             }
 
@@ -366,6 +395,142 @@ final class DeadlineQueries
                 url: $record->personnel !== null ? $this->url(fn () => PersonnelResource::getUrl('view', ['record' => $record->personnel])) : null,
             ))
             ->all();
+    }
+
+    /**
+     * Isler: son tarihi pencerede olan, kapanmamis is kartlari. Sorumlu isin kisisi.
+     *
+     * @return list<DeadlineHit>
+     */
+    private function workItems(CarbonImmutable $from, CarbonImmutable $until): array
+    {
+        return WorkItem::query()
+            ->with('project')
+            ->whereNotIn('status', ['done', 'cancelled', 'blocked'])
+            ->whereNotNull('due_on')
+            ->whereBetween('due_on', [$from->toDateString(), $until->toDateString()])
+            ->get()
+            ->map(fn (WorkItem $item): DeadlineHit => new DeadlineHit(
+                triggerCode: 'deadline.work_item',
+                subjectType: 'work_item',
+                subjectId: (int) $item->getKey(),
+                dueAt: CarbonImmutable::instance($item->due_on),
+                params: $this->params((string) $item->title, $item->project?->getAttribute('display_name')),
+                ownerPersonnelId: $item->personnel_id !== null ? (int) $item->personnel_id : null,
+                projectId: $item->project_id !== null ? (int) $item->project_id : null,
+                orgUnitId: $item->org_unit_id !== null ? (int) $item->org_unit_id : null,
+                url: $this->url(fn () => RecordLinks::detailUrl($item, checkRecord: false)),
+            ))
+            ->all();
+    }
+
+    /**
+     * Satin alma talepleri: gerektigi tarih pencerede, talep acik. Sorumlu Satin
+     * Alma departmaninin yoneticisi (yoksa talep eden).
+     *
+     * @return list<DeadlineHit>
+     */
+    private function purchaseRequests(CarbonImmutable $from, CarbonImmutable $until): array
+    {
+        $unit = $this->purchasing();
+
+        return PurchaseRequest::query()
+            ->with('project')
+            ->notArchived()
+            ->whereIn('status', [PurchaseRequestStatus::Open->value, PurchaseRequestStatus::InProgress->value])
+            ->whereNotNull('needed_by')
+            ->whereBetween('needed_by', [$from->toDateString(), $until->toDateString()])
+            ->get()
+            ->map(fn (PurchaseRequest $request): DeadlineHit => new DeadlineHit(
+                triggerCode: 'deadline.purchase_request',
+                subjectType: 'purchase_request',
+                subjectId: (int) $request->getKey(),
+                dueAt: CarbonImmutable::instance($request->getAttribute('needed_by')),
+                params: $this->params((string) $request->getAttribute('request_no'), $request->project?->getAttribute('display_name')),
+                ownerPersonnelId: $this->purchasingOwner($unit, $request->getAttribute('requested_by_personnel_id')),
+                projectId: $request->getAttribute('project_id') !== null ? (int) $request->getAttribute('project_id') : null,
+                orgUnitId: $unit?->getKey() !== null ? (int) $unit->getKey() : null,
+                url: $this->url(fn () => RecordLinks::detailUrl($request, checkRecord: false)),
+            ))
+            ->all();
+    }
+
+    /**
+     * Satin alinacak kalemler: bir talebe bagli olmayanlar (talebin kalemleri
+     * talebin uyarisiyla gelir, iki kez bildirilmez).
+     *
+     * @return list<DeadlineHit>
+     */
+    private function purchaseNeeds(CarbonImmutable $from, CarbonImmutable $until): array
+    {
+        $unit = $this->purchasing();
+
+        return PurchaseNeed::query()
+            ->with('project')
+            ->notArchived()
+            ->when(SchemaReadiness::hasBatch('B53'), fn ($query) => $query->whereNull('purchase_request_id'))
+            ->whereNotIn('status', [PurchaseNeedStatus::Ordered->value, PurchaseNeedStatus::Completed->value, PurchaseNeedStatus::Cancelled->value])
+            ->whereNotNull('needed_by')
+            ->whereBetween('needed_by', [$from->toDateString(), $until->toDateString()])
+            ->get()
+            ->map(fn (PurchaseNeed $need): DeadlineHit => new DeadlineHit(
+                triggerCode: 'deadline.purchase_need',
+                subjectType: 'purchase_need',
+                subjectId: (int) $need->getKey(),
+                dueAt: CarbonImmutable::instance($need->getAttribute('needed_by')),
+                params: $this->params((string) $need->getAttribute('title'), $need->project?->getAttribute('display_name')),
+                ownerPersonnelId: $this->purchasingOwner($unit, $need->getAttribute('requested_by_personnel_id')),
+                projectId: $need->getAttribute('project_id') !== null ? (int) $need->getAttribute('project_id') : null,
+                orgUnitId: $unit?->getKey() !== null ? (int) $unit->getKey() : null,
+                url: $this->url(fn () => RecordLinks::detailUrl($need, checkRecord: false)),
+            ))
+            ->all();
+    }
+
+    /**
+     * Teslimler: siparis verilmis ya da yolda, beklenen teslim pencerede.
+     *
+     * @return list<DeadlineHit>
+     */
+    private function deliveries(CarbonImmutable $from, CarbonImmutable $until): array
+    {
+        $unit = $this->purchasing();
+
+        return PurchaseOrder::query()
+            ->with('project')
+            ->notArchived()
+            ->whereIn('status', [PurchaseOrderStatus::Ordered->value, PurchaseOrderStatus::InTransit->value])
+            ->whereNotNull('expected_delivery_on')
+            ->whereBetween('expected_delivery_on', [$from->toDateString(), $until->toDateString()])
+            ->get()
+            ->map(fn (PurchaseOrder $order): DeadlineHit => new DeadlineHit(
+                triggerCode: 'deadline.delivery',
+                subjectType: 'purchase_order',
+                subjectId: (int) $order->getKey(),
+                dueAt: CarbonImmutable::instance($order->getAttribute('expected_delivery_on')),
+                params: $this->params(trim($order->getAttribute('order_no').' '.$order->supplierLabel()), $order->project?->getAttribute('display_name')),
+                ownerPersonnelId: $this->purchasingOwner($unit, $order->getAttribute('ordered_by_personnel_id')),
+                projectId: $order->getAttribute('project_id') !== null ? (int) $order->getAttribute('project_id') : null,
+                orgUnitId: $unit?->getKey() !== null ? (int) $unit->getKey() : null,
+                url: $this->url(fn () => RecordLinks::detailUrl($order, checkRecord: false)),
+            ))
+            ->all();
+    }
+
+    private function purchasing(): ?OrgUnit
+    {
+        return app(OrganizationQueries::class)->unitByCode(Departments::PURCHASING);
+    }
+
+    private function purchasingOwner(?OrgUnit $unit, mixed $fallback): ?int
+    {
+        $manager = $unit?->getAttribute('manager_personnel_id');
+
+        if ($manager !== null) {
+            return (int) $manager;
+        }
+
+        return $fallback !== null ? (int) $fallback : null;
     }
 
     /**

@@ -47,6 +47,11 @@ return [
         'deadline_contract_milestone' => 'Contract milestone: :subject (:context)',
         'deadline_contract_obligation' => 'Contract obligation: :subject (:context)',
         'deadline_certification' => 'Certification expiry: :subject (:context)',
+        // D-208: dashboard urgent sources
+        'deadline_work_item' => 'Work item due: :subject (:context)',
+        'deadline_purchase_request' => 'Purchase request needed by: :subject (:context)',
+        'deadline_purchase_need' => 'Purchase item needed by: :subject (:context)',
+        'deadline_delivery' => 'Expected delivery: :subject (:context)',
     ],
 
     'widget' => [

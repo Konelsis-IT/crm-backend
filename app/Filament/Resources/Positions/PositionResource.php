@@ -57,6 +57,12 @@ class PositionResource extends Resource
         return __('position.plural');
     }
 
+    /** Sol menude yok; Personel listesindeki dugmeden acilir (D-206, 14 Ekim 2026). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function canAccess(): bool
     {
         return FeatureFlags::enabled(Feature::Positions)

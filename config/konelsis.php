@@ -58,12 +58,12 @@ return [
     ],
 
     /*
-    | Is dosyasi ve teklifte secilebilen para birimleri (16 Eylul 2026
-    | kullanici karari, D-101): is dosyasi ve teklifte yalniz bu para
-    | birimleri sunulur. Kodlar currencies tablosunda tanimli olmalidir;
-    | ReferenceOptions::offerCurrencies() listeyi tabloyla kesistirir.
+    | Secilebilen para birimleri (16 Eylul 2026 kullanici karari, D-101;
+    | 15 Ekim 2026'dan beri butun ekranlarda, D-213): her para birimi
+    | seciminde yalniz bunlar sunulur. Kodlar currencies tablosunda tanimli
+    | olmalidir; ReferenceOptions::currencies() listeyi tabloyla kesistirir.
     */
-    'offer_currencies' => ['TRY', 'USD', 'EUR', 'RON'],
+    'currencies' => ['TRY', 'USD', 'EUR', 'RON'],
 
     /*
     | Personel hareketleri kaydinda degeri gosterilmeyecek alanlar.

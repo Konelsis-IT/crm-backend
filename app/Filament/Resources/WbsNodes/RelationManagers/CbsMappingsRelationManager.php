@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WbsNodes\RelationManagers;
 
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WbsCbsMapping;
@@ -73,10 +74,12 @@ class CbsMappingsRelationManager extends RelationManager
             ->heading(__('wbs_cbs_mapping.relation.title'))
             ->recordTitleAttribute('allocation_pct')
             ->columns([
-                TextColumn::make('cbsNode.cost_code')
-                    ->label(__('wbs_cbs_mapping.fields.cbs_node')),
-                TextColumn::make('cbsNode.name')
-                    ->label(__('wbs_cbs_mapping.fields.name')),
+                // Maliyet kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('cbsNode.name')
+                        ->label(__('wbs_cbs_mapping.fields.cbs_node')),
+                    'cbsNode.cost_code',
+                ),
                 TextColumn::make('cbsNode.cost_category')
                     ->label(__('wbs_cbs_mapping.fields.cost_category'))
                     ->badge(),

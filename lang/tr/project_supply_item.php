@@ -63,4 +63,19 @@ return [
     'filters' => [
         'my_step' => 'Odağı satın almada olan projeler',
     ],
+
+    // D-196: proje sayfasi satin alma kayitlarina bagli (ProjectPurchasing).
+    'purchasing' => [
+        'needs_title' => 'Satın alma',
+        'needs_empty' => 'Bu proje için satın alma talebi yok.',
+        'orders_title' => 'Lojistik',
+        'orders_empty' => 'Bu projenin siparişi yok.',
+        'software_title' => 'Yazılım',
+        'software_empty' => 'Bu proje için yazılım kalemi yok.',
+    ],
+
+    'legacy' => [
+        'title' => 'Eski tedarik kayıtları',
+        'description' => 'Satın alma modülünden önce girilen kayıtlar; yalnız görüntülenir.',
+    ],
 ];

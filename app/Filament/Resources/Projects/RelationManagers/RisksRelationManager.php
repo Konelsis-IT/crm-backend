@@ -8,11 +8,13 @@ use App\Enums\Project\ResponseStrategy;
 use App\Enums\Project\RiskCategory;
 use App\Enums\Project\RiskStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectRisk;
 use App\Services\Project\ProjectRiskService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -101,6 +103,7 @@ class RisksRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('project_risk.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -122,12 +125,14 @@ class RisksRelationManager extends RelationManager
             ->heading(__('project_risk.relation.title'))
             ->recordTitleAttribute('risk_no')
             ->columns([
-                TextColumn::make('risk_no')
-                    ->label(__('project_risk.fields.risk_no')),
-                TextColumn::make('title')
-                    ->label(__('project_risk.fields.title'))
-                    ->limit(40)
-                    ->searchable(),
+                // Risk no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026); iki alanla da aranir.
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('project_risk.fields.title'))
+                        ->limit(40)
+                        ->searchable(['title', 'risk_no']),
+                    'risk_no',
+                ),
                 TextColumn::make('category')
                     ->label(__('project_risk.fields.category'))
                     ->badge(),

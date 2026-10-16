@@ -20,6 +20,8 @@ class WorkItemExporter extends KonelsisExporter
     {
         return [
             self::dateTime('work_at', __('work_item.fields.work_at')),
+            // Is kodu IS-YYYY-NNNN (B56, D-204).
+            self::text('item_no', __('work_item.fields.code')),
             self::text('title', __('work_item.fields.title')),
             self::text('project.name', __('work_item.fields.project')),
             self::text('orgUnit.name', __('work_item.fields.org_unit')),

@@ -24,6 +24,8 @@ return [
         'analytics' => 'Analytics',
         'acquisition' => 'Business Acquisition',
         'operations' => 'Operations',
+        'operations_project' => 'Operations - Projects',
+        'operations_purchasing' => 'Operations - Purchasing',
         'project_group' => 'Project Group',
         'procurement' => 'Procurement',
         'tenders' => 'Tenders',

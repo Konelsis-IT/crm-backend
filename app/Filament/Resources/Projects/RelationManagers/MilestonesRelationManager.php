@@ -8,6 +8,7 @@ use App\Filament\Resources\Projects\RelationManagers\Concerns\OpensFromChecklist
 use App\Enums\Project\MilestoneKind;
 use App\Enums\Project\MilestoneStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\Milestone;
@@ -109,10 +110,12 @@ class MilestonesRelationManager extends RelationManager
             ->heading(__('milestone.relation.title'))
             ->recordTitleAttribute('milestone_code')
             ->columns([
-                TextColumn::make('milestone_code')
-                    ->label(__('milestone.fields.milestone_code')),
-                TextColumn::make('name')
-                    ->label(__('milestone.fields.name')),
+                // Kilometre tasi kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('milestone.fields.name')),
+                    'milestone_code',
+                ),
                 TextColumn::make('milestone_kind')
                     ->label(__('milestone.fields.milestone_kind'))
                     ->badge(),

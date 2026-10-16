@@ -13,7 +13,8 @@ use Throwable;
  * Taraf birlestirme okumalari (D-170, PartyMergeService).
  *
  * REFERENCES, parties.id'ye bakan butun kolonlardir (information_schema ile
- * 7 Ekim 2026'da cikarildi: 29 yabanci anahtar; organization_profiles.party_id
+ * 7 Ekim 2026'da cikarildi: 29 yabanci anahtar; 12 Ekim 2026'da satin almanin
+ * dort tedarikci kolonu eklendi, D-196; organization_profiles.party_id
  * ve person_profiles.party_id profilin kendisidir, tasinmaz). Yeni bir tablo
  * tarafa baglanirsa buraya eklenir. Bu ortamda olmayan tablo / kolon (grubu
  * uygulanmamis) atlanir.
@@ -45,6 +46,12 @@ final class PartyMergeQueries
         'contract_obligations' => ['responsible_party_id'],
         'projects' => ['customer_party_id'],
         'project_supply_items' => ['supplier_party_id'],
+        // Satin alma (D-189 B52, D-192 B53; D-196): tedarikci baglari. Grubu uygulanmamis
+        // ortamda tablo yoktur, references() atlar (hasColumn).
+        'purchase_quotes' => ['supplier_party_id'],
+        'purchase_quotations' => ['supplier_party_id'],
+        'purchase_orders' => ['supplier_party_id'],
+        'company_purchases' => ['supplier_party_id'],
         'commercial_clarifications' => ['customer_contact_party_id'],
         'transmittals' => ['recipient_party_id'],
         'work_requests' => ['customer_party_id'],

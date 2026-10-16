@@ -514,6 +514,11 @@ if (! str_contains($provider, 'TableConventions::register()')) {
     $failures[] = 'Table standard: app/Providers/AppServiceProvider.php must call TableConventions::register() (row click opens detail, icon-only row actions, linked related records).';
 }
 
+// Detay sayfasinda aciklama / not alanlari kilitli textarea gibi kutu (14 Ekim 2026, LongText).
+if (! str_contains($provider, 'LongText::register()')) {
+    $failures[] = 'Detail long text: app/Providers/AppServiceProvider.php must call LongText::register() (description / note entries look like a disabled textarea).';
+}
+
 foreach (phpFiles($root.'/app/Filament') as $file) {
     $relativePath = relative($root, $file);
 
@@ -567,6 +572,27 @@ foreach (phpFiles($root.'/app/Filament') as $file) {
 
     if (preg_match('/^(?:final\s+|abstract\s+)?class\s+\w+\s+extends\s+(?:EditRecord|CreateRecord)\b/m', $source) === 1 && ! str_contains($source, 'use HasColoredFormActions;')) {
         $failures[] = sprintf('Button colours: %s is a create/edit page without HasColoredFormActions; its Kaydet / Oluştur button must be green and İptal rose.', relative($root, $file));
+    }
+
+    // Detay / duzenleme sayfasi basligi (D-205, 14 Ekim 2026): baslik kaydin turu
+    // ("Teklif detayi"), alt baslik kaydin adi, gezinme satirinda kod; ayni ad uc kez
+    // yazilmaz. Sayfa HasRecordHeading kullanir, kendi getTitle / getHeading'ini yazmaz.
+    if (preg_match('/^(?:final\s+|abstract\s+)?class\s+\w+\s+extends\s+(?:ViewRecord|EditRecord|ShieldViewRole|ShieldEditRole)\b/m', $source) === 1) {
+        if (! str_contains($source, 'use HasRecordHeading;')) {
+            $failures[] = sprintf('Record heading: %s is a detail/edit page without HasRecordHeading (heading = record type, subheading = record name, breadcrumb = code).', relative($root, $file));
+        }
+
+        if (preg_match('/function\s+(getTitle|getHeading)\s*\(/', $source) === 1) {
+            $failures[] = sprintf('Record heading: %s overrides getTitle()/getHeading(); override recordSubheading() instead (D-205).', relative($root, $file));
+        }
+    }
+
+    // Duzenle sayfasinda "Goruntule" yok (14 Ekim 2026 kullanici: "Tum duzenle
+    // ekranlarinda goruntule butonlari kaldirilmalidir. Yerine Iptal butonu
+    // getirilmelidir."): baslikta HasColoredFormActions::cancelHeaderAction().
+    if (preg_match('/^(?:final\s+|abstract\s+)?class\s+\w+\s+extends\s+(?:EditRecord|ShieldEditRole)\b/m', $source) === 1
+        && preg_match('/\bViewAction::make\s*\(/', $source) === 1) {
+        $failures[] = sprintf('Edit page cancel: %s shows a ViewAction ("Görüntüle") on an edit page; use $this->cancelHeaderAction() ("İptal") instead.', relative($root, $file));
     }
 }
 

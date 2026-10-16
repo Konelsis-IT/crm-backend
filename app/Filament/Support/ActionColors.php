@@ -28,6 +28,9 @@ use Filament\Support\Colors\Color;
  *  - Dolu dugmelerde yazi her zaman beyaz (D-149, WhiteTextButtonComponent):
  *    acik tonlu renklerde (turuncu, zumrut, yesil, warning) zemin koyu tona
  *    gecer.
+ *  - Rengi verilmemis eylem (14 Ekim 2026, "silme disinda kirmizi buton
+ *    olmasin"): form gonderen yesil, digerleri gri; panelin kirmizi ana rengi
+ *    (primary) dugmede kullanilmaz, kirmizi yalniz Sil / Reddet icindir.
  *
  * Tek tek eylemde acikca verilen renk bu kurali ezer; ozel eylemler amacina
  * uyan sabiti kullanir (ActionColors::CANCEL, ::CREATE...).
@@ -79,6 +82,12 @@ final class ActionColors
     {
         Action::configureUsing(function (Action $action): void {
             $action
+                // Panelin ana rengi kirmizi; rengi verilmemis dugme kirmizi
+                // gorunuyordu (kullanici 14 Ekim 2026: "silme disinda kirmizi
+                // buton olmasin"). Varsayilan: form gonderen dugme yesil, digerleri
+                // gri. Filament'in kendi eylemleri (Sil, Duzenle...) setUp'ta ve
+                // koddaki ->color() bu varsayilani ezer.
+                ->defaultColor(fn (Action $action): string => $action->canSubmitForm() ? self::SAVE : self::NEUTRAL)
                 ->modalSubmitAction(fn (Action $action): Action => self::submit($action))
                 ->modalCancelAction(fn (Action $action): Action => $action->color(self::CANCEL));
         });

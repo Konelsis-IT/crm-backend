@@ -20,6 +20,7 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
@@ -87,6 +88,7 @@ class OperationHandoffResource extends Resource
                         Select::make('prepared_by_employee_id')
                             ->label(__('operation_handoff.fields.prepared_by'))
                             ->relationship('preparer', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),

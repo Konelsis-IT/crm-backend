@@ -6,7 +6,9 @@ namespace App\Providers;
 
 use App\Filament\Exports\Jobs\KonelsisExportCompletion;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\LongText;
 use App\Filament\Support\TableConventions;
+use App\Filament\Support\TurkishSelectSearch;
 use App\Filament\Support\WhiteTextButtonComponent;
 use App\Infrastructure\Console\SchemaChangeGuard;
 use App\Query\SocialMedia\SocialResponsibilityQueries;
@@ -19,12 +21,15 @@ use Filament\Actions\EditAction;
 use Filament\Actions\Exports\Jobs\ExportCompletion;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TimePicker;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Facades\FilamentTimezone;
 use Filament\Support\View\Components\ButtonComponent;
+use App\Infrastructure\Database\Search\TurkishSearchMySqlConnection;
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -34,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Turkce arama (D-214): MySQL'de her LIKE karsilastirmasi I / i / I / i
+        // ayrimi yapmaz ("irmak" "Irmak" ve "Irmak"i bulur); tablo, genel ve
+        // secim aramalari ile uygulamanin kendi aramalari ayni yerden gecer.
+        Connection::resolverFor('mysql', static fn (mixed $pdo, string $database, string $prefix, array $config): TurkishSearchMySqlConnection => new TurkishSearchMySqlConnection($pdo, $database, $prefix, $config));
+
         // Hareketi kimin yaptigi bilgisi istek/is basina tutulur.
         $this->app->scoped(ActorContext::class);
 
@@ -98,6 +108,8 @@ class AppServiceProvider extends ServiceProvider
         FilamentTimezone::set(DisplayTime::zone());
         DatePicker::configureUsing(fn (DatePicker $picker) => $picker->native()->displayFormat('d.m.Y'));
         TimePicker::configureUsing(fn (TimePicker $picker) => $picker->native());
+        // Secim kutusu aramasi Turkce duyarsiz (D-214): "irmak" "İrmak"i bulur.
+        Select::configureUsing(fn (Select $select) => TurkishSelectSearch::configure($select));
         CreateRecord::disableCreateAnother();
         CreateAction::configureUsing(fn (CreateAction $action) => $action->modalWidth(Width::SixExtraLarge)->createAnother(false));
         EditAction::configureUsing(fn (EditAction $action) => $action->modalWidth(Width::SixExtraLarge));
@@ -107,6 +119,10 @@ class AppServiceProvider extends ServiceProvider
         // dugmesi yok, satir eylemleri simge + ipucu, bagli kayit tiklanabilir
         // ve simgeli, personel adinda kisi simgesi.
         TableConventions::register();
+
+        // Detay sayfasinda aciklama / not alanlari kilitli textarea gibi kutu
+        // (14 Ekim 2026, LongText).
+        LongText::register();
 
         // Dugme renkleri (D-148): Kaydet / onay yesil, Iptal / Kapat gul
         // kirmizisi, Duzenle turuncu, Yeni zumrut yesili, Goruntule mavi.

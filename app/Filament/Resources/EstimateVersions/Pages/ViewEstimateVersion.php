@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\EstimateVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Acquisition\EstimateVersionStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\EstimateVersions\EstimateVersionResource;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ViewEstimateVersion extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = EstimateVersionResource::class;
 
     protected function getHeaderActions(): array

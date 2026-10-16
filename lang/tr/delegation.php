@@ -18,6 +18,7 @@ return [
         'reason' => 'Gerekçe',
         'valid_from' => 'Başlangıç',
         'valid_until' => 'Bitiş',
+        'period' => 'Süre',
         'status' => 'Durum',
         'approver' => 'Onaylayan',
         'revoked_at' => 'İptal tarihi',
@@ -34,11 +35,17 @@ return [
         'scope_type' => '"Tümü": vekalet verenin bütün onay adımları. "Onay politikası": yalnız seçilen politikanın adımları.',
         'valid_until' => 'Bitiş zorunludur; süre dolunca vekalet kendiliğinden biter.',
         'list' => 'Kendi verdiğiniz ve aldığınız vekaletler; yöneticiler tümünü görür.',
+        'open_list' => 'Geçerli ve başlayacak vekaletler. Geçmiş vekaletler ve düzenleme için Tüm vekaletler.',
     ],
 
     'actions' => [
         'revoke' => 'Vekaleti iptal et',
+        'all' => 'Tüm vekaletler',
+        'new' => 'Vekalet ver',
+        'close' => 'Kapat',
     ],
+
+    'empty_open' => 'Geçerli ya da başlayacak vekalet yok.',
 
     'messages' => [
         'revoked' => 'Vekalet iptal edildi.',

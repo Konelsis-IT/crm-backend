@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 
 use App\Enums\Project\DecisionScope;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectDecision;
@@ -78,11 +79,13 @@ class DecisionsRelationManager extends RelationManager
             ->heading(__('project_decision.relation.title'))
             ->recordTitleAttribute('decision_no')
             ->columns([
-                TextColumn::make('decision_no')
-                    ->label(__('project_decision.fields.decision_no')),
-                TextColumn::make('title')
-                    ->label(__('project_decision.fields.title'))
-                    ->limit(40),
+                // Karar no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('project_decision.fields.title'))
+                        ->limit(40),
+                    'decision_no',
+                ),
                 TextColumn::make('decision_scope')
                     ->label(__('project_decision.fields.decision_scope'))
                     ->badge(),

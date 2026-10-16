@@ -7,11 +7,13 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 use App\Enums\Project\IssueSeverity;
 use App\Enums\Project\IssueStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectIssue;
 use App\Services\Project\ProjectIssueService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -80,6 +82,7 @@ class IssuesRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('project_issue.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -101,12 +104,14 @@ class IssuesRelationManager extends RelationManager
             ->heading(__('project_issue.relation.title'))
             ->recordTitleAttribute('issue_no')
             ->columns([
-                TextColumn::make('issue_no')
-                    ->label(__('project_issue.fields.issue_no')),
-                TextColumn::make('title')
-                    ->label(__('project_issue.fields.title'))
-                    ->limit(40)
-                    ->searchable(),
+                // Sorun no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026); iki alanla da aranir.
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('project_issue.fields.title'))
+                        ->limit(40)
+                        ->searchable(['title', 'issue_no']),
+                    'issue_no',
+                ),
                 TextColumn::make('severity')
                     ->label(__('project_issue.fields.severity'))
                     ->badge(),

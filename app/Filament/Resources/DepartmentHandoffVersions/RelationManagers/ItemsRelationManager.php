@@ -7,6 +7,7 @@ namespace App\Filament\Resources\DepartmentHandoffVersions\RelationManagers;
 use App\Enums\Acquisition\CompletionState;
 use App\Enums\Project\DepartmentHandoffItemType;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\DepartmentHandoffItem;
@@ -89,14 +90,16 @@ class ItemsRelationManager extends RelationManager
             ->heading(__('department_handoff_item.relation.title'))
             ->recordTitleAttribute('item_code')
             ->columns([
-                TextColumn::make('item_code')
-                    ->label(__('department_handoff_item.fields.item_code')),
                 TextColumn::make('item_type')
                     ->label(__('department_handoff_item.fields.item_type'))
                     ->badge(),
-                TextColumn::make('description')
-                    ->label(__('department_handoff_item.fields.description'))
-                    ->limit(50),
+                // Kod basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('department_handoff_item.fields.description'))
+                        ->limit(50),
+                    'item_code',
+                ),
                 TextColumn::make('completion_state')
                     ->label(__('department_handoff_item.fields.completion_state'))
                     ->badge(),

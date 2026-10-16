@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\WorkItems\Schemas;
 
+use App\Enums\Report\WorkDiscipline;
 use App\Enums\Report\WorkItemLinkKind;
+use App\Enums\Report\WorkItemPriority;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\FormState;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Personnel\Personnel;
-use App\Query\Personnel\PersonnelQueries;
+use App\Models\Report\WorkItem;
+use App\Query\Personnel\OrganizationQueries;
 use App\Query\Report\WorkItemQueries;
+use App\Services\Authorization\ExecutiveDirectory;
 use App\Services\Platform\SchemaReadiness;
+use App\Services\Report\WorkItemService;
 use App\Reports\Work\WorkCategoryCatalog;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -48,7 +55,7 @@ final class WorkItemForm
                 ->columnSpan(FieldGrid::WIDE),
             Select::make('personnel_id')
                 ->label(__('work_item.fields.personnel'))
-                ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                ->tap(PersonnelSelect::all())
                 ->default(fn () => auth()->id())
                 ->required()
                 ->searchable()
@@ -83,7 +90,9 @@ final class WorkItemForm
                 ->columnSpan(FieldGrid::NORMAL),
             Select::make('category_code')
                 ->label(__('work_item.fields.category'))
-                ->options(fn (Get $get): array => app(WorkCategoryCatalog::class)->optionsFor(self::unitCodeOf($get('personnel_id'))))
+                // D-217: gorevin kendi seti (Yonetim kurulu baskani) departman setinin yerine gecer.
+                // D-218: birden fazla departmanda calisanda setlerin birlesimi.
+                ->options(fn (Get $get): array => self::categoryOptions($get('personnel_id')))
                 ->placeholder('–')
                 ->native(false),
             // Bes durum dugmesi (simgeli) yan yana ~620 px tutar: xl'de 8/12 tek
@@ -98,7 +107,49 @@ final class WorkItemForm
                 ->columnSpan(['default' => 1, 'md' => 6, 'xl' => 8]),
             Toggle::make('is_critical')
                 ->label(__('work_item.fields.is_critical'))
-                ->inline(false),
+                ->inline(false)
+                ->visible(fn (): bool => ! WorkItemQueries::extendedUi()),
+            // D-219: dort seviyeli kritiklik (Kritik = eski kritik isareti).
+            ToggleButtons::make('priority')
+                ->label(__('work_item.fields.priority'))
+                ->options(WorkItemPriority::class)
+                ->default(WorkItemPriority::Normal->value)
+                ->inline()
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->columnSpan(FieldGrid::HALF),
+            // D-219: bir ise birden fazla sorumlu; ana sorumlu ustteki Personel.
+            Select::make('assignee_ids')
+                ->label(__('work_item.fields.assignees'))
+                ->helperText(__('work_item.help.assignees'))
+                ->multiple()
+                ->tap(PersonnelSelect::active())
+                ->searchable()
+                ->native(false)
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->columnSpan(FieldGrid::HALF),
+            Toggle::make('for_everyone')
+                ->label(__('work_item.fields.for_everyone'))
+                ->helperText(__('work_item.help.for_everyone'))
+                ->inline(false)
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->columnSpan(FieldGrid::NORMAL),
+            Select::make('discipline')
+                ->label(__('work_item.fields.discipline'))
+                ->options(WorkDiscipline::class)
+                ->placeholder('–')
+                ->native(false)
+                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->columnSpan(FieldGrid::NORMAL),
+            // D-216: Tamamlandi secilince bagli acik talep icin "Talebi tamamlandı olarak kapat?".
+            Toggle::make('close_request')
+                ->label(fn (?WorkItem $record): string => __('work_item.request_link.close_question', ['no' => $record?->linkedWorkRequest?->request_no]))
+                ->helperText(fn (?WorkItem $record): string => __($record?->linkedWorkRequest?->needsApproval() ? 'work_item.request_link.close_help_approval' : 'work_item.request_link.close_help'))
+                ->default(true)
+                ->inline(false)
+                ->visible(fn (Get $get, ?WorkItem $record): bool => FormState::value($get('status')) === WorkItemStatus::Done->value
+                    && $record instanceof WorkItem
+                    && app(WorkItemService::class)->canCloseLinkedRequest($record, auth()->user() instanceof Personnel ? auth()->user() : null))
+                ->columnSpan(FieldGrid::WIDE),
             DatePicker::make('work_on')
                 ->label(__('work_item.fields.work_on'))
                 ->helperText(__('work_item.help.work_on'))
@@ -129,7 +180,7 @@ final class WorkItemForm
                 ->columnSpan(FieldGrid::NORMAL),
             Select::make('requester_personnel_id')
                 ->label(__('work_item.fields.requester_personnel'))
-                ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                ->tap(PersonnelSelect::all())
                 ->searchable()
                 ->native(false)
                 ->visible(fn (Get $get): bool => SchemaReadiness::hasBatch('B37') && self::value($get('requester_kind')) === WorkWaitingKind::Personnel->value)
@@ -158,7 +209,7 @@ final class WorkItemForm
                 ->columnSpan(FieldGrid::NORMAL),
             Select::make('waiting_personnel_id')
                 ->label(__('work_item.fields.waiting_personnel'))
-                ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                ->tap(PersonnelSelect::all())
                 ->searchable()
                 ->native(false)
                 ->visible(fn (Get $get): bool => self::value($get('waiting_kind')) === WorkWaitingKind::Personnel->value)
@@ -204,7 +255,7 @@ final class WorkItemForm
             'main' => [
                 'label' => __('work_item.sections.main'),
                 'icon' => Heroicon::OutlinedClipboardDocumentCheck,
-                'fields' => ['title', 'personnel_id', 'org_unit_id', 'project_id', 'parent_id', 'category_code', 'status', 'is_critical', 'requester_kind', 'requester_personnel_id', 'requester_party_id', 'requester_text'],
+                'fields' => ['title', 'personnel_id', 'org_unit_id', 'project_id', 'parent_id', 'category_code', 'status', 'is_critical', 'priority', 'assignee_ids', 'for_everyone', 'discipline', 'requester_kind', 'requester_personnel_id', 'requester_party_id', 'requester_text'],
             ],
             'dates' => [
                 'label' => __('work_item.sections.dates'),
@@ -232,6 +283,34 @@ final class WorkItemForm
     private static function linkKind(mixed $value): WorkItemLinkKind
     {
         return WorkItemLinkKind::tryFrom(self::value($value)) ?? WorkItemLinkKind::None;
+    }
+
+    /**
+     * Sorumlunun kategori secenekleri: gorev seti, yoksa calistigi butun
+     * departmanlarin setleri (D-217 / D-218).
+     *
+     * @return array<string, string>
+     */
+    private static function categoryOptions(mixed $personnelId): array
+    {
+        $catalog = app(WorkCategoryCatalog::class);
+        $id = filled($personnelId) ? (int) $personnelId : (int) auth()->id();
+        $units = app(OrganizationQueries::class)->unitCodesOf($id);
+        $codes = $units === [] ? $catalog->codesFor(self::unitCodeOf($personnelId), self::positionCodeOf($personnelId)) : $catalog->codesForUnits($units, self::positionCodeOf($personnelId));
+        $options = [];
+
+        foreach ($codes as $code) {
+            $options[$code] = (string) $catalog->label($code);
+        }
+
+        return $options;
+    }
+
+    private static function positionCodeOf(mixed $personnelId): ?string
+    {
+        $id = filled($personnelId) ? (int) $personnelId : (int) auth()->id();
+
+        return app(ExecutiveDirectory::class)->positionCodes()[$id] ?? null;
     }
 
     private static function unitCodeOf(mixed $personnelId): ?string

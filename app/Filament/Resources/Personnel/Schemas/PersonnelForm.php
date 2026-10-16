@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Personnel\Schemas;
 use App\Enums\Personnel\CompetencyLevel;
 use App\Enums\Personnel\PersonnelStatus;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Personnel\Personnel;
 use App\Query\Authorization\RoleQueries;
 use App\Query\Personnel\PersonnelQueries;
@@ -82,8 +83,7 @@ final class PersonnelForm
                     Select::make('direct_manager_personnel_id')
                         ->label(__('personnel.fields.direct_manager'))
                         ->helperText(__('personnel.help.direct_manager'))
-                        ->options(fn (?Personnel $record): array => app(PersonnelQueries::class)
-                            ->managerOptions($record !== null ? (int) $record->getKey() : null))
+                        ->tap(PersonnelSelect::excluding(fn (?Personnel $record): ?int => $record !== null ? (int) $record->getKey() : null))
                         ->searchable()
                         ->native(false)
                         ->visible(fn (): bool => SchemaReadiness::hasBatch('B03'))

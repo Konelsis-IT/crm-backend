@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Delegations\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Approval\DelegationStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\Delegations\DelegationResource;
@@ -24,6 +25,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ViewDelegation extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = DelegationResource::class;
 
     public function infolist(Schema $schema): Schema

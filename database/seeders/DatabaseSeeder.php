@@ -25,6 +25,12 @@ use Illuminate\Support\Facades\DB;
  * referans verisi, gercek organizasyon, gercek personel, rol/yetki matrisi
  * ve gercek taraflar kalir; kurgusal veri ureten seeder eklenmez.
  *
+ * 13 Ekim 2026 (D-199, kullanici: "ornek veriler olustur ama bunlar canliya
+ * gitmeyecek veriler olacak"): yerel deneme verisi yalniz
+ * database/seeders/Samples altinda durur ve yalniz `php artisan
+ * konelsis:sample-data` (APP_ENV=local) ile kurulur / arsive alinir. Bu sinif,
+ * START_CHAIN ve DEPLOY_SEEDERS Samples altindaki hicbir sinifi cagirmaz.
+ *
  * 18 Eylul 2026 (D-106, Sosyal Medya): zincirin sonuna kullanicinin
  * adlandirdigi iki gercek sosyal medya hesabi (SocialProfileSeeder) ve tarihi
  * sabit resmi ulusal gunler (SocialSpecialDaySeeder; herkese acik referans
@@ -84,6 +90,29 @@ class DatabaseSeeder extends Seeder
         // D-181: teklif kapsamindaki Maliyet listesi icin "MLY Maliyet Listesi" dokuman
         // turu (yalniz yoksa eklenir). B51 ile ayni kurulumda.
         CostListDocumentType20261009Seeder::class,
+        // D-189 (B52): sabit katalog (Kartal maliyet Excel'indeki Urun/Hizmet, Idari
+        // kadro, Genel gider kalemleri + sirket ici ornekler), siparis onay politikalari
+        // (4.000 TL'ye kadar Satin alma muduru, ustu YK baskani) ve satin alma yetkileri.
+        Catalog20261010Seeder::class,
+        PurchaseApprovalPolicy20261010Seeder::class,
+        ProcurementPermissions20261010Seeder::class,
+        // D-192 (B53): tekliften acilan siparisin onay politikalari (ayni 4.000 TL siniri,
+        // konu turu purchase_order) ve satin alma teklif belgelerinin dokuman turu (STF).
+        PurchaseOrderApprovalPolicy20261012Seeder::class,
+        PurchaseQuotationDocumentType20261012Seeder::class,
+        // D-197: firma takip listesi 07.10'daki kirmizi satirlar = kaybedilen is (AKDAG Palu, CMS JANT).
+        FirmaTakipRedRowsLost20261013Seeder::class,
+        // D-198: KKS 07.10 listesindeki revizyonlar (Verilen'de ileri giden teklif tarihi) yeni teklif surumu olur (B55 gerekir).
+        KksRevisionVersions20261013Seeder::class,
+        // D-208: departmanlarin panodaki sablonlari icin "SAB Standart Sablon" dokuman turu (yalniz yoksa eklenir).
+        StandardTemplateDocumentType20261014Seeder::class,
+        // D-218: Yusuf Gokcan Fil, Mukaddes Tekik ve Haydar Samet Cakmak Teklif departmaninda da
+        // calisir: TEKLIF'e Teklif grup muduru / Teklif sorumlusu gorevleri ve ek gorev atamalari.
+        ProposalDepartmentMembers20261015Seeder::class,
+        // D-219 (B57): is takip listesi ve proje alt kirim tablosu 16.10 (eksik personel, METGUN /
+        // ORKOM taraflari ve kisiler, METGUN ve Kirsehir TM / ENH projeleri, gorev ve sorumluluklar,
+        // isler + notlar, proje dokumanlari, satin alinacak kalemler ve bagli isleri).
+        WorkTracking20261016Seeder::class,
     ];
 
     /**

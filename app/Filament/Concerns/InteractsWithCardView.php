@@ -7,6 +7,7 @@ namespace App\Filament\Concerns;
 use App\Filament\Support\CardList;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -98,7 +99,13 @@ trait InteractsWithCardView
             return parent::content($schema);
         }
 
-        return $schema->columns(1)->components($this->cardListComponents());
+        return $schema->columns(1)->components([
+            ...$this->cardListComponents(),
+            // Tablo sayfasinda eylem pencerelerini tablo cizer; kart gorunumunde tablo
+            // olmadigi icin baslik dugmelerinin pencereleri (Proje tipi koordinatorleri,
+            // Vekaletler...) acilmiyordu. Filament'in kendi pencere alani (D-206).
+            View::make('filament-actions::components.modals'),
+        ]);
     }
 
     /**

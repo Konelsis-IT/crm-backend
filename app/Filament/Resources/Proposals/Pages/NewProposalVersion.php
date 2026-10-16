@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Proposals\Pages;
 
+use App\Enums\Acquisition\OfferStatus;
 use App\Models\Acquisition\Proposal;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Contracts\Support\Htmlable;
 
 /**
@@ -36,6 +38,12 @@ class NewProposalVersion extends EditProposal
         return trim(($proposal->proposal_no ?? '').' · '.__('proposal.new_version.heading', ['no' => $this->nextVersionNo()]), ' ·');
     }
 
+    /** Baslik sayfanin isi ("Yeni teklif surumu"); teklif kodu ust gezinme satirinda (D-205). */
+    public function getHeading(): string|Htmlable|null
+    {
+        return __('proposal.new_version.heading', ['no' => $this->nextVersionNo()]);
+    }
+
     public function getBreadcrumb(): string
     {
         return __('proposal.new_version.breadcrumb');
@@ -45,9 +53,20 @@ class NewProposalVersion extends EditProposal
     {
         /** @var Proposal $proposal */
         $proposal = $this->getRecord();
+        $current = $proposal->currentVersion;
+
+        // D-195 (B55): yeni surum Verilecek baslar, onceki surum kendi teklif durumunu korur.
+        if (SchemaReadiness::hasBatch('B55') && $current?->offer_status !== null) {
+            return __('proposal.new_version.subheading_offer', [
+                'current' => $current->version_no,
+                'next' => $this->nextVersionNo(),
+                'offer' => OfferStatus::ToBeSubmitted->getLabel(),
+                'status' => $current->offer_status->getLabel(),
+            ]);
+        }
 
         return __('proposal.new_version.subheading', [
-            'current' => $proposal->currentVersion?->version_no ?? '-',
+            'current' => $current?->version_no ?? '-',
             'next' => $this->nextVersionNo(),
         ]);
     }

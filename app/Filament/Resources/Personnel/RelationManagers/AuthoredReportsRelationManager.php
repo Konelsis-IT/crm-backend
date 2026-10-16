@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Personnel\RelationManagers;
 
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Support\CodeLine;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
 use App\Query\Report\ReportQueries;
@@ -58,8 +59,11 @@ class AuthoredReportsRelationManager extends RelationManager
             ->defaultSort('created_at', 'desc')
             ->recordUrl(fn (Report $record): string => ReportResource::getUrl('view', ['record' => $record]))
             ->columns([
-                TextColumn::make('report_no')->label(__('report.fields.report_no'))->badge()->color('gray'),
-                TextColumn::make('title')->label(__('report.fields.title'))->weight('semibold')->wrap(),
+                // Rapor no ayri sutun degil, basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('title')->label(__('report.fields.title'))->weight('semibold')->wrap(),
+                    'report_no',
+                ),
                 TextColumn::make('template_code')
                     ->label(__('report.fields.template'))
                     ->formatStateUsing(fn (Report $record): string => $record->templateName()),

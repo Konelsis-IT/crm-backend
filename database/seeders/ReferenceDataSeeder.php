@@ -178,7 +178,8 @@ class ReferenceDataSeeder extends ProtectedSeeder
         $units = [
             [UomDimension::Count, 'pcs', 'ad', 'Adet', 'Piece', null, null],
             [UomDimension::Count, 'set', 'set', 'Takım', 'Set', null, null],
-            [UomDimension::Count, 'lot', 'lot', 'Parti', 'Lot', null, null],
+            // D-194: maliyet listelerindeki ad "Lot" (eskiden "Parti").
+            [UomDimension::Count, 'lot', 'lot', 'Lot', 'Lot', null, null],
             [UomDimension::Length, 'm', 'm', 'Metre', 'Metre', null, null],
             [UomDimension::Length, 'mm', 'mm', 'Milimetre', 'Millimetre', 'm', '0.001'],
             [UomDimension::Length, 'cm', 'cm', 'Santimetre', 'Centimetre', 'm', '0.01'],

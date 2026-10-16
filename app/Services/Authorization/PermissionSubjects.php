@@ -111,6 +111,21 @@ final class PermissionSubjects
         // D-177 (B50): referanslar teklifin aracidir; kendi anahtari yoksa teklif yetkisi.
         'ProjectReference' => 'Proposal',
         'ProjectReferenceScopeType' => 'Proposal',
+        // D-189 (B52): maliyet listesi teklifin araci; katalog alt kayitlari ve teklifler.
+        'CostList' => 'Proposal',
+        'CostListLine' => 'Proposal',
+        'CatalogCategory' => 'CatalogItem',
+        'CatalogItemAlias' => 'CatalogItem',
+        // D-194 (B54): Ayarlar > Birimler; kendi anahtari yoksa Malzeme ve Hizmetler yetkisi.
+        'UnitOfMeasure' => 'CatalogItem',
+        'PurchaseQuote' => 'PurchaseNeed',
+        // D-192 (B53): kalemli talep, satin alma teklifleri ve siparisler satin alma yetkisini paylasir.
+        'PurchaseRequest' => 'PurchaseNeed',
+        'PurchaseQuotation' => 'PurchaseNeed',
+        'PurchaseQuotationLine' => 'PurchaseNeed',
+        'PurchaseQuotationDocument' => 'PurchaseNeed',
+        'PurchaseOrder' => 'PurchaseNeed',
+        'PurchaseOrderLine' => 'PurchaseNeed',
         'EstimateLine' => 'EstimateVersion',
         'ContractDocument' => 'Contract',
         'ContractParty' => 'Contract',
@@ -150,6 +165,9 @@ final class PermissionSubjects
         'SocialWatchLink' => 'SocialContent',
         'SocialMetricEntry' => 'SocialContent',
         'SocialResponsiblePosition' => 'SocialContent',
+
+        // Is panosu (D-219): gorev ve sorumluluklar is yetkisini devralir
+        'RecurringWork' => 'WorkItem',
     ];
 
     /** Bu konunun yetkisini devraldigi ana konu; yoksa null. */

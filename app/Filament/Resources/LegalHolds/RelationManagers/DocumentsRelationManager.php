@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\LegalHolds\RelationManagers;
 
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\RowDetail;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\LegalHoldDocument;
@@ -68,11 +69,13 @@ class DocumentsRelationManager extends RelationManager
             ->heading(__('legal_hold.relation.documents.title'))
             ->recordTitleAttribute('document.title')
             ->columns([
-                TextColumn::make('document.document_no')
-                    ->label(__('document.fields.document_no')),
-                TextColumn::make('document.title')
-                    ->label(__('legal_hold_document.fields.document'))
-                    ->limit(50),
+                // Dokuman no ayri sutun degil, basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('document.title')
+                        ->label(__('legal_hold_document.fields.document'))
+                        ->limit(50),
+                    'document.document_no',
+                ),
                 TextColumn::make('revision.revision_code')
                     ->label(__('legal_hold_document.fields.revision'))
                     ->placeholder(__('legal_hold_document.messages.all_revisions')),

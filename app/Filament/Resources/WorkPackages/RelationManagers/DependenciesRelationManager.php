@@ -6,6 +6,7 @@ namespace App\Filament\Resources\WorkPackages\RelationManagers;
 
 use App\Enums\Project\DependencyType;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WorkPackageDependency;
@@ -74,10 +75,12 @@ class DependenciesRelationManager extends RelationManager
             ->heading(__('work_package_dependency.relation.title'))
             ->recordTitleAttribute('id')
             ->columns([
-                TextColumn::make('predecessor.package_code')
-                    ->label(__('work_package_dependency.fields.predecessor')),
-                TextColumn::make('predecessor.name')
-                    ->label(__('work_package_dependency.fields.name')),
+                // Oncul paketin kodu adinin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('predecessor.name')
+                        ->label(__('work_package_dependency.fields.predecessor')),
+                    'predecessor.package_code',
+                ),
                 TextColumn::make('dependency_type')
                     ->label(__('work_package_dependency.fields.dependency_type'))
                     ->badge(),

@@ -10,7 +10,7 @@ return [
         'main' => 'Proposal details',
         'business_case' => 'Business case',
         'header' => 'Proposal card',
-        'current_version' => 'Current version',
+        'current_version' => 'Version',
         'scope' => 'Project scope',
         'documents' => 'Proposal documents',
     ],
@@ -29,7 +29,7 @@ return [
     'fields' => [
         'business_case' => 'Business case',
         'created_at' => 'Created at',
-        'current_version' => 'Current version',
+        'current_version' => 'Version',
         'is_selected' => 'Selected',
         'offer_status' => 'Offer status',
         'owner' => 'Owner',
@@ -53,6 +53,8 @@ return [
         'heading' => 'New version (Version :no)',
         'breadcrumb' => 'New version',
         'subheading' => 'Version :current is filled in. Saving creates Version :next; Version :current is kept as it is.',
+        // D-195 (B55): the new version starts as "to be submitted"; the previous one keeps its own offer status.
+        'subheading_offer' => 'Version :current is filled in. Saving creates Version :next as ":offer"; Version :current is kept as it is, with its own offer status (:status).',
         'save' => 'Save new version',
     ],
 
@@ -83,6 +85,10 @@ return [
         'item' => 'Version :no · :status · :date',
         'current' => 'Version :no · :status · current',
         'modal_description' => ':status · :date. When the window closes the page keeps showing the current version.',
+        // D-195 (B55): each version's own offer status is shown as a badge in the menu.
+        'item_offer' => 'Version :no · :date',
+        'current_offer' => 'Version :no · :date · current',
+        'modal_description_offer' => 'Offer status: :offer · Version status: :status · :date. When the window closes the page keeps showing the current version.',
         'close' => 'Close',
         'scope_totals' => 'Totals',
         'no_documents' => 'No documents in this version.',
@@ -101,6 +107,8 @@ return [
         'no_offer_status' => 'No offer status',
         'menu_label' => ':status ▾',
         'menu_tooltip' => 'Change the offer status; the chosen status is saved at once, no new version is created',
+        // D-195 (B55): the button changes the current version's own offer status.
+        'menu_tooltip_version' => 'Change the offer status of the current version (Version :no); the chosen status is saved at once, no new version is created. Earlier versions keep their own status',
         'confirm_heading' => 'Set the proposal to ":status"?',
         'confirm_description' => 'The offer status changes from ":from" to ":to"; there is no way back from this status. No new version is created.',
         'approved_note' => 'If the proposal was not sent yet, the current version is marked as submitted; the potential job becomes Won.',

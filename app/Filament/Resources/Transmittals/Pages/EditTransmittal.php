@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Transmittals\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\StaleRecordException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Transmittals\TransmittalResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Document\TransmittalService;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 
 class EditTransmittal extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = TransmittalResource::class;
@@ -23,7 +24,7 @@ class EditTransmittal extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

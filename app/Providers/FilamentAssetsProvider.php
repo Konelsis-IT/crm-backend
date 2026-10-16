@@ -8,10 +8,12 @@ use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
 use App\Filament\Support\Assets\KonelsisCss as Css;
 use App\Filament\Support\Assets\KonelsisJs as Js;
+use App\Filament\Support\RecordHeading;
 use App\Models\Personnel\Personnel;
 use Filament\Facades\Filament;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 /**
  * Konelsis'e ozel panel varliklari. `php artisan filament:assets` ile
@@ -51,8 +53,17 @@ use Illuminate\Support\ServiceProvider;
  *   filament.dashboards.scripts betikleri yalniz o iki sayfada yukler.
  *   cost-lab.js (D-187): UI Deneme > Maliyet kalemleri; ayni cekirdek ve stil.
  *
+ * - konelsis-nd.css ve nd-app.js (D-207): UI Deneme > Yeni pano (React, kendi
+ *   bilesenleri; dash-* kullanmaz). `loadedOnRequest()`:
+ *   resources/views/filament/new-dashboard/app.blade.php stili,
+ *   filament.new-dashboard.scripts betigi yalniz o sayfada yukler.
+ *
  * - report-copy.js (D-167): raporun bicimli metnini panoya zengin metin + duz
  *   metin olarak yazar (ReportActions::copy). Her panel sayfasinda (kucuk).
+ *
+ * - konelsis-purchasing.css (D-192): kalemli satin alma formlarinin kalem
+ *   listesi (kesik cizgili "Kalem ekle", kalem basligi rozetleri) ve satin alma
+ *   tekliflerinin karsilastirma matrisi. Her panel sayfasinda (kucuk).
  *
  * Surum: adres eki (?v=) yayimlanan dosyanin icerik ozetidir (KonelsisCss /
  * KonelsisJs, 21 Eylul 2026); dosya degisince tarayici yenisini indirir.
@@ -67,6 +78,9 @@ final class FilamentAssetsProvider extends ServiceProvider
     {
         FilamentAsset::register([
             Css::make('konelsis', resource_path('css/filament/konelsis.css')),
+            // Satin alma kalem listesi rozetleri ve teklif karsilastirma matrisi
+            // (D-192, kullanici onayi 12 Ekim 2026); kucuk, her panel sayfasinda.
+            Css::make('konelsis-purchasing', resource_path('css/filament/konelsis-purchasing.css')),
             Js::make('react', resource_path('js/vendor/react/react.production.min.js'))->loadedOnRequest(),
             Js::make('react-dom', resource_path('js/vendor/react/react-dom.production.min.js'))->loadedOnRequest(),
             Js::make('konelsis-chat', resource_path('js/chat/konelsis-chat.js'))->loadedOnRequest(),
@@ -101,13 +115,45 @@ final class FilamentAssetsProvider extends ServiceProvider
             Js::make('dash-catalog', resource_path('js/dashboards/dash-catalog.js'))->loadedOnRequest(),
             // Maliyet kalemleri denemesi (D-187): yalniz UI Deneme > Maliyet kalemleri.
             Js::make('cost-lab', resource_path('js/dashboards/cost-lab.js'))->loadedOnRequest(),
+            // Yeni pano (D-207, kullanici 14 Ekim 2026: "react ile yap"): yalniz UI Deneme > Yeni pano.
+            Css::make('konelsis-nd', resource_path('css/filament/konelsis-nd.css'))->loadedOnRequest(),
+            Js::make('nd-app', resource_path('js/dashboards/nd-app.js'))->loadedOnRequest(),
             // Masaustu (Windows) bildirimi + bildirim sesi (D-126, kullanici onayi
             // 25 Eylul 2026): her panel sayfasinda; ayarlari AlertFeed verir.
             Js::make('konelsis-alerts', resource_path('js/konelsis-alerts.js')),
             // Raporu bicimli kopyala (D-167, kullanici onayi 6 Ekim 2026): kucuk
             // yardimci; rapor listesi, rapor detayi ve ileride rapor sekmeleri kullanir.
             Js::make('report-copy', resource_path('js/report-copy.js')),
+            // Baglantiya gitmeden once onay penceresi (D-200, kullanici onayi 13 Ekim
+            // 2026: "JavaScript, tek nokta"); her panel sayfasinda, ayarlar asagida.
+            Js::make('konelsis-link-guard', resource_path('js/konelsis-link-guard.js')),
         ], 'konelsis');
+
+        // Baglanti onayi metinleri ve hedef sayfa adlari (adres oneki => kayit turu,
+        // pencere basligi icin); Feature::LinkGuard kapaliysa veri yok, betik calismaz.
+        Filament::serving(function (): void {
+            if (! auth()->user() instanceof Personnel || ! FeatureFlags::enabled(Feature::LinkGuard)) {
+                return;
+            }
+
+            FilamentAsset::registerScriptData([
+                'konelsisLinkGuard' => [
+                    'labels' => [
+                        'title' => (string) __('link_guard.title'),
+                        'title_type' => (string) __('link_guard.title_type'),
+                        'body' => (string) __('link_guard.body'),
+                        'body_no_field' => (string) __('link_guard.body_no_field'),
+                        'body_no_target' => (string) __('link_guard.body_no_target'),
+                        'stay' => (string) __('link_guard.stay'),
+                        'row' => (string) __('link_guard.row'),
+                        'go' => (string) __('link_guard.go'),
+                        'go_type' => (string) __('link_guard.go_type'),
+                        'close' => (string) __('link_guard.close'),
+                    ],
+                    'targets' => $this->linkGuardTargets(),
+                ],
+            ]);
+        });
 
         // Betik ayarlari istek aninda (oturum, dil ve adres hazir): window.filamentData.konelsisAlerts.
         Filament::serving(function (): void {
@@ -136,5 +182,36 @@ final class FilamentAssetsProvider extends ServiceProvider
                 ],
             ]);
         });
+    }
+
+    /**
+     * Baglanti onayi penceresinin basligi icin panel kaynaklarinin adres
+     * onekleri ve kayit turu adlari ("/admin/business-cases" => "Potansiyel
+     * iş"); ad detay sayfasi basligiyla aynidir (RecordHeading::typeLabel,
+     * record_heading.labels).
+     *
+     * @return array<string, string>
+     */
+    private function linkGuardTargets(): array
+    {
+        $panel = Filament::getCurrentPanel();
+
+        if ($panel === null) {
+            return [];
+        }
+
+        $base = '/'.trim($panel->getPath(), '/');
+        $targets = [];
+
+        foreach ($panel->getResources() as $resource) {
+            try {
+                // Detay sayfasi basligiyla ayni tur adi (RecordHeading, D-205).
+                $targets[$base.'/'.$resource::getSlug($panel)] = RecordHeading::typeLabel($resource);
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return $targets;
     }
 }

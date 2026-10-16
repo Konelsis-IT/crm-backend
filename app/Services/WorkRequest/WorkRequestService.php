@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\WorkRequest;
 
+use App\Enums\Report\WorkItemStatus;
 use App\Enums\WorkRequest\RequestTargetKind;
 use App\Enums\WorkRequest\WorkRequestPriority;
 use App\Enums\WorkRequest\WorkRequestStatus;
@@ -32,6 +33,7 @@ use App\Services\Audit\ActorContext;
 use App\Services\Document\FileObjectService;
 use App\Services\Notification\PanelNotifier;
 use App\Services\Platform\SchemaReadiness;
+use App\Services\Report\WorkItemService;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
 use Filament\Actions\Action;
@@ -104,7 +106,11 @@ final class WorkRequestService extends AbstractService
 
             $this->notify($request, $this->targetRecipients($request), 'created');
 
-            return $request->refresh();
+            $request->refresh();
+            // D-216: kisiye acilan talep sorumlunun panosuna bagli is olarak duser.
+            $this->workItems()->syncForWorkRequest($request);
+
+            return $request;
         });
     }
 
@@ -132,13 +138,20 @@ final class WorkRequestService extends AbstractService
 
     public function accept(Model|int|string $record): WorkRequest
     {
-        return $this->transitionTo($record, WorkRequestStatus::InProgress, 'accepted', function (WorkRequest $request): void {
-            $this->assertNotRequester($request);
-            $request->fill([
-                'accepted_at' => Carbon::now('UTC'),
-                'assignee_personnel_id' => $request->assignee_personnel_id ?? ($request->targetsOrgUnit() ? $this->actorId() : $request->target_personnel_id),
-            ]);
-        }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+        return $this->transactions->run(function () use ($record): WorkRequest {
+            $request = $this->transitionTo($record, WorkRequestStatus::InProgress, 'accepted', function (WorkRequest $request): void {
+                $this->assertNotRequester($request);
+                $request->fill([
+                    'accepted_at' => Carbon::now('UTC'),
+                    'assignee_personnel_id' => $request->assignee_personnel_id ?? ($request->targetsOrgUnit() ? $this->actorId() : $request->target_personnel_id),
+                ]);
+            }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+
+            // D-216: ustlenenin panosunda bagli is "Devam ediyor".
+            $this->workItems()->syncForWorkRequest($request, true);
+
+            return $request;
+        });
     }
 
     /**
@@ -152,16 +165,23 @@ final class WorkRequestService extends AbstractService
         $this->assertNotRequester($current);
 
         if (! SchemaReadiness::hasBatch('B11D') || ! $current->needsApproval()) {
-            return $this->transitionTo($record, WorkRequestStatus::Done, 'completed', function (WorkRequest $request) use ($note): void {
-                $now = Carbon::now('UTC');
-                $request->fill([
-                    'completed_at' => $now,
-                    'closed_at' => $now,
-                    'closed_by_personnel_id' => $this->actorId(),
-                    'closing_note' => filled($note) ? trim((string) $note) : null,
-                    'assignee_personnel_id' => $request->assignee_personnel_id ?? $this->actorId(),
-                ]);
-            }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+            return $this->transactions->run(function () use ($record, $note): WorkRequest {
+                $request = $this->transitionTo($record, WorkRequestStatus::Done, 'completed', function (WorkRequest $request) use ($note): void {
+                    $now = Carbon::now('UTC');
+                    $request->fill([
+                        'completed_at' => $now,
+                        'closed_at' => $now,
+                        'closed_by_personnel_id' => $this->actorId(),
+                        'closing_note' => filled($note) ? trim((string) $note) : null,
+                        'assignee_personnel_id' => $request->assignee_personnel_id ?? $this->actorId(),
+                    ]);
+                }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+
+                // D-216: talep tamamlaninca bagli isler de tamamlanir.
+                $this->workItems()->closeForWorkRequest($request, WorkItemStatus::Done);
+
+                return $request;
+            });
         }
 
         $policyId = $this->approvals->policyIdByCode(self::DESIGNATED_APPROVAL_POLICY);
@@ -189,6 +209,9 @@ final class WorkRequestService extends AbstractService
 
             $request->forceFill(['approval_request_id' => (int) $approval->getKey()])->save();
 
+            // D-216: muhatabin isi bitti; bagli isler tamamlanir (onaydan donerse yenisi acilir).
+            $this->workItems()->closeForWorkRequest($request, WorkItemStatus::Done);
+
             return $request->refresh()->load($this->with);
         });
     }
@@ -199,25 +222,39 @@ final class WorkRequestService extends AbstractService
             throw NoteRequiredException::make();
         }
 
-        return $this->transitionTo($record, WorkRequestStatus::Rejected, 'rejected', function (WorkRequest $request) use ($note): void {
-            $this->assertNotRequester($request);
-            $request->fill([
-                'closed_at' => Carbon::now('UTC'),
-                'closed_by_personnel_id' => $this->actorId(),
-                'closing_note' => trim((string) $note),
-            ]);
-        }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+        return $this->transactions->run(function () use ($record, $note): WorkRequest {
+            $request = $this->transitionTo($record, WorkRequestStatus::Rejected, 'rejected', function (WorkRequest $request) use ($note): void {
+                $this->assertNotRequester($request);
+                $request->fill([
+                    'closed_at' => Carbon::now('UTC'),
+                    'closed_by_personnel_id' => $this->actorId(),
+                    'closing_note' => trim((string) $note),
+                ]);
+            }, fn (WorkRequest $request) => $this->requesterRecipients($request));
+
+            // D-216: reddedilen talebin bagli isleri Iptal.
+            $this->workItems()->closeForWorkRequest($request, WorkItemStatus::Blocked);
+
+            return $request;
+        });
     }
 
     public function cancel(Model|int|string $record, ?string $note = null): WorkRequest
     {
-        return $this->transitionTo($record, WorkRequestStatus::Cancelled, 'cancelled', function (WorkRequest $request) use ($note): void {
-            $request->fill([
-                'closed_at' => Carbon::now('UTC'),
-                'closed_by_personnel_id' => $this->actorId(),
-                'closing_note' => filled($note) ? trim((string) $note) : null,
-            ]);
-        }, fn (WorkRequest $request) => $this->targetRecipients($request));
+        return $this->transactions->run(function () use ($record, $note): WorkRequest {
+            $request = $this->transitionTo($record, WorkRequestStatus::Cancelled, 'cancelled', function (WorkRequest $request) use ($note): void {
+                $request->fill([
+                    'closed_at' => Carbon::now('UTC'),
+                    'closed_by_personnel_id' => $this->actorId(),
+                    'closing_note' => filled($note) ? trim((string) $note) : null,
+                ]);
+            }, fn (WorkRequest $request) => $this->targetRecipients($request));
+
+            // D-216: iptal edilen talebin bagli isleri Iptal.
+            $this->workItems()->closeForWorkRequest($request, WorkItemStatus::Blocked);
+
+            return $request;
+        });
     }
 
     /**
@@ -286,6 +323,9 @@ final class WorkRequestService extends AbstractService
             if ($assignee instanceof Personnel) {
                 $this->notify($request, collect([$assignee]), 'reassigned');
             }
+
+            // D-216: is yeni sorumlunun panosuna gecer (eskisi Iptal).
+            $this->workItems()->syncForWorkRequest($request, $request->status === WorkRequestStatus::InProgress);
 
             return $request;
         });
@@ -390,6 +430,9 @@ final class WorkRequestService extends AbstractService
 
             $this->notify($request, $this->targetRecipients($request), 'forwarded');
             $this->notify($request, $this->requesterRecipients($request), 'forwarded_info');
+
+            // D-216: kisiye yonlendirilen talep onun panosuna duser; eski sorumlunun isi Iptal.
+            $this->workItems()->syncForWorkRequest($request);
 
             return $request;
         });
@@ -521,6 +564,9 @@ final class WorkRequestService extends AbstractService
                         ], fn ($value): bool => $value !== null && $value !== ''));
 
                         $notifyEvent = 'approval_returned';
+
+                        // D-216: muhataba donen talep icin panoya yeniden is acilir.
+                        $this->workItems()->syncForWorkRequest($locked, true);
                     }
 
                     $request = $locked;
@@ -790,6 +836,12 @@ final class WorkRequestService extends AbstractService
             },
             $actions,
         );
+    }
+
+    /** Talebe bagli is (D-216); is servisi bu servisi de kullandigi icin geç cozulur. */
+    private function workItems(): WorkItemService
+    {
+        return app(WorkItemService::class);
     }
 
     private function actorId(): int

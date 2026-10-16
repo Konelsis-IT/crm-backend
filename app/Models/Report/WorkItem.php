@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models\Report;
 
+use App\Enums\Report\WorkDiscipline;
 use App\Enums\Report\WorkItemLinkKind;
+use App\Enums\Report\WorkItemPriority;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
@@ -19,16 +21,19 @@ use App\Models\Party\Party;
 use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
+use App\Models\Procurement\PurchaseNeed;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\WorkRequest\WorkRequest;
 use App\Policies\WorkItemPolicy;
 use App\Reports\Work\WorkCategoryCatalog;
+use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -47,6 +52,8 @@ use Illuminate\Support\Carbon;
     'link_kind', 'linked_business_case_id', 'linked_proposal_id', 'linked_tender_notice_id', 'linked_document_id',
     'linked_supply_item_id', 'linked_work_request_id', 'linked_meeting_plan_id',
     'source', 'source_activity_id', 'work_hours', 'note', 'sort_order',
+    // D-219 (B57): oncelik, tum ekip, is grubu, satin alinacak kalem, tekrarli is donemi, eski no.
+    'priority', 'for_everyone', 'discipline', 'linked_purchase_need_id', 'recurring_work_id', 'period_key', 'legacy_no',
     'status_changed_at', 'started_at', 'completed_at', 'progress_seconds', 'waiting_seconds', 'blocked_seconds',
 ])]
 #[UsePolicy(WorkItemPolicy::class)]
@@ -56,6 +63,9 @@ class WorkItem extends Model
 
     /** Bu kadar gunden uzun bekleyen kart "uzun bekleyen" sayilir. */
     public const LONG_WAIT_DAYS = 7;
+
+    /** Is kodu on eki: IS-YYYY-NNNN (B56, D-204); kodu WorkItemService verir, elle yazilmaz. */
+    public const CODE_PREFIX = 'IS';
 
     /**
      * @return array<string, string>
@@ -69,6 +79,9 @@ class WorkItem extends Model
             'waiting_kind' => WorkWaitingKind::class,
             'requester_kind' => WorkWaitingKind::class,
             'is_critical' => 'boolean',
+            'priority' => WorkItemPriority::class,
+            'for_everyone' => 'boolean',
+            'discipline' => WorkDiscipline::class,
             'work_at' => 'datetime',
             'work_on' => 'date',
             'due_on' => 'date',
@@ -167,6 +180,58 @@ class WorkItem extends Model
     public function linkedMeetingPlan(): BelongsTo
     {
         return $this->belongsTo(MeetingPlan::class, 'linked_meeting_plan_id');
+    }
+
+    /** D-219 (B57): isin diger sorumlulari (ana sorumlu personnel_id). */
+    public function assignees(): BelongsToMany
+    {
+        return $this->belongsToMany(Personnel::class, 'work_item_assignees', 'work_item_id', 'personnel_id')->orderBy('full_name');
+    }
+
+    /** D-219 (B57): isin tarihli notlari, en yenisi once. */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(WorkItemNote::class, 'work_item_id')->orderByDesc('noted_at')->orderByDesc('id');
+    }
+
+    /** D-219 (B57): isin belgeleri. */
+    public function files(): HasMany
+    {
+        return $this->hasMany(WorkItemFile::class, 'work_item_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** D-219 (B57): isin geldigi tekrarli is (gorev ve sorumluluk). */
+    public function recurringWork(): BelongsTo
+    {
+        return $this->belongsTo(RecurringWork::class, 'recurring_work_id');
+    }
+
+    /**
+     * Diger sorumlularin kimlikleri (D-219); B57 yoksa bos.
+     *
+     * @return list<int>
+     */
+    public function assigneeIds(): array
+    {
+        if (! SchemaReadiness::hasBatch('B57')) {
+            return [];
+        }
+
+        return $this->assignees->map(fn (Personnel $person): int => (int) $person->getKey())->values()->all();
+    }
+
+    /** Oncelik (B57 oncesi kayitta kritik bayragindan). */
+    public function priorityLevel(): WorkItemPriority
+    {
+        $priority = $this->getAttribute('priority');
+
+        return $priority instanceof WorkItemPriority ? $priority : WorkItemPriority::fromCritical((bool) $this->is_critical);
+    }
+
+    /** D-219 (B57): satin alinacak kalem. */
+    public function linkedPurchaseNeed(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseNeed::class, 'linked_purchase_need_id');
     }
 
     public function sourceActivity(): BelongsTo

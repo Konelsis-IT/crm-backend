@@ -9,6 +9,7 @@
 # Kullanim (sunucuda, proje klasorunde):
 #   ./deploy.sh          kodu gunceller, surum yayinlamaz
 #   ./deploy.sh 2.5      kodu gunceller ve 2.5 surumunu yayinlar
+#   ./deploy.sh 2.9.1    uc parcali surum de olur (D-211: 2.9'dan sonra 2.9.1, 2.9.2 ...)
 #
 # Sira: on kontrol -> veritabani yedegi (son 14 saklanir) -> bakim modu ->
 # git pull -> composer install -> onbellek temizligi -> migration -> seed
@@ -50,8 +51,8 @@ main() {
     say "Klasor: $app_dir"
     say "Kayit dosyasi: $log_file"
 
-    if [[ -n "$version" && ! "$version" =~ ^[0-9]+\.[0-9]+$ ]]; then
-        fail "Surum numarasi gecersiz: '$version' (ornek: 2.5)."
+    if [[ -n "$version" && ! "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+        fail "Surum numarasi gecersiz: '$version' (ornek: 2.9 ya da 2.9.1)."
     fi
 
     # 1 -----------------------------------------------------------------

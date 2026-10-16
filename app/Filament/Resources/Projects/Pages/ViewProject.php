@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Projects\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Project\FocusDirection;
 use App\Enums\Project\ProjectStatus;
 use App\Exceptions\AbstractException;
@@ -57,16 +58,18 @@ use Illuminate\Support\Facades\Gate;
  */
 class ViewProject extends ViewRecord
 {
+    use HasRecordHeading;
     use OpensChecklistTargets;
 
     protected static string $resource = ProjectResource::class;
 
-    public function getTitle(): string
+    /** Alt baslik: projenin kisa adi (yoksa lisans adi); PRJ kodu ust gezinme satirinda (D-205). */
+    protected function recordSubheading(): ?string
     {
         /** @var Project $project */
         $project = $this->getRecord();
 
-        return ($project->businessCode?->formatted_code ?? '').' · '.$project->display_name;
+        return $project->display_name;
     }
 
     public function content(Schema $schema): Schema
@@ -183,7 +186,7 @@ class ViewProject extends ViewRecord
         return Action::make('advance_focus')
             ->label(__('project.actions.advance_focus'))
             ->icon(Heroicon::OutlinedForward)
-            ->color('primary')
+            ->color(ActionColors::SEND)
             ->visible(fn (): bool => Gate::allows('update', $this->getRecord())
                 && app(ProjectStepReadiness::class)->next($this->getRecord()) !== null)
             ->modalHeading(__('project.actions.advance_focus'))

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Projects\RelationManagers;
 
 use App\Filament\Resources\Parties\PartyResource;
+use App\Filament\Support\CodeLine;
 use App\Models\Project\Project;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -48,11 +49,13 @@ class CustomerLicensesRelationManager extends RelationManager
             ->description(fn (): ?string => $this->getOwnerRecord()->customerParty?->display_name)
             ->recordTitleAttribute('license_no')
             ->columns([
-                TextColumn::make('license_type')
-                    ->label(__('party_license.fields.license_type')),
-                TextColumn::make('license_no')
-                    ->label(__('party_license.fields.license_no'))
-                    ->searchable(),
+                // Lisans no turun altinda kucuk yazi (CodeLine, 14 Ekim 2026); iki alanla da aranir.
+                CodeLine::under(
+                    TextColumn::make('license_type')
+                        ->label(__('party_license.fields.license_type'))
+                        ->searchable(['license_type', 'license_no']),
+                    'license_no',
+                ),
                 TextColumn::make('issuer')
                     ->label(__('party_license.fields.issuer'))
                     ->placeholder('-'),

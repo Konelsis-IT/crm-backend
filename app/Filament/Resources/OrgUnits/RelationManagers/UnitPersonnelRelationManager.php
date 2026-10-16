@@ -58,12 +58,8 @@ class UnitPersonnelRelationManager extends RelationManager
                 TextColumn::make('job_title')
                     ->label(__('personnel.fields.job_title'))
                     ->placeholder('–'),
-                TextColumn::make('personnel_no')
-                    ->label(__('personnel.fields.personnel_no'))
-                    ->badge()
-                    ->color('gray')
-                    ->placeholder('–')
-                    ->toggleable(),
+                // Personel no arayuzde hic gosterilmez (5 Eylul 2026 urun karari;
+                // 14 Ekim 2026'da sutun kaldirildi).
                 TextColumn::make('email')
                     ->label(__('personnel.fields.email'))
                     ->placeholder('–')

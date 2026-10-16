@@ -10,20 +10,23 @@ use App\Filament\Support\FormState;
 use App\Enums\Notification\AnnouncementAudience;
 use App\Enums\Notification\AnnouncementPriority;
 use App\Exceptions\AbstractException;
+use App\Filament\Concerns\InteractsWithNewDashboard;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\Personnel;
 use App\Query\Authorization\RoleQueries;
 use App\Query\Personnel\OrganizationQueries;
-use App\Query\Personnel\PersonnelQueries;
+use App\Filament\Support\PersonnelSelect;
 use App\Filament\Widgets\AnnouncementsWidget;
 use App\Filament\Widgets\DashboardStatsWidget;
 use App\Filament\Widgets\MyAlertsWidget;
 use App\Filament\Widgets\MyWorkItemsWidget;
+use App\Filament\Widgets\PurchaseRecommendationsWidget;
 use App\Filament\Widgets\UpcomingSocialContentsWidget;
 use App\Services\Notification\AnnouncementService;
 use App\Services\Notification\AudienceResolver;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\Dashboard\DepartmentDashboards;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -35,6 +38,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -54,7 +58,20 @@ use Filament\Support\Icons\Heroicon;
  */
 class Dashboard extends BaseDashboard
 {
+    use InteractsWithNewDashboard;
+
     public const SEND_ACTION = 'sendNotification';
+
+    /** D-212: kisinin departman panolari (yoksa eski Genel bakis). */
+    protected function newDashboardPanels(): array
+    {
+        return app(DepartmentDashboards::class)->panelsFor($this->viewer());
+    }
+
+    protected function newDashboardTitle(): ?string
+    {
+        return (string) __('app.dashboard.title');
+    }
 
     public static function getNavigationLabel(): string
     {
@@ -84,6 +101,23 @@ class Dashboard extends BaseDashboard
 
     public function content(Schema $schema): Schema
     {
+        // D-212: departmaninin panosu olan kisi (Is Gelistirme, Teklif, Satin Alma,
+        // ust yonetim) yeni panoyu gorur; digerleri asagidaki Genel bakisi.
+        if (app(DepartmentDashboards::class)->showsFor($this->viewer())) {
+            return $schema->components([
+                View::make('filament.new-dashboard.root')
+                    ->viewData(fn (): array => ['config' => $this->newDashboardConfig()]),
+                // D-215 (15 Ekim 2026 kullanici: "Görevlerim ve işlerim ile Yaklaşan
+                // tarihler ve uyarılar alanı da tüm panellerde ilgili alanının alt
+                // kısmında görülmeye devam edecek."): her panelin altinda, eski Genel
+                // bakistaki 3/4 + 1/4 duzeniyle.
+                Grid::make(['default' => 1, 'lg' => 4])->schema([
+                    Group::make($this->getWidgetsSchemaComponents([MyWorkItemsWidget::class]))->columnSpan(['lg' => 3]),
+                    Group::make($this->getWidgetsSchemaComponents([MyAlertsWidget::class]))->columnSpan(['lg' => 1]),
+                ]),
+            ]);
+        }
+
         return $schema->components([
             Grid::make(['default' => 1, 'lg' => 4])->schema([
                 Group::make([
@@ -94,7 +128,8 @@ class Dashboard extends BaseDashboard
                         ])->grow(false)->extraAttributes(['class' => 'kc-dash-heading']),
                         Group::make($this->getWidgetsSchemaComponents([DashboardStatsWidget::class])),
                     ])->from('md')->verticallyAlignCenter(),
-                    ...$this->getWidgetsSchemaComponents([MyWorkItemsWidget::class]),
+                    // D-189: ust yonetimin "Satin alma onerileri" tablosu, islerimin altinda.
+                    ...$this->getWidgetsSchemaComponents([MyWorkItemsWidget::class, PurchaseRecommendationsWidget::class]),
                 ])->columnSpan(['lg' => 3]),
                 Group::make([
                     // Dugme ozellikle kapanir; eylem kapanmaz: sag ust menudeki
@@ -160,7 +195,7 @@ class Dashboard extends BaseDashboard
                             ->columnSpan(['default' => 1, 'md' => 2]),
                         Select::make('audience_ids')
                             ->label(__('announcement.fields.personnel'))
-                            ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                            ->tap(PersonnelSelect::all())
                             ->multiple()
                             ->searchable()
                             ->native(false)

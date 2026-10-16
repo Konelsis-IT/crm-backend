@@ -14,6 +14,7 @@ use App\Models\Project\ProjectTeamMember;
 use App\Models\Project\ProjectWorkstream;
 use App\Services\Project\ProjectTeamMemberService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
@@ -58,6 +59,7 @@ class TeamMembersRelationManager extends RelationManager
                     Select::make('personnel_id')
                         ->label(__('project_team_member.fields.personnel'))
                         ->relationship('personnel', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->required()

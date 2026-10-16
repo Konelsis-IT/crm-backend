@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Enums\Report\WorkItemPriority;
+use App\Enums\Report\WorkDiscipline;
 use App\Enums\Platform\Feature;
 use App\Enums\Report\WorkItemLinkKind;
 use App\Enums\Report\WorkItemSource;
@@ -15,8 +17,10 @@ use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Models\Personnel\Personnel;
 use App\Models\Report\WorkItem;
+use App\Query\Personnel\OrganizationQueries;
 use App\Query\Report\WorkItemQueries;
 use App\Reports\Work\WorkCategoryCatalog;
+use App\Services\Authorization\ExecutiveDirectory;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Report\WorkItemPresenter;
 use App\Support\DisplayTime;
@@ -45,6 +49,9 @@ final class WorkAppConfig
         $me = self::me();
         $queries = app(WorkItemQueries::class);
         $scope = (string) request()->query('kapsam', 'mine');
+        $units = $queries->units();
+        $people = $queries->people();
+        $sets = self::personSets($people, $units);
 
         return [
             ...self::base('work-board'),
@@ -55,6 +62,7 @@ final class WorkAppConfig
                 'update' => self::route('filament.admin.work.items.update', ['item' => self::PLACEHOLDER]),
                 'status' => self::route('filament.admin.work.items.status', ['item' => self::PLACEHOLDER]),
                 'critical' => self::route('filament.admin.work.items.critical', ['item' => self::PLACEHOLDER]),
+                'priority' => self::route('filament.admin.work.items.priority', ['item' => self::PLACEHOLDER]),
                 'delete' => self::route('filament.admin.work.items.delete', ['item' => self::PLACEHOLDER]),
                 'reorder' => self::route('filament.admin.work.reorder'),
                 'card' => self::route('filament.admin.work.suggestions.card', ['activity' => self::PLACEHOLDER]),
@@ -78,6 +86,8 @@ final class WorkAppConfig
             // gorunum (work.board.compact) kapaliyken pano eski gorunumuyle cizilir.
             'features' => [
                 'compact' => FeatureFlags::enabled(Feature::WorkBoardCompact),
+                // D-219: kritiklik, coklu sorumlu, Tum ekip, is grubu (B57 + work.items.extended).
+                'extended' => WorkItemQueries::extendedUi(),
             ],
             'can' => [
                 'team' => $me !== null && Gate::forUser($me)->allows('viewTeam', WorkItem::class),
@@ -86,14 +96,30 @@ final class WorkAppConfig
             ],
             'options' => [
                 ...self::options(),
+                // D-218: birden fazla departmanda calisanin birlesik seti ("UNITS:...").
+                'category_sets' => [
+                    ...app(WorkCategoryCatalog::class)->sets(),
+                    ...array_combine(
+                        $keys = array_values(array_unique(array_filter($sets))),
+                        array_map(fn (string $key): array => app(WorkCategoryCatalog::class)->codesForKey($key), $keys),
+                    ),
+                ],
                 'units' => array_map(
                     fn (int $id, array $unit): array => ['value' => $id, 'label' => $unit['name'], 'code' => $unit['code']],
-                    array_keys($units = $queries->units()),
+                    array_keys($units),
                     $units,
                 ),
+                // D-217 / D-218: kendi kategori seti olan kiside `set` (gorev "POS:YKB",
+                // birden fazla departman "UNITS:IS_GELISTIRME+TEKLIF").
                 'people' => array_map(
-                    fn (int $id, array $person): array => ['value' => $id, 'label' => $person['name'], 'unit' => $person['unit'], 'initials' => WorkItemPresenter::initials($person['name'])],
-                    array_keys($people = $queries->people()),
+                    fn (int $id, array $person): array => [
+                        'value' => $id,
+                        'label' => $person['name'],
+                        'unit' => $person['unit'],
+                        'initials' => WorkItemPresenter::initials($person['name']),
+                        'set' => $sets[$id] ?? null,
+                    ],
+                    array_keys($people),
                     $people,
                 ),
                 'projects' => array_map(
@@ -103,6 +129,33 @@ final class WorkAppConfig
                 ),
             ],
         ];
+    }
+
+    /**
+     * Kisi => kategori seti anahtari (gorev seti ya da birden fazla departmanin
+     * birlesimi); departman seti yetenler listede yok.
+     *
+     * @param  array<int, array{name: string, unit: int|null}>  $people
+     * @param  array<int, array{name: string, code: string}>  $units
+     * @return array<int, string>
+     */
+    private static function personSets(array $people, array $units): array
+    {
+        $catalog = app(WorkCategoryCatalog::class);
+        $positions = app(ExecutiveDirectory::class)->positionCodes();
+        $assigned = app(OrganizationQueries::class)->assignmentUnitCodes();
+        $sets = [];
+
+        foreach ($people as $id => $person) {
+            $own = $person['unit'] !== null ? ($units[$person['unit']]['code'] ?? null) : null;
+            $key = $catalog->personKey(array_values(array_filter([$own, ...($assigned[$id] ?? [])])), $positions[$id] ?? null);
+
+            if ($key !== null) {
+                $sets[$id] = $key;
+            }
+        }
+
+        return $sets;
     }
 
     /**
@@ -209,6 +262,8 @@ final class WorkAppConfig
                 'unit' => $me->org_unit_id !== null ? (int) $me->org_unit_id : null,
                 'unit_code' => $me->orgUnit?->code,
                 'unit_name' => $me->orgUnit?->name,
+                // D-217: kisinin gorevinin kendi kategori seti ("POS:YKB"); yoksa null.
+                'set' => app(WorkCategoryCatalog::class)->personKey(app(OrganizationQueries::class)->unitCodesOf((int) $me->getKey()), app(ExecutiveDirectory::class)->positionCodes()[(int) $me->getKey()] ?? null),
             ] : null,
         ];
     }
@@ -230,6 +285,9 @@ final class WorkAppConfig
                 $links,
             ),
             'category_sets' => $categories->sets(),
+            // D-219: kritiklik (dusukten kritige) ve is grubu.
+            'priorities' => array_map(fn (WorkItemPriority $priority): array => ['value' => $priority->value, 'label' => $priority->getLabel()], WorkItemPriority::cases()),
+            'disciplines' => array_map(fn (WorkDiscipline $discipline): array => ['value' => $discipline->value, 'label' => $discipline->getLabel()], WorkDiscipline::cases()),
             'category_labels' => array_combine($categories->allCodes(), array_map(fn (string $code): string => (string) $categories->label($code), $categories->allCodes())),
         ];
     }

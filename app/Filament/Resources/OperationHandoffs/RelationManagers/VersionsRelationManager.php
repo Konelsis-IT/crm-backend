@@ -161,7 +161,7 @@ class VersionsRelationManager extends RelationManager
                     ->maxLength(255),
                 Select::make('project_manager_employee_id')
                     ->label(__('operation_handoff_version.fields.project_manager'))
-                    ->options(fn (): array => app(\App\Query\Personnel\PersonnelQueries::class)->personnelOptions())
+                    ->tap(\App\Filament\Support\PersonnelSelect::all())
                     ->searchable()
                     ->native(false),
                 TextInput::make('site_location')

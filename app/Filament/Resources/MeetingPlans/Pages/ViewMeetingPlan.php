@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MeetingPlans\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Filament\Exports\MeetingPlanExporter;
 use App\Filament\Resources\MeetingPlans\MeetingPlanActions;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
@@ -13,7 +14,6 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -23,9 +23,12 @@ use Illuminate\Support\Facades\Gate;
  */
 class ViewMeetingPlan extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = MeetingPlanResource::class;
 
-    public function getTitle(): string | Htmlable
+    /** Alt baslik: taraf ve plan tarihi (D-205). */
+    protected function recordSubheading(): ?string
     {
         /** @var MeetingPlan $plan */
         $plan = $this->getRecord();

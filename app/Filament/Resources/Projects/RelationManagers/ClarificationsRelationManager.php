@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 use App\Enums\Project\ClarificationStatus;
 use App\Enums\Project\ClarificationType;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\CommercialClarification;
@@ -96,11 +97,13 @@ class ClarificationsRelationManager extends RelationManager
             ->heading(__('commercial_clarification.relation.title'))
             ->recordTitleAttribute('clarification_no')
             ->columns([
-                TextColumn::make('clarification_no')
-                    ->label(__('commercial_clarification.fields.clarification_no')),
-                TextColumn::make('title')
-                    ->label(__('commercial_clarification.fields.title'))
-                    ->limit(40),
+                // Netlestirme no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('commercial_clarification.fields.title'))
+                        ->limit(40),
+                    'clarification_no',
+                ),
                 TextColumn::make('clarification_type')
                     ->label(__('commercial_clarification.fields.clarification_type'))
                     ->badge(),

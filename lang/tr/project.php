@@ -55,7 +55,7 @@ return [
         // D-174: proje adi "Lisans adı", yeni "Kısa ad"; listede ikisi tek sütunda.
         'short_name' => 'Kısa ad',
         'license_name' => 'Lisans adı',
-        'names' => 'Kısa ad / Lisans adı',
+        'names' => 'Proje',
         'scope_types' => 'Proje tipi',
         'next_focus' => 'Sıradaki adım',
         'origin' => 'Kaynak',

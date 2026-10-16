@@ -8,6 +8,7 @@ use App\Filament\Resources\Projects\RelationManagers\Concerns\OpensFromChecklist
 use App\Enums\Acquisition\CostCategory;
 use App\Enums\Project\NodeStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\CbsNode;
@@ -89,11 +90,12 @@ class CbsNodesRelationManager extends RelationManager
             ->heading(__('cbs_node.relation.title'))
             ->recordTitleAttribute('cost_code')
             ->columns([
-                TextColumn::make('cost_code')
-                    ->label(__('cbs_node.fields.cost_code'))
-                    ->sortable(),
-                TextColumn::make('name')
-                    ->label(__('cbs_node.fields.name')),
+                // Maliyet kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('cbs_node.fields.name')),
+                    'cost_code',
+                ),
                 TextColumn::make('cost_category')
                     ->label(__('cbs_node.fields.cost_category'))
                     ->badge(),

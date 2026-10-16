@@ -10,6 +10,7 @@ use App\Models\Document\DocumentDistribution;
 use App\Services\Audit\ActorContext;
 use App\Services\Document\DocumentDistributionService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -59,6 +60,7 @@ class DistributionsRelationManager extends RelationManager
                     Select::make('recipient_personnel_id')
                         ->label(__('document_distribution.fields.recipient'))
                         ->relationship('recipient', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->required()

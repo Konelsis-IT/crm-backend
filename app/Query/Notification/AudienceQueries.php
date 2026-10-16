@@ -8,6 +8,7 @@ use App\Models\Authorization\Role;
 use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
 use App\Models\Personnel\ReportingRelationship;
+use App\Query\Personnel\OrganizationQueries;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -38,7 +39,8 @@ final class AudienceQueries
 
     public function department(int $orgUnitId): Collection
     {
-        return $this->active()->where('org_unit_id', $orgUnitId)->get();
+        // D-218: departmanda ek gorevi olanlar da duyuruyu alir.
+        return app(OrganizationQueries::class)->inUnits($this->active(), [$orgUnitId])->get();
     }
 
     public function role(int $roleId): Collection

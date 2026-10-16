@@ -24,6 +24,9 @@ return [
         'analytics' => 'Analizler',
         'acquisition' => 'İş Alım',
         'operations' => 'Operasyon',
+        // D-190: sol menude iki ayri grup.
+        'operations_project' => 'Operasyon - Proje',
+        'operations_purchasing' => 'Operasyon - Satın alma',
         'project_group' => 'Proje Grubu',
         'procurement' => 'Satın Alma',
         'tenders' => 'İhaleler',

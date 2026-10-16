@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Proposals\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Platform\Feature;
 use App\Filament\Exports\ProposalExporter;
 use App\Filament\Resources\Proposals\ProposalResource;
@@ -35,15 +36,9 @@ use Filament\Schemas\Schema;
  */
 class ViewProposal extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ProposalResource::class;
-
-    public function getTitle(): string
-    {
-        /** @var Proposal $proposal */
-        $proposal = $this->getRecord();
-
-        return trim($proposal->proposal_no.' · '.($proposal->title ?? ''), ' ·');
-    }
 
     public function content(Schema $schema): Schema
     {

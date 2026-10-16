@@ -9,6 +9,7 @@ use App\Models\Personnel\Personnel;
 use App\Models\Report\WorkItem;
 use App\Policies\Concerns\ResolvesInterimRoles;
 use App\Query\Report\ReportQueries;
+use App\Query\Report\WorkItemQueries;
 
 /**
  * Is panosu karti (B36, D-115).
@@ -45,6 +46,7 @@ final class WorkItemPolicy
 
         return $this->ownsOrCreated($personnel, $record)
             || $this->isAwaited($personnel, $record)
+            || $this->sharesWork($personnel, $record)
             || $this->viewAll($personnel)
             || $this->isAuditor($personnel)
             || $this->manages($personnel, (int) $record->personnel_id);
@@ -62,6 +64,7 @@ final class WorkItemPolicy
         }
 
         return $this->ownsOrCreated($personnel, $record)
+            || $this->sharesWork($personnel, $record)
             || $this->hasFullAccess($personnel)
             || $this->manages($personnel, (int) $record->personnel_id);
     }
@@ -196,6 +199,18 @@ final class WorkItemPolicy
     {
         return $record->waiting_personnel_id !== null
             && (int) $record->waiting_personnel_id === (int) $personnel->getKey();
+    }
+
+    /**
+     * D-219 (B57): diger sorumlulardan biri ya da "Tüm ekip" isinin ekibinden;
+     * isi gorur, durumunu degistirir, not ve belge ekler.
+     */
+    private function sharesWork(Personnel $personnel, WorkItem $record): bool
+    {
+        $queries = app(WorkItemQueries::class);
+        $id = (int) $personnel->getKey();
+
+        return $queries->isTeamWorkFor($record, $id) || $queries->isAssignee((int) $record->getKey(), $id);
     }
 
     private function ownsOrCreated(Personnel $personnel, WorkItem $record): bool

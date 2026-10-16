@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ContractVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\StaleRecordException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\ContractVersions\ContractVersionResource;
 use App\Filament\Support\DomainNotifications;
 use App\Services\Acquisition\ContractVersionService;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 
 class EditContractVersion extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = ContractVersionResource::class;
@@ -23,7 +24,7 @@ class EditContractVersion extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

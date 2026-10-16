@@ -33,12 +33,15 @@ return [
         'badge' => ':type coordinator',
         'project_item' => ':type: :name',
         'projects' => ':count projects',
+        'since' => 'since :date',
     ],
 
     'actions' => [
         'assign' => 'Assign coordinator',
         'change' => 'Change coordinator',
         'remove' => 'Remove coordinator',
+        'save' => 'Save',
+        'close' => 'Close',
     ],
 
     'modals' => [
@@ -50,6 +53,8 @@ return [
     'messages' => [
         'assigned' => 'Coordinator assigned.',
         'removed' => 'Coordinator removed.',
+        'saved' => 'Coordinators saved.',
+        'unchanged' => 'Nothing changed.',
     ],
 
     'empty' => 'No project types found.',

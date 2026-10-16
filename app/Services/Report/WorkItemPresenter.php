@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Report;
 
+use App\Enums\Report\WorkDiscipline;
 use App\Enums\Report\WorkItemLinkKind;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
@@ -13,6 +14,7 @@ use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Resources\PurchaseNeeds\PurchaseNeedResource;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Resources\TenderNotices\TenderNoticeResource;
 use App\Filament\Resources\WorkItems\WorkItemResource;
@@ -30,11 +32,15 @@ use App\Models\Party\PartyMeetingNote;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Project\ProjectPhoto;
+use App\Models\Procurement\PurchaseNeed;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Report\Report;
 use App\Models\Report\WorkItem;
+use App\Enums\Platform\Feature;
 use App\Models\WorkRequest\WorkRequest;
 use App\Query\Report\WorkItemQueries;
+use App\Query\WorkRequest\ManagementPriorityQueries;
+use App\Services\Platform\FeatureFlags;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Reports\Work\WorkSuggestionCatalog;
 use App\Support\ActivityLabels;
@@ -59,7 +65,43 @@ final class WorkItemPresenter
         private readonly WorkCategoryCatalog $categories,
         private readonly WorkSuggestionCatalog $suggestions,
         private readonly WorkItemQueries $queries,
+        private readonly ManagementPriorityQueries $management,
     ) {}
+
+    /**
+     * Talebe bagli isin talebi (D-216): kod, acik mi, kart sahibi "Talebi
+     * tamamlandı olarak kapat?" sorusunu gorur mu, onaya tabi mi.
+     *
+     * @return array{id: int, no: string, title: string, open: bool, can_close: bool, needs_approval: bool, url: string|null}|null
+     */
+    public function request(WorkItem $item, ?Personnel $viewer): ?array
+    {
+        if (! FeatureFlags::enabled(Feature::WorkRequestWorkItems) || $item->link_kind !== WorkItemLinkKind::WorkRequest) {
+            return null;
+        }
+
+        $request = $item->linkedRecord();
+
+        if (! $request instanceof WorkRequest) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $request->getKey(),
+            'no' => (string) $request->request_no,
+            'title' => (string) $request->title,
+            'open' => $request->isOpen(),
+            'can_close' => $viewer instanceof Personnel && $request->isOpen() && Gate::forUser($viewer)->allows('complete', $request),
+            'needs_approval' => $request->needsApproval(),
+            'url' => $this->safe(fn (): string => WorkRequestResource::getUrl('view', ['record' => $request])),
+        ];
+    }
+
+    /** Isi ust yonetim mi istedi (D-216, "Talep eden"); acik islerde one alinir. */
+    public function management(WorkItem $item): bool
+    {
+        return $item->status?->isOpen() === true && $this->management->isManagement($item->requester_personnel_id);
+    }
 
     /**
      * @return array<string, mixed>
@@ -78,6 +120,8 @@ final class WorkItemPresenter
             'status' => $item->status?->value,
             'status_label' => $item->status?->getLabel(),
             'is_critical' => (bool) $item->is_critical,
+            // D-219 (B57): dort seviyeli kritiklik, diger sorumlular, Tum ekip, is grubu.
+            ...$this->extended($item),
             'work_at' => $item->work_at?->toIso8601String(),
             'work_on' => $item->work_on?->format('Y-m-d'),
             'time' => $workAt?->format('H:i'),
@@ -94,6 +138,9 @@ final class WorkItemPresenter
             'waiting' => $waiting,
             'requester' => $this->requester($item),
             'link' => $link,
+            // D-216: talebe bagli is ve yonetim onceligi.
+            'request' => $this->request($item, $viewer),
+            'management' => $this->management($item),
             'source' => $source->value,
             'source_label' => $source->getLabel(),
             'source_tag' => $source === WorkItemSource::Automatic
@@ -108,6 +155,30 @@ final class WorkItemPresenter
                 'update' => $viewer !== null && Gate::forUser($viewer)->allows('update', $item),
                 'delete' => $viewer !== null && Gate::forUser($viewer)->allows('delete', $item),
             ],
+        ];
+    }
+
+    /**
+     * Kartin D-219 alanlari; B57 yokken oncelik kritik bayragindan gelir.
+     *
+     * @return array<string, mixed>
+     */
+    private function extended(WorkItem $item): array
+    {
+        $priority = $item->priorityLevel();
+        $ready = WorkItemQueries::extended();
+        $discipline = $item->getAttribute('discipline');
+
+        return [
+            'priority' => $priority->value,
+            'priority_label' => $priority->getLabel(),
+            'assignees' => $ready ? $item->assignees->map(fn (Personnel $person): array => $this->person($person))->values()->all() : [],
+            'for_everyone' => $ready && (bool) $item->getAttribute('for_everyone'),
+            'discipline' => $discipline instanceof WorkDiscipline ? $discipline->value : null,
+            'discipline_label' => $discipline instanceof WorkDiscipline ? $discipline->getLabel() : null,
+            'notes_count' => (int) ($item->getAttribute('notes_count') ?? 0),
+            'files_count' => (int) ($item->getAttribute('files_count') ?? 0),
+            'legacy_no' => $ready ? $item->getAttribute('legacy_no') : null,
         ];
     }
 
@@ -182,9 +253,10 @@ final class WorkItemPresenter
     public function link(WorkItem $item): ?array
     {
         $kind = $item->link_kind ?? WorkItemLinkKind::None;
-        $record = $item->linkedRecord();
+        $record = $kind->visible() ? $item->linkedRecord() : null;
 
-        if ($kind === WorkItemLinkKind::None || $record === null) {
+        // D-220: satin alinacak kalem Satin alma (2.8) acilana kadar gorunmez.
+        if ($kind === WorkItemLinkKind::None || ! $kind->visible() || $record === null) {
             return null;
         }
 
@@ -214,6 +286,7 @@ final class WorkItemPresenter
             $record instanceof Document => [$record->document_no, (string) $record->title],
             $record instanceof ProjectSupplyItem => [$record->item_code, (string) $record->name],
             $record instanceof WorkRequest => [$record->request_no, (string) $record->title],
+            $record instanceof PurchaseNeed => [$record->purchaseRequest?->request_no, (string) $record->title],
             $record instanceof MeetingPlan => [$record->planned_on?->format('d.m.Y'), trim((string) ($record->party?->display_name ?? '').($record->subject ? ' · '.$record->subject : ''), ' ·')],
             default => [null, (string) $kind->getLabel()],
         };
@@ -231,6 +304,7 @@ final class WorkItemPresenter
                 : null,
             WorkItemLinkKind::WorkRequest => WorkRequestResource::getUrl('view', ['record' => $record]),
             WorkItemLinkKind::MeetingPlan => MeetingPlanResource::getUrl('view', ['record' => $record]),
+            WorkItemLinkKind::PurchaseNeed => PurchaseNeedResource::getUrl('view', ['record' => $record]),
             WorkItemLinkKind::None => null,
         });
     }
@@ -592,7 +666,9 @@ final class WorkItemPresenter
             $meta[] = (string) __('work_item.values.automatic');
         }
 
-        if ($item->status === WorkItemStatus::Blocked && filled($item->note)) {
+        // Karta yazilan not her durumda rapora girer (14 Ekim 2026; once yalniz
+        // engellenen islerde giriyordu, bekleyen isin notu raporda gorunmuyordu).
+        if (filled($item->note)) {
             $meta[] = Str::limit(Str::squish((string) $item->note), 200, '…');
         }
 

@@ -11,7 +11,7 @@ return [
     'fields' => [
         'code' => 'Code',
         'created_at' => 'Created at',
-        'current_version' => 'Current version',
+        'current_version' => 'Version',
         'name_tr' => 'Name',
         'project_type' => 'Project type',
         'reason' => 'Reason',

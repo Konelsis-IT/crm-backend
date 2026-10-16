@@ -54,7 +54,7 @@
 
     /** Arama icin sadelestirme: yerel kucuk harf + aksan ayirma (s-cedilla -> s, dotless i -> i ...). */
     function fold(value) {
-        let text = String(value === undefined || value === null ? '' : value).toLocaleLowerCase(KS.locale);
+        let text = String(value === undefined || value === null ? '' : value).toLocaleLowerCase(KS.locale).replace(/ı/g, 'i');
 
         if (typeof text.normalize === 'function') {
             text = text.normalize('NFD').replace(/[̀-ͯ]/g, '');

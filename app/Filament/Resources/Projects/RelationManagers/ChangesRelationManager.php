@@ -8,6 +8,7 @@ use App\Enums\Project\ChangeStatus;
 use App\Enums\Project\ChangeType;
 use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
@@ -100,11 +101,13 @@ class ChangesRelationManager extends RelationManager
             ->heading(__('project_change.relation.title'))
             ->recordTitleAttribute('change_no')
             ->columns([
-                TextColumn::make('change_no')
-                    ->label(__('project_change.fields.change_no')),
-                TextColumn::make('title')
-                    ->label(__('project_change.fields.title'))
-                    ->limit(40),
+                // Degisiklik no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('project_change.fields.title'))
+                        ->limit(40),
+                    'change_no',
+                ),
                 TextColumn::make('change_type')
                     ->label(__('project_change.fields.change_type'))
                     ->badge(),

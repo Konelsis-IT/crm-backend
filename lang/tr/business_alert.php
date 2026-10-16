@@ -48,6 +48,11 @@ return [
         'deadline_contract_milestone' => 'Sözleşme kilometre taşı: :subject (:context)',
         'deadline_contract_obligation' => 'Sözleşme yükümlülüğü: :subject (:context)',
         'deadline_certification' => 'Sertifika geçerlilik sonu: :subject (:context)',
+        // D-208: panonun acil kaynaklari
+        'deadline_work_item' => 'İş son tarihi: :subject (:context)',
+        'deadline_purchase_request' => 'Satın alma talebi gerektiği tarih: :subject (:context)',
+        'deadline_purchase_need' => 'Satın alınacak kalem gerektiği tarih: :subject (:context)',
+        'deadline_delivery' => 'Beklenen teslim: :subject (:context)',
     ],
 
     'widget' => [

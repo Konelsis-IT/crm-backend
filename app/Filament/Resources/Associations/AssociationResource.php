@@ -16,6 +16,7 @@ use App\Filament\Resources\Parties\RelationManagers\AddressesRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\ContactsRelationManager;
 use App\Filament\Resources\Parties\RelationManagers\MeetingNotesRelationManager;
 use App\Filament\Resources\Parties\Schemas\PartyInfolist;
+use App\Filament\Support\CodeLine;
 use App\Models\Party\Party;
 use App\Query\Party\PartyQueries;
 use App\Enums\Platform\Feature;
@@ -92,11 +93,15 @@ class AssociationResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('display_name')
-                    ->label(__('association.fields.name'))
-                    // D-170: kisa ad ya da uzun ad (unvan) ile de bulunur.
-                    ->searchable(query: fn (Builder $query, string $search): Builder => app(PartyQueries::class)->searchByName($query, $search))
-                    ->sortable(),
+                // Taraf no ayri sutun degil, adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('display_name')
+                        ->label(__('association.fields.name'))
+                        // D-170: kisa ad ya da uzun ad (unvan) ile de bulunur; taraf no ile de.
+                        ->searchable(query: fn (Builder $query, string $search): Builder => app(PartyQueries::class)->searchByName($query, $search))
+                        ->sortable(),
+                    'party_no',
+                ),
                 TextColumn::make('contacts_count')
                     ->label(__('association.fields.contacts'))
                     ->counts('contacts')
@@ -110,9 +115,6 @@ class AssociationResource extends Resource
                 TextColumn::make('status')
                     ->label(__('party.fields.status'))
                     ->badge(),
-                TextColumn::make('party_no')
-                    ->label(__('party.fields.party_no'))
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('archive')

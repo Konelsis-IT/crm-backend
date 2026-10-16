@@ -8,7 +8,9 @@ use App\Services\Platform\FeatureFlags;
 use App\Enums\Platform\Feature;
 use App\Filament\Clusters\WorkReports;
 use App\Filament\Resources\WorkItems\WorkItemResource;
+use App\Filament\Support\CodeLine;
 use App\Models\Personnel\Personnel;
+use App\Services\Platform\SchemaReadiness;
 use App\Models\Project\Project;
 use App\Models\Report\WorkItem;
 use App\Support\Projects\ProjectNames;
@@ -101,16 +103,20 @@ class WorkDurationReport extends Page implements HasTable
         return $table
             ->query(fn (): Builder => $analysis->durationQuery($this->viewer()))
             ->columns([
-                TextColumn::make('title')
-                    ->label(__('work_item.duration.columns.item'))
-                    ->wrap()
-                    ->weight('medium')
-                    ->searchable()
-                    ->description(fn (WorkItem $record): ?string => (int) ($record->getAttribute('children_count') ?? 0) > 0
+                // Is kodu (B56, D-204) is sutununun altinda kucuk yazi (CodeLine).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('work_item.duration.columns.item'))
+                        ->wrap()
+                        ->weight('medium')
+                        ->searchable(SchemaReadiness::hasBatch('B56') ? ['title', 'item_no'] : ['title'])
+                        ->url(fn (WorkItem $record): string => WorkItemResource::getUrl('view', ['record' => $record]))
+                        ->summarize($this->summary(fn (array $s): ?string => __('work_item.duration.summary_cards', ['count' => $s['count']]))),
+                    fn (WorkItem $record): ?string => $record->getAttribute('item_no'),
+                    fn (WorkItem $record): ?string => (int) ($record->getAttribute('children_count') ?? 0) > 0
                         ? __('work_item.duration.root_badge', ['count' => (int) $record->getAttribute('children_count')])
-                        : null)
-                    ->url(fn (WorkItem $record): string => WorkItemResource::getUrl('view', ['record' => $record]))
-                    ->summarize($this->summary(fn (array $s): ?string => __('work_item.duration.summary_cards', ['count' => $s['count']]))),
+                        : null,
+                ),
                 TextColumn::make('project.display_name')
                     ->label(__('work_item.duration.columns.project'))
                     ->placeholder('–')

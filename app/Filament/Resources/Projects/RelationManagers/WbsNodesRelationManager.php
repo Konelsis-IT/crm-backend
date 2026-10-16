@@ -8,6 +8,7 @@ use App\Filament\Resources\Projects\RelationManagers\Concerns\OpensFromChecklist
 use App\Enums\Project\NodeStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\WbsNodes\WbsNodeResource;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WbsNode;
@@ -89,11 +90,12 @@ class WbsNodesRelationManager extends RelationManager
             ->heading(__('wbs_node.relation.title'))
             ->recordTitleAttribute('wbs_code')
             ->columns([
-                TextColumn::make('wbs_code')
-                    ->label(__('wbs_node.fields.wbs_code'))
-                    ->sortable(),
-                TextColumn::make('name')
-                    ->label(__('wbs_node.fields.name')),
+                // WBS kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('wbs_node.fields.name')),
+                    'wbs_code',
+                ),
                 TextColumn::make('parent.wbs_code')
                     ->label(__('wbs_node.fields.parent'))
                     ->placeholder('-'),

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Query\Report;
 
+use App\Enums\Platform\Feature;
 use App\Enums\Report\ReportStatus;
 use App\Enums\Report\WorkItemLinkKind;
+use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Contract;
@@ -22,15 +24,19 @@ use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Project\ProjectPhoto;
+use App\Models\Procurement\PurchaseNeed;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Report\Report;
 use App\Models\Report\WorkItem;
 use App\Models\Report\WorkSuggestionDismissal;
 use App\Models\WorkRequest\WorkRequest;
+use App\Query\Personnel\OrganizationQueries;
+use App\Query\WorkRequest\ManagementPriorityQueries;
 use App\Reports\Templates\CoordinationBoardReportTemplate;
 use App\Reports\Templates\DailyWorkReportTemplate;
 use App\Reports\Templates\WeeklyWorkReportTemplate;
 use App\Reports\Work\WorkSuggestionCatalog;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
 use App\Support\Projects\ProjectNames;
@@ -121,12 +127,94 @@ final class WorkItemQueries
             'waitingPersonnel:id,full_name', 'waitingParty:id,display_name',
             ...(SchemaReadiness::hasBatch('B37') ? ['requesterPersonnel:id,full_name', 'requesterParty:id,display_name'] : []),
             ...WorkItemLinkKind::relations(),
+            // D-219 (B57): diger sorumlular.
+            ...(self::extended() ? ['assignees:id,full_name'] : []),
         ];
     }
 
     public function newQuery(): Builder
     {
         return WorkItem::query()->with($this->relations());
+    }
+
+    /** D-219 (B57): oncelik, diger sorumlular, tum ekip, notlar ve belgeler hazir mi? */
+    public static function extended(): bool
+    {
+        return SchemaReadiness::hasBatch('B57');
+    }
+
+    /** Ekranlarda D-219 alanlari: B57 uygulanmis ve ozellik acik (work.items.extended). */
+    public static function extendedUi(): bool
+    {
+        return self::extended() && FeatureFlags::enabled(Feature::WorkItemsExtended);
+    }
+
+    /** Kisi isin diger sorumlularindan biri mi (D-219)? */
+    public function isAssignee(int $itemId, int $personnelId): bool
+    {
+        return self::extended() && DB::table('work_item_assignees')
+            ->where('work_item_id', $itemId)
+            ->where('personnel_id', $personnelId)
+            ->exists();
+    }
+
+    /**
+     * "Tüm ekip" isi bu kisiye acik mi (D-219): departmani bos is tum sirketin,
+     * dolu is o departmanin uyelerinin (D-218 ek gorevler dahil).
+     */
+    public function isTeamWorkFor(WorkItem $item, int $personnelId): bool
+    {
+        if (! self::extended() || ! (bool) $item->getAttribute('for_everyone')) {
+            return false;
+        }
+
+        return $item->org_unit_id === null
+            || in_array((int) $item->org_unit_id, app(OrganizationQueries::class)->unitIdsOf($personnelId), true);
+    }
+
+    /**
+     * D-219 (B57; kullanici 16 Ekim 2026: "bir iş birden fazla kişiye
+     * atanabilir"): kisiyle paylasilan is da onun isidir: diger sorumlulardan
+     * biri oldugu is ve "Tüm ekip" isi.
+     */
+    private function orWhereShared(Builder $inner, int $me): void
+    {
+        if (! self::extended()) {
+            return;
+        }
+
+        $units = app(OrganizationQueries::class)->unitIdsOf($me);
+
+        $inner->orWhereExists(function ($sub) use ($me): void {
+            $sub->selectRaw('1')
+                ->from('work_item_assignees')
+                ->whereColumn('work_item_assignees.work_item_id', 'work_items.id')
+                ->where('work_item_assignees.personnel_id', $me);
+        })->orWhere(function (Builder $team) use ($units): void {
+            $team->where('work_items.for_everyone', true)
+                ->where(function (Builder $unit) use ($units): void {
+                    $unit->whereNull('work_items.org_unit_id');
+
+                    if ($units !== []) {
+                        $unit->orWhereIn('work_items.org_unit_id', $units);
+                    }
+                });
+        });
+    }
+
+    /** Ekibin diger sorumlu oldugu isler (Ekip panosu, D-219). @param list<int> $ids */
+    private function orWhereAssigneeIn(Builder $inner, array $ids): void
+    {
+        if (! self::extended() || $ids === []) {
+            return;
+        }
+
+        $inner->orWhereExists(function ($sub) use ($ids): void {
+            $sub->selectRaw('1')
+                ->from('work_item_assignees')
+                ->whereColumn('work_item_assignees.work_item_id', 'work_items.id')
+                ->whereIn('work_item_assignees.personnel_id', $ids);
+        });
     }
 
     /** Tum kartlari gorebilen (Yonetim panosu yetkisi). */
@@ -150,7 +238,8 @@ final class WorkItemQueries
             $unit = $unitId ?? ($viewer->org_unit_id !== null ? (int) $viewer->org_unit_id : null);
 
             if ($unit !== null) {
-                $ids = [...$ids, ...Personnel::query()->where('org_unit_id', $unit)->pluck('id')->map(fn ($id): int => (int) $id)->all()];
+                // D-218: departmanda ek gorevi olanlar da.
+                $ids = [...$ids, ...app(OrganizationQueries::class)->inUnits(Personnel::query(), [$unit])->pluck('id')->map(fn ($id): int => (int) $id)->all()];
             }
         }
 
@@ -176,6 +265,9 @@ final class WorkItemQueries
                 ->orWhere('work_items.created_by_personnel_id', $me)
                 // Benden beklenen is: kart baskasinin olsa da benim isim.
                 ->orWhere('work_items.waiting_personnel_id', $me);
+            // D-219: diger sorumlusu oldugum (ya da ekibimin oldugu) is ve Tüm ekip isi.
+            $this->orWhereShared($inner, $me);
+            $this->orWhereAssigneeIn($inner, $ids);
         });
     }
 
@@ -216,7 +308,7 @@ final class WorkItemQueries
      */
     public function board(Personnel $viewer, string $scope, array $params): Collection
     {
-        $query = $this->newQuery()->withCount('children');
+        $query = $this->newQuery()->withCount(['children', ...(self::extended() ? ['notes', 'files'] : [])]);
         $me = (int) $viewer->getKey();
         $projects = array_values(array_filter(array_map('intval', $params['projects'] ?? [])));
         $units = array_values(array_filter(array_map('intval', $params['units'] ?? [])));
@@ -226,11 +318,10 @@ final class WorkItemQueries
         $query->where(function (Builder $outer) use ($scope, $viewer, $me, $managed): void {
             $outer->where(function (Builder $inner) use ($scope, $viewer, $me): void {
                 match ($scope) {
-                    'team' => $inner->whereIn('work_items.personnel_id', $this->teamIds($viewer)),
+                    'team' => $this->whereTeam($inner, $this->teamIds($viewer)),
                     'all' => $this->applyVisible($inner, $viewer),
-                    // Kendi kartlarim + benden beklenen isler.
-                    default => $inner->where('work_items.personnel_id', $me)
-                        ->orWhere('work_items.waiting_personnel_id', $me),
+                    // Kendi kartlarim + benden beklenen isler + paylasilan isler (D-219).
+                    default => $this->whereMine($inner, $me),
                 };
             });
 
@@ -251,11 +342,70 @@ final class WorkItemQueries
 
         return $query
             ->orderBy('work_items.sort_order')
+            ->when(self::extended(), fn (Builder $ordered) => $ordered->orderByRaw(self::priorityRankSql().' desc'))
             ->orderByDesc('work_items.is_critical')
             ->orderByDesc('work_items.work_at')
             ->orderByDesc('work_items.id')
             ->limit(self::BOARD_LIMIT)
             ->get();
+    }
+
+    /** Kendi kartlarim, benden beklenen ve benimle paylasilan isler. */
+    private function whereMine(Builder $inner, int $me): Builder
+    {
+        $inner->where('work_items.personnel_id', $me)
+            ->orWhere('work_items.waiting_personnel_id', $me);
+        $this->orWhereShared($inner, $me);
+
+        return $inner;
+    }
+
+    /** @param  list<int>  $ids */
+    private function whereTeam(Builder $inner, array $ids): Builder
+    {
+        $inner->whereIn('work_items.personnel_id', $ids);
+        $this->orWhereAssigneeIn($inner, $ids);
+
+        return $inner;
+    }
+
+    /** Isler listesinde kritiklige gore siralama (D-219). */
+    public function orderByPriority(Builder $query, string $direction): Builder
+    {
+        return $query->orderByRaw(self::priorityRankSql().($direction === 'desc' ? ' desc' : ' asc'));
+    }
+
+    /** Oncelik sirasi (D-219): kritik 3, yuksek 2, normal 1, dusuk 0. */
+    public static function priorityRankSql(string $column = 'work_items.priority'): string
+    {
+        return "(CASE {$column} WHEN 'critical' THEN 3 WHEN 'high' THEN 2 WHEN 'low' THEN 0 ELSE 1 END)";
+    }
+
+    /**
+     * Talebe bagli isler (D-216), kilitli: talep atanınca / kapaninca guncellenir.
+     * $automaticOnly: yalniz talepten kendiliginden acilan isler.
+     *
+     * @return Collection<int, WorkItem>
+     */
+    public function requestItemsForUpdate(int $requestId, bool $automaticOnly): Collection
+    {
+        return WorkItem::query()
+            ->where('linked_work_request_id', $requestId)
+            ->whereIn('status', WorkItemStatus::openValues())
+            ->when($automaticOnly, fn (Builder $query): Builder => $query->where('source', WorkItemSource::Automatic->value))
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+    }
+
+    /** Is listesi siralamasi (D-216): ust yonetimin talep ettigi acik isler once, sonra en yeni. */
+    public function listOrder(Builder $query): Builder
+    {
+        if (SchemaReadiness::hasBatch('B37')) {
+            app(ManagementPriorityQueries::class)->openFirst($query, 'requester_personnel_id', 'status', WorkItemStatus::openValues());
+        }
+
+        return $query->orderByDesc($query->getModel()->qualifyColumn('work_at'));
     }
 
     /**
@@ -275,12 +425,65 @@ final class WorkItemQueries
     public const AGENDA_GROUPS = ['overdue', 'today', 'tomorrow'];
 
     /**
+     * "Gorevlerim ve islerim" kapsami (D-217; kullanici 15 Ekim 2026: "personeller
+     * için oluşturduğu işleri takip edebilmelidir ... İstiyorsan tüm şirket diyerek
+     * herkese açılan işler listeli şekilde görülsün"): kendi islerim, verdigim
+     * isler (baskasinin karti; ben actim ya da talep eden benim), tum sirket.
+     */
+    public const AGENDA_SCOPES = ['mine', 'assigned', 'all'];
+
+    /** Kapsami secilebilir mi: tum sirket yalniz tum kartlari gorende. */
+    public function agendaScopeAllowed(Personnel $viewer, string $scope): bool
+    {
+        return match ($scope) {
+            'mine', 'assigned' => true,
+            'all' => $this->seesAll($viewer),
+            default => false,
+        };
+    }
+
+    private function applyAgendaScope(Builder $query, Personnel $viewer, string $scope): Builder
+    {
+        $me = (int) $viewer->getKey();
+
+        return match ($scope) {
+            'assigned' => $query
+                ->where('work_items.personnel_id', '!=', $me)
+                ->where(function (Builder $mine) use ($me): void {
+                    $mine->where('work_items.created_by_personnel_id', $me);
+
+                    if (SchemaReadiness::hasBatch('B37')) {
+                        $mine->orWhere('work_items.requester_personnel_id', $me);
+                    }
+                }),
+            'all' => $this->seesAll($viewer) ? $query : $query->where(fn (Builder $mine) => $this->whereMine($mine, $me)),
+            default => $query->where(fn (Builder $mine) => $this->whereMine($mine, $me)),
+        };
+    }
+
+    /**
+     * "Gorevlerim ve islerim" proje / departman secimi (D-219; kullanici
+     * 16 Ekim 2026: "proje ve departman seçim küçük bir dropdown alanı olsun").
+     *
+     * @param  array{project?: int|null, unit?: int|null}  $filters
+     */
+    private function applyAgendaFilters(Builder $query, array $filters): Builder
+    {
+        $project = (int) ($filters['project'] ?? 0);
+        $unit = (int) ($filters['unit'] ?? 0);
+
+        return $query
+            ->when($project > 0, fn (Builder $inner) => $inner->where('work_items.project_id', $project))
+            ->when($unit > 0, fn (Builder $inner) => $inner->where('work_items.org_unit_id', $unit));
+    }
+
+    /**
      * "Gorevlerim ve islerim" tablosu (D-146; D-147: yalniz bana ait isler):
      * kisinin bugun / yarin kartlari ile onceki gunlerden devreden acik
      * kartlari. Her satir `agenda_group` tasir (0 geciken, 1 bugun, 2 yarin);
      * $from secili sekmedir ve liste o gruptan baslar.
      */
-    public function agendaQuery(Personnel $viewer, string $from): Builder
+    public function agendaQuery(Personnel $viewer, string $from, string $scope = 'mine', array $filters = []): Builder
     {
         $today = self::today();
         [$groupSql, $bindings] = $this->agendaGroupSql($today);
@@ -288,8 +491,9 @@ final class WorkItemQueries
         $query = WorkItem::query()
             ->select('work_items.*')
             ->selectRaw($groupSql.' as agenda_group', $bindings)
-            ->with(['project:'.ProjectNames::select(), 'personnel:id,full_name,photo_path'])
-            ->where('work_items.personnel_id', (int) $viewer->getKey());
+            ->with(['project:'.ProjectNames::select(), 'personnel:id,full_name,photo_path', ...(self::extended() ? ['assignees:id,full_name'] : [])]);
+        $this->applyAgendaScope($query, $viewer, $scope);
+        $this->applyAgendaFilters($query, $filters);
 
         $this->applyRange($query, $today, $today->copy()->addDay());
 
@@ -300,8 +504,19 @@ final class WorkItemQueries
         }
 
         // Grup ifadesi once: onceki gunden tamamlanan kart "Bugün" grubunda kalir.
+        $query->orderByRaw($groupSql, $bindings);
+
+        // D-216: grup icinde ust yonetimin talep ettigi acik isler once.
+        if (SchemaReadiness::hasBatch('B37')) {
+            app(ManagementPriorityQueries::class)->openFirst($query, 'requester_personnel_id', 'status', WorkItemStatus::openValues());
+        }
+
+        // D-219: grup icinde kritiklik sirasi.
+        if (self::extended()) {
+            $query->orderByRaw(self::priorityRankSql().' desc');
+        }
+
         return $query
-            ->orderByRaw($groupSql, $bindings)
             ->orderBy('work_items.work_on')
             ->orderBy('work_items.work_at')
             ->orderBy('work_items.id');
@@ -312,12 +527,13 @@ final class WorkItemQueries
      *
      * @return array{overdue: int, today: int, tomorrow: int}
      */
-    public function agendaCounts(Personnel $viewer): array
+    public function agendaCounts(Personnel $viewer, string $scope = 'mine', array $filters = []): array
     {
         $today = self::today();
         [$groupSql, $bindings] = $this->agendaGroupSql($today);
 
-        $query = WorkItem::query()->where('work_items.personnel_id', (int) $viewer->getKey());
+        $query = $this->applyAgendaScope(WorkItem::query(), $viewer, $scope);
+        $this->applyAgendaFilters($query, $filters);
         $this->applyRange($query, $today, $today->copy()->addDay());
 
         $rows = $query
@@ -329,6 +545,30 @@ final class WorkItemQueries
             'overdue' => (int) ($rows[0] ?? 0),
             'today' => (int) ($rows[1] ?? 0),
             'tomorrow' => (int) ($rows[2] ?? 0),
+        ];
+    }
+
+    /**
+     * "Gorevlerim ve islerim" proje / departman secenekleri (D-219): secili
+     * kapsamdaki gundem islerinin projeleri ve departmanlari (bos secenek yok).
+     *
+     * @return array{projects: array<int, string>, units: array<int, string>}
+     */
+    public function agendaFacets(Personnel $viewer, string $scope): array
+    {
+        $today = self::today();
+        $query = $this->applyAgendaScope(WorkItem::query(), $viewer, $scope);
+        $this->applyRange($query, $today, $today->copy()->addDay());
+
+        $projectIds = (clone $query)->whereNotNull('work_items.project_id')->distinct()->pluck('work_items.project_id')->map(fn ($id): int => (int) $id)->all();
+        $unitIds = (clone $query)->whereNotNull('work_items.org_unit_id')->distinct()->pluck('work_items.org_unit_id')->map(fn ($id): int => (int) $id)->all();
+
+        $units = array_map(fn (array $unit): string => $unit['name'], array_intersect_key($this->units(), array_flip($unitIds)));
+        asort($units);
+
+        return [
+            'projects' => array_intersect_key($this->projectNames(), array_flip($projectIds)),
+            'units' => $units,
         ];
     }
 
@@ -761,6 +1001,12 @@ final class WorkItemQueries
                 ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('subject', 'like', $like)->orWhereHas('party', fn (Builder $p) => $p->where('display_name', 'like', $like))))
                 ->orderByDesc('planned_on')->limit(20)->get()
                 ->map(fn (MeetingPlan $plan): array => ['id' => (int) $plan->getKey(), 'no' => $plan->planned_on?->format('d.m.Y'), 'label' => trim((string) ($plan->party?->display_name ?? '').($plan->subject ? ' · '.$plan->subject : ''), ' ·'), 'project_id' => null]),
+            // D-219 (B57): satin alinacak kalem (adi ya da talep kodu).
+            WorkItemLinkKind::PurchaseNeed => ! WorkItemLinkKind::PurchaseNeed->available() ? collect() : PurchaseNeed::query()
+                ->with(['project:'.ProjectNames::select(), 'purchaseRequest:id,request_no'])
+                ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where('title', 'like', $like))
+                ->orderByDesc('id')->limit(20)->get()
+                ->map(fn (PurchaseNeed $need): array => ['id' => (int) $need->getKey(), 'no' => $need->purchaseRequest?->request_no, 'label' => trim((string) $need->title.($need->project !== null ? ' · '.$need->project->display_name : '')), 'project_id' => $need->project_id !== null ? (int) $need->project_id : null]),
             WorkItemLinkKind::None => collect(),
         };
 
@@ -799,6 +1045,8 @@ final class WorkItemQueries
 
         return $query->where(function (Builder $inner) use ($like): void {
             $inner->where('work_items.title', 'like', $like)
+                // D-204: is kodu (IS-YYYY-NNNN).
+                ->when(SchemaReadiness::hasBatch('B56'), fn (Builder $code) => $code->orWhere('work_items.item_no', 'like', $like))
                 // D-174: lisans adi ya da kisa ad.
                 ->orWhereHas('project', fn (Builder $project) => $project->where(fn (Builder $names) => $names->where('name', 'like', $like)
                     ->when(ProjectNames::schemaReady(), fn (Builder $short) => $short->orWhere('short_name', 'like', $like))))
@@ -855,7 +1103,27 @@ final class WorkItemQueries
     /** Kisinin kartlari (personel kartindaki Isler sekmesi). */
     public function applyPersonnel(Builder $query, int $personnelId): Builder
     {
-        return $query->where('work_items.personnel_id', $personnelId);
+        // D-219: diger sorumlusu oldugu isler de.
+        return $query->where(function (Builder $inner) use ($personnelId): void {
+            $inner->where('work_items.personnel_id', $personnelId);
+            $this->orWhereAssigneeIn($inner, [$personnelId]);
+        });
+    }
+
+    /**
+     * Oncelik suzgeci (D-219, dort seviye).
+     *
+     * @param  list<string>  $values
+     */
+    public function applyPriorities(Builder $query, array $values): Builder
+    {
+        $values = array_values(array_filter($values, fn ($value): bool => is_string($value) && $value !== ''));
+
+        if ($values === [] || ! self::extended()) {
+            return $query;
+        }
+
+        return $query->whereIn('work_items.priority', $values);
     }
 
     /**

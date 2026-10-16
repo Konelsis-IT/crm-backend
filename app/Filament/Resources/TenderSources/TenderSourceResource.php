@@ -114,10 +114,7 @@ class TenderSourceResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('tender_source.fields.code'))
-                    ->searchable()
-                    ->sortable(),
+                // D-130: katalog kodu tabloda gosterilmez (14 Ekim 2026, kod sutunu kaldirildi).
                 TextColumn::make('name_tr')
                     ->label(__('tender_source.fields.name_tr'))
                     ->searchable(),
@@ -147,7 +144,7 @@ class TenderSourceResource extends Resource
                     }),
             ])
             ->toolbarActions([])
-            ->defaultSort('code');
+            ->defaultSort('name_tr');
     }
 
     public static function getPages(): array

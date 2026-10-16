@@ -8,10 +8,12 @@ use App\Enums\Acquisition\ProjectScopeType;
 use App\Enums\Personnel\PersonnelStatus;
 use App\Filament\Resources\Personnel\Actions\PersonnelStatusActions;
 use App\Filament\Resources\Personnel\PersonnelResource;
+use App\Filament\Support\ActionColors;
 use App\Filament\Support\BrandIcons;
 use App\Filament\Support\PersonnelAvatar;
 use App\Filament\Support\ProjectTypeCoordinatorSchema;
 use App\Models\Personnel\Personnel;
+use App\Query\Personnel\OrganizationQueries;
 use App\Support\ContactLinks;
 use App\Support\Projects\ProjectNames;
 use Illuminate\Support\Facades\Auth;
@@ -87,8 +89,10 @@ final class PersonnelTable
                 ->sortable()
                 ->weight('medium')
                 ->description(fn (Personnel $record): ?string => $record->job_title),
+            // D-218: ek gorevinin departmanlari da (ornegin Is Gelistirme + Teklif).
             TextColumn::make('orgUnit.name')
                 ->label(__('personnel.fields.department'))
+                ->state(fn (Personnel $record): array => array_values(array_filter([$record->orgUnit?->name, ...app(OrganizationQueries::class)->extraUnitNamesOf((int) $record->getKey())])))
                 ->badge()
                 ->color('gray')
                 ->sortable()
@@ -156,7 +160,7 @@ final class PersonnelTable
         return Action::make('start_chat')
             ->label(__('personnel.actions.start_chat'))
             ->icon(Heroicon::OutlinedChatBubbleLeftRight)
-            ->color('primary')
+            ->color(ActionColors::SEND)
             ->visible(fn (Personnel $record): bool => ! $record->is(Auth::user()))
             ->url(fn (Personnel $record): string => PersonnelResource::getUrl('index', ['sohbet_kisi' => $record->getKey()]));
     }

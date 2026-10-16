@@ -17,6 +17,10 @@ final class ApprovalSubjectRegistry
     private const SUBJECTS = [
         DocumentRevisionSubject::TYPE => DocumentRevisionSubject::class,
         WorkRequestSubject::TYPE => WorkRequestSubject::class,
+        // D-189: satin alma siparisi (tutar sinirina gore Satin alma mudur / YK baskani).
+        PurchaseNeedSubject::TYPE => PurchaseNeedSubject::class,
+        // D-192: tekliften acilan siparis (onay siparisin TL toplamina bakar).
+        PurchaseOrderSubject::TYPE => PurchaseOrderSubject::class,
     ];
 
     public function __construct(private readonly Container $container) {}

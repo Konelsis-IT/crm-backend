@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    /*
+    | Konelsis AI Service (D-192, ai-service planning record 29). The CRM calls
+    | it only from the backend with a Bearer token + HMAC-SHA256 signature
+    | (client id e.g. "crm-local"). Secrets come from .env only. Plain HTTP is
+    | accepted only for a loopback development URL.
+    */
+    'ai_service' => [
+        'base_url' => env('AI_SERVICE_URL'),
+        'client_id' => env('AI_SERVICE_CLIENT_ID', 'crm-local'),
+        'token' => env('AI_SERVICE_TOKEN'),
+        'secret' => env('AI_SERVICE_SECRET'),
+        'timeout' => (int) env('AI_SERVICE_TIMEOUT', 60),
+        'connect_timeout' => (int) env('AI_SERVICE_CONNECT_TIMEOUT', 10),
+        // Pending readings older than this are closed as failed (worker not running, lost job).
+        'stale_after_minutes' => (int) env('AI_SERVICE_STALE_AFTER_MINUTES', 20),
+    ],
+
 ];

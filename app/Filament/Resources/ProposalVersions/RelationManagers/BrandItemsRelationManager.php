@@ -6,6 +6,7 @@ namespace App\Filament\Resources\ProposalVersions\RelationManagers;
 
 use App\Enums\Acquisition\BrandApprovalState;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\BrandItem;
@@ -87,11 +88,13 @@ class BrandItemsRelationManager extends RelationManager
             ->heading(__('brand_item.relation.title'))
             ->recordTitleAttribute('item_code')
             ->columns([
-                TextColumn::make('item_code')
-                    ->label(__('brand_item.fields.item_code')),
-                TextColumn::make('item_description')
-                    ->label(__('brand_item.fields.item_description'))
-                    ->limit(40),
+                // Kalem kodu ayri sutun degil, tanimin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('item_description')
+                        ->label(__('brand_item.fields.item_description'))
+                        ->limit(40),
+                    'item_code',
+                ),
                 TextColumn::make('proposed_brand')
                     ->label(__('brand_item.fields.proposed_brand')),
                 TextColumn::make('alternative_brand')

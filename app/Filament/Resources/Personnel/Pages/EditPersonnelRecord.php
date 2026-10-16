@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Personnel\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\Personnel\EmailAlreadyInUseException;
 use App\Exceptions\StaleRecordException;
 use App\Filament\Concerns\HasColoredFormActions;
@@ -14,7 +15,6 @@ use App\Filament\Support\PersonnelFormData;
 use App\Models\Personnel\Personnel;
 use App\Query\Personnel\PersonnelQueries;
 use App\Services\Personnel\PersonnelService;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +22,7 @@ use Illuminate\Validation\ValidationException;
 
 class EditPersonnelRecord extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
 
     protected static string $resource = PersonnelResource::class;
@@ -30,7 +31,7 @@ class EditPersonnelRecord extends EditRecord
     {
         return [
             PersonnelStatusActions::headerGroup(),
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

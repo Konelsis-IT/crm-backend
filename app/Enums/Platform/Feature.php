@@ -33,6 +33,20 @@ use App\Models\Personnel\PersonnelCertification;
 use App\Models\Personnel\PersonnelCompetency;
 use App\Models\Personnel\Training;
 use App\Models\Personnel\TrainingAttendance;
+use App\Models\Procurement\CatalogCategory;
+use App\Models\Procurement\CatalogItem;
+use App\Models\Procurement\CatalogItemAlias;
+use App\Models\Procurement\CompanyPurchase;
+use App\Models\Procurement\CostList;
+use App\Models\Procurement\CostListLine;
+use App\Models\Procurement\PurchaseNeed;
+use App\Models\Procurement\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrderLine;
+use App\Models\Procurement\PurchaseQuotation;
+use App\Models\Procurement\PurchaseQuotationDocument;
+use App\Models\Procurement\PurchaseQuotationLine;
+use App\Models\Procurement\PurchaseQuote;
+use App\Models\Procurement\PurchaseRequest;
 use App\Models\Project\Project;
 use App\Models\Project\ProjectScope;
 use App\Models\Project\ProjectTypeCoordinator;
@@ -40,6 +54,7 @@ use App\Models\Project\ProjectStageInstance;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Project\StageTemplate;
 use App\Models\Report\Report;
+use App\Models\Report\RecurringWork;
 use App\Models\Report\WorkItem;
 use App\Models\SocialMedia\SocialContent;
 use App\Models\WorkRequest\WorkRequest;
@@ -77,11 +92,22 @@ enum Feature: string
      * gelistirme bekletilebiliyorsa versiyonlanacak ve sirasi gelen
      * guncellemeyle acilacak. Kodla gidenler kodla gidecek."). Bugunden sonra
      * eklenen her bekletilebilir ozellik bu surumle kaydolur; yeni surum notu
-     * maddeleri de bu numarali kayda yazilir. Kullanici bu surumu canlida
-     * yayinladigini soyleyince bir artirilir (2.4 -> 2.5). Hicbir ozelligin
-     * surumu bundan buyuk olamaz (safe-verify).
+     * maddeleri de bu numarali kayda yazilir. Hicbir ozelligin surumu bundan
+     * buyuk olamaz (safe-verify).
+     *
+     * D-211 (15 Ekim 2026 kullanici karari: "surumleme isini sen features
+     * tablosuna bakip bakip yapacaksin. artik bir ust surumle devam ediyim bu
+     * ozellikler bir ust surum konusu diyerek ekliceksin. Ve 3 surumune gecme
+     * 2.9'a kadar geldiysen 2.9.1 yap oyle git."): bu numara gelistirmedeki
+     * surumdur; bir konu bitip yenisi baslayinca ajan kendisi bir ust surume
+     * gecer (yayini beklemez). Kullanici bu surumu yayinlarsa yeni isler
+     * hemen bir ust surume yazilir. 2.9'dan sonra 2.9.1, 2.9.2 ... (3.0 yok).
+     * Sirasi: 2.7 projeler, 2.8 satin alma, 2.9 pano / uyarilar / ekran duzeni.
+     * D-215 (15 Ekim 2026 kullanici: "dashboard'un son güncel halini 2.7 sürümü
+     * olarak güncelle dashboardu canlıya alacağım."): pano, baglanti onayi ve
+     * is uyarilari 2.7'ye alindi (2.7 = projeler + pano); 2.9 sonraki konu.
      */
-    public const NEXT_RELEASE = '2.7';
+    public const NEXT_RELEASE = '2.9';
 
     /**
      * Bekleme surumu (D-164, 6 Ekim 2026 kullanici karari: "Ben sana bunlari
@@ -97,10 +123,17 @@ enum Feature: string
     case Dashboard = 'dashboard';
     case DashboardStats = 'dashboard.stats';
     case DashboardAgenda = 'dashboard.agenda';
+    // D-217: Gorevlerim ve islerim'de verdigim isler / tum sirket ve satirdan durum degistirme.
+    case DashboardAgendaScopes = 'dashboard.agenda.scopes';
+    // D-219: Gorevlerim ve islerim'de proje / departman secimi (D-220: 2.7).
+    case DashboardAgendaFilters = 'dashboard.agenda.filters';
     case DashboardSendNotification = 'dashboard.send_notification';
     case DashboardAlerts = 'dashboard.alerts';
     case DashboardAnnouncements = 'dashboard.announcements';
     case DashboardSocial = 'dashboard.social';
+    // D-189: yonetimin Genel bakis'inda satin almanin onerdigi teklifler.
+    case DashboardPurchasing = 'dashboard.purchasing';
+    case DashboardDepartmentPanels = 'dashboard.department_panels';
 
     // Personel ve organizasyon
     case Personnel = 'personnel';
@@ -176,9 +209,29 @@ enum Feature: string
     case FocusExpectations = 'projects.catalogs.focus_expectations';
     case StageTemplates = 'projects.catalogs.stage_templates';
 
+    // Satin alma (D-189, B52): sabit katalog, teklif maliyet kalemleri (Excel), siparis
+    // kalemleri, tedarikci teklifleri ve karsilastirma, sirket ici alimlar ve yenilemeler.
+    case Procurement = 'procurement';
+    case Catalog = 'procurement.catalog';
+    case CostItems = 'procurement.cost_items';
+    case PurchaseNeeds = 'procurement.needs';
+    case PurchaseQuotes = 'procurement.needs.quotes';
+    case CompanyPurchases = 'procurement.company_purchases';
+    // D-192 (B53): kalemli satin alma talebi, satin alma teklifleri (belge, PDF, Konelsis AI) ve siparisler.
+    case PurchaseRequests = 'procurement.requests';
+    case PurchaseQuotations = 'procurement.quotations';
+    case PurchaseQuotationsAi = 'procurement.quotations.ai';
+    case PurchaseOrders = 'procurement.orders';
+    // D-194 (B54): sabit birimler (Ayarlar > Birimler).
+    case Units = 'procurement.units';
+
     // Talepler ve raporlar
     case WorkRequests = 'work_requests';
     case WorkRequestThread = 'work_requests.thread';
+    // D-216: talep atanınca sorumlunun panosuna bagli is, is bitince "talebi kapat?"
+    // sorusu, talepte Bagli isler; ust yonetimin talepleri ve istedigi isler once.
+    case WorkRequestWorkItems = 'work_requests.work_items';
+    case WorkRequestManagementPriority = 'work_requests.management_priority';
     case Reports = 'reports';
     // Arayuze ozel disa aktarim (D-167): genel Excel / PDF (tools.exports) kapali
     // kalirken her ekran kendi anahtariyla kademe kademe acilir; ilki raporlar.
@@ -195,6 +248,10 @@ enum Feature: string
     case WorkItems = 'work.items';
     case WorkBoard = 'work.board';
     case WorkBoardCompact = 'work.board.compact';
+    // D-219 (B57): dort seviye kritiklik, coklu sorumlu, Tum ekip, is grubu, notlar ve belgeler (D-220: 2.7).
+    case WorkItemsExtended = 'work.items.extended';
+    // D-219 (B57): gorev ve sorumluluklar (tekrarli isler) ve uyum takibi (D-220: 2.7).
+    case WorkRecurring = 'work.recurring';
     case ControlMatrix = 'work.control_matrix';
     case ControlPersonnelTab = 'work.control_matrix.personnel_tab';
     case AttentionCard = 'work.control_matrix.attention_card';
@@ -223,6 +280,7 @@ enum Feature: string
     case NotificationsInbox = 'notifications.inbox';
     case Announcements = 'notifications.announcements';
     case BusinessAlerts = 'notifications.business_alerts';
+    case BusinessAlertsWorkPurchasing = 'notifications.business_alerts.work_purchasing';
     case DesktopAlerts = 'notifications.desktop_alerts';
     case AlertSound = 'notifications.desktop_alerts.sound';
     case AlertWindows = 'notifications.desktop_alerts.windows';
@@ -230,6 +288,8 @@ enum Feature: string
     // Genel araclar
     case Tools = 'tools';
     case QuickActions = 'tools.quick_actions';
+    // D-200: tablo ve detay sayfasindaki baglantilara gitmeden once onay penceresi.
+    case LinkGuard = 'tools.link_guard';
     case Exports = 'tools.exports';
     case ExcelExport = 'tools.exports.excel';
     case PdfExport = 'tools.exports.pdf';
@@ -335,11 +395,20 @@ enum Feature: string
             self::ProjectScopeTypes => [ProjectScope::class],
             self::ProjectTypeCoordinators => [ProjectTypeCoordinator::class],
             self::SupplyItems => [ProjectSupplyItem::class],
+            self::Catalog => [CatalogCategory::class, CatalogItem::class, CatalogItemAlias::class],
+            self::CostItems => [CostList::class, CostListLine::class],
+            self::PurchaseNeeds => [PurchaseNeed::class],
+            self::PurchaseQuotes => [PurchaseQuote::class],
+            self::CompanyPurchases => [CompanyPurchase::class],
+            self::PurchaseRequests => [PurchaseRequest::class],
+            self::PurchaseQuotations => [PurchaseQuotation::class, PurchaseQuotationLine::class, PurchaseQuotationDocument::class],
+            self::PurchaseOrders => [PurchaseOrder::class, PurchaseOrderLine::class],
             self::StageGates => [ProjectStageInstance::class],
             self::StageTemplates => [StageTemplate::class],
             self::WorkRequests => [WorkRequest::class],
             self::Reports => [Report::class],
             self::Work => [WorkItem::class],
+            self::WorkRecurring => [RecurringWork::class],
             self::SocialMedia => [SocialContent::class],
             self::NotificationsInbox => [PanelNotification::class],
             self::Announcements => [Announcement::class],
@@ -360,14 +429,18 @@ enum Feature: string
             self::Dashboard => ['Genel bakış', 'Genel bakış sayfasındaki bütün bölümler: sayılar, Görevlerim ve işlerim, Duyuru gönder düğmesi, yaklaşan tarihler, duyurular, sosyal medya. Kapanınca sayfada yalnız başlık kalır; alt özellikler de kapanır.', 'D-146', '1.0'],
             self::DashboardStats => ['Genel bakış: Sayılar', 'Başlığın yanındaki Bugün, Geciken ve Yaklaşan iş sayıları.', 'D-146', '2.3'],
             self::DashboardAgenda => ['Genel bakış: Görevlerim ve işlerim', 'Kişinin kendi işlerinin tablosu (Geciken / Bugün / Yarın sekmeleri).', 'D-147', '1.9'],
+            self::DashboardAgendaScopes => ['Görevlerim ve işlerim: verdiğim işler ve tüm şirket', 'Görevlerim ve işlerim tablosunda "Benim işlerim / Verdiğim işler / Tüm şirket" seçimi (verdiğim işler: başkasının işi, kişinin açtığı ya da talep ettiği; tüm şirket yalnız bütün işleri görebilene) ve satırdaki simgeyle işin durumunu değiştirme. Kapanınca tablo yalnız kişinin kendi işlerini gösterir.', 'D-217', '2.7'],
+            self::DashboardAgendaFilters => ['Görevlerim ve işlerim: proje ve departman seçimi', 'Görevlerim ve işlerim tablosunun başlığında küçük proje ve departman seçimi; tablo ve sekme sayıları seçime göre süzülür. Kapanınca tablo bütün projeleri gösterir.', 'D-219 / D-220', '2.7'],
             self::DashboardSendNotification => ['Genel bakış: Duyuru gönder düğmesi', 'Genel bakıştaki turuncu "Duyuru gönder" düğmesi. Sağ üst menüdeki "Duyuru gönder" Duyurular özelliğine bağlı kalır.', 'D-146 / D-148', '1.0'],
             self::DashboardAlerts => ['Genel bakış: Yaklaşan tarihler ve uyarılar', 'Genel bakıştaki uyarı kartları. Uyarılar üretilmeye ve zile düşmeye devam eder.', 'D-146', '1.0'],
             self::DashboardAnnouncements => ['Genel bakış: Duyurular', 'Genel bakıştaki son 3 duyuru. Duyuru gönderme ve zil bildirimleri etkilenmez.', 'D-146', '1.0'],
             self::DashboardSocial => ['Genel bakış: Yaklaşan sosyal medya paylaşımları', 'Genel bakıştaki sosyal medya bölümü. Sosyal Medya ekranı etkilenmez.', 'D-146', '1.5'],
+            self::DashboardPurchasing => ['Genel bakış: Satın alma önerileri', 'Üst yönetimin Genel bakış\'ında satın almanın önerdiği teklifler tablosu (proje, teklif, kalem, önerilen tedarikçi, tutar, termin, geliş tarihi); satıra tıklayınca diğer teklifler. Kapanınca tablo görünmez.', 'D-189', '2.8'],
+            self::DashboardDepartmentPanels => ['Genel bakış: departman panoları', 'Genel bakış kişinin departmanına göre açılır: İş Geliştirme ve Teklif çalışanlarına İş geliştirme paneli, Satın Alma çalışanlarına Satın alma paneli, üst yönetime Yönetici paneli ile birlikte hepsi (sekmeler, ACİL şeridi, acil uyarı penceresi, şablonlar, Onay ver, Hemen uyar, Departmanı çağır; her panelin altında Görevlerim ve işlerim ile Yaklaşan tarihler ve uyarılar). Satın alma paneli Satın alma açıkken görünür. Diğer departmanlar eski Genel bakışı görmeye devam eder. Kapanınca herkes eski Genel bakışı görür.', 'D-212 / D-215', '2.7'],
 
             self::Personnel => ['Personel ve organizasyon', 'Personel listesi ve personel kartı. Kapanınca Personel menüsü ve personel sayfaları kaybolur; alt özellikler de kapanır. Giriş ve profil sayfası etkilenmez.', 'D-42', '1.0'],
-            self::OrgUnits => ['Organizasyon birimleri', 'İdari > Organizasyon Birimleri ekranı.', 'D-62', '1.0'],
-            self::Positions => ['Pozisyonlar', 'İdari > Pozisyonlar ekranı.', 'D-62', '1.0'],
+            self::OrgUnits => ['Organizasyon birimleri', 'Personel listesindeki Organizasyon birimleri düğmesi ve ekranı (D-206).', 'D-62', '1.0'],
+            self::Positions => ['Pozisyonlar', 'Personel listesindeki Pozisyonlar düğmesi ve ekranı (D-206).', 'D-62', '1.0'],
             self::Competencies => ['Yetkinlikler', 'Ayarlar > Yetkinlikler ekranı ve personel kartındaki yetkinlik sekmesi.', null, '1.0'],
             self::Certifications => ['Sertifikalar', 'Ayarlar > Sertifikalar ekranı ve personel kartındaki sertifika sekmesi.', 'D-60', '1.0'],
             self::Trainings => ['Eğitimler', 'Ayarlar > Eğitimler ekranı ve personel kartındaki eğitim sekmesi.', 'D-60', '1.0'],
@@ -376,7 +449,7 @@ enum Feature: string
             self::Approvals => ['Onay motoru', 'Onay talepleri: dokümanda "Onaya gönder", Onaylar sekmeleri, onay bildirimleri. Alt özellikler de kapanır.', 'D-76', '1.0'],
             self::ApprovalRequests => ['Onaylar ekranı', 'Üst menüdeki Onaylar listesi (bana gelenler, taleplerim).', 'D-76', '1.0'],
             self::ApprovalPolicies => ['Onay politikaları', 'Ayarlar > Onay Politikaları, sürümleri ve adımları.', 'D-76', '1.0'],
-            self::Delegations => ['Vekaletler', 'İdari > Vekaletler ekranı.', 'D-76', '5.0'],
+            self::Delegations => ['Vekaletler', 'Personel listesindeki Vekaletler penceresi ve ekranı (D-206).', 'D-76', '5.0'],
 
             self::Documents => ['Doküman yönetimi', 'Dokümanlar ekranı, projedeki Dokümanlar sekmesi, belge indirme. Alt özellikler de kapanır.', 'D-66', '1.0'],
             self::LegalHolds => ['Hukuki tutmalar', 'Doküman > Hukuki Tutmalar ekranı.', 'D-66', '5.0'],
@@ -416,8 +489,19 @@ enum Feature: string
             self::Projects => ['Projeler', 'Projeler ekranı, proje kartı ve alt ekranları (workstream, iş kırılımı, iş paketleri, gecikmeler, departman devirleri). Alt özellikler de kapanır.', 'D-67', '1.0'],
             self::ProjectShortName => ['Projeler: Kısa ad ve Lisans adı', 'Projenin Kısa ad alanı; proje adı alanı "Lisans adı" olarak görünür. Listede kısa ad ve altında lisans adı, kartta ve diğer ekranlarda kısa ad. Kapanınca projeler eskisi gibi tek "Ad" ile görünür; kayıtlı kısa adlar silinmez.', 'D-174', '2.7'],
             self::ProjectScopeTypes => ['Projeler: Proje tipi', 'Proje oluştur / düzenle ekranında proje tipi seçimi (GES, RES, TM, HES, BESS, ENH/EİH) ve tip başına proje ölçüleri; listede proje tipi sütunu, proje sayfasında tipler ve kapsam kartı. Tekliften dönüşen projeye tipler yine kopyalanır; kapanınca yalnız ekranda görünmez.', 'D-174', '2.7'],
-            self::ProjectTypeCoordinators => ['Projeler: Proje tipi koordinatörleri', 'Proje Grubu > Proje tipi koordinatörleri ekranı (her proje tipinin koordinatörü atanır, değiştirilir, kaldırılır); personel kartında ve detayında "GES koordinatörü" gibi rozet; proje sayfasında tiplerin koordinatörleri; proje listesinde koordinatör sütunu ve süzgeci. Kapanınca atamalar silinmez, yalnız görünmez.', 'D-175', '2.7'],
-            self::SupplyItems => ['Tedarik kalemleri', 'Satın Alma > Tedarik Kalemleri ve projedeki tedarik sekmesi.', 'D-68', '1.0'],
+            self::ProjectTypeCoordinators => ['Projeler: Proje tipi koordinatörleri', 'Projeler listesindeki Proje tipi koordinatörleri penceresi (her proje tipinin koordinatörü atanır, değiştirilir, kaldırılır; D-206); personel kartında ve detayında "GES koordinatörü" gibi rozet; proje sayfasında tiplerin koordinatörleri; proje listesinde koordinatör sütunu ve süzgeci. Kapanınca atamalar silinmez, yalnız görünmez.', 'D-175', '2.7'],
+            self::SupplyItems => ['Tedarik kalemleri', 'Projedeki Tedarik, Lojistik ve Yazılım sekmeleri ve adım hazırlığındaki tedarik beklentileri. D-193: Operasyon - Satın alma > Tedarik kalemleri menüsü kaldırıldı; satın alma Satın alınacaklar ve Siparişler ile yürür.', 'D-68, D-193', '1.0'],
+            self::Procurement => ['Satın alma', 'Satın alma modülü: ürün ve hizmet kataloğu, teklif maliyet kalemleri, sipariş kalemleri, tedarikçi teklifleri, şirket içi alımlar. Kapanınca alt özelliklerin hepsi kapanır; Tedarik kalemleri etkilenmez.', 'D-189', '2.8'],
+            self::Catalog => ['Satın alma: Malzeme ve Hizmetler', 'Operasyon - Satın alma > Malzeme ve Hizmetler ve Kategoriler (D-192 adı; eski Katalog):Ürün, Hizmet, Genel gider, İdari kadro sekmelerinde sabit kalemler; kullanım yerine göre Şirket içi ve Saha sekmeleri (D-190), kategoriler, Excel eşleşme adları; kalem sayfasında siparişler ve kalemi isteyen teklif / projeler. Kapanınca katalog ekranı görünmez; kayıtlar silinmez.', 'D-189, D-190', '2.8'],
+            self::CostItems => ['Satın alma: Teklif maliyet kalemleri', 'Teklif sayfasında Maliyet kalemleri sekmesi: maliyet listesi Excel\'i Ürün/Hizmet, İdari kadro ve Genel giderler kalemlerine aktarılır, kalemler katalogla eşleşir (yeni kayıt açılmaz), fiyat durumu (yeşil kesin / sarı netleşmedi) görünür, seçilen kalemler satın almaya gönderilir. Kapanınca sekme görünmez.', 'D-189', '2.8'],
+            self::PurchaseNeeds => ['Satın alma: Satın alınacaklar', 'Operasyon - Satın alma > Satın alınacaklar (D-192 adı; eski Sipariş kalemleri; B53 ile her kalemin bağlı teklif ve siparişi, toplu "Teklif iste"):Tümü / Teklif grubunun gönderdiği / Projenin onayladığı / Satın alma talepleri / Termin geçmiş / Acil / Şirket içi / Saha sekmeleri, proje onayı, satın alma talebi (ürün, marka / model, özellikler, gerekçe; D-190), katalogla eşleştirme, sipariş ver ve tamamla (onay sınırı: 4.000 ₺\'ye kadar Satın alma müdürü, üstü Yönetim kurulu başkanı). Kapanınca ekran görünmez.', 'D-189, D-190', '2.8'],
+            self::PurchaseQuotes => ['Satın alma: Tedarikçi teklifleri', 'Sipariş kaleminde birden fazla tedarikçi teklifi, kartlarla karşılaştırma (fiyat ve teslim farkı yeşil / kırmızı) ve önerilen teklif. Kapanınca teklif bölümü görünmez.', 'D-189', '2.8'],
+            self::CompanyPurchases => ['Satın alma: Şirket içi alımlar', 'Operasyon - Satın alma > Şirket içi alımlar: satın alma talebine bağlı (alanlar talepten dolar, D-190) alınmış ofis ürünleri, yazılım ve hizmetler, yenileme dönemleri, yaklaşan yenilemeler ve önümüzdeki 12 ayın yenileme gideri. Kapanınca ekran görünmez.', 'D-189, D-190', '2.8'],
+            self::PurchaseRequests => ['Satın alma: Kalemli satın alma talebi', 'Talepler ve Satın alınacaklar ekranında "Satın alma talebi aç": bir talepte birden fazla kalem (Kalem ekle, Toplu kalem ekle, tümünü küçült / genişlet), kalem başlığında rozetler; gerekçe ve kullanım yeri talep başlığında. Her kalem Satın alınacaklar\'a düşer. Kapanınca talep tek kalemli açılır.', 'D-192', '2.8'],
+            self::PurchaseQuotations => ['Satın alma: Satın alma teklifleri', 'Operasyon - Satın alma > Satın alma teklifleri: tedarikçi teklifleri kalemli tutulur (miktar, birim fiyat, indirim, opsiyon), belgeler eklenir, teklifler karşılaştırılır, en uygun teklif seçilir, standart PDF görünümü. Satın alınacaklar\'dan seçilen kalemler toplu teklife eklenir. Kapanınca ekran görünmez.', 'D-192', '2.8'],
+            self::PurchaseQuotationsAi => ['Satın alma: Konelsis AI teklif okuma', 'Satın alma teklifinde yüklenen PDF / Word / Excel / fotoğraf belgeleri Konelsis AI ile okunur: belge teklif mi diye bakılır, tedarikçi, tarih, para birimi ve kalemler doldurulur, kalemler Malzeme ve Hizmetler\'de eşleşir; olmayanlar açılır ve "Konelsis AI olarak yeni oluşturduğum ürünler" penceresinde gösterilir. Kapanınca alanlar yalnız elle doldurulur.', 'D-192', '2.8'],
+            self::Units => ['Satın alma: Birimler', 'Ayarlar > Birimler: sabit birim listesi (ad, simge, tür; pasife alınabilir, silinmez). Malzeme ve hizmetlerde birim zorunlu; satın alma taleplerinde, tekliflerde ve siparişlerde birim bu listeden seçilir, malzeme / hizmet seçilince birimi kendiliğinden gelir. Kapanınca Birimler ekranı görünmez; seçim kutuları çalışmaya devam eder.', 'D-194', '2.8'],
+            self::PurchaseOrders => ['Satın alma: Siparişler', 'Operasyon - Satın alma > Siparişler: seçili satın alma teklifi siparişe dönüşür; onay (4.000 ₺\'ye kadar Satın alma müdürü, üstü Yönetim kurulu başkanı), teslim adresi ve dönemi, lojistik aşamaları (sipariş verildi, yolda, teslim alındı, tamamlandı), standart PDF. Kapanınca ekran görünmez.', 'D-192', '2.8'],
             self::StageGates => ['Proje onay kapıları', 'Proje kartındaki onay kapıları (kanıt, inceleme, muafiyet).', 'D-67', '1.0'],
             self::ProjectCatalogs => ['Proje ayarları', 'Ayarlar altındaki proje tanımları: bileşenler, operasyon grupları, odak beklentileri, onay kapısı şablonları. Alt özellikler de kapanır.', 'D-68', '1.0'],
             self::ProjectComponents => ['Proje bileşenleri', 'Ayarlar > Proje Bileşenleri ekranı.', 'D-67', '5.0'],
@@ -427,6 +511,8 @@ enum Feature: string
 
             self::WorkRequests => ['Talepler', 'Talepler ekranı, onaya tabi talepler, talep dosyaları ve kartlardaki talep sekmeleri. Alt özellik (talep yazışması) de kapanır.', 'D-84', '1.0'],
             self::WorkRequestThread => ['Talep yazışması (talep sohbeti)', 'Talep sayfasındaki Yazışma bölümü: cevap yazma ve dosya ekleme. Talebin kendisi etkilenmez.', 'D-108', '1.7'],
+            self::WorkRequestWorkItems => ['Talepler: talebe bağlı iş', 'Talep bir kişiye düşünce (kişiye açılınca, birimden üstlenilince, sorumlu değişince ya da yönlendirilince) o kişinin İş panosuna talebe bağlı iş açılır; talep başkasına geçerse eski iş İptal olur, talep kapanınca bağlı işler de kapanır. Bağlı iş tamamlanırken "Talebi tamamlandı olarak kapat?" sorusu, talep sayfasında Bağlı işler bölümü, iş kartında talep kodu. Kapanınca iş kendiliğinden açılmaz; soru ve bölüm görünmez.', 'D-216', '2.7'],
+            self::WorkRequestManagementPriority => ['Talepler: yönetim önceliği', 'Üst yönetimin (Yönetim kurulu başkanı, İdari müdür) açtığı açık talepler ve talep ettiği açık işler personelinkilerden önce gelir: Talepler listesinde, İşler listesinde, Görevlerim ve işlerim\'de ve İş panosunun sütunlarında en üstte, "Yönetim" işaretiyle. Kapanınca sıralama eskisi gibi olur.', 'D-216', '2.7'],
             self::Reports => ['Raporlar', 'Raporlar ekranı ve kartlardaki rapor sekmeleri.', 'D-86', '1.2'],
             self::ReportExports => ['Raporlar: Dışa aktarım', 'Rapor listesi ve rapor detayındaki PDF ve Excel indirme. Genel dışa aktarımdan (Araçlar) bağımsızdır. Alt özellikler de kapanır.', 'D-167', '2.4'],
             self::ReportPdf => ['Raporlar: PDF', 'Rapora özel düzenli PDF çıktısı (kişi, tarih, biçimli rapor metni).', 'D-167', '2.4'],
@@ -438,6 +524,8 @@ enum Feature: string
             self::WorkItems => ['İşler ekranı', 'Raporlar > İşler listesi ve genel bakıştaki Görevlerim ve işlerim ile sayılar.', 'D-115', '1.9'],
             self::WorkBoard => ['İş panosu', 'İş panosu ekranı, üst çubuktaki İş panosu düğmesi, gün / hafta kapatma.', 'D-115', '1.9'],
             self::WorkBoardCompact => ['İş panosu: sade görünüm', 'İş panosunda süzgeçler süzgeç simgesinin arkasında (Yoksayılanlar dahil), Hızlı iş ekle düğmesi, okunaklı renkli sütun başlıkları. Kapanınca eski görünüm gelir.', 'D-167', '2.6'],
+            self::WorkItemsExtended => ['İşler: kritiklik, çoklu sorumlu, notlar ve belgeler', 'Dört seviye kritiklik (Düşük / Normal / Yüksek / Kritik; İş panosunda, Görevlerim ve işlerim\'de ve İşler listesinde renkli işaret ve sıralama), bir işe birden fazla sorumlu, personelden bağımsız "Tüm ekip" işi, iş grubu (İnşaat, Mekanik, Elektrik...), iş sayfasında tarihli notlar ve çoklu belge; satın alınacak kalem bağlantısı Satın alma (2.8) açılınca görünür. Kapanınca iş tek sorumlulu, kritik işaretli eski haline döner; notlar ve belgeler görünmez.', 'D-219 / D-220', '2.7'],
+            self::WorkRecurring => ['Görev ve sorumluluklar (tekrarlı işler)', 'Personel için günlük / haftalık / aylık tekrarlı görev tanımı (rapor kontrolü, mail kutusu, düzenli kontroller); her dönem sorumlunun panosuna iş düşer, dönem sonunda yapıldı / yapılmadı uyumu görünür. Görev ve sorumluluklar ekranı ve personel kartındaki sekme. Kapanınca dönem işleri açılmaz, ekran görünmez.', 'D-219 / D-220', '2.7'],
             self::ControlMatrix => ['Kontrol matrisi', 'Kontrol matrisi ekranı ve üst çubuktaki düğmesi. Alt özellikler (personel kartındaki parçalar) de kapanır.', 'D-116', '1.9'],
             self::ControlPersonnelTab => ['Personel kartı: Haftalık kontrol sekmesi', 'Personel kartındaki Haftalık kontrol sekmesi (kontrol matrisi kayıtları).', 'D-116', '5.0'],
             self::AttentionCard => ['Personel kartı: Dikkat kartı', 'Personel kartındaki Dikkat kartı (son 12 haftanın kontrol matrisi özeti).', 'D-115', '5.0'],
@@ -463,12 +551,14 @@ enum Feature: string
             self::NotificationsInbox => ['Tüm bildirimler tablosu', 'Zilin yanındaki "Tüm bildirimleri gör" düğmesi ve tablosu.', 'D-122', '5.0'],
             self::Announcements => ['Duyurular', 'Kullanıcı menüsündeki "Duyuru gönder" ve genel bakıştaki duyurular.', 'D-82 / D-148', '1.0'],
             self::BusinessAlerts => ['İş uyarıları', 'Genel bakıştaki uyarılar kutusu ve uyarıyı bildirimden görüldü yapma.', 'D-82', '1.0'],
+            self::BusinessAlertsWorkPurchasing => ['İş uyarıları: işler ve satın alma', 'Sabah son tarih taramasına işler (son tarih), satın alma talepleri ve satın alınacak kalemler (gerektiği tarih) ve siparişlerin beklenen teslimi eklenir; yaklaşan ve geçen tarihlerde sorumlusu, kritik seviyede amiri ve departman yöneticisi bildirim alır (D-208). Satın alma kaynakları kendi ekranları açıkken taranır (D-215). Kapanınca bu kaynaklar taranmaz.', 'D-208 / D-215', '2.7'],
             self::DesktopAlerts => ['Masaüstü uyarıları', 'Yeni bildirim ve sohbet mesajı yoklaması. Alt özellikler (ses, Windows bildirimi) de kapanır.', 'D-126', '5.0'],
             self::AlertSound => ['Bildirim sesi', 'Yeni bildirim ya da sohbet mesajı gelince çalan kısa ses.', 'D-126', '5.0'],
             self::AlertWindows => ['Windows bildirimi', 'Başka sekmedeyken ya da pencere arkadayken çıkan Windows bildirimi ve kullanıcı menüsündeki "Masaüstü bildirimlerini aç".', 'D-126', '5.0'],
 
             self::Tools => ['Genel araçlar', 'Hızlı işlemler, Excel / PDF dışa aktarım, sürüm notları, UI Deneme. Alt özellikler de kapanır.', null, '1.0'],
             self::QuickActions => ['Hızlı işlemler', 'Üst çubuktaki Hızlı işlemler düğmesi ve kişisel seçim ekranı.', 'D-122', '5.0'],
+            self::LinkGuard => ['Bağlantı onayı', 'Bir kaydın sayfasına giden bağlantıya tıklayınca "‹Tür› sayfasına gidiyorsunuz" penceresi: tablolarda Sayfada kal / Satırın detayına git / ‹Tür› sayfasına git, detay sayfalarında, panolarda (ACİL şeridi, kayan yazı, acil uyarının Kaydı aç düğmesi), kartlarda, iş panosunda ve sohbette Sayfada kal / ‹Tür› sayfasına git. Satıra ya da karta tıklamak, işlem düğmeleri, menüler, indirme ve yeni sekmede açma pencere sormaz. Kapanınca bağlantılar doğrudan açılır.', 'D-200 / D-215', '2.7'],
             self::Exports => ['Dışa aktarım', 'Excel ve PDF indirme. Alt özellikler de kapanır.', 'D-110', '5.0'],
             self::ExcelExport => ['Excel indirme', 'Listelerdeki Excel düğmesi ve detay sayfalarındaki "Excel" seçeneği.', 'D-110', '5.0'],
             self::PdfExport => ['PDF indirme', 'Detay sayfalarındaki "PDF" seçeneği.', 'D-110', '5.0'],

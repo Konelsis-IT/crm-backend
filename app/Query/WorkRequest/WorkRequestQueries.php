@@ -16,6 +16,7 @@ use App\Models\Document\Document;
 use App\Models\Party\Party;
 use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
+use App\Query\Personnel\OrganizationQueries;
 use App\Models\WorkRequest\WorkRequest;
 use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,19 +28,12 @@ use Illuminate\Database\Eloquent\Collection;
  */
 final class WorkRequestQueries
 {
-    /** Kisinin birimleri: kendi birimi + yonettigi birimler. */
+    /** Kisinin birimleri: calistigi departmanlar (ek gorevler dahil, D-218) + yonettigi birimler. */
     public function unitIdsFor(int $personnelId): array
     {
-        $own = Personnel::query()->whereKey($personnelId)->value('org_unit_id');
         $managed = OrgUnit::query()->where('manager_personnel_id', $personnelId)->pluck('id')->all();
 
-        $ids = array_map('intval', $managed);
-
-        if ($own !== null) {
-            $ids[] = (int) $own;
-        }
-
-        return array_values(array_unique($ids));
+        return array_values(array_unique([...app(OrganizationQueries::class)->unitIdsOf($personnelId), ...array_map('intval', $managed)]));
     }
 
     public function belongsToUnit(int $personnelId, int $unitId): bool
@@ -55,10 +49,8 @@ final class WorkRequestQueries
     /** Birim uyeleri + yoneticisi (bildirim alicilari). */
     public function unitMembers(int $unitId): Collection
     {
-        $members = Personnel::query()
-            ->reachable()
-            ->where('org_unit_id', $unitId)
-            ->get();
+        // D-218: departmanda ek gorevi olanlar da uyedir.
+        $members = app(OrganizationQueries::class)->inUnits(Personnel::query()->reachable(), [$unitId])->get();
 
         $manager = OrgUnit::query()->whereKey($unitId)->first()?->manager;
 
@@ -97,6 +89,21 @@ final class WorkRequestQueries
     public function applyOpen(Builder $query): Builder
     {
         return $query->whereIn('status', [WorkRequestStatus::Open->value, WorkRequestStatus::InProgress->value]);
+    }
+
+    /**
+     * Talepler listesi siralamasi (D-216): ust yonetimin actigi ve kapanmamis
+     * (acik, islemde, onay bekliyor) talepler once, sonra en yeni.
+     */
+    public function listOrder(Builder $query): Builder
+    {
+        app(ManagementPriorityQueries::class)->openFirst($query, 'requester_personnel_id', 'status', [
+            WorkRequestStatus::Open->value,
+            WorkRequestStatus::InProgress->value,
+            WorkRequestStatus::AwaitingApproval->value,
+        ]);
+
+        return $query->orderByDesc($query->getModel()->qualifyColumn('created_at'));
     }
 
     public function inboxCount(int $personnelId): int

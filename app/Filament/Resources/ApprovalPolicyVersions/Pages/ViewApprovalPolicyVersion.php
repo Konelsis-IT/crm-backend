@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalPolicyVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ApprovalPolicies\ApprovalPolicyResource;
 use App\Filament\Resources\ApprovalPolicyVersions\ApprovalPolicyVersionResource;
@@ -25,9 +26,11 @@ use Filament\Support\Icons\Heroicon;
 
 class ViewApprovalPolicyVersion extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ApprovalPolicyVersionResource::class;
 
-    public function getTitle(): string
+    protected function recordSubheading(): ?string
     {
         /** @var ApprovalPolicyVersion $version */
         $version = $this->getRecord();

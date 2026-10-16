@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StageTemplateVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\StageTemplateVersions\StageTemplateVersionResource;
 use App\Filament\Support\ActionColors;
@@ -15,6 +16,8 @@ use Filament\Support\Icons\Heroicon;
 
 class ViewStageTemplateVersion extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = StageTemplateVersionResource::class;
 
     protected function getHeaderActions(): array

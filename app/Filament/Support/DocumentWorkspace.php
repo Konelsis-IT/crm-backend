@@ -331,7 +331,7 @@ final class DocumentWorkspace
             $actions[] = Action::make('download_file')
                 ->label(__('document_revision.actions.download'))
                 ->icon(Heroicon::OutlinedArrowDownTray)
-                ->color('primary')
+                ->color(ActionColors::NEUTRAL)
                 ->url($downloadUrl);
         }
 

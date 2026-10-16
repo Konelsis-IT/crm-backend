@@ -47,7 +47,9 @@ return [
         'last_meeting' => 'Last meeting',
         'outcome' => 'Outcome',
         'offer_status' => 'Offer status',
-        'version' => 'Current version',
+        'version' => 'Version',
+        // D-195 (B55): an earlier version with its own offer status.
+        'previous_version' => 'Earlier version',
         'sent' => 'Sent',
         'validity' => 'Validity',
         'price' => 'Amount',

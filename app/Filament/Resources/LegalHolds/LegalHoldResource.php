@@ -12,12 +12,14 @@ use App\Filament\Resources\LegalHolds\Pages\EditLegalHold;
 use App\Filament\Resources\LegalHolds\Pages\ListLegalHolds;
 use App\Filament\Resources\LegalHolds\Pages\ViewLegalHold;
 use App\Filament\Resources\LegalHolds\RelationManagers\DocumentsRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\FieldGrid;
 use App\Models\Document\LegalHold;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -83,6 +85,7 @@ class LegalHoldResource extends Resource
                     Select::make('personnel_id')
                         ->label(__('legal_hold.fields.requester'))
                         ->relationship('requester', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->required()
@@ -90,6 +93,7 @@ class LegalHoldResource extends Resource
                     Select::make('approved_by_personnel_id')
                         ->label(__('legal_hold.fields.approver'))
                         ->relationship('approver', 'full_name')
+                        ->tap(PersonnelSelect::relationship())
                         ->searchable()
                         ->preload()
                         ->native(false),
@@ -122,14 +126,15 @@ class LegalHoldResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->label(__('legal_hold.fields.code'))
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('name')
-                    ->label(__('legal_hold.fields.name'))
-                    ->searchable()
-                    ->sortable(),
+                // Kod ayri sutun degil, adin altinda kucuk yazi (CodeLine, 14 Ekim 2026);
+                // arama ad ve koddan yapilir.
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('legal_hold.fields.name'))
+                        ->searchable(['name', 'code'])
+                        ->sortable(),
+                    'code',
+                ),
                 TextColumn::make('status')
                     ->label(__('legal_hold.fields.status'))
                     ->badge(),

@@ -57,8 +57,9 @@ final class PartyQueries
     }
 
     /**
-     * Ada gore arama (D-170): gorunen ad, kisa ad ya da uzun ad (unvan). Tablo
-     * aramasi ve secim listeleri ayni kurali kullanir.
+     * Ada gore arama (D-170): gorunen ad, kisa ad ya da uzun ad (unvan); taraf
+     * no da aranir (tabloda adin altinda durur, 14 Ekim 2026). Tablo aramasi ve
+     * secim listeleri ayni kurali kullanir.
      */
     public function searchByName(Builder $query, string $search): Builder
     {
@@ -67,6 +68,7 @@ final class PartyQueries
 
         return $query->where(fn (Builder $inner): Builder => $inner
             ->where($model->qualifyColumn('display_name'), 'like', $term)
+            ->orWhere($model->qualifyColumn('party_no'), 'like', $term)
             ->orWhereHas('organizationProfile', fn (Builder $profile): Builder => $profile
                 ->where('legal_name', 'like', $term)
                 ->orWhere('trade_name', 'like', $term)));

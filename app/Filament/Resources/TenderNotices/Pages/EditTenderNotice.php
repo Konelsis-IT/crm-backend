@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TenderNotices\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
@@ -15,7 +16,6 @@ use App\Filament\Support\DraftSupport;
 use App\Models\Acquisition\TenderNotice;
 use App\Services\Acquisition\TenderNoticeService;
 use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Wizard\Step;
@@ -32,6 +32,7 @@ use Livewire\Attributes\Url;
  */
 class EditTenderNotice extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
     use HasSaveableWizard {
         form as protected wizardForm;
@@ -104,7 +105,7 @@ class EditTenderNotice extends EditRecord
                     ->color(ActionColors::SAVE)
                     ->action('save'),
             ] : []),
-            ViewAction::make(),
+            $this->cancelHeaderAction(),
         ];
     }
 

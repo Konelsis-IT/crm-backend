@@ -80,6 +80,13 @@ final class SchemaReadiness
         'B49' => 'project_type_coordinators',          // Proje tipi koordinatorleri (D-175)
         'B50' => 'project_reference_scope_types',      // Referanslar ve Otomasyon / Process tipi (D-177; grubun son tablosu)
         'B51' => 'proposal_version_scope_documents',   // Teklif kapsaminda maliyet listesi (D-181)
+        'B52' => 'company_purchases',                  // Satin alma: katalog, maliyet kalemleri, siparis kalemleri, teklifler (D-189; grubun son tablosu)
+        'B52A' => 'purchase_needs.justification',      // Kullanim yeri (Sirket ici / Saha) ve satin alma talebi alanlari (D-190)
+        'B53' => 'purchase_orders',                    // Kalemli talep, satin alma teklifleri ve siparisler (D-192; grubun son tablosu)
+        'B54' => 'purchase_order_lines.uom_id',        // Sabit birimler (D-194; grubun son kolonu)
+        'B55' => 'proposal_versions.offer_status',     // Her teklif surumunun kendi teklif durumu (D-195)
+        'B56' => 'work_items.item_no',                 // Is kodu IS-YYYY-NNNN (D-204)
+        'B57' => 'work_items.legacy_no',               // Is sistemi: oncelik, coklu sorumlu, notlar, belgeler, tekrarli isler (D-219; grubun son kolonu)
     ];
 
     /** @var array<string, bool> */

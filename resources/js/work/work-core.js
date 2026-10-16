@@ -749,7 +749,7 @@
             };
         }, [open, query, load]);
 
-        const list = load ? remote : (options || []).filter((option) => !query || String(option.label).toLocaleLowerCase('tr-TR').indexOf(query.toLocaleLowerCase('tr-TR')) !== -1);
+        const list = load ? remote : (options || []).filter((option) => !query || fold(option.label).indexOf(fold(query)) !== -1);
         const current = label || ((options || []).find((option) => String(option.value) === String(value)) || {}).label;
         const triggerClass = variant === 'field' ? cx('kw-field', open && 'open', !current && 'ph') : cx('kw-input', !current && 'ph');
 
@@ -853,7 +853,16 @@
         };
     }
 
+    // Turkce arama (D-214): buyuk / kucuk harf, I-i-I-i ve isaretler (s/s, g/g...) ayirt edilmez;
+    // sunucudaki aramayla (utf8mb4_general_ci) ayni sonuc.
+    function fold(text) {
+        const value = String(text === undefined || text === null ? '' : text).toLocaleLowerCase('tr-TR').replace(/ı/g, 'i');
+
+        return typeof value.normalize === 'function' ? value.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : value;
+    }
+
     window.KonelsisWork = {
+        fold,
         h,
         Fragment,
         hooks: { useState, useEffect, useRef, useCallback, useMemo, useContext },

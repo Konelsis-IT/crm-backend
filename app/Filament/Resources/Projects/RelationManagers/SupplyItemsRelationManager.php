@@ -9,6 +9,7 @@ use App\Enums\Project\SupplyItemKind;
 use App\Enums\Project\SupplyItemStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
@@ -197,14 +198,14 @@ class SupplyItemsRelationManager extends RelationManager
                 TextColumn::make('item_kind')
                     ->label(__('project_supply_item.fields.item_kind'))
                     ->badge(),
-                TextColumn::make('item_code')
-                    ->label(__('project_supply_item.fields.item_code'))
-                    ->placeholder('-')
-                    ->searchable(),
-                TextColumn::make('name')
-                    ->label(__('project_supply_item.fields.name'))
-                    ->limit(40)
-                    ->searchable(),
+                // Kalem kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026); iki alanla da aranir.
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('project_supply_item.fields.name'))
+                        ->limit(40)
+                        ->searchable(['name', 'item_code']),
+                    'item_code',
+                ),
                 TextColumn::make('quantity')
                     ->label(__('project_supply_item.fields.quantity'))
                     ->numeric(decimalPlaces: 2)

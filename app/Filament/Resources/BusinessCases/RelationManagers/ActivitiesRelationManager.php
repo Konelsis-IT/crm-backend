@@ -11,6 +11,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\BusinessDevelopmentActivity;
 use App\Services\Acquisition\BusinessDevelopmentActivityService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -65,6 +66,7 @@ class ActivitiesRelationManager extends RelationManager
                         Select::make('organizer_employee_id')
                             ->label(__('bd_activity.fields.organizer'))
                             ->relationship('organizer', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),

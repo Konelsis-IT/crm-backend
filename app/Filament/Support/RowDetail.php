@@ -50,6 +50,8 @@ final class RowDetail
                 ->state(fn (Model $record): mixed => self::safe(fn (): mixed => $column->record($record)->getState()))
                 ->formatStateUsing(fn (mixed $state, Model $record): mixed => self::safe(fn (): mixed => $column->record($record)->formatState($state)) ?? $state)
                 ->badge($column->isBadge())
+                // Sutunun alt satiri (CodeLine ile basligin altina alinan kod...) pencerede de yazar.
+                ->helperText(fn (Model $record): mixed => self::safe(fn (): mixed => $column->record($record)->getDescriptionBelow()))
                 ->color(fn (mixed $state, Model $record): mixed => self::safe(fn (): mixed => $column->record($record)->getColor($state)))
                 ->placeholder(self::safe(fn (): mixed => $column->getPlaceholder()) ?? '-');
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProjectWorkstreams\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Project\WorkstreamStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ProjectWorkstreams\ProjectWorkstreamResource;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ViewProjectWorkstream extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ProjectWorkstreamResource::class;
 
     protected function getHeaderActions(): array

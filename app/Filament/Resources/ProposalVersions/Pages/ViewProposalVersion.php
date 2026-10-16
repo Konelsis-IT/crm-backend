@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProposalVersions\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Acquisition\ProposalVersionStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ProposalVersions\ProposalVersionResource;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ViewProposalVersion extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ProposalVersionResource::class;
 
     protected function getHeaderActions(): array

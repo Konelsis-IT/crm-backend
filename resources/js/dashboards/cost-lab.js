@@ -49,8 +49,12 @@
         return value >>> 0;
     }
 
+    // Turkce arama (D-214): buyuk / kucuk harf, I-i-I-i ve isaretler (s/s, g/g...) ayirt edilmez;
+    // sunucudaki aramayla (utf8mb4_general_ci) ayni sonuc.
     function lower(text) {
-        return String(text || '').toLocaleLowerCase('tr-TR');
+        const value = String(text === undefined || text === null ? '' : text).toLocaleLowerCase('tr-TR').replace(/ı/g, 'i');
+
+        return typeof value.normalize === 'function' ? value.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : value;
     }
 
     /** Excel'in tek kur tablosu: 1 birim kac TL (TRY 1, USD, EUR). */

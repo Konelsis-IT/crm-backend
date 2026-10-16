@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApprovalPolicies\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Filament\Resources\ApprovalPolicies\ApprovalPolicyResource;
 use App\Filament\Support\FieldGrid;
 use App\Models\Approval\ApprovalPolicy;
@@ -16,9 +17,11 @@ use Filament\Support\Icons\Heroicon;
 
 class ViewApprovalPolicy extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ApprovalPolicyResource::class;
 
-    public function getTitle(): string
+    protected function recordSubheading(): ?string
     {
         /** @var ApprovalPolicy $policy */
         $policy = $this->getRecord();
@@ -39,7 +42,6 @@ class ViewApprovalPolicy extends ViewRecord
                         ->badge()
                         ->color('info'),
                     TextEntry::make('status')->label(__('approval_policy.fields.status'))->badge(),
-                    TextEntry::make('name_tr')->label(__('approval_policy.fields.name_tr')),
                     TextEntry::make('currentVersion.version_no')
                         ->label(__('approval_policy.fields.current_version'))
                         ->placeholder(__('approval_policy.help.no_version'))

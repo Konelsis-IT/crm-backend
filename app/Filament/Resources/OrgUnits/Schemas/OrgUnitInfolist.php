@@ -24,8 +24,7 @@ final class OrgUnitInfolist
                 ->icon(Heroicon::OutlinedBuildingOffice2)
                 ->columns(['default' => 1, 'md' => 3])
                 ->components([
-                    TextEntry::make('name')->label(__('org_unit.fields.name'))->weight('semibold'),
-                    TextEntry::make('code')->label(__('org_unit.fields.code'))->badge()->color('gray')->placeholder('–'),
+                    // Ad sayfanin alt basliginda (D-205); departman kodu gosterilmez (urun karari 2026-09-05).
                     TextEntry::make('unit_type')->label(__('org_unit.fields.unit_type'))->badge(),
                     TextEntry::make('parent')
                         ->label(__('org_unit.fields.parent'))

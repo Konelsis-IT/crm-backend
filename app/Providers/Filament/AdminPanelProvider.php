@@ -10,6 +10,7 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\UiCostItems;
 use App\Filament\Pages\UiDashboardComponents;
 use App\Filament\Pages\UiDashboardGallery;
+use App\Filament\Pages\UiNewDashboardApp;
 use App\Http\Controllers\Dashboard\DashboardExportController;
 use App\Filament\NavigationGroup;
 use Filament\Navigation\NavigationGroup as FilamentNavigationGroup;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Meeting\MeetingPlanCalendarController;
 use App\Http\Controllers\Work\ControlMatrixController;
 use App\Http\Controllers\Work\WorkBoardController;
 use App\Http\Controllers\Work\WorkInsightController;
+use App\Http\Controllers\Work\WorkItemFileController;
 use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Files\RevisionPreviewController;
@@ -53,7 +55,8 @@ use App\Http\Middleware\ImpersonatePersonnel;
 use App\Http\Middleware\RequireFeature;
 use App\Http\Middleware\SetLocale;
 use App\Models\Personnel\Personnel;
-use App\Query\Personnel\PersonnelQueries;
+use App\Support\Dashboard\DepartmentDashboards;
+use App\Filament\Support\PersonnelSelect;
 use App\Services\Authorization\ImpersonationService;
 use App\Services\Notification\AudienceResolver;
 use App\Enums\Platform\Feature;
@@ -189,7 +192,7 @@ class AdminPanelProvider extends PanelProvider
                     ->schema(fn (Schema $schema): Schema => $schema->columns(1)->components([
                         Select::make('personnel_id')
                             ->label(__('impersonation.fields.personnel'))
-                            ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                            ->tap(PersonnelSelect::all())
                             ->searchable()
                             ->required()
                             ->native(false),
@@ -295,6 +298,8 @@ class AdminPanelProvider extends PanelProvider
                         Route::post('items/{item}', [WorkBoardController::class, 'update'])->name('items.update');
                         Route::post('items/{item}/status', [WorkBoardController::class, 'status'])->name('items.status');
                         Route::post('items/{item}/critical', [WorkBoardController::class, 'critical'])->name('items.critical');
+                        // D-219: dort seviyeli kritiklik.
+                        Route::post('items/{item}/priority', [WorkBoardController::class, 'priority'])->name('items.priority');
                         Route::post('items/{item}/delete', [WorkBoardController::class, 'destroy'])->name('items.delete');
                         Route::post('reorder', [WorkBoardController::class, 'reorder'])->name('reorder');
                         Route::post('suggestions/{activity}/card', [WorkBoardController::class, 'fromSuggestion'])->name('suggestions.card');
@@ -328,6 +333,8 @@ class AdminPanelProvider extends PanelProvider
                     Route::get('revisions/{file}/preview', RevisionPreviewController::class)->middleware(RequireFeature::for(Feature::DocumentOfficePreview))->name('revision-preview');
                     Route::get('project-photos/{photo}', ProjectPhotoController::class)->middleware(RequireFeature::for(Feature::Projects))->name('photo');
                     Route::get('work-request/{file}', WorkRequestFileController::class)->middleware(RequireFeature::for(Feature::WorkRequests))->name('work-request');
+                    // D-219: is belgeleri (filament.admin.files.work-item).
+                    Route::get('work-item/{file}', WorkItemFileController::class)->middleware(RequireFeature::for(Feature::WorkItemsExtended))->name('work-item');
                     // D-176 "Tum belgeleri indir": filament.admin.files.bundle.proposal / .business-case
                     Route::middleware(RequireFeature::for(Feature::DocumentBundles))->prefix('bundles')->name('bundle.')->group(function (): void {
                         Route::get('proposals/{proposal}', [DocumentBundleController::class, 'proposal'])->whereNumber('proposal')->name('proposal');
@@ -541,6 +548,20 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.dashboards.scripts', ['screens' => ['cost-lab']]),
                 scopes: UiCostItems::class,
+            )
+            // Yeni pano (D-207, React): UI Deneme > Yeni pano; kendi betigi (nd-app).
+            // D-212: Genel bakista yalniz departman panosunu goren kisiye yuklenir.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.new-dashboard.scripts'),
+                scopes: UiNewDashboardApp::class,
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => app(DepartmentDashboards::class)->showsFor(auth()->user() instanceof Personnel ? auth()->user() : null)
+                    ? view('filament.new-dashboard.scripts')
+                    : '',
+                scopes: Dashboard::class,
             )
             // Teklif oncesi kontrol listesi tahtasi (D-157, React): potansiyel is
             // sihirbazi; D-158 ile detay sayfasindaki salt okunur hali.

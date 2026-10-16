@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Contracts\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Filament\Exports\ContractExporter;
 use App\Filament\Resources\Contracts\ContractResource;
 use App\Filament\Support\ExportActions;
@@ -12,6 +13,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewContract extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = ContractResource::class;
 
     protected function getHeaderActions(): array

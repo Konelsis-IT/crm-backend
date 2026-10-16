@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ProjectWorkstreams;
 
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\ProjectWorkstreams\Pages\EditProjectWorkstream;
 use App\Filament\Resources\ProjectWorkstreams\Pages\ListProjectWorkstreams;
 use App\Filament\Resources\ProjectWorkstreams\Pages\ViewProjectWorkstream;
@@ -16,6 +15,7 @@ use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -34,8 +34,6 @@ class ProjectWorkstreamResource extends Resource
     protected static ?string $model = ProjectWorkstream::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedSquares2x2;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 11;
 
@@ -69,6 +67,7 @@ class ProjectWorkstreamResource extends Resource
                         Select::make('owner_personnel_id')
                             ->label(__('project_workstream.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->required()

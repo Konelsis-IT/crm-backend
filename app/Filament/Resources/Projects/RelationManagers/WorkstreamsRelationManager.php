@@ -12,6 +12,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectWorkstream;
 use App\Services\Project\ProjectWorkstreamService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
@@ -50,6 +51,7 @@ class WorkstreamsRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('project_workstream.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->required()

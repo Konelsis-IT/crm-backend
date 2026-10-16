@@ -26,6 +26,8 @@ return [
     'subject_types' => [
         'work_request' => 'Talep',
         'document_revision' => 'Doküman revizyonu',
+        'purchase_need' => 'Satın alma siparişi',
+        'purchase_order' => 'Sipariş (satın alma teklifinden)',
     ],
 
 ];

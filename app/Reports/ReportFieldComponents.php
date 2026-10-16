@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Reports;
 
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\LongText;
 use App\Models\Report\Report;
 use App\Services\Report\ReportSuggestions;
 use Filament\Forms\Components\CheckboxList;
@@ -79,12 +80,13 @@ final class ReportFieldComponents
         $name = self::PAYLOAD.'.'.$field->name;
 
         $entry = match ($field->type) {
-            ReportField::LONG_TEXT => TextEntry::make($name)->placeholder('-')->columnSpanFull(),
+            // Uzun metin cevap: kilitli textarea gorunumu (LongText, 14 Ekim 2026).
+            ReportField::LONG_TEXT => LongText::apply(TextEntry::make($name)->placeholder('-')->columnSpanFull()),
             // Plan alani: her satir bir is, tablo halinde (kullanici istegi).
             ReportField::LINES => RepeatableEntry::make($name)
                 ->state(fn ($record): array => self::lineRows(data_get($record, $name)))
                 ->table([TableColumn::make($template->label($field->name))])
-                ->schema([TextEntry::make('line')->hiddenLabel()])
+                ->schema([TextEntry::make('line')->label($template->label($field->name))->hiddenLabel()])
                 ->placeholder('-')
                 ->columnSpanFull(),
             ReportField::INTEGER, ReportField::DECIMAL, ReportField::PERCENT => TextEntry::make($name)
@@ -126,11 +128,11 @@ final class ReportFieldComponents
                     TableColumn::make(__('report.sources.columns.next')),
                 ])
                 ->schema([
-                    TextEntry::make('date')->color('gray')->placeholder('–'),
-                    TextEntry::make('title')->weight('medium'),
-                    TextEntry::make('meta')->color('gray')->placeholder('–'),
-                    TextEntry::make('text')->color('gray')->placeholder('–')->limit(300)->tooltip(fn (?string $state): ?string => $state),
-                    TextEntry::make('next')->color('gray')->placeholder('–'),
+                    TextEntry::make('date')->label(__('report.sources.columns.date'))->color('gray')->placeholder('–'),
+                    TextEntry::make('title')->label(__('report.sources.columns.title'))->weight('medium'),
+                    TextEntry::make('meta')->label(__('report.sources.columns.meta'))->color('gray')->placeholder('–'),
+                    TextEntry::make('text')->label(__('report.sources.columns.text'))->color('gray')->placeholder('–')->limit(300)->tooltip(fn (?string $state): ?string => $state),
+                    TextEntry::make('next')->label(__('report.sources.columns.next'))->color('gray')->placeholder('–'),
                 ])
                 ->placeholder(__('report.sources.none'))
                 ->columnSpanFull(),

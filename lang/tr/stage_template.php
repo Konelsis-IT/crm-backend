@@ -11,7 +11,7 @@ return [
     'fields' => [
         'code' => 'Kod',
         'created_at' => 'Oluşturulma',
-        'current_version' => 'Güncel sürüm',
+        'current_version' => 'Sürüm',
         'name_tr' => 'Ad',
         'project_type' => 'Proje tipi',
         'reason' => 'Gerekçe',

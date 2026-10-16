@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Personnel;
 
+use App\Models\Report\RecurringWork;
 use App\Enums\Personnel\PersonnelStatus;
 use App\Models\Activity\PersonnelActivity;
 use App\Models\Concerns\HasAuditColumns;
@@ -226,6 +227,12 @@ class Personnel extends Authenticatable implements FilamentUser, HasAvatar, HasN
     public function authoredReports(): HasMany
     {
         return $this->hasMany(Report::class, 'author_personnel_id');
+    }
+
+    /** Bu kisinin gorev ve sorumluluklari (tekrarli isler, D-219). */
+    public function recurringWorks(): HasMany
+    {
+        return $this->hasMany(RecurringWork::class, 'personnel_id');
     }
 
     /** Bu kisinin is panosu kartlari (B36, D-115). */

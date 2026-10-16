@@ -221,10 +221,10 @@ final class BusinessCaseWizard
                 ->required()
                 ->native(false)
                 ->columnSpan(FieldGrid::SHORT),
-            // Teklifte yalniz TRY / USD / EUR / RON (config konelsis.offer_currencies).
+            // Yalniz TRY / USD / EUR / RON (config konelsis.currencies, D-101 / D-213).
             Select::make('currency_code')
                 ->label(__('business_case.fields.currency'))
-                ->options(fn (): array => app(ReferenceOptions::class)->offerCurrencies())
+                ->options(fn (): array => app(ReferenceOptions::class)->currencies())
                 ->default((string) config('konelsis.organization.default_currency', 'TRY'))
                 ->searchable()
                 ->required()
@@ -317,12 +317,14 @@ final class BusinessCaseWizard
             Select::make('owner_employee_id')
                 ->label(__('business_case.fields.owner'))
                 ->relationship('owner', 'full_name')
+                ->tap(PersonnelSelect::relationship())
                 ->searchable()
                 ->preload()
                 ->native(false),
             Select::make('proposal_owner_employee_id')
                 ->label(__('business_case.fields.proposal_owner'))
                 ->relationship('proposalOwner', 'full_name')
+                ->tap(PersonnelSelect::relationship())
                 ->searchable()
                 ->preload()
                 ->native(false),
@@ -529,7 +531,7 @@ final class BusinessCaseWizard
                 'label' => $editing !== null ? __('proposal.sections.main') : __('business_case.sections.proposal'),
                 'icon' => Heroicon::OutlinedClipboardDocumentList,
                 'fields' => [
-                    'create_proposal', 'proposal_title', 'owner_employee_id', 'offer_status', 'total_price', 'scope_total_sales', 'scope_margin_pct',
+                    'create_proposal', 'proposal_title', 'owner_employee_id', 'offer_status', 'currency_code', 'total_price', 'scope_total_sales', 'scope_margin_pct',
                     'validity_until', 'is_critical_route', 'summary',
                 ],
                 ...($creating ? ['visible' => static fn (Get $get): bool => filled($get('business_case_id'))] : []),
@@ -702,9 +704,9 @@ final class BusinessCaseWizard
                                     }
                                 })
                                 ->columnSpan(FieldGrid::HALF),
-                            // Santiye il / ilce ve tutar bicimi potansiyel isin ulke / para birimine gore.
+                            // Santiye il / ilce potansiyel isin ulkesine gore. Para birimi teklif
+                            // bilgilerinde secilir (14 Ekim 2026), isten dolar.
                             Hidden::make('country_code')->dehydrated(false),
-                            Hidden::make('currency_code')->dehydrated(false),
                         ]),
                     // D-183: potansiyel is karti teklif alanlarinin hemen ustunde (kompakt,
                     // katlanabilir, acik gelir), basliginda "Potansiyel ise git".
@@ -757,7 +759,6 @@ final class BusinessCaseWizard
                 ->schema([
                     Hidden::make('business_case_id')->dehydrated(false),
                     Hidden::make('country_code')->dehydrated(false),
-                    Hidden::make('currency_code')->dehydrated(false),
                     $this->caseSummarySection('standalone', $reader),
                     Actions::make([
                         Action::make('open_case')
@@ -837,8 +838,8 @@ final class BusinessCaseWizard
      * Teklif olustur ekraninda potansiyel is secilince (ya da ?business_case_id=
      * ile secili gelince) potansiyel isten tureyen alanlar. Doner: yol => deger.
      *
-     * - Ulke ve para birimi (gizli alanlar: santiye il / ilce, tutar simgesi):
-     *   her zaman isin degeri.
+     * - Ulke (gizli alan: santiye il / ilce): her zaman isin degeri. Para birimi
+     *   (secilebilir, 14 Ekim 2026) bos ya da onceki isten geldiyse isin degeri.
      * - Teklif basligi = isin basligi; teklif sorumlusu = isin teklif sorumlusu,
      *   yoksa giris yapan kisi (isin sahibi degil, D-175); GES kurulu gucu (MWp)
      *   = isin GES kapsamindaki kurulu guc. Bu uc alan yalniz bossa ya da bir
@@ -858,7 +859,6 @@ final class BusinessCaseWizard
 
         $values = [
             'country_code' => $data['country_code'] ?? null,
-            'currency_code' => $data['currency_code'] ?? null,
         ];
 
         if ($data === []) {
@@ -871,6 +871,11 @@ final class BusinessCaseWizard
 
             return blank($current) || ($previousValue !== null && (string) $current === (string) $previousValue);
         };
+
+        // Para birimi secilebilir (14 Ekim 2026): bos ya da onceki isten gelmisse isinki.
+        if ($replaceable('currency_code', $previous['currency_code'] ?? null)) {
+            $values['currency_code'] = $data['currency_code'] ?? null;
+        }
 
         if ($replaceable('proposal_title', $previous['title'] ?? null)) {
             $values['proposal_title'] = $data['title'] ?? null;
@@ -1590,10 +1595,25 @@ final class BusinessCaseWizard
             ...($b43 && ($editing !== null || $standalone) ? [
                 Select::make('owner_employee_id')
                     ->label(__('proposal.fields.owner'))
-                    ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                    ->tap(PersonnelSelect::all())
                     ->searchable()
                     ->native(false)
                     ->columnSpan(FieldGrid::NORMAL),
+            ] : []),
+            // 14 Ekim 2026 kullanici: "Is gelistirme - Teklif duzenleme ve direk
+            // olusturma adiminda para birimi degistirilebilmelidir." Teklif olustur /
+            // duzenle ekraninda tutarin yaninda; potansiyel is secilince isin para
+            // birimi gelir. Sihirbazda (potansiyel is + teklif) isin alanini paylasir.
+            ...($b43 && ($editing !== null || $standalone) ? [
+                Select::make('currency_code')
+                    ->label(__('proposal_version.fields.currency'))
+                    ->options(fn (): array => app(ReferenceOptions::class)->currencies())
+                    ->required()
+                    ->native(false)
+                    // D-180: tutar alanlarinin simgesi secimle birlikte degisir.
+                    ->live()
+                    ->visible($whenProposal)
+                    ->columnSpan(FieldGrid::SHORT),
             ] : []),
             MoneyInput::make('total_price')
                 ->label(__('proposal_version.fields.total_price'))
@@ -1667,7 +1687,7 @@ final class BusinessCaseWizard
                 ->columnStart(1),
             Select::make('project_manager_employee_id')
                 ->label(__('project.fields.project_manager'))
-                ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                ->tap(PersonnelSelect::all())
                 ->searchable()
                 ->required($whenConvert)
                 ->visible($whenConvert)

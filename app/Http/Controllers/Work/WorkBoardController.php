@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Work;
 
+use App\Enums\Report\WorkItemPriority;
+use App\Enums\Report\WorkDiscipline;
 use App\Enums\Report\WorkItemLinkKind;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
@@ -143,6 +145,8 @@ final class WorkBoardController extends Controller
             ...$this->waitingRules(),
             'work_hours' => ['nullable', 'numeric', 'min:0', 'max:999'],
             'note' => ['nullable', 'string', 'max:1000'],
+            // D-216: "Talebi tamamlandı olarak kapat?" sorusunun cevabi.
+            'close_request' => ['nullable', 'boolean'],
         ]);
 
         $previous = [
@@ -166,6 +170,16 @@ final class WorkBoardController extends Controller
         $data = $this->validated($request, ['critical' => ['required', 'boolean']]);
 
         return $this->respond(fn (): array => ['card' => $this->cardOf($this->service->setCritical($item, (bool) $data['critical']), $me)]);
+    }
+
+    /** Kritiklik (D-219, dort seviye). */
+    public function priority(Request $request, WorkItem $item): JsonResponse
+    {
+        $me = $this->me($request);
+        Gate::forUser($me)->authorize('update', $item);
+        $data = $this->validated($request, ['priority' => ['required', Rule::enum(WorkItemPriority::class)]]);
+
+        return $this->respond(fn (): array => ['card' => $this->cardOf($this->service->setPriority($item, (string) $data['priority']), $me)]);
     }
 
     public function destroy(Request $request, WorkItem $item): JsonResponse
@@ -341,6 +355,12 @@ final class WorkBoardController extends Controller
             'category_code' => ['nullable', 'string', 'max:40'],
             'status' => ['nullable', Rule::enum(WorkItemStatus::class)],
             'is_critical' => ['nullable', 'boolean'],
+            // D-219 (B57): kritiklik, diger sorumlular, Tum ekip, is grubu.
+            'priority' => ['nullable', Rule::enum(WorkItemPriority::class)],
+            'assignee_ids' => ['nullable', 'array', 'max:30'],
+            'assignee_ids.*' => ['integer'],
+            'for_everyone' => ['nullable', 'boolean'],
+            'discipline' => ['nullable', Rule::enum(WorkDiscipline::class)],
             'work_on' => ['nullable', 'date_format:Y-m-d'],
             'work_time' => ['nullable', 'date_format:H:i'],
             'due_on' => ['nullable', 'date_format:Y-m-d'],
@@ -374,7 +394,7 @@ final class WorkBoardController extends Controller
      */
     private function cardOf(WorkItem $item, Personnel $me): array
     {
-        $fresh = $this->queries->newQuery()->withCount('children')->whereKey($item->getKey())->first();
+        $fresh = $this->queries->newQuery()->withCount(['children', ...(WorkItemQueries::extended() ? ['notes', 'files'] : [])])->whereKey($item->getKey())->first();
 
         return $this->presenter->card($fresh ?? $item, $me);
     }

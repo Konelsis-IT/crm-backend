@@ -201,6 +201,7 @@ final class ReportInfolist
                 ->badgeColor($status->getColor())
                 ->schema([
                     RepeatableEntry::make('items_'.$status->value)
+                        ->label($status->getLabel())
                         ->hiddenLabel()
                         ->state(fn (Report $record): array => $record->items
                             ->where('status', $status)
@@ -208,7 +209,8 @@ final class ReportInfolist
                                 'title' => (string) $item->title,
                                 'project' => $item->project?->display_name,
                                 'hours' => ReportFieldComponents::formatNumber($item->work_hours, __('report.values.hours')),
-                                'description' => $item->description,
+                                // Kalem notu + kaynak kartin notu (14 Ekim 2026).
+                                'description' => $item->displayDescription(),
                                 'tag' => self::itemTag($item),
                             ])
                             ->values()
@@ -221,11 +223,11 @@ final class ReportInfolist
                             TableColumn::make(__('report.items.tag')),
                         ])
                         ->schema([
-                            TextEntry::make('title')->weight('medium'),
-                            TextEntry::make('project')->color('gray')->placeholder('–'),
-                            TextEntry::make('hours')->color('gray')->placeholder('–'),
-                            TextEntry::make('description')->color('gray')->placeholder('–'),
-                            TextEntry::make('tag')->badge()->color('warning')->placeholder('–'),
+                            TextEntry::make('title')->label(__('report.items.title'))->weight('medium'),
+                            TextEntry::make('project')->label(__('report.items.project'))->color('gray')->placeholder('–'),
+                            TextEntry::make('hours')->label(__('report.items.work_hours'))->color('gray')->placeholder('–'),
+                            TextEntry::make('description')->label(__('report.items.description'))->color('gray')->placeholder('–'),
+                            TextEntry::make('tag')->label(__('report.items.tag'))->badge()->color('warning')->placeholder('–'),
                         ])
                         ->placeholder(__('report.values.no_items')),
                 ]);

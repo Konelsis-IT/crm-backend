@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Personnel\Pages;
 use App\Filament\Concerns\InteractsWithCardView;
 use App\Filament\Contracts\HasCardView;
 use App\Filament\Exports\PersonnelExporter;
+use App\Filament\Resources\Personnel\PersonnelOrganizationActions;
 use App\Filament\Resources\Personnel\PersonnelResource;
 use App\Filament\Support\CardGallery;
 use App\Filament\Support\ExportActions;
@@ -35,6 +36,8 @@ class ListPersonnelRecords extends ListRecords implements HasCardView
         return [
             $this->cardViewToggleAction(),
             ExportActions::table(PersonnelExporter::class),
+            // D-206: organizasyon birimleri, pozisyonlar, vekaletler sol menude degil, buradan.
+            ...PersonnelOrganizationActions::all(),
             CreateAction::make(),
         ];
     }

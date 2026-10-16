@@ -14,6 +14,7 @@ use App\Models\Acquisition\Proposal;
 use App\Services\Acquisition\BusinessCaseService;
 use App\Services\Acquisition\ProposalService;
 use App\Services\Platform\FeatureFlags;
+use App\Services\Platform\SchemaReadiness;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -41,7 +42,9 @@ use Livewire\Component as LivewireComponent;
  * - Teklifte gosterilen ve degistirilen durum Teklif durumudur
  *   (proposals.offer_status: Verilecek / Verilen / Onaylandi / Kacan firsat),
  *   surum durumu (Gonderildi...) degil. Kurallar ProposalService::offerTargets /
- *   changeOfferStatus'ta; yeni teklif surumu acilmaz.
+ *   changeOfferStatus'ta; yeni teklif surumu acilmaz. D-195 (B55): gosterilen ve
+ *   degisen, guncel surumun kendi teklif durumudur (Proposal::currentOfferStatus);
+ *   onceki surumler kendi durumlarini korur.
  * - Potansiyel is: BusinessCaseService::changeStage (Kaybedildi -> teklifler
  *   "Kacan firsat"); "Operasyona devredildi" elle secilmez.
  * - Duzenleme sayfasi: dugme "Degisiklikleri kaydet"in hemen yaninda, her zaman
@@ -129,11 +132,14 @@ final class StatusButton
      */
     public static function offerStatusAction(Proposal $proposal): ActionGroup
     {
+        // D-195 (B55): dugme guncel surumun kendi teklif durumunu gosterir ve degistirir.
         return ActionGroup::make(self::offerTargetActions($proposal))
-            ->label(fn (): string => __('proposal.status.menu_label', ['status' => self::offerLabel($proposal->offer_status)]))
-            ->icon(fn (): Heroicon => self::offerIcon($proposal->offer_status))
-            ->color(fn (): string => $proposal->offer_status?->getColor() ?? 'gray')
-            ->tooltip(__('proposal.status.menu_tooltip'))
+            ->label(fn (): string => __('proposal.status.menu_label', ['status' => self::offerLabel($proposal->currentOfferStatus())]))
+            ->icon(fn (): Heroicon => self::offerIcon($proposal->currentOfferStatus()))
+            ->color(fn (): string => $proposal->currentOfferStatus()?->getColor() ?? 'gray')
+            ->tooltip(fn (): string => SchemaReadiness::hasBatch('B55') && $proposal->currentVersion !== null
+                ? __('proposal.status.menu_tooltip_version', ['no' => $proposal->currentVersion->version_no])
+                : __('proposal.status.menu_tooltip'))
             ->button();
     }
 
@@ -141,9 +147,9 @@ final class StatusButton
     private static function offerStatusFixed(Proposal $proposal): Action
     {
         return Action::make('offer_status')
-            ->label(fn (): string => self::offerLabel($proposal->offer_status))
-            ->icon(fn (): Heroicon => self::offerIcon($proposal->offer_status))
-            ->color(fn (): string => $proposal->offer_status?->getColor() ?? 'gray')
+            ->label(fn (): string => self::offerLabel($proposal->currentOfferStatus()))
+            ->icon(fn (): Heroicon => self::offerIcon($proposal->currentOfferStatus()))
+            ->color(fn (): string => $proposal->currentOfferStatus()?->getColor() ?? 'gray')
             ->tooltip(fn (): string => self::offerTargets($proposal) === []
                 ? __('proposal.status.no_targets')
                 : __('business_case.status.no_permission'))
@@ -264,7 +270,7 @@ final class StatusButton
                     ->requiresConfirmation()
                     ->modalHeading(__('proposal.status.confirm_heading', ['status' => $target->getLabel()]))
                     ->modalDescription(fn (): string => __('proposal.status.confirm_description', [
-                        'from' => self::offerLabel($proposal->offer_status),
+                        'from' => self::offerLabel($proposal->currentOfferStatus()),
                         'to' => $target->getLabel(),
                     ]).' '.__($target === OfferStatus::Approved ? 'proposal.status.approved_note' : 'proposal.status.lost_note'))
                     ->modalIcon(self::offerIcon($target))

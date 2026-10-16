@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Projects\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Concerns\HasSaveableWizard;
@@ -17,7 +18,6 @@ use App\Models\Project\Project;
 use App\Services\Project\ProjectPhotoService;
 use App\Services\Project\ProjectService;
 use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
@@ -34,6 +34,7 @@ use Livewire\Attributes\Url;
  */
 class EditProject extends EditRecord
 {
+    use HasRecordHeading;
     use HasColoredFormActions;
     use HasSaveableWizard;
     use OpensChecklistTargets;
@@ -95,9 +96,7 @@ class EditProject extends EditRecord
                 ->icon(Heroicon::OutlinedCheck)
                 ->color(ActionColors::SAVE)
                 ->action('save'),
-            ViewAction::make()
-                ->label(__('project.actions.open_workspace'))
-                ->icon(Heroicon::OutlinedRocketLaunch),
+            $this->cancelHeaderAction(),
         ];
     }
 

@@ -13,10 +13,10 @@ use App\Filament\Resources\Delegations\Pages\EditDelegation;
 use App\Filament\Resources\Delegations\Pages\ListDelegations;
 use App\Filament\Resources\Delegations\Pages\ViewDelegation;
 use App\Filament\Support\FieldGrid;
+use App\Filament\Support\PersonnelSelect;
 use App\Models\Approval\Delegation;
 use App\Models\Personnel\Personnel;
 use App\Query\Approval\ApprovalQueries;
-use App\Query\Personnel\PersonnelQueries;
 use App\Services\Authorization\RoleResolver;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
@@ -65,6 +65,12 @@ class DelegationResource extends Resource
         return __('delegation.plural');
     }
 
+    /** Sol menude yok; Personel listesindeki dugmeden acilir (D-206, 14 Ekim 2026). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function canAccess(): bool
     {
         return FeatureFlags::enabled(Feature::Delegations)
@@ -84,7 +90,7 @@ class DelegationResource extends Resource
                 ->components(FieldGrid::fields([
                     Select::make('grantor_personnel_id')
                         ->label(__('delegation.fields.grantor'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->default(fn (): ?int => auth()->id() !== null ? (int) auth()->id() : null)
                         ->searchable()
                         ->required()
@@ -94,7 +100,7 @@ class DelegationResource extends Resource
                         ->disabledOn('edit'),
                     Select::make('delegate_personnel_id')
                         ->label(__('delegation.fields.delegate'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->searchable()
                         ->required()
                         ->native(false),

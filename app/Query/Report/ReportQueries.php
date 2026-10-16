@@ -15,6 +15,7 @@ use App\Models\Personnel\Personnel;
 use App\Models\Personnel\ReportingRelationship;
 use App\Models\Report\Report;
 use App\Models\Report\ReportItem;
+use App\Query\Personnel\OrganizationQueries;
 use App\Query\Personnel\PersonnelQueries;
 use App\Query\Project\ProjectCatalogQueries;
 use App\Query\WorkRequest\WorkRequestQueries;
@@ -93,8 +94,8 @@ final class ReportQueries
         $units = $this->managedUnitIds($personnelId);
 
         if ($units !== []) {
-            $members = Personnel::query()
-                ->whereIn('org_unit_id', $units)
+            // D-218: yonetilen departmanda ek gorevi olanlar da ekiptedir.
+            $members = app(OrganizationQueries::class)->inUnits(Personnel::query(), $units)
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->all();
@@ -137,7 +138,8 @@ final class ReportQueries
             ->whereNull('valid_until')
             ->pluck('manager_personnel_id');
 
-        $unitIds = Personnel::query()->whereKey($personnelId)->pluck('org_unit_id');
+        // D-218: ek gorevinin departmaninin yoneticisi de amiridir.
+        $unitIds = collect(app(OrganizationQueries::class)->unitIdsOf($personnelId));
 
         $unitManagers = OrgUnit::query()
             ->whereIn('id', $unitIds->filter())

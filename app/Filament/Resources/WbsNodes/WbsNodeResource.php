@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\WbsNodes;
 
 use App\Enums\Project\NodeStatus;
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\WbsNodes\Pages\EditWbsNode;
 use App\Filament\Resources\WbsNodes\Pages\ListWbsNodes;
 use App\Filament\Resources\WbsNodes\Pages\ViewWbsNode;
 use App\Filament\Resources\WbsNodes\RelationManagers\CbsMappingsRelationManager;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\WbsNode;
 use App\Enums\Platform\Feature;
@@ -33,8 +33,6 @@ class WbsNodeResource extends Resource
     protected static ?string $model = WbsNode::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedRectangleGroup;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 13;
 
@@ -106,10 +104,12 @@ class WbsNodeResource extends Resource
                 TextColumn::make('project.display_name')
                     ->label(__('wbs_node.fields.project'))
                     ->limit(30),
-                TextColumn::make('wbs_code')
-                    ->label(__('wbs_node.fields.wbs_code')),
-                TextColumn::make('name')
-                    ->label(__('wbs_node.fields.name')),
+                // WBS kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('name')
+                        ->label(__('wbs_node.fields.name')),
+                    'wbs_code',
+                ),
                 TextColumn::make('level')
                     ->label(__('wbs_node.fields.level')),
                 TextColumn::make('status')

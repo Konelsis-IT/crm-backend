@@ -10,6 +10,7 @@ use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Resources\ProposalVersions\RelationManagers\DocumentsRelationManager as VersionDocumentsRelationManager;
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DocumentBundleAction;
 use App\Filament\Support\DocumentLine;
 use App\Filament\Support\DomainNotifications;
@@ -117,11 +118,15 @@ class DocumentsRelationManager extends VersionDocumentsRelationManager
                     ->badge()
                     // Sanal "Referans listesi" metin; rol enum'u kendi rengini verir.
                     ->color(fn (mixed $state): string => $state instanceof HasColor ? (string) $state->getColor() : 'info'),
-                TextColumn::make('documentRevision.document.document_no')
+                // Belge no ayri satir degil, belge adinin altinda kucuk yazi (CodeLine,
+                // 14 Ekim 2026). Sanal satirlar (D-184) dizi kayittir, CodeLine::under
+                // yalniz modeli okur: ayni sinif burada elle verilir. Katalog satirinda
+                // KAT no altta; referans listesinde ad yok, referans ozeti adin yerinde.
+                TextColumn::make('documentRevision.document.title')
                     ->label(__('proposal_document.fields.document'))
-                    ->description(fn (mixed $record): ?string => $record instanceof ProposalDocument
-                        ? $record->documentRevision?->document?->title
-                        : (is_array($record) ? ($record['documentRevision']['document']['title'] ?? null) : null)),
+                    ->state(fn (mixed $record): ?string => self::documentTitle($record) ?? self::documentNo($record))
+                    ->description(fn (mixed $record): ?string => self::documentTitle($record) !== null ? self::documentNo($record) : null)
+                    ->extraAttributes(['class' => CodeLine::CSS_CLASS], merge: true),
                 TextColumn::make('file')
                     ->label(__('proposal_document.fields.file'))
                     ->state(fn (mixed $record): string => (string) (self::info($record)['file'] ?? '-'))
@@ -370,6 +375,22 @@ class DocumentsRelationManager extends VersionDocumentsRelationManager
 
     /** @var array<string, array<string, mixed>|null> */
     private static array $infos = [];
+
+    /** Belge sutununun adi (model ya da sanal satir dizisi); bossa null. */
+    private static function documentTitle(mixed $record): ?string
+    {
+        $title = data_get($record, 'documentRevision.document.title');
+
+        return filled($title) ? (string) $title : null;
+    }
+
+    /** Belge no (sanal referans satirinda ozet metni); bossa null. */
+    private static function documentNo(mixed $record): ?string
+    {
+        $number = data_get($record, 'documentRevision.document.document_no');
+
+        return filled($number) ? (string) $number : null;
+    }
 
     /** Satir tiklamasi: belgenin Dokuman sayfasi; Genel katalog satirinda PDF (D-184). */
     private static function rowUrl(mixed $record): ?string

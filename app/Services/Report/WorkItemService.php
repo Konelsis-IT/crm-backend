@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace App\Services\Report;
 
+use Carbon\CarbonImmutable;
+use App\Models\Report\RecurringWork;
+use App\Enums\Platform\Feature;
+use App\Enums\Report\WorkDiscipline;
 use App\Enums\Report\WorkItemLinkKind;
+use App\Enums\Report\WorkItemPriority;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
+use App\Enums\WorkRequest\WorkRequestPriority;
 use App\Exceptions\ActorRequiredException;
+use App\Exceptions\InvalidTransitionException;
 use App\Exceptions\RecordNotFoundException;
 use App\Exceptions\Report\AssigneeNotAllowedException;
 use App\Exceptions\Report\DayAlreadyClosedException;
@@ -26,7 +33,10 @@ use App\Models\Personnel\Personnel;
 use App\Models\Report\Report;
 use App\Models\Report\ReportItem;
 use App\Models\Report\WorkItem;
+use App\Models\Report\WorkItemFile;
+use App\Models\Report\WorkItemNote;
 use App\Models\Report\WorkSuggestionDismissal;
+use App\Models\WorkRequest\WorkRequest;
 use App\Query\Report\ReportQueries;
 use App\Query\Report\WorkItemQueries;
 use App\Reports\Templates\CoordinationBoardReportTemplate;
@@ -34,13 +44,17 @@ use App\Reports\Templates\DailyWorkReportTemplate;
 use App\Reports\Templates\WeeklyWorkReportTemplate;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Services\AbstractService;
+use App\Services\Document\FileObjectService;
 use App\Services\Audit\ActivityInput;
 use App\Services\Audit\ActivityRecorder;
 use App\Services\Audit\ActorContext;
 use App\Services\Notification\PanelNotifier;
+use App\Services\Numbering\YearlyCodeAllocator;
+use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Support\OptimisticLock;
 use App\Services\Support\TransactionRunner;
+use App\Services\WorkRequest\WorkRequestService;
 use App\Support\ActivityLabels;
 use App\Support\DisplayTime;
 use Filament\Actions\Action;
@@ -68,6 +82,9 @@ final class WorkItemService extends AbstractService
 
     protected string $orderDirection = 'desc';
 
+    /** Toplu aktarim suruyor (import): baskasina is yazma kurali aranmaz. */
+    private bool $importing = false;
+
     public function __construct(
         TransactionRunner $transactions,
         OptimisticLock $lock,
@@ -79,6 +96,7 @@ final class WorkItemService extends AbstractService
         private readonly WorkItemPresenter $presenter,
         private readonly ReportService $reports,
         private readonly PanelNotifier $notifier,
+        private readonly YearlyCodeAllocator $codes,
     ) {
         parent::__construct($transactions, $lock, $activities);
     }
@@ -98,32 +116,234 @@ final class WorkItemService extends AbstractService
         $now = Carbon::now('UTC');
         $status = $this->initialStatus($data, $attributes);
         $this->assertWaiting($status, $attributes);
+        $assignees = $this->assigneeIds($data, $me, null);
 
-        return $this->transactions->run(function () use ($attributes, $status, $now): WorkItem {
-            $workAt = $attributes['work_at'];
-            $since = $workAt->lessThan($now) ? $workAt->copy() : $now->copy();
+        return $this->transactions->run(fn (): WorkItem => $this->persistNew($attributes, $status, $now, $assignees));
+    }
 
-            /** @var WorkItem $item */
-            $item = $this->newModel()->newInstance();
-            $item->fill([
-                ...$attributes,
-                'status' => $status->value,
-                'status_changed_at' => $since,
-                'started_at' => $status === WorkItemStatus::InProgress ? $since : null,
-                // Kapali durum: Tamamlandi ya da Iptal (eski "Engellendi").
-                'completed_at' => ! $status->isOpen() ? $since : null,
-                'done_on' => ! $status->isOpen() ? $attributes['work_on'] : null,
-                'waiting_since' => $status === WorkItemStatus::Waiting ? $since : null,
-                'sort_order' => 0,
-            ]);
-            $item->save();
+    /**
+     * Aktarilan is (D-219: Is takip listesi, proje alt kirim tablosu, satin alma
+     * takip listesi). create() ile ayni kurallar; ek olarak gecmis tarihli is
+     * kapatilmis gunun raporuna "sonradan eklendi" diye eklenmez, beklenen
+     * kisiye bildirim gitmez ve verilen notlar ayni islemde yazilir.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array{body: string, source?: string|null, noted_at?: string|null}>  $notes
+     */
+    public function import(array $data, array $notes = []): WorkItem
+    {
+        $me = $this->actorPersonnel();
+        // Toplu aktarim: kisi listesi yonetimin verdigi istir; baskasina is yazma kurali aranmaz.
+        $this->importing = true;
 
-            $this->recordActivity($item, 'created', $this->summary($item));
-            $this->notifyAwaited($item, null);
-            $this->appendToClosedDay($item);
+        try {
+            $attributes = $this->normalize($data, null, $me);
+            $status = $this->initialStatus($data, $attributes, true);
+            $this->assertWaiting($status, $attributes);
+            $assignees = $this->assigneeIds($data, $me, null);
+        } finally {
+            $this->importing = false;
+        }
+
+        return $this->transactions->run(function () use ($attributes, $status, $assignees, $notes, $data): WorkItem {
+            $item = $this->persistNew($attributes, $status, Carbon::now('UTC'), $assignees, quiet: true);
+
+            // Kapali isin gercek kapanis gunu (Hareketler'deki tarih); yoksa is gunu.
+            if (! $status->isOpen() && filled($data['closed_on'] ?? null)) {
+                $closed = Carbon::parse((string) $data['closed_on'].' 18:00', DisplayTime::zone());
+                $item->forceFill(['done_on' => $closed->format('Y-m-d'), 'completed_at' => $closed->copy()->timezone('UTC'), 'status_changed_at' => $closed->copy()->timezone('UTC')]);
+                $this->saveWithoutVersion($item);
+            }
+
+            foreach ($notes as $note) {
+                $this->writeNote($item, (string) $note['body'], $note['source'] ?? null, $note['noted_at'] ?? null);
+            }
 
             return $item;
         });
+    }
+
+    /**
+     * Ise tarihli not (D-219; kullanici 16 Ekim 2026: "Hareketler içinde yine
+     * ilgili iş yoksa oluşturulup varsa da iş detaylarında not olarak
+     * eklenebilmelidir. Bir iş için birden fazla notta eklenebilir.").
+     */
+    public function addNote(Model|int|string $record, string $body, ?string $source = null, ?string $notedAt = null): WorkItemNote
+    {
+        return $this->transactions->run(function () use ($record, $body, $source, $notedAt): WorkItemNote {
+            /** @var WorkItem $item */
+            $item = $this->lockForUpdate($record);
+
+            return $this->writeNote($item, $body, $source, $notedAt);
+        });
+    }
+
+    /**
+     * Ise belgeler (D-219: "iş model yapımıza çoklu belge eklenebilme sistemi").
+     * Gelen: 'local' diskteki gecici yukleme anahtari => ozgun ad. Ayni icerik
+     * daha once yuklendiyse dosya tekrar saklanmaz (FileObjectService); ayni
+     * belge ayni ise iki kez baglanmaz.
+     *
+     * @param  array<string, string|null>  $uploads
+     */
+    public function addFiles(Model|int|string $record, array $uploads): int
+    {
+        // Dosya ozeti islem acilmadan hesaplanir (buyuk dosya, D-127).
+        $objects = [];
+
+        foreach ($uploads as $path => $name) {
+            $objects[] = app(FileObjectService::class)->createFromUpload((string) $path, is_string($name) ? $name : null);
+        }
+
+        return $this->transactions->run(function () use ($record, $objects): int {
+            /** @var WorkItem $item */
+            $item = $this->lockForUpdate($record);
+            $order = (int) $item->files()->max('sort_order');
+            $added = [];
+
+            foreach ($objects as $object) {
+                if ($item->files()->where('file_object_id', (int) $object->getKey())->exists()) {
+                    continue;
+                }
+
+                WorkItemFile::query()->create([
+                    'work_item_id' => (int) $item->getKey(),
+                    'file_object_id' => (int) $object->getKey(),
+                    'sort_order' => ++$order,
+                ]);
+                $added[] = (string) $object->original_name;
+            }
+
+            if ($added !== []) {
+                $this->recordActivity($item, 'updated', ['belge_eklendi' => implode(', ', $added)]);
+            }
+
+            return count($added);
+        });
+    }
+
+    /** Belge baglantisini kaldirir; dosya nesnesi kalir (baska kayitta kullanilabilir). */
+    public function removeFile(WorkItemFile $file): void
+    {
+        $this->transactions->run(function () use ($file): void {
+            /** @var WorkItem $item */
+            $item = $this->lockForUpdate((int) $file->work_item_id);
+            $name = (string) ($file->fileObject?->original_name ?? '');
+            $file->delete();
+            $this->recordActivity($item, 'updated', ['belge_kaldirildi' => $name]);
+        });
+    }
+
+    /** Oncelik (D-219, dort seviye); Kritik eski kritik bayragiyla esit tutulur. */
+    public function setPriority(Model|int|string $record, string $priority): WorkItem
+    {
+        $target = WorkItemPriority::tryFrom($priority) ?? throw RecordNotFoundException::make();
+
+        return $this->transactions->run(function () use ($record, $target): WorkItem {
+            /** @var WorkItem $item */
+            $item = $this->lockForUpdate($record);
+            $before = $item->priorityLevel();
+
+            if ($before === $target && (bool) $item->is_critical === ($target === WorkItemPriority::Critical)) {
+                return $item;
+            }
+
+            if (WorkItemQueries::extended()) {
+                $item->priority = $target;
+            }
+
+            $item->is_critical = $target === WorkItemPriority::Critical;
+            $this->saveWithoutVersion($item);
+            $this->recordActivity($item, 'updated', ['oncelik' => ['onceki' => $before->getLabel(), 'yeni' => $target->getLabel()]]);
+
+            return $item;
+        });
+    }
+
+    /**
+     * Talebe bagli is (D-216; kullanici 15 Ekim 2026: "Talep bir kişiye
+     * atanınca o kişinin panosuna talebe bağlı bir iş otomatik düşsün; kişi
+     * her seferinde öneriden çevirmek zorunda kalmasın."). Talep acilinca,
+     * birimden ustlenilince, sorumlusu degisince, yonlendirilince ve onaydan
+     * geri donunce cagrilir. Sorumlunun acik bagli isi yoksa acilir (talep eden
+     * = talebi acan, bagli kayit = talep, son tarih = talebin son tarihi, Kritik
+     * oncelikli talepte kritik); talep baskasina gectiyse eski sorumlunun
+     * kendiliginden acilan isi Iptal olur. Talebi ustlenen (kabul eden) icin is
+     * "Devam ediyor"a gecer. Kart yazma yetkisi aranmaz: isi sistem acar.
+     */
+    public function syncForWorkRequest(WorkRequest $request, bool $started = false): ?WorkItem
+    {
+        if (! $this->requestLinkEnabled()) {
+            return null;
+        }
+
+        return $this->transactions->run(function () use ($request, $started): ?WorkItem {
+            $assigneeId = $request->assignee_personnel_id !== null ? (int) $request->assignee_personnel_id : null;
+            $active = $request->isOpen() && $assigneeId !== null;
+            $current = null;
+
+            foreach ($this->queries->requestItemsForUpdate((int) $request->getKey(), true) as $item) {
+                if ($active && $current === null && (int) $item->personnel_id === $assigneeId) {
+                    $current = $item;
+
+                    continue;
+                }
+
+                $this->closeForRequest($item, WorkItemStatus::Blocked, __('work_item.request_link.moved', ['no' => $request->request_no]));
+            }
+
+            if (! $active) {
+                return null;
+            }
+
+            if ($current === null) {
+                return $this->createForRequest($request, (int) $assigneeId, $started);
+            }
+
+            if ($started && $current->status === WorkItemStatus::Planned) {
+                $this->closeForRequest($current, WorkItemStatus::InProgress, null);
+            }
+
+            return $current;
+        });
+    }
+
+    /**
+     * Talep kapaninca (D-216) bagli acik isler de kapanir: tamamlanan /
+     * onaya giden talepte Tamamlandi, reddedilen / iptal edilen talepte Iptal.
+     */
+    public function closeForWorkRequest(WorkRequest $request, WorkItemStatus $target): int
+    {
+        if (! $this->requestLinkEnabled() || $target->isOpen()) {
+            return 0;
+        }
+
+        return $this->transactions->run(function () use ($request, $target): int {
+            $count = 0;
+            $note = __('work_item.request_link.closed', ['no' => $request->request_no, 'status' => $request->status->getLabel()]);
+
+            foreach ($this->queries->requestItemsForUpdate((int) $request->getKey(), false) as $item) {
+                $this->closeForRequest($item, $target, $note);
+                $count++;
+            }
+
+            return $count;
+        });
+    }
+
+    /**
+     * Isi tamamlayan kisi bagli talebi de kapatabilir mi (D-216: "Talebi
+     * tamamlandı olarak kapat?" sorusu): talep acik ve kisi talebi
+     * tamamlayabiliyor (talep eden degil, muhatap / sorumlu).
+     */
+    public function canCloseLinkedRequest(WorkItem $item, ?Personnel $viewer): bool
+    {
+        $request = $this->linkedRequest($item);
+
+        return $request instanceof WorkRequest
+            && $viewer instanceof Personnel
+            && $request->isOpen()
+            && Gate::forUser($viewer)->allows('complete', $request);
     }
 
     /**
@@ -140,6 +360,7 @@ final class WorkItemService extends AbstractService
             /** @var WorkItem $item */
             $item = $this->lockForUpdate($record);
             $before = $this->summary($item);
+            $assignees = $this->assigneeIds($data, $me, $item);
             $waitingBefore = $item->waiting_personnel_id !== null ? (int) $item->waiting_personnel_id : null;
             $previousDay = $item->work_on?->format('Y-m-d');
             $attributes = $this->normalize($data, $item, $me);
@@ -160,6 +381,11 @@ final class WorkItemService extends AbstractService
             $item->fill($attributes);
             $this->transition($item, $target, Carbon::now('UTC'));
             $this->saveWithoutVersion($item);
+
+            if ($assignees !== null) {
+                $this->syncAssignees($item, $assignees);
+            }
+
             // Ozet yeni proje/ana is/sorumlu adlarini okusun.
             $item->unsetRelations();
 
@@ -172,6 +398,11 @@ final class WorkItemService extends AbstractService
 
             if ($previousDay !== $item->work_on?->format('Y-m-d')) {
                 $this->appendToClosedDay($item);
+            }
+
+            // D-216: duzenlemede Tamamlandi secilip "Talebi kapat" isaretlendiyse.
+            if ($target === WorkItemStatus::Done && (bool) ($data['close_request'] ?? false)) {
+                $this->closeLinkedRequest($item, null);
             }
 
             return $item;
@@ -227,6 +458,11 @@ final class WorkItemService extends AbstractService
                 ], static fn ($value): bool => $value !== null && $value !== ''));
             }
 
+            // D-216: "Talebi tamamlandı olarak kapat?" sorusuna evet.
+            if ($target === WorkItemStatus::Done && (bool) ($extra['close_request'] ?? false)) {
+                $this->closeLinkedRequest($item, filled($extra['note'] ?? null) ? trim((string) $extra['note']) : null);
+            }
+
             return $item;
         });
     }
@@ -278,6 +514,12 @@ final class WorkItemService extends AbstractService
             }
 
             $item->is_critical = $critical;
+
+            // D-219: dort seviyeli oncelik kritik bayragiyla esit kalir.
+            if (WorkItemQueries::extended()) {
+                $item->priority = $critical ? WorkItemPriority::Critical : WorkItemPriority::Normal;
+            }
+
             $this->saveWithoutVersion($item);
             $this->recordActivity($item, 'updated', ['kritik' => ['onceki' => ! $critical, 'yeni' => $critical]]);
 
@@ -605,6 +847,240 @@ final class WorkItemService extends AbstractService
     }
 
     /**
+     * Yeni kartin kaydi (elle, oneriden ya da talepten): durum anlari, is kodu,
+     * hareket, beklenen kisiye bildirim, kapatilmis gune ek.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function persistNew(array $attributes, WorkItemStatus $status, Carbon $now, ?array $assignees = null, bool $quiet = false): WorkItem
+    {
+        $workAt = $attributes['work_at'];
+        $since = $workAt->lessThan($now) ? $workAt->copy() : $now->copy();
+
+        /** @var WorkItem $item */
+        $item = $this->newModel()->newInstance();
+        $item->fill([
+            ...$attributes,
+            'status' => $status->value,
+            'status_changed_at' => $since,
+            'started_at' => $status === WorkItemStatus::InProgress ? $since : null,
+            // Kapali durum: Tamamlandi ya da Iptal (eski "Engellendi").
+            'completed_at' => ! $status->isOpen() ? $since : null,
+            'done_on' => ! $status->isOpen() ? $attributes['work_on'] : null,
+            'waiting_since' => $status === WorkItemStatus::Waiting ? $since : null,
+            'sort_order' => 0,
+        ]);
+
+        // Is kodu IS-YYYY-NNNN (B56, D-204): ayni islemde sayactan; elle yazilmaz.
+        if (SchemaReadiness::hasBatch('B56')) {
+            $item->forceFill(['item_no' => $this->codes->next(WorkItem::CODE_PREFIX)['formatted_code']]);
+        }
+
+        $item->save();
+
+        if ($assignees !== null && $assignees !== []) {
+            $this->syncAssignees($item, $assignees);
+        }
+
+        $this->recordActivity($item, 'created', $this->summary($item));
+
+        if (! $quiet) {
+            $this->notifyAwaited($item, null);
+            $this->appendToClosedDay($item);
+        }
+
+        return $item;
+    }
+
+    /**
+     * Diger sorumlular (D-219): ana sorumlu listede tutulmaz; cikan satir
+     * silinir, yeni gelen yazan kisiyle eklenir.
+     *
+     * @param  list<int>  $ids
+     */
+    private function syncAssignees(WorkItem $item, array $ids): void
+    {
+        $ids = array_values(array_diff(array_unique(array_map('intval', $ids)), [(int) $item->personnel_id, 0]));
+        $current = $item->assignees()->pluck('personnel.id')->map(fn ($id): int => (int) $id)->all();
+        $remove = array_values(array_diff($current, $ids));
+        $add = array_values(array_diff($ids, $current));
+
+        if ($remove !== []) {
+            $item->assignees()->detach($remove);
+        }
+
+        foreach ($add as $id) {
+            $item->assignees()->attach($id, ['created_by_personnel_id' => $this->actor->personnelId()]);
+        }
+
+        $item->unsetRelation('assignees');
+    }
+
+    /**
+     * Gelen diger sorumlular; anahtar yoksa ya da B57 yoksa null (dokunulmaz).
+     * Baskasina is yazma kurali her kisi icin aranir.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<int>|null
+     */
+    private function assigneeIds(array $data, Personnel $me, ?WorkItem $item): ?array
+    {
+        if (! WorkItemQueries::extended() || ! array_key_exists('assignee_ids', $data)) {
+            return null;
+        }
+
+        $raw = is_array($data['assignee_ids']) ? $data['assignee_ids'] : [];
+        $ids = array_values(array_unique(array_filter(array_map('intval', $raw), fn (int $id): bool => $id > 0)));
+        $existing = $item !== null ? $item->assignees()->pluck('personnel.id')->map(fn ($id): int => (int) $id)->all() : [];
+
+        foreach (array_diff($ids, $existing) as $id) {
+            $this->assertAssignee($me, (int) $id);
+        }
+
+        return $ids;
+    }
+
+    private function writeNote(WorkItem $item, string $body, ?string $source, ?string $notedAt): WorkItemNote
+    {
+        $body = trim($body);
+
+        if ($body === '') {
+            throw RecordNotFoundException::make();
+        }
+
+        /** @var WorkItemNote $note */
+        $note = WorkItemNote::query()->create([
+            'work_item_id' => (int) $item->getKey(),
+            'body' => mb_substr($body, 0, 5000),
+            'source' => filled($source) ? mb_substr(Str::squish((string) $source), 0, 40) : null,
+            'noted_at' => filled($notedAt) ? Carbon::parse((string) $notedAt, DisplayTime::zone())->timezone('UTC') : Carbon::now('UTC'),
+        ]);
+
+        $this->recordActivity($item, 'updated', array_filter([
+            'not_eklendi' => Str::limit($note->body, 300, '…'),
+            'kaynak' => $note->source,
+        ], static fn ($value): bool => $value !== null && $value !== ''));
+
+        return $note;
+    }
+
+    /** Talepten kendiliginden acilan is (D-216). */
+    private function createForRequest(WorkRequest $request, int $assigneeId, bool $started): WorkItem
+    {
+        $zone = DisplayTime::zone();
+        $unit = Personnel::query()->whereKey($assigneeId)->value('org_unit_id');
+        $attributes = [
+            'title' => mb_substr(Str::squish((string) $request->title), 0, 200),
+            'personnel_id' => $assigneeId,
+            'org_unit_id' => $unit !== null ? (int) $unit : null,
+            'project_id' => $request->project_id !== null ? (int) $request->project_id : null,
+            'is_critical' => $request->priority === WorkRequestPriority::Critical,
+            // D-219: talebin onceligi isin onceligi olur (ayni dort seviye).
+            ...(WorkItemQueries::extended() ? ['priority' => WorkItemPriority::tryFrom((string) $request->priority?->value)?->value ?? WorkItemPriority::Normal->value] : []),
+            'due_on' => $request->due_on?->format('Y-m-d'),
+            'link_kind' => WorkItemLinkKind::WorkRequest->value,
+            'linked_work_request_id' => (int) $request->getKey(),
+            'source' => WorkItemSource::Automatic->value,
+            ...$this->workMoment([], null, $zone),
+        ];
+
+        // Talep eden (B37): talebi acan kisi; yonetim onceligi buna bakar.
+        if (SchemaReadiness::hasBatch('B37') && $request->requester_personnel_id !== null) {
+            $attributes['requester_kind'] = WorkWaitingKind::Personnel->value;
+            $attributes['requester_personnel_id'] = (int) $request->requester_personnel_id;
+        }
+
+        return $this->persistNew($attributes, $started ? WorkItemStatus::InProgress : WorkItemStatus::Planned, Carbon::now('UTC'));
+    }
+
+    /**
+     * Gorev ve sorumlulugun donem isi (D-219): sorumlunun panosuna, donemin
+     * acilis gununde 09:00'da, Planlandi; son tarih donemin beklenen gunu.
+     * Talep eden = tanimi yapan (Verdigim isler'de izlenir). Isi sistem acar;
+     * kart yazma yetkisi aranmaz. Ayni donemin ikinci isi veritabaninda da
+     * engellidir (recurring_work_id + period_key tekil).
+     */
+    public function openRecurring(RecurringWork $work, string $periodKey, CarbonImmutable $workOn, CarbonImmutable $due, string $periodLabel, WorkItemStatus $status = WorkItemStatus::Planned): WorkItem
+    {
+        return $this->transactions->run(function () use ($work, $periodKey, $workOn, $due, $periodLabel, $status): WorkItem {
+            $priority = $work->priority instanceof WorkItemPriority ? $work->priority : WorkItemPriority::Normal;
+            $attributes = [
+                'title' => mb_substr(Str::squish((string) $work->title).' · '.$periodLabel, 0, 200),
+                'personnel_id' => (int) $work->personnel_id,
+                'org_unit_id' => $work->org_unit_id !== null ? (int) $work->org_unit_id : null,
+                'project_id' => $work->project_id !== null ? (int) $work->project_id : null,
+                'category_code' => $work->category_code,
+                'is_critical' => $priority === WorkItemPriority::Critical,
+                'priority' => $priority->value,
+                'due_on' => $due->format('Y-m-d'),
+                'note' => filled($work->description) ? mb_substr((string) $work->description, 0, 2000) : null,
+                'source' => WorkItemSource::Automatic->value,
+                'recurring_work_id' => (int) $work->getKey(),
+                'period_key' => $periodKey,
+                ...$this->workMoment(['work_on' => $workOn->format('Y-m-d'), 'work_time' => '09:00'], null, DisplayTime::zone()),
+            ];
+
+            if (SchemaReadiness::hasBatch('B37') && $work->created_by_personnel_id !== null && (int) $work->created_by_personnel_id !== (int) $work->personnel_id) {
+                $attributes['requester_kind'] = WorkWaitingKind::Personnel->value;
+                $attributes['requester_personnel_id'] = (int) $work->created_by_personnel_id;
+            }
+
+            return $this->persistNew($attributes, $status, Carbon::now('UTC'), quiet: true);
+        });
+    }
+
+    /** Talebe bagli isin durumu talepten degisir; hareket kaydina talep notu yazilir. */
+    private function closeForRequest(WorkItem $item, WorkItemStatus $target, ?string $note): void
+    {
+        $from = $item->status;
+
+        if (! $this->transition($item, $target, Carbon::now('UTC'))) {
+            return;
+        }
+
+        $item->sort_order = 0;
+        $this->saveWithoutVersion($item);
+
+        $this->recordActivity($item, 'status_changed', array_filter([
+            'durum' => ['onceki' => $from?->getLabel(), 'yeni' => $target->getLabel()],
+            'not' => $note,
+        ], static fn ($value): bool => $value !== null && $value !== ''));
+    }
+
+    /**
+     * "Talebi tamamlandı olarak kapat?" sorusuna evet (D-216): is tamamlaninca
+     * bagli talep ayni islemde tamamlanir (onaya tabi talep onaya gider).
+     */
+    private function closeLinkedRequest(WorkItem $item, ?string $note): void
+    {
+        $request = $this->linkedRequest($item);
+
+        if (! $request instanceof WorkRequest || ! $request->isOpen()) {
+            return;
+        }
+
+        if (! $this->canCloseLinkedRequest($item, $this->actorPersonnel())) {
+            throw InvalidTransitionException::make();
+        }
+
+        app(WorkRequestService::class)->complete($request, $note);
+    }
+
+    private function linkedRequest(WorkItem $item): ?WorkRequest
+    {
+        if (! $this->requestLinkEnabled() || $item->link_kind !== WorkItemLinkKind::WorkRequest || $item->linked_work_request_id === null) {
+            return null;
+        }
+
+        return WorkRequest::query()->find((int) $item->linked_work_request_id);
+    }
+
+    private function requestLinkEnabled(): bool
+    {
+        return FeatureFlags::enabled(Feature::WorkRequestWorkItems) && SchemaReadiness::hasBatch('B36');
+    }
+
+    /**
      * Gelen veriyi kart kolonlarina cevirir (durum haric).
      *
      * @param  array<string, mixed>  $data
@@ -647,6 +1123,11 @@ final class WorkItemService extends AbstractService
 
         if (array_key_exists('is_critical', $data)) {
             $attributes['is_critical'] = (bool) $data['is_critical'];
+        }
+
+        // D-219 (B57): oncelik, Tum ekip, is grubu, aktarim alanlari.
+        if (WorkItemQueries::extended()) {
+            $attributes = [...$attributes, ...$this->extendedAttributes($data, $item)];
         }
 
         if (array_key_exists('due_on', $data)) {
@@ -702,6 +1183,50 @@ final class WorkItemService extends AbstractService
                 || $parent->parent_id !== null
                 || ($item !== null && $this->queries->hasChildren((int) $item->getKey()))) {
                 throw InvalidParentException::make();
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Dort seviyeli oncelik (Kritik = eski kritik bayragi), Tum ekip, is grubu;
+     * aktarilan iste eski is numarasi ve tekrarli is donemi (yalniz ilk kayitta).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function extendedAttributes(array $data, ?WorkItem $item): array
+    {
+        $attributes = [];
+
+        if (array_key_exists('priority', $data) && filled($data['priority'])) {
+            $priority = WorkItemPriority::tryFrom(self::rawValue($data['priority'])) ?? WorkItemPriority::Normal;
+            $attributes['priority'] = $priority->value;
+            $attributes['is_critical'] = $priority === WorkItemPriority::Critical;
+        } elseif (array_key_exists('is_critical', $data)) {
+            $current = $item?->priorityLevel() ?? WorkItemPriority::Normal;
+            $attributes['priority'] = (bool) $data['is_critical']
+                ? WorkItemPriority::Critical->value
+                : ($current === WorkItemPriority::Critical ? WorkItemPriority::Normal->value : $current->value);
+        }
+
+        if (array_key_exists('for_everyone', $data)) {
+            $attributes['for_everyone'] = (bool) $data['for_everyone'];
+        }
+
+        if (array_key_exists('discipline', $data)) {
+            $attributes['discipline'] = WorkDiscipline::tryFrom(self::rawValue($data['discipline']))?->value;
+        }
+
+        if ($item === null) {
+            if (filled($data['legacy_no'] ?? null)) {
+                $attributes['legacy_no'] = mb_substr(trim((string) $data['legacy_no']), 0, 20);
+            }
+
+            if (filled($data['recurring_work_id'] ?? null) && filled($data['period_key'] ?? null)) {
+                $attributes['recurring_work_id'] = (int) $data['recurring_work_id'];
+                $attributes['period_key'] = mb_substr((string) $data['period_key'], 0, 16);
             }
         }
 
@@ -845,13 +1370,13 @@ final class WorkItemService extends AbstractService
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $attributes
      */
-    private function initialStatus(array $data, array $attributes): WorkItemStatus
+    private function initialStatus(array $data, array $attributes, bool $imported = false): WorkItemStatus
     {
         $raw = $data['status'] ?? null;
         $status = $raw instanceof WorkItemStatus ? $raw : (WorkItemStatus::tryFrom((string) ($raw ?? '')) ?? WorkItemStatus::Planned);
 
         // Ileri tarih verilirse kart Planlandi sayilir ve o gun panoya duser.
-        if ($attributes['work_on'] > WorkItemQueries::today()->format('Y-m-d') && $status->isOpen()) {
+        if (! $imported && $attributes['work_on'] > WorkItemQueries::today()->format('Y-m-d') && $status->isOpen()) {
             return WorkItemStatus::Planned;
         }
 
@@ -932,6 +1457,10 @@ final class WorkItemService extends AbstractService
 
         if (! Personnel::query()->whereKey($personnelId)->exists()) {
             throw RecordNotFoundException::make();
+        }
+
+        if ($this->importing) {
+            return;
         }
 
         if ($this->queries->seesAll($me) || $this->reportQueries->managesPersonnel((int) $me->getKey(), $personnelId)) {
@@ -1090,10 +1619,11 @@ final class WorkItemService extends AbstractService
 
     private function summary(WorkItem $item): array
     {
-        $item->loadMissing(['personnel:id,full_name', 'project:id,name', 'parent:id,title', 'orgUnit:id,name']);
+        $item->loadMissing(['personnel:id,full_name', 'project:id,name', 'parent:id,title', 'orgUnit:id,name', ...(WorkItemQueries::extended() ? ['assignees:id,full_name'] : [])]);
         $link = $item->link_kind !== null && $item->link_kind !== WorkItemLinkKind::None ? $this->presenter->link($item) : null;
 
         return array_filter([
+            'kod' => $item->getAttribute('item_no'),
             'baslik' => $item->title,
             'durum' => $item->status?->getLabel(),
             'sorumlu' => $item->personnel?->full_name,
@@ -1104,6 +1634,11 @@ final class WorkItemService extends AbstractService
             'tarih' => DisplayTime::format($item->work_at),
             'termin' => $item->due_on?->format('d.m.Y'),
             'kritik' => $item->is_critical ? true : null,
+            'oncelik' => WorkItemQueries::extended() ? $item->priorityLevel()->getLabel() : null,
+            'diger_sorumlular' => WorkItemQueries::extended() && $item->assignees->isNotEmpty() ? $item->assignees->pluck('full_name')->implode(', ') : null,
+            'tum_ekip' => WorkItemQueries::extended() && (bool) $item->getAttribute('for_everyone') ? true : null,
+            'is_grubu' => $item->getAttribute('discipline') instanceof WorkDiscipline ? $item->discipline->getLabel() : null,
+            'eski_no' => $item->getAttribute('legacy_no'),
             'kimden_bekleniyor' => $item->waiting_kind !== null ? $item->waitingLabel() : null,
             'talep_eden' => $item->requester_kind !== null ? $item->requesterLabel() : null,
             'bagli_kayit' => $link !== null ? trim(($link['no'] ?? '').' '.$link['label']) : null,

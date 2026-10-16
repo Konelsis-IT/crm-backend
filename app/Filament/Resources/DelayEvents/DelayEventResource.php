@@ -6,7 +6,6 @@ namespace App\Filament\Resources\DelayEvents;
 
 use App\Enums\Project\DelayCauseCategory;
 use App\Enums\Project\DelayStatus;
-use App\Filament\Clusters\ProjectGroup;
 use App\Filament\Resources\DelayEvents\Pages\EditDelayEvent;
 use App\Filament\Resources\DelayEvents\Pages\ListDelayEvents;
 use App\Filament\Resources\DelayEvents\Pages\ViewDelayEvent;
@@ -37,8 +36,6 @@ class DelayEventResource extends Resource
     protected static ?string $model = DelayEvent::class;
 
     protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedClock;
-
-    protected static ?string $cluster = ProjectGroup::class;
 
     protected static ?int $navigationSort = 14;
 

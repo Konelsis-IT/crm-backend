@@ -11,8 +11,11 @@ use App\Models\Acquisition\ProposalVersion;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Party\PartyMeetingNote;
 use App\Models\Personnel\Personnel;
+use App\Models\Procurement\CostList;
+use App\Models\Procurement\CostListLine;
 use App\Policies\ProposalPolicy;
 use App\Models\Report\Report;
+use App\Services\Platform\SchemaReadiness;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -65,6 +68,33 @@ class Proposal extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(ProposalVersion::class, 'proposal_id');
+    }
+
+    /**
+     * Teklif durumu (D-195, 12 Ekim 2026 kullanici karari: "Her revizyonda yeni
+     * surum gelsin, oncekinin durumu da kaybedilmesin. Yani her revizyon'un
+     * durumu kendine ait olsun"). B55 ile her surumun kendi teklif durumu vardir;
+     * teklifin durumu guncel surumun durumudur ve proposals.offer_status onun
+     * kopyasidir (listeler, sekmeler, panolar kopyayi okur; ProposalService
+     * ikisini birlikte yazar). B55 oncesi ya da surumsuz teklifte kopya okunur.
+     */
+    public function currentOfferStatus(): ?OfferStatus
+    {
+        if ($this->current_version_id === null || ! SchemaReadiness::hasBatch('B55')) {
+            return $this->offer_status;
+        }
+
+        return $this->currentVersion?->offer_status ?? $this->offer_status;
+    }
+
+    /**
+     * Teklifin maliyet kalemleri (B52, D-189): butun aktarilmis maliyet
+     * listelerinin satirlari. Teklif sayfasinin Maliyet kalemleri sekmesi
+     * bunu guncel surume suzer (CostListQueries::linesForVersion).
+     */
+    public function costItems(): HasManyThrough
+    {
+        return $this->hasManyThrough(CostListLine::class, CostList::class, 'proposal_id', 'cost_list_id');
     }
 
     /** Tum surumlerin teklif belgeleri (teklif sayfasinin Dokumanlar tablosu, D-113). */

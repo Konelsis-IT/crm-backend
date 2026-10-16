@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Enums\Report;
 
 use App\Enums\Concerns\HasTranslatedLabel;
+use App\Enums\Platform\Feature;
+use App\Services\Platform\FeatureFlags;
+use App\Services\Platform\SchemaReadiness;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Icons\Heroicon;
@@ -26,6 +29,8 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
     case SupplyItem = 'supply_item';
     case WorkRequest = 'work_request';
     case MeetingPlan = 'meeting_plan';
+    // D-219 (B57): satin alinacak kalem; her kalem bir is olarak da gorunur.
+    case PurchaseNeed = 'purchase_need';
 
     /** FK kolonu; None icin null. */
     public function column(): ?string
@@ -39,6 +44,7 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
             self::SupplyItem => 'linked_supply_item_id',
             self::WorkRequest => 'linked_work_request_id',
             self::MeetingPlan => 'linked_meeting_plan_id',
+            self::PurchaseNeed => 'linked_purchase_need_id',
         };
     }
 
@@ -54,6 +60,7 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
             self::SupplyItem => 'linkedSupplyItem',
             self::WorkRequest => 'linkedWorkRequest',
             self::MeetingPlan => 'linkedMeetingPlan',
+            self::PurchaseNeed => 'linkedPurchaseNeed',
         };
     }
 
@@ -63,9 +70,24 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
     public static function columns(): array
     {
         return array_values(array_filter(array_map(
-            static fn (self $kind): ?string => $kind->column(),
+            static fn (self $kind): ?string => $kind->available() ? $kind->column() : null,
             self::cases(),
         )));
+    }
+
+    /** Kolonu veritabaninda var mi (satin alinacak kalem B57 ile gelir). */
+    public function available(): bool
+    {
+        return $this !== self::PurchaseNeed || SchemaReadiness::hasBatch('B57');
+    }
+
+    /**
+     * Ekranda gosterilir ve secilir mi: satin alinacak kalem Satin alma (2.8)
+     * acilmadan gorunmez (D-220: is sistemi 2.7'de, satin alma 2.8'de bekliyor).
+     */
+    public function visible(): bool
+    {
+        return $this->available() && ($this !== self::PurchaseNeed || FeatureFlags::enabled(Feature::PurchaseNeeds));
     }
 
     /**
@@ -89,6 +111,10 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
         $options = self::options();
         unset($options[self::None->value]);
 
+        if (! self::PurchaseNeed->visible()) {
+            unset($options[self::PurchaseNeed->value]);
+        }
+
         return $options;
     }
 
@@ -103,6 +129,7 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
             self::SupplyItem => Heroicon::OutlinedTruck,
             self::WorkRequest => Heroicon::OutlinedInboxArrowDown,
             self::MeetingPlan => Heroicon::OutlinedChatBubbleLeftRight,
+            self::PurchaseNeed => Heroicon::OutlinedShoppingCart,
         };
     }
 }

@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Parties\RelationManagers;
 
 use App\Enums\Party\PartyCredentialStatus;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Party\PartyLicense;
@@ -86,11 +87,13 @@ class LicensesRelationManager extends RelationManager
             ->heading(__('party_license.relation.title'))
             ->recordTitleAttribute('license_no')
             ->columns([
-                TextColumn::make('license_type')
-                    ->label(__('party_license.fields.license_type')),
-                TextColumn::make('license_no')
-                    ->label(__('party_license.fields.license_no'))
-                    ->searchable(),
+                // Lisans no ayri sutun degil, turun altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('license_type')
+                        ->label(__('party_license.fields.license_type'))
+                        ->searchable(['license_type', 'license_no']),
+                    'license_no',
+                ),
                 TextColumn::make('issuer')
                     ->label(__('party_license.fields.issuer'))
                     ->placeholder('-'),

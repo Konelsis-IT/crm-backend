@@ -25,6 +25,7 @@ use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\FormState;
 use App\Filament\Support\MeetingNoteComponents;
+use App\Filament\Support\PersonnelSelect;
 use App\Filament\Support\QuickContact;
 use App\Models\Party\MeetingPlan;
 use App\Models\Party\Party;
@@ -154,7 +155,7 @@ class MeetingPlanResource extends Resource
                         ->native(false),
                     Select::make('personnel_id')
                         ->label(__('meeting_plan.fields.personnel'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->default(fn () => auth()->id())
                         ->required()
                         ->searchable()
@@ -162,7 +163,7 @@ class MeetingPlanResource extends Resource
                     Select::make('participant_ids')
                         ->label(__('meeting_plan.fields.participants'))
                         ->helperText(__('meeting_plan.help.participants'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->multiple()
                         ->searchable()
                         ->native(false)

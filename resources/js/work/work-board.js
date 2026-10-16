@@ -19,6 +19,12 @@
  * sayi rozeti ve pano kendi icinde kayarken ustte sabit kalir. Anahtar kapaliyken
  * pano eski gorunumuyle (asagidaki eski dallar) birebir cizilir.
  *
+ * D-219 (16 Ekim 2026; config.features.extended): dort seviyeli kritiklik (kartta
+ * etiket, menude secim, pencerede dort dugme), diger sorumlular (kartin altinda
+ * avatarlar), "Tum ekip" isi, is grubu, not / belge sayisi. Tum sirket kapsaminda
+ * proje seritleri baslikla acilip kapanir (kullanici: "Ilgili proje panosu toggle
+ * olarak acilip kapanabilir olsun"); secim tarayicida hatirlanir.
+ *
  * Kok: [data-kw-root="work-board"]; data-config: WorkAppConfig::board().
  */
 (function () {
@@ -38,6 +44,9 @@
     const RANGES = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'range'];
     const GROUP_DEFAULT = { mine: 'none', team: 'personnel', all: 'project' };
     const NONE = '__none__';
+    // D-219: kritiklik sirasi (buyuk once).
+    const PRIORITY_RANK = { critical: 3, high: 2, normal: 1, low: 0 };
+    const rankOf = (card) => PRIORITY_RANK[card.priority || (card.is_critical ? 'critical' : 'normal')] || 0;
 
     // Sade gorunum simgeleri (D-167): Filament'in simge seti Heroicons'un 24'luk
     // cizgi yollari (blade-heroicons o-funnel, o-plus, o-calendar, o-play, o-clock,
@@ -120,17 +129,20 @@
 
     function sortCards(cards, scope) {
         const list = cards.slice();
+        // D-216: ust yonetimin istedigi acik is sutunun en ustunde (sunucu `management`).
+        const byManagement = (a, b) => (!!a.management === !!b.management ? 0 : (a.management ? -1 : 1));
 
         if (scope === 'all') {
             list.sort((a, b) => {
-                if (a.is_critical !== b.is_critical) { return a.is_critical ? -1 : 1; }
+                if (byManagement(a, b) !== 0) { return byManagement(a, b); }
+                if (rankOf(a) !== rankOf(b)) { return rankOf(b) - rankOf(a); }
                 const wa = a.status === 'waiting' && a.waiting ? a.waiting.days || 0 : -1;
                 const wb = b.status === 'waiting' && b.waiting ? b.waiting.days || 0 : -1;
                 if (wa !== wb) { return wb - wa; }
                 return (a.sort_order || 0) - (b.sort_order || 0);
             });
         } else {
-            list.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+            list.sort((a, b) => byManagement(a, b) || (a.sort_order || 0) - (b.sort_order || 0));
         }
 
         return list;
@@ -176,7 +188,7 @@
         const { options, selected, searchable, searchPlaceholder, hint, onApply, t } = props;
         const [local, setLocal] = useState(selected.slice());
         const [query, setQuery] = useState('');
-        const q = query.toLocaleLowerCase('tr-TR');
+        const q = KW.fold(query);
 
         const toggle = (value) => setLocal((list) => (list.indexOf(value) === -1 ? list.concat([value]) : list.filter((item) => item !== value)));
 
@@ -187,7 +199,7 @@
                     return q ? null : h(Opt, { key: 'sub-' + option.sub, sub: true }, option.sub);
                 }
 
-                if (q && String(option.label).toLocaleLowerCase('tr-TR').indexOf(q) === -1) {
+                if (q && KW.fold(option.label).indexOf(q) === -1) {
                     return null;
                 }
 
@@ -364,8 +376,8 @@
         const { t, api, config } = useApp();
         const people = (config.options.people || []).map((person) => ({ value: 'person:' + person.value, label: person.label }));
         const load = useCallback((q) => {
-            const needle = String(q || '').toLocaleLowerCase('tr');
-            const matched = needle ? people.filter((row) => row.label.toLocaleLowerCase('tr').indexOf(needle) !== -1) : people;
+            const needle = KW.fold(q);
+            const matched = needle ? people.filter((row) => KW.fold(row.label).indexOf(needle) !== -1) : people;
 
             if (!needle) { return Promise.resolve(matched); }
 
@@ -467,7 +479,8 @@
             return h('span', null, t('due_label', { date: fmt.dm(card.due_on) }));
         }
 
-        if (card.link) {
+        // Talep kodu ust satirda (D-216); ayni kod iki kez yazmaz.
+        if (card.link && !card.request) {
             return h(Tag, { kind: 'link', href: card.link.url || undefined, title: card.link.label }, card.link.no || card.link.kind_label);
         }
 
@@ -479,8 +492,9 @@
     }
 
     function CardMenu(props) {
-        const { card, onEdit, onStatus, onCritical, onDelete } = props;
+        const { card, onEdit, onStatus, onCritical, onPriority, onDelete } = props;
         const { t, config } = useApp();
+        const extended = !!(config.features && config.features.extended);
 
         return h(Dropdown, {
             align: 'end',
@@ -505,7 +519,16 @@
                 onClick: () => { close(); if (status.value !== card.status) { onStatus(card, status.value); } },
             }, status.label)) : null,
             card.can && card.can.update ? h('div', { className: 'kw-divider' }) : null,
-            card.can && card.can.update ? h(Opt, { plain: true, onClick: () => { close(); onCritical(card); } }, card.is_critical ? t('menu_critical_off') : t('menu_critical_on')) : null,
+            card.can && card.can.update && !extended ? h(Opt, { plain: true, onClick: () => { close(); onCritical(card); } }, card.is_critical ? t('menu_critical_off') : t('menu_critical_on')) : null,
+            // D-219: dort seviyeli kritiklik.
+            card.can && card.can.update && extended ? h(Opt, { sub: true }, t('menu_priority')) : null,
+            card.can && card.can.update && extended ? (config.options.priorities || []).slice().reverse().map((row) => h(Opt, {
+                key: 'p-' + row.value,
+                radio: true,
+                on: card.priority === row.value,
+                onClick: () => { close(); if (row.value !== card.priority) { onPriority(card, row.value); } },
+            }, row.label)) : null,
+            card.can && card.can.update && extended ? h('div', { className: 'kw-divider' }) : null,
             card.link && card.link.url ? h(Opt, { plain: true, onClick: () => { close(); window.location.assign(card.link.url); } }, t('menu_open_record')) : null,
             card.url ? h(Opt, { plain: true, onClick: () => { close(); window.location.assign(card.url); } }, t('menu_detail')) : null,
             card.can && card.can.delete ? h(Opt, { plain: true, danger: true, onClick: () => { close(); onDelete(card); } }, t('menu_delete')) : null,
@@ -514,11 +537,14 @@
 
     function CardView(props) {
         const { card, type, isNew, ghost, handlers, dragStart, dragEnd } = props;
-        const { t } = useApp();
+        const { t, config } = useApp();
         const draggable = !!(card.can && card.can.update);
 
+        const extended = !!(config.features && config.features.extended);
+        const others = extended ? (card.assignees || []) : [];
+
         return h('article', {
-            className: cx('kw-card', { critical: card.is_critical, new: isNew, ghost }),
+            className: cx('kw-card', { critical: card.is_critical, 'prio-high': extended && card.priority === 'high', mgmt: card.management, new: isNew, ghost }),
             'data-card-id': card.id,
             draggable,
             tabIndex: 0,
@@ -528,21 +554,36 @@
             onDragStart: draggable ? (event) => dragStart(event, card) : undefined,
             onDragEnd: draggable ? dragEnd : undefined,
         },
-        h(CardMenu, { card, onEdit: handlers.onOpen, onStatus: handlers.onStatus, onCritical: handlers.onCritical, onDelete: handlers.onDelete }),
+        h(CardMenu, { card, onEdit: handlers.onOpen, onStatus: handlers.onStatus, onCritical: handlers.onCritical, onPriority: handlers.onPriority, onDelete: handlers.onDelete }),
         h('div', { className: 'kw-title' }, card.title),
         h('div', { className: 'kw-meta' },
+            // D-216: ust yonetimin istedigi is ve bagli talebin kodu her gorunumde.
+            card.management ? h(Tag, { kind: 'mgmt', title: t('management_hint') }, t('management_tag')) : null,
+            card.request ? h(Tag, { kind: 'link', href: card.request.url || undefined, title: t('request_tag_hint', { title: card.request.title }) }, card.request.no) : null,
             card.unit ? h(Tag, { kind: 'dept' }, card.unit.name) : null,
             card.project ? h('span', null, card.project.name) : null,
             card.category_label ? h(Tag, null, card.category_label) : null,
-            card.is_critical ? h(Tag, { kind: 'critical' }, t('critical_tag')) : null,
+            !extended && card.is_critical ? h(Tag, { kind: 'critical' }, t('critical_tag')) : null,
+            // D-219: kritiklik (Normal etiketsiz), Tum ekip, is grubu, not / belge sayisi.
+            extended && card.priority && card.priority !== 'normal' ? h(Tag, { kind: 'prio-' + card.priority }, card.priority_label) : null,
+            extended && card.for_everyone ? h(Tag, { kind: 'team' }, t('for_everyone_tag')) : null,
+            extended && card.discipline_label ? h(Tag, null, card.discipline_label) : null,
             card.children ? h(Tag, null, t('children_n', { n: card.children })) : null,
+            extended && card.notes_count ? h(Tag, { title: t('notes_hint') }, t('notes_n', { n: card.notes_count })) : null,
+            extended && card.files_count ? h(Tag, { title: t('files_hint') }, t('files_n', { n: card.files_count })) : null,
             isNew ? h(Tag, { kind: 'newc' }, t('new_tag')) : null,
         ),
         card.parent ? h('div', { className: 'kw-sub' }, '↳ ' + t('parent_of', { title: card.parent.title })) : null,
         h('div', { className: 'kw-foot' },
             type !== 'panom' && card.personnel
-                ? h('span', { className: 'kw-who' }, h(Avatar, { initials: card.personnel.initials }), h('span', null, card.personnel.name))
-                : (card.link && card.source === 'automatic' && card.source_tag
+                ? h('span', { className: 'kw-who', title: others.length ? others.map((p) => p.name).join(', ') : undefined },
+                    h(Avatar, { initials: card.personnel.initials }),
+                    // D-219: diger sorumlular avatar olarak.
+                    others.slice(0, 3).map((p) => h(Avatar, { key: 'a' + p.id, initials: p.initials })),
+                    h('span', null, card.personnel.name + (others.length ? ' +' + others.length : '')))
+                : others.length
+                    ? h('span', { className: 'kw-who', title: others.map((p) => p.name).join(', ') }, others.slice(0, 3).map((p) => h(Avatar, { key: 'a' + p.id, initials: p.initials })), h('span', null, '+' + others.length))
+                : (card.link && !card.request && card.source === 'automatic' && card.source_tag
                     ? h(Tag, { kind: 'link', href: card.link.url || undefined, title: card.link.label }, card.link.no || card.link.kind_label)
                     : h('span', null)),
             cardRight(card, t),
@@ -644,6 +685,9 @@
         const [hours, setHours] = useState(card.hours !== null && card.hours !== undefined ? String(card.hours) : '');
         const [note, setNote] = useState('');
         const [invalid, setInvalid] = useState(false);
+        // D-216: bagli talep acik ve kart sahibi kapatabiliyorsa "Talebi tamamlandı olarak kapat?".
+        const askClose = kind === 'done' && !!(card.request && card.request.open && card.request.can_close);
+        const [closeRequest, setCloseRequest] = useState(true);
 
         KW.useEscape(onCancel, true);
 
@@ -658,7 +702,11 @@
                 return;
             }
 
-            onConfirm({ work_hours: hours === '' ? null : Number(String(hours).replace(',', '.')), note: note || null });
+            onConfirm({
+                work_hours: hours === '' ? null : Number(String(hours).replace(',', '.')),
+                note: note || null,
+                ...(askClose ? { close_request: closeRequest } : {}),
+            });
         };
 
         return h(KW.Portal, null, h('div', { className: 'kw-overlay light', onMouseDown: (event) => { if (event.target === event.currentTarget) { onCancel(); } } },
@@ -671,6 +719,16 @@
                 kind === 'waiting' && invalid ? h('p', { className: 'kw-error', style: { fontSize: '11.5px', color: 'var(--kw-bad)' } }, t('waiting_required')) : null,
                 kind === 'done' ? h('p', { className: 'kw-muted', style: { fontSize: '11.5px' } }, t('hours_prompt_help')) : null,
                 h(Input, { value: note, placeholder: t('note_optional'), onChange: setNote }),
+                askClose ? h('div', { className: 'kw-ask' },
+                    h('div', { className: 'kw-ask-q' }, t('request_close_question'), ' ', h('span', { className: 'kw-mono' }, card.request.no)),
+                    h(Seg, {
+                        label: t('request_close_question'),
+                        value: closeRequest ? 'yes' : 'no',
+                        onChange: (value) => setCloseRequest(value === 'yes'),
+                        items: [{ value: 'yes', label: t('request_close_yes') }, { value: 'no', label: t('request_close_no') }],
+                    }),
+                    card.request.needs_approval ? h('div', { className: 'kw-ask-help' }, t('request_close_approval')) : null,
+                ) : null,
                 h('div', { className: 'kw-pop-foot' },
                     h(Btn, { onClick: onCancel }, t('cancel')),
                     h(Btn, { variant: 'primary', onClick: submit }, t('save')),
@@ -683,11 +741,14 @@
     /* Yeni kalem / duzenleme penceresi                                      */
     /* ------------------------------------------------------------------ */
 
-    function categoryOptionsFor(config, unitId, t) {
+    function categoryOptionsFor(config, unitId, t, personnelId) {
         const units = config.options.units || [];
         const unit = units.find((row) => row.value === unitId);
         const sets = config.options.category_sets || {};
-        const codes = (unit && sets[String(unit.code || '').toUpperCase()]) || sets['*'] || [];
+        // D-217: kisinin gorevinin kendi seti (ornegin Yonetim kurulu baskani) departman setinin yerine gecer.
+        const person = (config.options.people || []).find((row) => row.value === personnelId);
+        const own = person ? person.set : (config.me && config.me.id === personnelId ? config.me.set : null);
+        const codes = (own && sets[own]) || (unit && sets[String(unit.code || '').toUpperCase()]) || sets['*'] || [];
         const labels = config.options.category_labels || {};
 
         return codes.map((code) => ({ value: code, label: labels[code] || code }));
@@ -714,6 +775,11 @@
             category: card ? card.category : null,
             status: card ? card.status : 'planned',
             critical: card ? !!card.is_critical : false,
+            // D-219
+            priority: card && card.priority ? card.priority : 'normal',
+            assignees: card && card.assignees ? card.assignees.map((p) => p.id) : [],
+            for_everyone: card ? !!card.for_everyone : false,
+            discipline: card ? card.discipline || null : null,
             due: card ? card.due_on || '' : '',
             waiting: waitingFromCard(card),
             requester: requesterFromCard(card),
@@ -725,14 +791,21 @@
         }));
         const set = (patch) => setForm((previous) => ({ ...previous, ...patch }));
         const personnelUnit = form.unit_id || unitOfPersonnel(config, form.personnel_id) || me.unit;
-        const categories = categoryOptionsFor(config, personnelUnit, t);
-        const unitName = ((config.options.units || []).find((row) => row.value === personnelUnit) || {}).label || me.unit_name || '';
+        const categories = categoryOptionsFor(config, personnelUnit, t, form.personnel_id);
+        const unitName =((config.options.units || []).find((row) => row.value === personnelUnit) || {}).label || me.unit_name || '';
         const projects = config.options.projects || [];
         const parents = (cards || [])
             .filter((row) => !row.parent && (!card || row.id !== card.id) && (!row.personnel || row.personnel.id === form.personnel_id))
             .map((row) => ({ value: row.id, label: row.title }));
         const linkLocked = !!(card && card.source === 'automatic' && card.link);
         const scopeLabel = t('scope_' + scope);
+        // D-219: kritiklik ve paylasim (diger sorumlu / Tum ekip yalniz baskasina is yazabilene).
+        const extended = !!(config.features && config.features.extended);
+        const canShare = extended && !!(config.can && (config.can.team || config.can.all));
+        const people = config.options.people || [];
+        const ownerId = scope !== 'mine' ? form.personnel_id : me.id;
+        const assigneeOptions = people.filter((p) => p.value !== ownerId && form.assignees.indexOf(p.value) === -1).map((p) => ({ value: p.value, label: p.label }));
+        const nameOf = (id) => ((people.find((p) => p.value === id) || {}).label || '#' + id);
         const subDate = form.when.mode === 'now' ? fmt.dayName(config.today) + ' ' + fmt.date(config.today) : fmt.dayName(form.when.date) + ' ' + fmt.date(form.when.date);
 
         const save = () => {
@@ -752,7 +825,9 @@
                 project_id: form.project_id || null,
                 category_code: form.category || null,
                 status: form.status,
-                is_critical: form.critical,
+                ...(extended
+                    ? { priority: form.priority, discipline: form.discipline || null, ...(canShare ? { assignee_ids: form.assignees, for_everyone: form.for_everyone } : {}) }
+                    : { is_critical: form.critical }),
                 due_on: form.due || null,
                 ...waitingPayload(form.waiting),
                 ...requesterPayload(form.requester),
@@ -827,8 +902,28 @@
                 h(RequesterPicker, { value: form.requester, onChange: (requester) => set({ requester }) })),
             h(Field, { label: t('field_status'), size: 'lg' },
                 h(Seg, { items: config.options.statuses || [], value: form.status, label: t('field_status'), onChange: (value) => set({ status: value }) })),
-            h(Field, { label: t('field_critical'), size: 'sm' },
-                h(Toggle, { checked: form.critical, label: form.critical ? t('yes') : t('no'), onChange: (value) => set({ critical: value }) })),
+            !extended ? h(Field, { label: t('field_critical'), size: 'sm' },
+                h(Toggle, { checked: form.critical, label: form.critical ? t('yes') : t('no'), onChange: (value) => set({ critical: value }) })) : null,
+            extended ? h(Field, { label: t('field_priority'), size: 'lg' },
+                h(Seg, { items: config.options.priorities || [], value: form.priority, label: t('field_priority'), onChange: (value) => set({ priority: value }) })) : null,
+            extended ? h(Field, { label: t('field_discipline') },
+                h(Select, { value: form.discipline, options: config.options.disciplines || [], placeholder: '–', onChange: (value) => set({ discipline: value || null }) })) : null,
+            canShare ? h(Field, { label: t('field_assignees'), full: true, help: t('field_assignees_help') },
+                h('div', { className: 'kw-chips-edit' },
+                    form.assignees.map((id) => h('span', { key: 'as' + id, className: 'kw-tag kw-chip-person' },
+                        nameOf(id),
+                        h('button', { type: 'button', className: 'kw-remove', 'aria-label': t('clear'), onClick: () => set({ assignees: form.assignees.filter((x) => x !== id) }) }, '×'))),
+                    h('div', { className: 'kw-chips-add' },
+                        h(SearchSelect, {
+                            value: null,
+                            options: assigneeOptions,
+                            placeholder: t('field_assignees_add'),
+                            searchPlaceholder: t('search'),
+                            onChange: (id) => { if (id) { set({ assignees: form.assignees.concat([id]) }); } },
+                        })),
+                )) : null,
+            canShare ? h(Field, { label: t('field_for_everyone'), help: t('field_for_everyone_help') },
+                h(Toggle, { checked: form.for_everyone, label: form.for_everyone ? t('yes') : t('no'), onChange: (value) => set({ for_everyone: value }) })) : null,
             h(Field, { label: t('field_waiting'), full: true, help: t('field_waiting_help'), error: errors.waiting },
                 h(WaitingPicker, { value: form.waiting, invalid: !!errors.waiting, onChange: (waiting) => set({ waiting }) })),
             h(Field, { label: t('field_link'), full: true },
@@ -857,7 +952,7 @@
         if (card.source === 'automatic') { parts.push(t('row_auto')); }
         if (card.hours) { parts.push(t('hours_value', { h: fmt.hours(card.hours) })); }
         if (withDue && card.status === 'planned' && card.due_on) { parts.push(fmt.dm(card.due_on)); }
-        if (card.is_critical) { parts.push(t('critical_tag')); }
+        if (card.priority === 'critical' || card.priority === 'high') { parts.push(card.priority_label); } else if (!card.priority && card.is_critical) { parts.push(t('critical_tag')); }
 
         if (!parts.length && card.link) {
             return card.link.no || card.link.label;
@@ -1107,7 +1202,7 @@
             h(Field, { label: t('field_project'), full: true },
                 h(SearchSelect, { value: project, options: config.options.projects || [], clearable: true, placeholder: t('project_none_link'), searchPlaceholder: t('search_project'), onChange: setProject })),
             h(Field, { label: t('field_category'), full: true },
-                h(Select, { value: category, options: categoryOptionsFor(config, me.unit, t), placeholder: '–', onChange: (value) => setCategory(value || null) })),
+                h(Select, { value: category, options: categoryOptionsFor(config, me.unit, t, me.id), placeholder: '–', onChange: (value) => setCategory(value || null) })),
             h(Field, { label: t('field_status'), full: true },
                 h(Seg, { items: statuses, value: status, onChange: setStatus })),
             h(Field, { label: t('field_link'), full: true },
@@ -1266,7 +1361,7 @@
         const [category, setCategory] = useState(null);
         const [when, setWhen] = useState({ mode: 'now' });
         const [requester, setRequester] = useState(null);
-        const categories = categoryOptionsFor(config, me.unit, t);
+        const categories = categoryOptionsFor(config, me.unit, t, me.id);
 
         useEffect(() => { setProject(defaultProject || null); }, [defaultProject]);
 
@@ -1325,6 +1420,9 @@
         const [dismissed, setDismissed] = useState([]);
         const [dismissedMode, setDismissedMode] = useState(false);
         const [trayOpen, setTrayOpenState] = useState(() => storage.get('kw_tray_open', true) !== false);
+        // D-219: kapali seritler (kapsam + serit adi); yalniz tercih, tarayicida.
+        const [closedLanes, setClosedLanes] = useState(() => storage.get('kw_lanes_closed', {}) || {});
+        const saveLanes = (next) => { storage.set('kw_lanes_closed', next); return next; };
         const [drag, setDrag] = useState(null);
         const [dropAt, setDropAt] = useState(null);
         const [busy, setBusy] = useState(false);
@@ -1448,6 +1546,12 @@
                     reorder(status, ids, card.id);
                 }
 
+                // D-216: talep de kapandiysa geri alma yok (talep geri acilmaz).
+                if (extra && extra.close_request && json.card && json.card.request && !json.card.request.open) {
+                    app.toast({ text: t('request_closed', { no: json.card.request.no }), tone: 'ok' });
+                    return;
+                }
+
                 const label = ((config.options.statuses || []).find((row) => row.value === status) || {}).label || status;
                 app.toast({
                     text: t('status_changed', { status: label }),
@@ -1479,6 +1583,11 @@
         };
 
         const toggleCritical = (card) => api.post(app.url(config.endpoints.critical, card.id), { critical: !card.is_critical })
+            .then((json) => upsert(json.card, false))
+            .catch(app.fail);
+
+        // D-219: dort seviyeli kritiklik.
+        const setPriority = (card, priority) => api.post(app.url(config.endpoints.priority, card.id), { priority })
             .then((json) => upsert(json.card, false))
             .catch(app.fail);
 
@@ -1532,6 +1641,7 @@
             onOpen: (card) => { if (card.can && card.can.update) { setModal({ kind: 'item', card }); } else if (card.url) { window.location.assign(card.url); } },
             onStatus: (card, status) => requestStatus(card, status, null),
             onCritical: toggleCritical,
+            onPriority: setPriority,
             onDelete: deleteCard,
         };
 
@@ -1868,10 +1978,33 @@
             loading && !data.cards.length ? h(State, { loading: true }) : null,
             !error ? (lanes.length === 1 && !lanes[0].key
                 ? renderBoard(lanes[0])
-                : lanes.map((lane) => h('div', { key: 'lane-' + lane.key, className: 'kw-lane' },
-                    h('div', { className: 'kw-lane-head' }, lane.key, h('span', null, t('cards_n', { n: lane.cards.length }))),
-                    renderBoard(lane),
-                ))) : null,
+                : h(Fragment, null,
+                    // D-219: seritlerin hepsini birden ac / kapat.
+                    lanes.length > 1 ? h('div', { className: 'kw-lanes-bar' },
+                        h(Btn, { variant: 'link', onClick: () => setClosedLanes(saveLanes({ ...closedLanes, ...Object.fromEntries(lanes.map((lane) => [scope + ':' + lane.key, false])) })) }, t('lanes_open_all')),
+                        h(Btn, { variant: 'link', onClick: () => setClosedLanes(saveLanes({ ...closedLanes, ...Object.fromEntries(lanes.map((lane) => [scope + ':' + lane.key, true])) })) }, t('lanes_close_all')),
+                    ) : null,
+                    lanes.map((lane) => {
+                        const laneId = scope + ':' + lane.key;
+                        const closed = !!closedLanes[laneId];
+                        const urgent = lane.cards.filter((card) => card.status !== 'done' && card.status !== 'blocked' && rankOf(card) >= 3).length;
+                        const open = lane.cards.filter((card) => card.status !== 'done' && card.status !== 'blocked').length;
+
+                        return h('div', { key: 'lane-' + lane.key, className: cx('kw-lane', { closed }) },
+                            h('button', {
+                                type: 'button',
+                                className: 'kw-lane-head kw-lane-toggle',
+                                'aria-expanded': String(!closed),
+                                title: closed ? t('lane_open') : t('lane_close'),
+                                onClick: () => setClosedLanes(saveLanes({ ...closedLanes, [laneId]: !closed })),
+                            },
+                            h('span', { className: 'kw-lane-chevron', 'aria-hidden': 'true' }, closed ? '▸' : '▾'),
+                            lane.key,
+                            h('span', null, t('cards_n', { n: lane.cards.length }) + (open !== lane.cards.length ? ' · ' + t('open_n', { n: open }) : '')),
+                            urgent ? h(Tag, { kind: 'prio-critical' }, t('critical_n', { n: urgent })) : null),
+                            closed ? null : renderBoard(lane),
+                        );
+                    }))) : null,
             modal && modal.kind === 'item' ? h(ItemModal, { card: modal.card, scope, cards: data.cards, defaultProject: soleProject, onClose: () => setModal(null), onSaved: (card, isNew) => { upsert(card, isNew); app.toast({ text: isNew ? t('created') : t('saved'), tone: 'ok' }); } }) : null,
             modal && modal.kind === 'day' ? h(DayModal, { onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'week' ? h(WeekModal, { onClose: () => setModal(null), onDone: onReport }) : null,

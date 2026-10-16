@@ -19,7 +19,7 @@ return [
         'business_case' => 'Business case',
         'captured_at' => 'Identified on',
         'created_at' => 'Created at',
-        'current_version' => 'Current version',
+        'current_version' => 'Version',
         'external_notice' => 'External notice ID',
         'issuer_party' => 'Issuer',
         'notice_url' => 'Notice URL',

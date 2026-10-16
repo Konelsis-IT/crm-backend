@@ -12,7 +12,6 @@ use App\Models\Party\PartyMeetingNote;
 use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Acquisition\ProposalQueries;
 use App\Query\Party\MeetingNoteQueries;
-use App\Query\Personnel\PersonnelQueries;
 use App\Services\Party\PartyMeetingNoteService;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
@@ -252,7 +251,7 @@ final class MeetingNoteComponents
                     QuickContact::select('contact_relationship_id', __('party_meeting_note.fields.contact'), $party),
                     Select::make('personnel_id')
                         ->label(__('party_meeting_note.fields.personnel'))
-                        ->options(fn (): array => app(PersonnelQueries::class)->personnelOptions())
+                        ->tap(PersonnelSelect::all())
                         ->default(fn () => auth()->id())
                         ->searchable()
                         ->native(false),
@@ -333,14 +332,15 @@ final class MeetingNoteComponents
                 TextColumn::make('personnel.full_name')
                     ->label(__('party_meeting_note.fields.personnel'))
                     ->placeholder('-'),
-                TextColumn::make('businessCase.title')
-                    ->label(__('party_meeting_note.fields.business_case'))
-                    ->state(fn (PartyMeetingNote $record): ?string => $record->businessCase !== null
-                        ? trim(($record->businessCase->caseCode()?->formatted_code ?? '').' · '.$record->businessCase->title, ' ·')
-                        : null)
-                    ->limit(40)
-                    ->placeholder('-')
-                    ->visible($links && $context === self::CONTEXT_PARTY),
+                // POTIS kodu potansiyel isin adinin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('businessCase.title')
+                        ->label(__('party_meeting_note.fields.business_case'))
+                        ->limit(40)
+                        ->placeholder('-')
+                        ->visible($links && $context === self::CONTEXT_PARTY),
+                    fn (PartyMeetingNote $record): ?string => $record->businessCase?->caseCode()?->formatted_code,
+                ),
                 TextColumn::make('proposals.proposal_no')
                     ->label(__('party_meeting_note.fields.proposals'))
                     ->badge()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TenderNotices\Pages;
 
+use App\Filament\Concerns\HasRecordHeading;
 use App\Enums\Platform\Feature;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
 use App\Filament\Resources\TenderNotices\TenderNoticeResource;
@@ -32,15 +33,9 @@ use Illuminate\Support\Facades\Gate;
  */
 class ViewTenderNotice extends ViewRecord
 {
+    use HasRecordHeading;
+
     protected static string $resource = TenderNoticeResource::class;
-
-    public function getTitle(): string
-    {
-        /** @var TenderNotice $notice */
-        $notice = $this->getRecord();
-
-        return BusinessCaseWizard::b43() ? (string) $notice->title : parent::getTitle();
-    }
 
     public function content(Schema $schema): Schema
     {

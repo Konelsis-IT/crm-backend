@@ -21,10 +21,16 @@ use App\Filament\Resources\Projects\RelationManagers\DelayEventsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\ExposuresRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\IssuesRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\LegacyLogisticsItemsRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\LegacySoftwareItemsRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\LegacySupplyItemsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\LogisticsItemsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\ProgressSnapshotsRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\ProjectPurchaseNeedsRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\ProjectPurchaseOrdersRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\ProjectSoftwareNeedsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\ScheduleBaselinesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\SoftwareItemsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\SupplyItemsRelationManager;
@@ -33,10 +39,12 @@ use App\Filament\Resources\Projects\RelationManagers\WbsNodesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\WorkPackagesRelationManager;
 use App\Models\Project\Project;
 use App\Query\Project\ProjectCatalogQueries;
+use App\Query\Project\ProjectPurchasingQueries;
 use App\Query\Project\ProjectStepReadiness;
 use App\Query\Reference\ReferenceOptions;
 use App\Services\Project\ProjectService;
 use App\Support\Projects\ProjectNames;
+use App\Support\Projects\ProjectPurchasing;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -315,6 +323,7 @@ final class ProjectWizard
             Select::make('project_manager_employee_id')
                 ->label(__('project.fields.project_manager'))
                 ->relationship('projectManager', 'full_name')
+                ->tap(PersonnelSelect::relationship())
                 ->searchable()
                 ->preload()
                 ->required()
@@ -733,7 +742,7 @@ final class ProjectWizard
                 : $this->quickDatesAction($project, $name);
 
             return [
-                ...($met ? [] : [$modal('chk_add_'.$suffix)->label(__('project.actions.quick_add'))->tooltip(__('project.actions.quick_add'))->icon(Heroicon::OutlinedPlus)->iconButton()->color('primary')]),
+                ...($met ? [] : [$modal('chk_add_'.$suffix)->label(__('project.actions.quick_add'))->tooltip(__('project.actions.quick_add'))->icon(Heroicon::OutlinedPlus)->iconButton()->color(ActionColors::CREATE)]),
                 $modal('chk_edit_'.$suffix)->tooltip($isSite ? __('project.actions.edit_site') : __('project.actions.edit_dates'))->icon(Heroicon::OutlinedPencilSquare)->iconButton()->color('gray'),
             ];
         }
@@ -745,20 +754,12 @@ final class ProjectWizard
         }
 
         $key = self::relationKey($target[0], $target[1]);
+        // "+" yalniz olusturma eylemi olan tabloda (OpensFromChecklist); siparis tablosu gibi
+        // salt okunur hedefte yalniz "tabloya git" kalir (D-196).
+        $creatable = in_array(OpensFromChecklist::class, class_uses_recursive($target[0]), true);
 
         return [
-            Action::make('chk_add_'.$suffix)
-                ->label(__('project.actions.quick_add'))
-                ->tooltip(__('project.actions.quick_add'))
-                ->icon(Heroicon::OutlinedPlus)
-                ->iconButton()
-                ->color(ActionColors::CREATE)
-                // Sayfa hedef tabloyu (gerekirse) hemen kurar ve tabloya olusturma olayini yollar.
-                ->action(function (LivewireComponent $livewire) use ($key): void {
-                    if (method_exists($livewire, 'checklistCreate')) {
-                        $livewire->checklistCreate($key);
-                    }
-                }),
+            ...($creatable ? [$this->checklistAddAction($suffix, $key)] : []),
             Action::make('chk_edit_'.$suffix)
                 ->label(__('project.actions.open_table'))
                 ->tooltip(__('project.actions.open_table'))
@@ -767,6 +768,23 @@ final class ProjectWizard
                 ->color('gray')
                 ->url('#anchor-'.$key),
         ];
+    }
+
+    /** Kontrol listesi "+": hedef tablonun olusturma eylemini acar. */
+    private function checklistAddAction(string $suffix, string $key): Action
+    {
+        return Action::make('chk_add_'.$suffix)
+            ->label(__('project.actions.quick_add'))
+            ->tooltip(__('project.actions.quick_add'))
+            ->icon(Heroicon::OutlinedPlus)
+            ->iconButton()
+            ->color(ActionColors::CREATE)
+            // Sayfa hedef tabloyu (gerekirse) hemen kurar ve tabloya olusturma olayini yollar.
+            ->action(function (LivewireComponent $livewire) use ($key): void {
+                if (method_exists($livewire, 'checklistCreate')) {
+                    $livewire->checklistCreate($key);
+                }
+            });
     }
 
     /**
@@ -778,6 +796,16 @@ final class ProjectWizard
     {
         $group = strtoupper($groupCode);
 
+        // D-196: anahtar acikken tedarik beklentileri satin alma tablolarina gider.
+        $purchasing = ProjectPurchasing::enabled();
+        $supply = $purchasing ? ProjectPurchaseNeedsRelationManager::class : SupplyItemsRelationManager::class;
+        $logistics = match (true) {
+            ! $purchasing => LogisticsItemsRelationManager::class,
+            ProjectPurchasing::ordersEnabled() => ProjectPurchaseOrdersRelationManager::class,
+            default => ProjectPurchaseNeedsRelationManager::class,
+        };
+        $software = $purchasing ? ProjectSoftwareNeedsRelationManager::class : SoftwareItemsRelationManager::class;
+
         return match ($kind) {
             ExpectationKind::Components => [ComponentsRelationManager::class, ''],
             ExpectationKind::Documents, ExpectationKind::Drawings => [DocumentsRelationManager::class, 'project'],
@@ -786,9 +814,9 @@ final class ProjectWizard
             ExpectationKind::Wbs => [WbsNodesRelationManager::class, ''],
             ExpectationKind::Milestones => [MilestonesRelationManager::class, ''],
             ExpectationKind::ScheduleBaseline => [ScheduleBaselinesRelationManager::class, ''],
-            ExpectationKind::SupplyItems, ExpectationKind::SupplyOrdered => [SupplyItemsRelationManager::class, ''],
-            ExpectationKind::SupplyDelivered => [$group === 'LOGISTICS' ? LogisticsItemsRelationManager::class : SupplyItemsRelationManager::class, ''],
-            ExpectationKind::SoftwareItems => [$group === 'SOFTWARE' ? SoftwareItemsRelationManager::class : SupplyItemsRelationManager::class, ''],
+            ExpectationKind::SupplyItems, ExpectationKind::SupplyOrdered => [$supply, ''],
+            ExpectationKind::SupplyDelivered => [$group === 'LOGISTICS' ? $logistics : $supply, ''],
+            ExpectationKind::SoftwareItems => [$group === 'SOFTWARE' ? $software : $supply, ''],
             ExpectationKind::Cbs => [CbsNodesRelationManager::class, ''],
             ExpectationKind::Exposures => [ExposuresRelationManager::class, ''],
             ExpectationKind::TeamMembers => [TeamMembersRelationManager::class, ''],
@@ -813,6 +841,9 @@ final class ProjectWizard
             $eagerAll || in_array(self::relationKey($class, $suffix), $eagerKeys, true),
         );
 
+        // D-196: anahtar acikken Satin alma / Lojistik / Yazilim tablolari satin alma kayitlarini gosterir.
+        $purchasing = ProjectPurchasing::enabled();
+
         return match (strtoupper($groupCode)) {
             'PROJECT' => [
                 $rm(ComponentsRelationManager::class),
@@ -822,9 +853,9 @@ final class ProjectWizard
                 $rm(MilestonesRelationManager::class),
                 $rm(ScheduleBaselinesRelationManager::class),
             ],
-            'PROCUREMENT' => [
-                $rm(SupplyItemsRelationManager::class),
-            ],
+            'PROCUREMENT' => $purchasing
+                ? $this->purchasingTables(ProjectPurchaseNeedsRelationManager::class, LegacySupplyItemsRelationManager::class, ProjectPurchasingQueries::LEGACY_SUPPLY, $project, $pageClass, $rm)
+                : [$rm(SupplyItemsRelationManager::class)],
             'ACCOUNTING' => [
                 $rm(CbsNodesRelationManager::class),
                 $rm(ExposuresRelationManager::class),
@@ -832,7 +863,9 @@ final class ProjectWizard
             ],
             'LOGISTICS' => [
                 $this->workspace->siteAddressSection($project),
-                $rm(LogisticsItemsRelationManager::class),
+                ...($purchasing
+                    ? $this->purchasingTables(ProjectPurchaseOrdersRelationManager::class, LegacyLogisticsItemsRelationManager::class, ProjectPurchasingQueries::LEGACY_LOGISTICS, $project, $pageClass, $rm)
+                    : [$rm(LogisticsItemsRelationManager::class)]),
             ],
             'FIELD' => [
                 $rm(TeamMembersRelationManager::class),
@@ -843,11 +876,46 @@ final class ProjectWizard
                 $rm(PhotosRelationManager::class, 'field'),
             ],
             'SOFTWARE' => [
-                $rm(SoftwareItemsRelationManager::class),
+                ...($purchasing
+                    ? $this->purchasingTables(ProjectSoftwareNeedsRelationManager::class, LegacySoftwareItemsRelationManager::class, ProjectPurchasingQueries::LEGACY_SOFTWARE, $project, $pageClass, $rm)
+                    : [$rm(SoftwareItemsRelationManager::class)]),
                 $rm(AutomationDocumentsRelationManager::class),
             ],
             default => [],
         };
+    }
+
+    /**
+     * Satin alma tablosu (D-196) ve altinda, projede eski tedarik kalemi varsa,
+     * kapali "Eski tedarik kayıtları" bolumunde salt okunur eski tablo. Gomulu
+     * tablo yetkisi (canViewForRecord) burada denetlenir: gomulu bilesen
+     * sonraki isteklerde ayni denetimi yapar ve kapali ozellikte 403 verirdi.
+     *
+     * @param  class-string<\Filament\Resources\RelationManagers\RelationManager>  $class
+     * @param  class-string<\Filament\Resources\RelationManagers\RelationManager>  $legacyClass
+     * @param  \Closure(string, string=): Livewire  $rm
+     * @return list<Component>
+     */
+    private function purchasingTables(string $class, string $legacyClass, string $legacyScope, Project $project, string $pageClass, \Closure $rm): array
+    {
+        $components = [];
+
+        if ($class::canViewForRecord($project, $pageClass)) {
+            $components[] = $rm($class);
+        }
+
+        if ($legacyClass::canViewForRecord($project, $pageClass) && app(ProjectPurchasingQueries::class)->hasLegacy($project, $legacyScope)) {
+            $components[] = Section::make(__('project_supply_item.legacy.title'))
+                ->description(__('project_supply_item.legacy.description'))
+                ->icon(Heroicon::OutlinedArchiveBox)
+                ->iconColor('gray')
+                ->collapsible()
+                ->collapsed()
+                ->compact()
+                ->components([$rm($legacyClass)]);
+        }
+
+        return $components;
     }
 
     /**

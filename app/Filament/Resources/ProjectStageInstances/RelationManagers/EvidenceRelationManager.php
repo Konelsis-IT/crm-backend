@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ProjectStageInstances\RelationManagers;
 
 use App\Filament\Support\ActionColors;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\RowDetail;
 use App\Exceptions\AbstractException;
 use App\Filament\Support\DomainNotifications;
@@ -53,13 +54,17 @@ class EvidenceRelationManager extends RelationManager
             ->heading(__('stage_evidence.relation.title'))
             ->recordTitleAttribute('evidence_hash')
             ->columns([
-                TextColumn::make('requirement.requirement_code_snapshot')
-                    ->label(__('stage_evidence.fields.requirement')),
-                TextColumn::make('documentRevision.document.document_no')
-                    ->label(__('stage_evidence.fields.document_revision')),
-                TextColumn::make('documentRevision.title')
-                    ->label(__('stage_evidence.fields.title'))
-                    ->limit(30),
+                // Gereksinim kodu katalog kodudur (D-130): kod yerine gereksinimin adi.
+                TextColumn::make('requirement.name_snapshot_tr')
+                    ->label(__('stage_evidence.fields.requirement'))
+                    ->limit(40),
+                // Dokuman no basligin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('documentRevision.title')
+                        ->label(__('stage_evidence.fields.title'))
+                        ->limit(30),
+                    'documentRevision.document.document_no',
+                ),
                 TextColumn::make('submitter.full_name')
                     ->label(__('stage_evidence.fields.submitter')),
                 TextColumn::make('submitted_at')

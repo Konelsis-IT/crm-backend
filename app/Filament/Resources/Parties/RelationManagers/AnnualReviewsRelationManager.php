@@ -11,6 +11,7 @@ use App\Filament\Support\FieldGrid;
 use App\Models\Party\PartyAnnualReview;
 use App\Services\Party\PartyAnnualReviewService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -54,6 +55,7 @@ class AnnualReviewsRelationManager extends RelationManager
                         Select::make('reviewer_employee_id')
                             ->label(__('party_annual_review.fields.reviewer'))
                             ->relationship('reviewer', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->required()

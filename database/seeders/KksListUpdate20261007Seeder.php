@@ -40,9 +40,13 @@ use Illuminate\Support\Str;
  * - Teklif varsa: durum yalniz ileri gider (Verilecek -> Verilen -> Kacan
  *   firsat; Onaylandi ve Kacan firsat korunur, geri gidilmez). Verilen olunca
  *   surum Taslak -> Incelemede -> Onaylandi -> Gonderildi yurur, gonderim tarihi
- *   listedeki teklif tarihidir. Degisen bilgi (teklif tarihi, proje durumu, guc,
- *   proje adi) surum ozetine "07.10.2026 listesi" satiri olarak EKLENIR; eski
- *   satirlar silinmez, yeni surum acilmaz.
+ *   listedeki teklif tarihidir. Degisen aciklama (proje durumu, proje adi)
+ *   surum ozetine "07.10.2026 listesi" satiri olarak EKLENIR; eski satirlar
+ *   silinmez. D-198 (13 Ekim 2026): bu listenin revizyonlari (Verilen'de
+ *   teklif tarihi ileri gitti, guc ya da depolama degisti) icin yeni teklif
+ *   surumunu KksRevisionVersions20261013Seeder acar (bu dosyanin satirlari
+ *   degistirilmez, D-165); sonraki liste seed'i Support\KksRevisions'i dogrudan
+ *   kullanir.
  * - Teklif yoksa (yeni satir): KksProposalSeeder kurallariyla taraf, potansiyel
  *   is ve teklif acilir (var olan taraf / potansiyel isin altina da).
  * - Notlar: "(gg.aa.yyyy" ve kisa "gg/aa" tarihleri yeni gorusme baslatir; potansiyel
@@ -55,7 +59,7 @@ use Illuminate\Support\Str;
  * islemler yapilir. Her satir seed arsivine duser (bir kez islenir). preview()
  * hicbir sey yazmadan yapilacaklari listeler. Kurulumda DEPLOY_SEEDERS ile calisir.
  */
-final class KksListUpdate20261007Seeder extends KksProposalSeeder
+class KksListUpdate20261007Seeder extends KksProposalSeeder
 {
     public const LIST_DATE = '07.10.2026';
 
@@ -298,7 +302,7 @@ final class KksListUpdate20261007Seeder extends KksProposalSeeder
      * @param  array<string, mixed>  $row
      * @return array<string, mixed>|null
      */
-    private function previousRow(array $row): ?array
+    protected function previousRow(array $row): ?array
     {
         static $previous = null;
         $previous ??= require __DIR__.'/data/'.self::PREVIOUS_FILE;
@@ -321,7 +325,7 @@ final class KksListUpdate20261007Seeder extends KksProposalSeeder
      * @param  array<string, mixed>  $row
      * @param  array<string, mixed>|null  $previous
      */
-    private function existingProposal(array $row, ?array $previous): ?Proposal
+    protected function existingProposal(array $row, ?array $previous): ?Proposal
     {
         if ($previous !== null) {
             $tag = '('.self::PREVIOUS_DATE.', '.$previous['sheet'].', satır '.$previous['excel_row'].').';
@@ -403,10 +407,21 @@ final class KksListUpdate20261007Seeder extends KksProposalSeeder
             OfferStatus::Submitted => 1,
             OfferStatus::Lost, OfferStatus::Approved => 2,
         };
-        $current = $proposal->offer_status;
+        // D-195 (B55): teklifin durumu guncel surumun kendi durumudur (surum ve
+        // teklifteki kopya servislerle birlikte yazilir). Liste, bir surumde zaten
+        // karsilanmis durumu yeniden yazmaz: Verilen surumun sonradan acilan
+        // (Verilecek) yeni surumu listedeki "Verilen" ile gonderilmis sayilmaz.
+        $current = $proposal->currentOfferStatus();
         $target = OfferStatus::from((string) $row['offer_status']);
+        $earlier = 0;
 
-        if ($rank($target) <= $rank($current)) {
+        if (SchemaReadiness::hasBatch('B55')) {
+            foreach ($proposal->versions()->whereKeyNot((int) $proposal->current_version_id)->pluck('offer_status') as $status) {
+                $earlier = max($earlier, $rank($status instanceof OfferStatus ? $status : OfferStatus::tryFrom((string) $status)));
+            }
+        }
+
+        if ($rank($target) <= max($rank($current), $earlier)) {
             return null;
         }
 
@@ -416,8 +431,12 @@ final class KksListUpdate20261007Seeder extends KksProposalSeeder
             return $step;
         }
 
-        SeedGuard::allowingUpdates(function () use ($proposal, $row, $target): void {
-            $this->submitVersion($proposal, $row);
+        SeedGuard::allowingUpdates(function () use ($proposal, $row, $target, $earlier): void {
+            // D-195: onceki surum zaten gonderildiyse listedeki Kacan firsat yeni
+            // (gonderilmemis) surume gonderim tarihi yazmaz; yalniz durumu degisir.
+            if (! ($target === OfferStatus::Lost && $earlier >= 1)) {
+                $this->submitVersion($proposal, $row);
+            }
 
             if ($target === OfferStatus::Lost) {
                 app(ProposalService::class)->syncOfferStatus([$proposal->refresh()], OfferStatus::Lost);

@@ -7,11 +7,13 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 use App\Enums\Project\StageInstanceStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\ProjectStageInstances\ProjectStageInstanceResource;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Project\ProjectStageInstance;
 use App\Services\Project\ProjectStageInstanceService;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
@@ -49,6 +51,7 @@ class StageInstancesRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('project_stage_instance.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->required()
@@ -67,10 +70,12 @@ class StageInstancesRelationManager extends RelationManager
             ->heading(__('project_stage_instance.relation.title'))
             ->recordTitleAttribute('status')
             ->columns([
-                TextColumn::make('stageNode.stage_code')
-                    ->label(__('project_stage_instance.fields.stage_code')),
-                TextColumn::make('stageNode.name_tr')
-                    ->label(__('project_stage_instance.fields.name')),
+                // Asama kodu adin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('stageNode.name_tr')
+                        ->label(__('project_stage_instance.fields.name')),
+                    'stageNode.stage_code',
+                ),
                 TextColumn::make('owner.full_name')
                     ->label(__('project_stage_instance.fields.owner')),
                 TextColumn::make('status')

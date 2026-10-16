@@ -26,5 +26,7 @@ return [
     'subject_types' => [
         'work_request' => 'Request',
         'document_revision' => 'Document revision',
+        'purchase_need' => 'Purchase order',
+        'purchase_order' => 'Order (from a purchase quotation)',
     ],
 ];

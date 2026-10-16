@@ -73,7 +73,7 @@ return [
         'dissolved' => 'Tasfiye',
     ],
     'uom_dimension' => [
-        'count' => 'Adet',
+        'count' => 'Sayı',
         'length' => 'Uzunluk',
         'area' => 'Alan',
         'volume' => 'Hacim',
@@ -844,6 +844,83 @@ return [
         'installed' => 'Montajı yapıldı',
         'cancelled' => 'İptal edildi',
     ],
+    // D-189 satin alma
+    'catalog_item_kind' => [
+        'product' => 'Ürün',
+        'service' => 'Hizmet',
+        'general_expense' => 'Genel gider',
+        'admin_staff' => 'İdari kadro',
+    ],
+    // D-190: urunun ana kullanim yeri (tur degil).
+    'usage_area' => [
+        'office' => 'Şirket içi',
+        'field' => 'Saha',
+    ],
+    'cost_line_type' => [
+        'product_service' => 'Ürün/Hizmet',
+        'admin_staff' => 'İdari kadro',
+        'general_expense' => 'Genel giderler',
+    ],
+    'catalog_match_status' => [
+        'matched' => 'Katalogda',
+        'new' => 'Yeni',
+        'similar' => 'Benzer?',
+    ],
+    'price_state' => [
+        'firm' => 'Fiyatı kesin',
+        'open' => 'Netleşmedi',
+    ],
+    'purchase_need_source' => [
+        'proposal_cost' => 'Teklif maliyeti',
+        'office_request' => 'Satın alma talebi',
+        'manual' => 'Satın alma',
+    ],
+    'purchase_request_status' => [
+        'open' => 'Açık',
+        'in_progress' => 'İşleniyor',
+        'completed' => 'Tamamlandı',
+        'cancelled' => 'İptal edildi',
+    ],
+    'purchase_quotation_status' => [
+        'draft' => 'Fiyat bekleniyor',
+        'received' => 'Teklif alındı',
+        'selected' => 'Seçildi',
+        'rejected' => 'Reddedildi',
+        'ordered' => 'Siparişe dönüştü',
+        'cancelled' => 'İptal edildi',
+    ],
+    'purchase_order_status' => [
+        'draft' => 'Taslak',
+        'awaiting_approval' => 'Onay bekliyor',
+        'approved' => 'Onaylandı',
+        'ordered' => 'Sipariş verildi',
+        'in_transit' => 'Yolda',
+        'delivered' => 'Teslim alındı',
+        'completed' => 'Tamamlandı',
+        'cancelled' => 'İptal edildi',
+    ],
+    'quotation_ai_status' => [
+        'pending' => 'Konelsis AI okuyor',
+        'completed' => 'Konelsis AI okudu',
+        'failed' => 'Konelsis AI okuyamadı',
+    ],
+    'quotation_document_ai_status' => [
+        'pending' => 'Okunuyor',
+        'quotation' => 'Teklif belgesi',
+        'not_quotation' => 'Teklif değil',
+        'failed' => 'Okunamadı',
+    ],
+    'purchase_need_status' => [
+        'awaiting_project' => 'Proje onayı bekliyor',
+        'open' => 'Sipariş bekliyor',
+        'quoting' => 'Teklif toplanıyor',
+        'recommended' => 'Teklif önerildi',
+        'awaiting_approval' => 'Onay bekliyor',
+        'approved' => 'Onaylandı',
+        'ordered' => 'Sipariş verildi',
+        'completed' => 'Tamamlandı',
+        'cancelled' => 'İptal edildi',
+    ],
     'team_role' => [
         'project_manager' => 'Proje müdürü',
         'site_manager' => 'Şantiye şefi',
@@ -1329,6 +1406,33 @@ return [
         'supply_item' => 'Tedarik kalemi',
         'work_request' => 'Talep',
         'meeting_plan' => 'Görüşme',
+        'purchase_need' => 'Satın alınacak',
+    ],
+    // D-219 (B57)
+    'work_item_priority' => [
+        'low' => 'Düşük',
+        'normal' => 'Normal',
+        'high' => 'Yüksek',
+        'critical' => 'Kritik',
+    ],
+    'work_discipline' => [
+        'construction' => 'İnşaat',
+        'mechanical' => 'Mekanik',
+        'electrical' => 'Elektrik',
+        'auxiliary' => 'Yardımcı sistemler',
+        'scada' => 'SCADA',
+        'enh' => 'ENH',
+        'acceptance' => 'Kabul / Devreye alma',
+    ],
+    'recurrence_frequency' => [
+        'daily' => 'Günlük',
+        'weekly' => 'Haftalık',
+        'monthly' => 'Aylık',
+    ],
+    'recurring_work_kind' => [
+        'report' => 'Rapor',
+        'mailbox' => 'Mail kutusu',
+        'task' => 'Düzenli iş',
     ],
     // Sosyal Medya (B31, D-106)
     'social_profile_kind' => [

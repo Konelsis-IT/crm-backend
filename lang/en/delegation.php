@@ -18,6 +18,7 @@ return [
         'reason' => 'Reason',
         'valid_from' => 'Valid from',
         'valid_until' => 'Valid until',
+        'period' => 'Period',
         'status' => 'Status',
         'approver' => 'Approved by',
         'revoked_at' => 'Revoked at',
@@ -34,11 +35,17 @@ return [
         'scope_type' => '"All": every approval step of the grantor. "Approval policy": only the steps of the selected policy.',
         'valid_until' => 'An end date is required; the delegation ends automatically when it passes.',
         'list' => 'Delegations you granted or received; administrators see all of them.',
+        'open_list' => 'Current and upcoming delegations. Use All delegations for past ones and editing.',
     ],
 
     'actions' => [
         'revoke' => 'Revoke delegation',
+        'all' => 'All delegations',
+        'new' => 'Grant delegation',
+        'close' => 'Close',
     ],
+
+    'empty_open' => 'No current or upcoming delegation.',
 
     'messages' => [
         'revoked' => 'Delegation revoked.',

@@ -15,6 +15,7 @@ use App\Filament\Resources\Proposals\ProposalResource;
 use App\Filament\Resources\TenderNotices\TenderNoticeResource;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Proposal;
+use App\Models\Acquisition\ProposalVersion;
 use App\Models\Acquisition\TenderNotice;
 use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Project\ProjectCatalogQueries;
@@ -253,8 +254,10 @@ final class DealTrack
                 'code' => $case->project?->businessCode?->formatted_code ?? '-',
             ])),
             $this->chips([
-                [__('deal_track.chips.offer_status'), (string) ($proposal->offer_status?->getLabel() ?? ''), Heroicon::OutlinedFlag, $proposal->offer_status?->getColor()],
-                [__('deal_track.chips.version'), $version === null ? '' : __('proposal.steps.version', ['no' => $version->version_no, 'status' => (string) ($version->status?->getLabel() ?? '-')]), Heroicon::OutlinedDocumentDuplicate, null],
+                $this->offerChip($proposal),
+                [__('deal_track.chips.version'), $version === null ? '' : ProposalDetail::versionLine($version), Heroicon::OutlinedDocumentDuplicate, null],
+                // D-195 (B55): onceki surumler kendi teklif durumlariyla ("Surum 1 · Verilen teklif").
+                ...$this->previousVersionChips($proposal),
                 [__('deal_track.chips.sent'), $submitted !== null ? __('deal_track.sent_on', ['date' => $submitted->format('d.m.Y')]) : __('deal_track.not_sent'), Heroicon::OutlinedPaperAirplane, null],
                 [__('deal_track.chips.validity'), $version?->validity_until !== null ? __('deal_track.valid_until', ['date' => $version->validity_until->format('d.m.Y')]) : '', Heroicon::OutlinedCalendarDays, null],
                 // D-181: "Secili teklif" etiketi kaldirildi.
@@ -303,11 +306,11 @@ final class DealTrack
                 ? Actions::make([$this->link('track_proposal_'.$proposal->getKey(), $label, ProposalResource::getUrl('view', ['record' => $proposal]), Heroicon::OutlinedClipboardDocumentList)])->grow(false)
                 : Text::make($label)->grow(false),
             $this->chips($compact ? [
-                [__('deal_track.chips.offer_status'), (string) ($proposal->offer_status?->getLabel() ?? ''), Heroicon::OutlinedFlag, $proposal->offer_status?->getColor()],
+                $this->offerChip($proposal),
                 [__('deal_track.chips.sent'), $submitted !== null ? __('deal_track.sent_on', ['date' => $submitted->format('d.m.Y')]) : '', Heroicon::OutlinedPaperAirplane, null],
             ] : [
-                [__('deal_track.chips.offer_status'), (string) ($proposal->offer_status?->getLabel() ?? ''), Heroicon::OutlinedFlag, $proposal->offer_status?->getColor()],
-                [__('deal_track.chips.version'), $version === null ? '' : __('proposal.steps.version', ['no' => $version->version_no, 'status' => (string) ($version->status?->getLabel() ?? '-')]), Heroicon::OutlinedDocumentDuplicate, null],
+                $this->offerChip($proposal),
+                [__('deal_track.chips.version'), $version === null ? '' : ProposalDetail::versionLine($version), Heroicon::OutlinedDocumentDuplicate, null],
                 [__('deal_track.chips.sent'), $submitted !== null ? __('deal_track.sent_on', ['date' => $submitted->format('d.m.Y')]) : __('deal_track.not_sent'), Heroicon::OutlinedPaperAirplane, null],
                 [__('deal_track.chips.price'), $this->money($version?->total_price, $version?->currency_code), Heroicon::OutlinedBanknotes, null],
             ]),
@@ -379,11 +382,43 @@ final class DealTrack
         return match (true) {
             $case->project !== null => 'project',
             $case->outcome === BusinessOutcome::Cancelled => 'cancelled',
-            $proposal->offer_status === OfferStatus::Lost || $case->outcome === BusinessOutcome::Lost || $status === ProposalStatus::Rejected => 'lost',
+            $proposal->currentOfferStatus() === OfferStatus::Lost || $case->outcome === BusinessOutcome::Lost || $status === ProposalStatus::Rejected => 'lost',
             $case->outcome === BusinessOutcome::Won || $status === ProposalStatus::Accepted => 'won',
             $this->submittedAt($proposal) !== null || in_array($status, [ProposalStatus::Submitted, ProposalStatus::Negotiation], true) => 'sent',
             default => 'draft',
         };
+    }
+
+    /**
+     * "Teklif durumu" etiketi: guncel surumun kendi teklif durumu (D-195).
+     *
+     * @return array{0: string, 1: string, 2: Heroicon, 3: string|null}
+     */
+    private function offerChip(Proposal $proposal): array
+    {
+        $offer = $proposal->currentOfferStatus();
+
+        return [__('deal_track.chips.offer_status'), (string) ($offer?->getLabel() ?? ''), Heroicon::OutlinedFlag, $offer?->getColor()];
+    }
+
+    /**
+     * Onceki surumlerin kendi teklif durumlari (D-195, B55; 12 Ekim 2026
+     * kullanici karari: "oncekinin durumu da kaybedilmesin"), en yenisi once.
+     *
+     * @return list<array{0: string, 1: string, 2: Heroicon, 3: string|null}>
+     */
+    private function previousVersionChips(Proposal $proposal): array
+    {
+        if (! SchemaReadiness::hasBatch('B55')) {
+            return [];
+        }
+
+        return $proposal->versions
+            ->reject(fn (ProposalVersion $version): bool => (int) $version->getKey() === (int) $proposal->current_version_id)
+            ->sortByDesc('version_no')
+            ->map(fn (ProposalVersion $version): array => [__('deal_track.chips.previous_version'), ProposalDetail::versionLine($version), Heroicon::OutlinedDocumentDuplicate, $version->offer_status?->getColor()])
+            ->values()
+            ->all();
     }
 
     private function submittedAt(Proposal $proposal): ?Carbon

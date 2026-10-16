@@ -44,18 +44,106 @@ final class WorkCategoryCatalog
     ];
 
     /**
+     * Gorevin kendi seti (D-217): departman setinin yerine gecer. Kisi adi
+     * yok, gorev (pozisyon) kodu (ExecutiveDirectory). 15 Ekim 2026 kullanici:
+     * Yonetim kurulu baskaninin calisma alani icin bu kategoriler, bu sirayla.
+     *
+     * @var array<string, list<string>>
+     */
+    private const POSITION_SETS = [
+        'YKB' => [
+            'construction', 'projects', 'legal', 'stock_market', 'finance', 'hr_isg', 'quality', 'service', 'it_media',
+            'software_commissioning', 'new_investments', 'existing_investments', 'romania', 'business_development',
+            'proposal', 'rents', 'internal_order', 'purchasing',
+        ],
+    ];
+
+    /**
+     * Birden fazla departmanda calisanin seti (D-218): gorev seti varsa o, yoksa
+     * departman setlerinin birlesimi (kendi departmani once, tekrarsiz).
+     *
+     * @param  list<string>  $unitCodes
      * @return list<string>
      */
-    public function codesFor(?string $unitCode): array
+    public function codesForUnits(array $unitCodes, ?string $positionCode = null): array
     {
+        if ($positionCode !== null && isset(self::POSITION_SETS[$positionCode])) {
+            return self::POSITION_SETS[$positionCode];
+        }
+
+        $codes = [];
+
+        foreach ($unitCodes as $unitCode) {
+            $key = strtoupper(trim($unitCode));
+
+            if (isset(self::SETS[$key])) {
+                $codes = [...$codes, ...self::SETS[$key]];
+            }
+        }
+
+        return $codes === [] ? self::GENERAL : array_values(array_unique($codes));
+    }
+
+    /**
+     * Kisinin React setinin anahtari: gorev seti "POS:YKB", birden fazla bilinen
+     * departman "UNITS:IS_GELISTIRME+TEKLIF"; tek departmanda null (departman seti).
+     *
+     * @param  list<string>  $unitCodes
+     */
+    public function personKey(array $unitCodes, ?string $positionCode): ?string
+    {
+        $position = $this->positionKey($positionCode);
+
+        if ($position !== null) {
+            return $position;
+        }
+
+        $known = array_values(array_unique(array_filter(array_map(
+            fn (string $code): ?string => isset(self::SETS[strtoupper(trim($code))]) ? strtoupper(trim($code)) : null,
+            $unitCodes,
+        ))));
+
+        return count($known) > 1 ? 'UNITS:'.implode('+', $known) : null;
+    }
+
+    /**
+     * personKey() anahtarinin seti (React `category_sets` ek anahtarlari icin).
+     *
+     * @return list<string>
+     */
+    public function codesForKey(string $key): array
+    {
+        if (str_starts_with($key, 'UNITS:')) {
+            return $this->codesForUnits(explode('+', substr($key, 6)));
+        }
+
+        return $this->sets()[$key] ?? self::GENERAL;
+    }
+
+    /** Gorev setinin `sets()` anahtari ("POS:YKB"); gorevin seti yoksa null. */
+    public function positionKey(?string $positionCode): ?string
+    {
+        return $positionCode !== null && isset(self::POSITION_SETS[$positionCode]) ? 'POS:'.$positionCode : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function codesFor(?string $unitCode, ?string $positionCode = null): array
+    {
+        // Gorevin kendi seti once (D-217), yoksa departman seti.
+        if ($positionCode !== null && isset(self::POSITION_SETS[$positionCode])) {
+            return self::POSITION_SETS[$positionCode];
+        }
+
         $key = strtoupper(trim((string) $unitCode));
 
         return self::SETS[$key] ?? self::GENERAL;
     }
 
-    public function has(?string $unitCode, string $category): bool
+    public function has(?string $unitCode, string $category, ?string $positionCode = null): bool
     {
-        return in_array($category, $this->codesFor($unitCode), true);
+        return in_array($category, $this->codesFor($unitCode, $positionCode), true);
     }
 
     /**
@@ -67,7 +155,7 @@ final class WorkCategoryCatalog
     {
         $codes = self::GENERAL;
 
-        foreach (self::SETS as $set) {
+        foreach ([...array_values(self::SETS), ...array_values(self::POSITION_SETS)] as $set) {
             $codes = [...$codes, ...$set];
         }
 
@@ -93,11 +181,11 @@ final class WorkCategoryCatalog
     /**
      * @return array<string, string>
      */
-    public function optionsFor(?string $unitCode): array
+    public function optionsFor(?string $unitCode, ?string $positionCode = null): array
     {
         $options = [];
 
-        foreach ($this->codesFor($unitCode) as $code) {
+        foreach ($this->codesFor($unitCode, $positionCode) as $code) {
             $options[$code] = (string) $this->label($code);
         }
 
@@ -123,12 +211,19 @@ final class WorkCategoryCatalog
     }
 
     /**
-     * Departman kodu => set (React arayuzu icin; genel set `*` anahtarinda).
+     * Departman kodu => set (React arayuzu icin; genel set `*` anahtarinda,
+     * gorev setleri "POS:<kod>" anahtarinda, D-217).
      *
      * @return array<string, list<string>>
      */
     public function sets(): array
     {
-        return ['*' => self::GENERAL, ...self::SETS];
+        $positions = [];
+
+        foreach (self::POSITION_SETS as $code => $set) {
+            $positions['POS:'.$code] = $set;
+        }
+
+        return ['*' => self::GENERAL, ...self::SETS, ...$positions];
     }
 }

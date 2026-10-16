@@ -22,13 +22,16 @@ use App\Filament\Resources\Reports\RelationManagers\SubjectReportsRelationManage
 use App\Filament\Resources\BusinessCases\RelationManagers\TenderNoticesRelationManager;
 use App\Filament\Support\BusinessCaseWizard;
 use App\Filament\Support\ChecklistSchema;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
 use App\Models\Acquisition\BusinessCase;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
+use App\Query\Acquisition\BusinessCaseQueries;
 use App\Services\Platform\SchemaReadiness;
+use App\Support\Acquisition\ChecklistTemplates;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -91,59 +94,55 @@ class BusinessCaseResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['codes', 'primaryParty', 'owner', ...($b29() ? ['scopes'] : [])]))
             ->columns([
-                // Kendi listesinde yalniz "Kod"; tekliflerde "Potansiyel iş kodu" (28 Eylul 2026 kullanici istegi).
-                TextColumn::make('offer_code')
-                    ->label(__('business_case.fields.code'))
-                    ->getStateUsing(fn (BusinessCase $record): ?string => $record->caseCode()?->formatted_code)
-                    ->placeholder('-'),
-                TextColumn::make('title')
-                    ->label(__('business_case.fields.title'))
-                    ->limit(50)
-                    // B43: taslagin kaldigi adim basligin altinda; D-162: kalem simgesi
-                    // ve amber satir (taslak oldugu ilk bakista anlasilir).
-                    ->description(fn (BusinessCase $record): ?string => DraftSupport::titleDescription($record))
-                    ->icon(fn (BusinessCase $record): ?Heroicon => DraftSupport::titleIcon($record))
-                    ->iconColor('warning')
-                    ->tooltip(fn (BusinessCase $record): ?string => DraftSupport::titleTooltip($record))
-                    ->searchable()
-                    ->sortable(),
-                // Teklif sicakligi (B43, D-155): kalp ve yuzde.
+                // Teklif sicakligi (B43, D-155): kalp ve yuzde. 15 Ekim 2026: basligin
+                // solunda, sutun adi yok.
                 TextColumn::make('heat_score')
-                    ->label(__('checklist.heat'))
+                    ->label('')
                     // D-167: bos sicaklik 0 sayilir ve %0 gorunur (0 = Yatirimci projesi).
                     ->default(0)
                     ->formatStateUsing(fn (mixed $state): HtmlString => ChecklistSchema::heatHtml(is_numeric($state) ? (int) $state : 0, small: true))
                     ->html()
                     ->sortable()
                     ->visible(fn (): bool => ChecklistSchema::enabled()),
+                // POTIS kodu ayri sutun degil, basligin altinda kucuk yazi (CodeLine,
+                // 14 Ekim 2026); B43 taslak notu kodun yaninda; D-162: kalem simgesi
+                // ve amber satir (taslak oldugu ilk bakista anlasilir).
+                CodeLine::under(
+                    TextColumn::make('title')
+                        ->label(__('business_case.fields.title'))
+                        ->limit(50)
+                        ->icon(fn (BusinessCase $record): ?Heroicon => DraftSupport::titleIcon($record))
+                        ->iconColor('warning')
+                        ->tooltip(fn (BusinessCase $record): ?string => DraftSupport::titleTooltip($record))
+                        ->searchable()
+                        ->sortable(),
+                    // POTIS yoksa (projeden acilan is) PRJ kodu.
+                    fn (BusinessCase $record): ?string => ($record->caseCode() ?? $record->projectCode())?->formatted_code,
+                    fn (BusinessCase $record): ?string => DraftSupport::titleDescription($record),
+                ),
                 // Taraf tablosundaki ad sutunuyla ayni kisalik (28 Eylul 2026 kullanici istegi);
                 // uzun adin tamami ipucunda.
                 TextColumn::make('primaryParty.display_name')
                     ->label(__('business_case.fields.primary_party'))
                     ->limit(25)
                     ->tooltip(fn (BusinessCase $record): ?string => mb_strlen((string) $record->primaryParty?->display_name) > 25 ? $record->primaryParty?->display_name : null),
+                // 15 Ekim 2026: durum, tur ve sonuc tek sutunda. Rozet durum; altinda Is
+                // Gelistirme durumunda tur (D-167: sicaklik 0 = Yatirimci projesi, > 0 =
+                // Potansiyel is) ve acik olmayan sonuc (Kazanildi, Kaybedildi...).
                 TextColumn::make('acquisition_stage')
                     ->label(__('business_case.fields.acquisition_stage'))
-                    ->badge(),
-                // D-167: Is Gelistirme durumunda sicaklik 0 = Yatirimci projesi, > 0 = Potansiyel is.
-                TextColumn::make('development_kind')
-                    ->label(__('business_case.kind'))
-                    ->state(fn (BusinessCase $record): ?string => $record->developmentKind())
-                    ->formatStateUsing(fn (?string $state): string => $state === null ? '-' : (string) __('business_case.kinds.'.$state))
                     ->badge()
-                    ->color(fn (?string $state): string => $state === 'potential_job' ? 'amber' : 'slate')
-                    ->placeholder('-'),
-                TextColumn::make('outcome')
-                    ->label(__('business_case.fields.outcome'))
-                    ->badge(),
+                    ->description(fn (BusinessCase $record): ?string => self::stageDetail($record)),
                 TextColumn::make('criticality')
                     ->label(__('business_case.fields.criticality'))
                     ->badge()
                     ->visible($notB29),
+                // 15 Ekim 2026: teklif tipi bos kalmaz; secilmemis kayitlar (ice aktarilan
+                // isler) potansiyel isin varsayilan tipi Butcesel'dir (D-101).
                 TextColumn::make('offer_type')
                     ->label(__('business_case.fields.offer_type'))
+                    ->state(fn (BusinessCase $record): mixed => $record->getAttribute('offer_type') ?? OfferType::Budgetary)
                     ->badge()
-                    ->placeholder('-')
                     ->visible($b29),
                 TextColumn::make('scopes.scope_type')
                     ->label(__('business_case.fields.scope_types'))
@@ -180,12 +179,45 @@ class BusinessCaseResource extends Resource
                 EditAction::make(),
             ])
             ->toolbarActions([])
-            ->recordClasses(fn (BusinessCase $record): ?string => DraftSupport::rowClass($record))
+            // Taslak amber (D-162); digerleri sicaklik rengiyle (15 Ekim 2026).
+            ->recordClasses(fn (BusinessCase $record): ?string => DraftSupport::rowClass($record) ?? self::heatRowClass($record))
             // Taslak satira tiklayinca kaldigi adimdan duzenleme acilir (B43).
             ->recordUrl(fn (BusinessCase $record): string => DraftSupport::enabled() && (bool) $record->getAttribute('is_draft') && Gate::allows('update', $record)
                 ? self::getUrl('edit', ['record' => $record, 'step' => app(BusinessCaseWizard::class)->resumeStepId($record)])
                 : self::getUrl('view', ['record' => $record]))
-            ->defaultSort('sequence_no', 'desc');
+            // 15 Ekim 2026: en sicak is en ustte (sonra en yeni).
+            ->defaultSort(fn (Builder $query): Builder => app(BusinessCaseQueries::class)->hottestFirst($query));
+    }
+
+    /** Durum rozetinin alt satiri: Is Gelistirme'de tur, acik olmayan sonuc. */
+    private static function stageDetail(BusinessCase $record): ?string
+    {
+        $stage = $record->getAttribute('acquisition_stage');
+        $parts = [];
+
+        if ($stage === AcquisitionStage::BusinessDevelopment && $record->developmentKind() !== null) {
+            $parts[] = (string) __('business_case.kinds.'.$record->developmentKind());
+        }
+
+        $outcome = $record->getAttribute('outcome');
+
+        if ($outcome instanceof BusinessOutcome && $outcome !== BusinessOutcome::Open && $outcome->getLabel() !== ($stage instanceof AcquisitionStage ? $stage->getLabel() : null)) {
+            $parts[] = (string) $outcome->getLabel();
+        }
+
+        return $parts === [] ? null : implode(' · ', $parts);
+    }
+
+    /** Sicaklik rengi satira (yalniz sicakligi olan kayitlarda). */
+    private static function heatRowClass(BusinessCase $record): ?string
+    {
+        $heat = $record->getAttribute('heat_score');
+
+        if (! ChecklistSchema::enabled() || ! is_numeric($heat) || (int) $heat <= 0) {
+            return null;
+        }
+
+        return 'kc-heat-row kc-heat-row--'.ChecklistTemplates::heatLevel((int) $heat);
     }
 
     public static function getRelations(): array

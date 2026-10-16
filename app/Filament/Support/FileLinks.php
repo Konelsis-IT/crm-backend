@@ -9,6 +9,7 @@ use App\Enums\Platform\Feature;
 use App\Models\Document\DocumentRevision;
 use App\Models\Document\DocumentRevisionFile;
 use App\Models\Project\ProjectPhoto;
+use App\Models\Report\WorkItemFile;
 use App\Services\Document\Preview\OfficePreviewService;
 use App\Services\Platform\FeatureFlags;
 use Filament\Facades\Filament;
@@ -94,6 +95,15 @@ final class FileLinks
         return route(self::routeName('files.photo'), [
             'photo' => $photo->getKey(),
             'variant' => $variant,
+            'disposition' => $disposition,
+        ]);
+    }
+
+    /** Is belgesi (D-219). */
+    public static function workItemFile(WorkItemFile $file, string $disposition = 'inline'): string
+    {
+        return route(self::routeName('files.work-item'), [
+            'file' => $file->getKey(),
             'disposition' => $disposition,
         ]);
     }

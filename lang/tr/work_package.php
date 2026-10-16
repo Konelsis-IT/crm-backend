@@ -20,7 +20,7 @@ return [
         'project_workstream' => 'Adım (departman)',
         'reason' => 'Gerekçe',
         'status' => 'Durum',
-        'wbs_node' => 'İş kırılımı düğümü',
+        'wbs_node' => 'İş kırılımı',
         'workstream' => 'Adım (departman)',
     ],
 

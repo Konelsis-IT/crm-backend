@@ -57,6 +57,19 @@ final class BusinessCaseQueries
     }
 
     /**
+     * Liste siralamasi (15 Ekim 2026): en sicak is en ustte, sonra en yeni.
+     * Sicaklik sutunu yoksa (B43 oncesi) yalniz en yeni.
+     */
+    public function hottestFirst(Builder $query): Builder
+    {
+        if (SchemaReadiness::hasBatch('B43')) {
+            $query->orderByRaw('COALESCE('.$query->getModel()->qualifyColumn('heat_score').', 0) desc');
+        }
+
+        return $query->orderByDesc($query->qualifyColumn('sequence_no'));
+    }
+
+    /**
      * Is gelistirme durumundaki kayitlar sicakliga gore (D-167, 6 Ekim 2026
      * kullanici talimati): sicaklik 0 (ya da bos) ise Yatirimci projesi,
      * 0'dan buyukse Potansiyel is.

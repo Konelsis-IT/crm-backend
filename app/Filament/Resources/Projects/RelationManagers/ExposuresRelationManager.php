@@ -9,6 +9,7 @@ use App\Enums\Project\ExposureKind;
 use App\Enums\Project\ExposureStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Forms\Components\MoneyInput;
+use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\MoneyDisplay;
@@ -17,6 +18,7 @@ use App\Query\Reference\ReferenceOptions;
 use App\Services\Project\CommercialExposureService;
 use App\Support\Money;
 use BackedEnum;
+use App\Filament\Support\PersonnelSelect;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Hidden;
@@ -92,6 +94,7 @@ class ExposuresRelationManager extends RelationManager
                         Select::make('owner_personnel_id')
                             ->label(__('commercial_exposure.fields.owner'))
                             ->relationship('owner', 'full_name')
+                            ->tap(PersonnelSelect::relationship())
                             ->searchable()
                             ->preload()
                             ->native(false),
@@ -133,14 +136,16 @@ class ExposuresRelationManager extends RelationManager
             ->heading(__('commercial_exposure.relation.title'))
             ->recordTitleAttribute('exposure_no')
             ->columns([
-                TextColumn::make('exposure_no')
-                    ->label(__('commercial_exposure.fields.exposure_no')),
                 TextColumn::make('exposure_kind')
                     ->label(__('commercial_exposure.fields.exposure_kind'))
                     ->badge(),
-                TextColumn::make('description')
-                    ->label(__('commercial_exposure.fields.description'))
-                    ->limit(40),
+                // Maruziyet no aciklamanin altinda kucuk yazi (CodeLine, 14 Ekim 2026).
+                CodeLine::under(
+                    TextColumn::make('description')
+                        ->label(__('commercial_exposure.fields.description'))
+                        ->limit(40),
+                    'exposure_no',
+                ),
                 MoneyDisplay::column('exposure_amount')
                     ->label(__('commercial_exposure.fields.exposure_amount')),
                 TextColumn::make('probability')

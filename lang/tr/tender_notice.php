@@ -20,7 +20,7 @@ return [
         'business_case' => 'Potansiyel iş',
         'captured_at' => 'Tespit tarihi',
         'created_at' => 'Oluşturulma',
-        'current_version' => 'Güncel sürüm',
+        'current_version' => 'Sürüm',
         'external_notice' => 'Harici ilan no',
         'issuer_party' => 'İlanı veren',
         'notice_url' => 'İlan adresi',

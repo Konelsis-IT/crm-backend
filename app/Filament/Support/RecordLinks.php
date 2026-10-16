@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Support;
 
 use App\Models\Personnel\Personnel;
+use App\Models\Reference\UnitOfMeasure;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
@@ -134,6 +135,11 @@ final class RecordLinks
     {
         if ($record instanceof Personnel) {
             return self::PERSONNEL_ICON;
+        }
+
+        // Birim bir deger etiketidir (D-194, Ayarlar > Birimler): miktar sutunlarinda simge gosterilmez.
+        if ($record instanceof UnitOfMeasure) {
+            return null;
         }
 
         $resource = self::resourceFor($record);
