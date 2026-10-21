@@ -10,6 +10,7 @@ use App\Enums\Procurement\PurchaseNeedStatus;
 use App\Exceptions\AbstractException;
 use App\Filament\Resources\PurchaseRequests\PurchaseRequestActions;
 use App\Filament\Resources\PurchaseRequests\PurchaseRequestForm;
+use App\Filament\Resources\PurchaseRequests\PurchaseRequestResource;
 use App\Filament\Support\ActionColors;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
@@ -179,7 +180,7 @@ final class PurchaseNeedActions
             ->icon(Heroicon::OutlinedPlus)
             ->color(ActionColors::CREATE)
             ->visible(fn (PurchaseNeed $record): bool => FeatureFlags::enabled(Feature::PurchaseQuotes)
-                && ! self::quotationFlow()
+                && self::legacyFlow()
                 && $record->statusEnum() !== PurchaseNeedStatus::Ordered
                 && Gate::allows('purchase', $record))
             ->modalHeading(__('purchasing.actions.add_quote'))
@@ -285,7 +286,7 @@ final class PurchaseNeedActions
             ->icon(Heroicon::OutlinedPaperAirplane)
             ->color(ActionColors::SEND)
             ->visible(function (PurchaseNeed $record): bool {
-                if (self::quotationFlow() || $record->getAttribute('recommended_quote_id') === null || ! Gate::allows('purchase', $record)) {
+                if (! self::legacyFlow() || $record->getAttribute('recommended_quote_id') === null || ! Gate::allows('purchase', $record)) {
                     return false;
                 }
 
@@ -316,7 +317,7 @@ final class PurchaseNeedActions
             ->label(__('purchasing.actions.place_order'))
             ->icon(Heroicon::OutlinedTruck)
             ->color(ActionColors::SAVE)
-            ->visible(fn (PurchaseNeed $record): bool => ! self::quotationFlow()
+            ->visible(fn (PurchaseNeed $record): bool => self::legacyFlow()
                 && in_array($record->statusEnum(), PurchaseNeedStatus::pendingOrder(), true)
                 && Gate::allows('purchase', $record))
             ->modalHeading(fn (PurchaseNeed $record): string => self::blocked($record) ? __('purchasing.modals.approval_required') : __('purchasing.actions.place_order'))
@@ -365,7 +366,7 @@ final class PurchaseNeedActions
             ->label(__('purchasing.actions.complete'))
             ->icon(Heroicon::OutlinedCheckCircle)
             ->color(ActionColors::SAVE)
-            ->visible(fn (PurchaseNeed $record): bool => ! self::quotationFlow()
+            ->visible(fn (PurchaseNeed $record): bool => self::legacyFlow()
                 && in_array($record->statusEnum(), [...PurchaseNeedStatus::pendingOrder(), PurchaseNeedStatus::Ordered], true)
                 && Gate::allows('purchase', $record))
             ->modalHeading(fn (PurchaseNeed $record): string => self::blocked($record) ? __('purchasing.modals.approval_required') : __('purchasing.actions.complete'))
@@ -573,7 +574,8 @@ final class PurchaseNeedActions
             ->label(__('purchasing.actions.report_need'))
             ->icon(Heroicon::OutlinedShoppingCart)
             ->color(ActionColors::CREATE)
-            ->visible(fn (): bool => self::purchasingReady() && Gate::allows('create', PurchaseRequest::class))
+            // D-229: talep ilk etapta Satin alinacaklar olmadan acilir (Talepler listesinde de).
+            ->visible(fn (): bool => PurchaseRequestResource::canAccess() && Gate::allows('create', PurchaseRequest::class))
             ->modalHeading(__('purchase_request.modals.heading'))
             ->modalDescription(__('purchase_request.modals.description'))
             ->modalIcon(Heroicon::OutlinedShoppingCart)
@@ -596,6 +598,19 @@ final class PurchaseNeedActions
     public static function quotationFlow(): bool
     {
         return SchemaReadiness::hasBatch('B53') && FeatureFlags::enabled(Feature::PurchaseQuotations);
+    }
+
+    /**
+     * Eski (B52A) kalem basina akis: tedarikci teklif kartlari, onerilen teklif,
+     * kalemde "Onaya gönder", "Sipariş ver", "Tamamla". Yalniz B53 uygulanmamis
+     * veritabaninda. D-229 (20 Ekim 2026: "Satin alinacaklar kismini da 2.8e
+     * alalim"): Satin alinacaklar 2.8'de takip listesi olarak acilir, satin alma
+     * teklifleri ve siparisler 2.9'da; aradaki surede eski akis acilmaz, siparis
+     * yalniz teklif -> siparis yoluyla verilir.
+     */
+    public static function legacyFlow(): bool
+    {
+        return ! SchemaReadiness::hasBatch('B53');
     }
 
     /**

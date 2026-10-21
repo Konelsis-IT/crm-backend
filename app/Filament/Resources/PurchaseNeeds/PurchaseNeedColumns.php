@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\PurchaseNeeds;
 
+use App\Enums\Platform\Feature;
 use App\Filament\Support\RecordLinks;
 use App\Models\Procurement\PurchaseNeed;
 use App\Models\Procurement\PurchaseOrder;
 use App\Models\Procurement\PurchaseQuotation;
 use App\Query\Procurement\PurchaseRequestQueries;
+use App\Services\Platform\FeatureFlags;
 use Filament\Tables\Columns\TextColumn;
 
 /**
@@ -31,6 +33,8 @@ final class PurchaseNeedColumns
 
         return TextColumn::make('quotation')
             ->label(__('purchasing.fields.quotation'))
+            // D-229: satin alma teklifleri ikinci etapta acilir.
+            ->visible(fn (): bool => FeatureFlags::enabled(Feature::PurchaseQuotations))
             ->state(fn (PurchaseNeed $record): ?string => $first($record)?->getAttribute('quotation_no'))
             ->badge()
             ->color(fn (PurchaseNeed $record): ?string => $first($record)?->statusEnum()->getColor())
@@ -64,6 +68,7 @@ final class PurchaseNeedColumns
 
         return TextColumn::make('purchase_order')
             ->label(__('purchasing.fields.order'))
+            ->visible(fn (): bool => FeatureFlags::enabled(Feature::PurchaseOrders))
             ->state(fn (PurchaseNeed $record): ?string => $order($record)?->getAttribute('order_no'))
             ->badge()
             ->color(fn (PurchaseNeed $record): ?string => $order($record)?->statusEnum()->getColor())

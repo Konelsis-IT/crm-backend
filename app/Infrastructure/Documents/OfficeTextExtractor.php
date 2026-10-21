@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Documents;
 
-use App\Infrastructure\Spreadsheet\XlsxSheetReader;
+use App\Infrastructure\Database\Spreadsheet\XlsxSheetReader;
 use DOMDocument;
 use DOMElement;
 use DOMNode;

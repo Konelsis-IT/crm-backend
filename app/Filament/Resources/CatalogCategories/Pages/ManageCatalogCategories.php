@@ -12,8 +12,8 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Katalog kategorileri (D-189): tur sekmeleri (Urun / Hizmet, Genel gider,
- * Idari kadro, Sirket ici); ekleme ve duzenleme pencerede.
+ * Katalog kategorileri (D-189); ekleme ve duzenleme pencerede. D-228 ek'ten
+ * beri her sayfa tek agac (Urun / Hizmet, Genel gider, Idari kadro ayri).
  */
 class ManageCatalogCategories extends ManageRecords
 {
@@ -22,7 +22,7 @@ class ManageCatalogCategories extends ManageRecords
     protected function getHeaderActions(): array
     {
         return [
-            CatalogCategoryResource::createAction(),
+            static::getResource()::createAction(),
         ];
     }
 
@@ -31,11 +31,18 @@ class ManageCatalogCategories extends ManageRecords
      */
     public function getTabs(): array
     {
+        // D-228 ek: her kategori sayfasi tek agac; sekme yalniz birden fazla agacta.
+        $resource = static::getResource();
+
+        if ($resource::singleKind()) {
+            return [];
+        }
+
         $screen = app(CatalogScreenQueries::class);
         $counts = $screen->categoryKindCounts();
         $tabs = [];
 
-        foreach (CatalogCategoryResource::kindOptions() as $value => $label) {
+        foreach ($resource::kindOptions() as $value => $label) {
             $kind = CatalogItemKind::from($value);
             $tabs[$value] = Tab::make($label)
                 ->icon($kind->getIcon())

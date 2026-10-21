@@ -8,6 +8,8 @@ use App\Exceptions\AbstractException;
 use App\Filament\Concerns\HasColoredFormActions;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Support\DomainNotifications;
+use App\Models\Personnel\Personnel;
+use App\Query\Document\TemplateDocumentQueries;
 use App\Services\Document\DocumentService;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Exceptions\Halt;
@@ -27,6 +29,28 @@ class CreateDocumentRecord extends CreateRecord
     public function getSubheading(): ?string
     {
         return __('document.help.create_intro');
+    }
+
+    /**
+     * Ust cubuktaki "+ Sablon ekle" (D-226) `?sablon=1` ile gelir: tur sablon,
+     * sahip birim kisinin departmani (ortak sablon icin bosaltilir).
+     */
+    protected function afterFill(): void
+    {
+        if (! request()->boolean('sablon')) {
+            return;
+        }
+
+        $typeId = app(TemplateDocumentQueries::class)->templateTypeId();
+        $user = auth()->user();
+
+        if ($typeId !== null) {
+            $this->data['document_type_id'] = $typeId;
+        }
+
+        if ($user instanceof Personnel && $user->org_unit_id !== null) {
+            $this->data['owner_org_unit_id'] = (int) $user->org_unit_id;
+        }
     }
 
     protected function handleRecordCreation(array $data): Model

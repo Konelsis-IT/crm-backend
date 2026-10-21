@@ -135,4 +135,11 @@ return [
         'code_taken' => 'Bu kod zaten kullanılıyor.',
         'duplicate' => 'Bu kayıt zaten var.',
     ],
+    // D-227: pano uyari seridi ve Teklifler listesindeki Uyari suzgeci.
+    'alerts' => [
+        'filter' => 'Uyarı',
+        'stale_to_submit' => 'Verilecek, :days günü geçen',
+        'stale_submitted' => 'Verilen, :days günden uzun cevapsız',
+        'no_amount' => 'Tutarı girilmemiş',
+    ],
 ];

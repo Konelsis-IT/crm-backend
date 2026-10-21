@@ -7,7 +7,7 @@ namespace App\Support\Procurement;
 use App\Enums\Procurement\CostLineType;
 use App\Enums\Procurement\PriceState;
 use App\Exceptions\Procurement\CostListFormatException;
-use App\Infrastructure\Spreadsheet\XlsxSheetReader;
+use App\Infrastructure\Database\Spreadsheet\XlsxSheetReader;
 use Throwable;
 
 /**

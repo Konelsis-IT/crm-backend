@@ -1497,6 +1497,246 @@ body:has(#konelsis-chat-root) .fi-main {
     flex-shrink: 0;
 }
 
+/*
+ * Dar ekranda uc nokta menusu (D-224, 19 Ekim 2026 kullanici: "ekran boyutuna
+ * gore o 3 noktadaki menuler dolacak"). Menu App\Filament\Support\TopbarShortcuts
+ * ::moreMenu (Filament eylem grubu); burada yalniz hangi genislikte neyin
+ * nerede durdugu. Ekran daraldikca kisayollar ust cubuktan menuye gecer:
+ *   1440 alti  TR / EN ve Kontrol matrisi (p4)
+ *    768 alti  Tum bildirimler ve Is panosu (p2)
+ *    640 alti  Hizli islemler (p1); arama simgeye doner, dokununca acilir.
+ * Ust cubukta `kc-tb-pN`, menude `kc-tb-more-pN`; dil dugmeleri ve Hizli
+ * islemler kendi gorunumleridir (role="group", .kc-qa-dropdown). Her sey
+ * sigdiginda (1440 ve ustu) uc nokta yoktur. Menude yalniz ust cubukta
+ * olmayanlar gorunur; bos kalan bolum gizlenir. Sablonlar (D-226) menuye
+ * gecmez: satirlarinda Goruntule / Indir var, dar ekranda simge olarak kalir.
+ * p3 kademesi (1280 alti) bos; yeni bir kisayol icin hazir.
+ */
+.kc-tb-more .kc-tb-more-p1,
+.kc-tb-more .kc-tb-more-p2,
+.kc-tb-more .kc-tb-more-p3,
+.kc-tb-more .kc-tb-more-p4 {
+    display: none;
+}
+
+@media (min-width: 90rem) {
+    .fi-topbar .fi-topbar-end > .kc-tb-more {
+        display: none;
+    }
+}
+
+@media (max-width: 89.999rem) {
+    .fi-topbar .fi-topbar-end > .kc-tb-p4 {
+        display: none;
+    }
+
+    /* Dil dugmelerinin kendi satir ici display kurali var. */
+    .fi-topbar .fi-topbar-end > [role="group"] {
+        display: none !important;
+    }
+
+    .kc-tb-more .kc-tb-more-p4 {
+        display: flex;
+    }
+}
+
+@media (min-width: 80rem) {
+    .kc-tb-more .fi-dropdown-list:not(:has(> .kc-tb-more-p4)) {
+        display: none;
+    }
+}
+
+@media (max-width: 79.999rem) {
+    /* Etiketli dugmeler (lg-xl) sigsin diye aralik ve arama alt siniri dar. */
+    .fi-topbar .fi-topbar-end {
+        column-gap: 0.5rem;
+    }
+
+    .fi-topbar .fi-topbar-end > .fi-global-search-ctn {
+        min-width: 10rem;
+    }
+
+    .fi-topbar .fi-topbar-end > .kc-tb-p3 {
+        display: none;
+    }
+
+    .kc-tb-more .kc-tb-more-p3 {
+        display: flex;
+    }
+}
+
+/*
+ * Sablonlar menusu (D-226; Goruntule / Indir dugmeleri kullanici onayi 19 Ekim
+ * 2026): Blade filament.components.template-menu. Bolum basligi kucuk gri
+ * satir; sablon satiri ad + uzanti + iki simge dugmesi; telefonda ekrana sigar.
+ */
+.kc-tpl-menu .fi-dropdown-panel {
+    max-width: calc(100vw - 1rem);
+}
+
+.kc-tpl-head {
+    padding: 0.375rem 0.5rem 0.125rem;
+    color: var(--gray-500);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.kc-tpl-head:where(.dark, .dark *) { color: var(--gray-400); }
+
+.kc-tpl-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.125rem 0.25rem 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.kc-tpl-row:hover { background-color: var(--gray-50); }
+.kc-tpl-row:where(.dark, .dark *):hover { background-color: rgb(255 255 255 / 0.05); }
+
+.kc-tpl-icon {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--gray-400);
+}
+
+.kc-tpl-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kc-tpl-name:where(.dark, .dark *) { color: var(--gray-200); }
+
+.kc-tpl-ext {
+    flex: none;
+    padding: 0 0.3125rem;
+    border-radius: 0.25rem;
+    background-color: var(--gray-100);
+    color: var(--gray-600);
+    font-size: 0.625rem;
+    font-weight: 600;
+    line-height: 1.125rem;
+}
+
+.kc-tpl-ext:where(.dark, .dark *) { background-color: var(--gray-800); color: var(--gray-300); }
+
+.kc-tpl-empty {
+    padding: 0.5rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.kc-tb-more .fi-dropdown-list-item-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (min-width: 48rem) {
+    .kc-tb-more .fi-dropdown-list:not(:has(> .kc-tb-more-p3, > .kc-tb-more-p4)) {
+        display: none;
+    }
+}
+
+@media (max-width: 47.999rem) {
+    .fi-topbar .fi-topbar-end > .kc-tb-p2 {
+        display: none;
+    }
+
+    .kc-tb-more .kc-tb-more-p2 {
+        display: flex;
+    }
+}
+
+@media (min-width: 40rem) {
+    .kc-tb-more .fi-dropdown-list:not(:has(> .kc-tb-more-p2, > .kc-tb-more-p3, > .kc-tb-more-p4)) {
+        display: none;
+    }
+}
+
+@media (max-width: 39.999rem) {
+    .fi-topbar .fi-topbar-end {
+        column-gap: 0.75rem;
+    }
+
+    .fi-topbar .fi-topbar-end > .kc-tb-p1,
+    .fi-topbar .fi-topbar-end > .kc-qa-dropdown {
+        display: none;
+    }
+
+    .kc-tb-more .kc-tb-more-p1 {
+        display: flex;
+    }
+
+    /* Arama simge: kare alan, simge ortada, dokunus girdiye gider. */
+    .fi-topbar .fi-topbar-end > .fi-global-search-ctn {
+        flex: 0 0 auto;
+        min-width: 0;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-global-search-field {
+        width: 2.25rem;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-input-wrp {
+        position: relative;
+        height: 2.25rem;
+        box-shadow: none;
+        background-color: transparent;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-input-wrp-prefix {
+        position: absolute;
+        inset: 0;
+        justify-content: center;
+        padding: 0;
+        pointer-events: none;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-input-wrp-suffix {
+        display: none;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-input {
+        width: 100%;
+        height: 2.25rem;
+        padding: 0;
+        color: transparent;
+        caret-color: transparent;
+        cursor: pointer;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-input::placeholder {
+        color: transparent;
+    }
+
+    .fi-topbar .fi-global-search-ctn:not(:focus-within) .fi-input::-webkit-search-cancel-button {
+        display: none;
+    }
+
+    /* Dokununca ust cubugun tamamini kaplar; sonuclar altinda acilir. */
+    .fi-topbar .fi-global-search-ctn:focus-within {
+        position: absolute;
+        inset-block: 0;
+        inset-inline: 1rem;
+        z-index: 30;
+        background-color: #fff;
+    }
+
+    .fi-topbar .fi-global-search-ctn:focus-within:where(.dark, .dark *) {
+        background-color: var(--gray-900);
+    }
+}
+
 /* Baslik ile alt basligi arasi dar. */
 .kc-dash-heading .fi-sc {
     row-gap: 0.25rem;

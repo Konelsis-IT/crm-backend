@@ -3,6 +3,8 @@
 return [
     'name' => 'Konelsis Admin Panel',
     'language' => 'Language selection',
+    // D-224: narrow-screen overflow menu for the topbar shortcuts.
+    'more' => 'More',
 
     'actions' => [
         'open' => 'Open',
@@ -26,6 +28,8 @@ return [
         'operations' => 'Operations',
         'operations_project' => 'Operations - Projects',
         'operations_purchasing' => 'Operations - Purchasing',
+        // D-228: General expenses live here.
+        'finance' => 'Accounting / Finance',
         'project_group' => 'Project Group',
         'procurement' => 'Procurement',
         'tenders' => 'Tenders',

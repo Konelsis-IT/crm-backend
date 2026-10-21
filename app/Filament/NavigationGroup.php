@@ -17,6 +17,10 @@ use Filament\Support\Contracts\HasLabel;
  * operasyon satin alma menuleri altinda gosterelim ... bu menuler solda
  * gorulsun"): Proje Grubu ve Satin Alma kumeleri kalkti; ekranlari sol menude
  * kendi gruplarinin altinda. Ayarlar tek kume olarak son gruptur.
+ *
+ * D-228 (19 Ekim 2026, kullanici: "Muhasebe / Finans diye bir ana menu olustur.
+ * Genel Gider'i oraya tasi. Idari Kadro kismini ise Idari ana menusu altina
+ * alalim"): Satin almadan sonra Muhasebe / Finans grubu.
  */
 enum NavigationGroup implements HasLabel
 {
@@ -25,6 +29,7 @@ enum NavigationGroup implements HasLabel
     case Acquisition;
     case OperationsProject;
     case OperationsPurchasing;
+    case Finance;
     case Administrative;
     case Documents;
     case Settings;
@@ -37,6 +42,7 @@ enum NavigationGroup implements HasLabel
             self::Acquisition => __('app.nav.acquisition'),
             self::OperationsProject => __('app.nav.operations_project'),
             self::OperationsPurchasing => __('app.nav.operations_purchasing'),
+            self::Finance => __('app.nav.finance'),
             self::Administrative => __('app.nav.administrative'),
             self::Documents => __('app.nav.documents'),
             self::Settings => __('app.nav.settings'),

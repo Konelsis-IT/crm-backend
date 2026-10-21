@@ -16,7 +16,8 @@
         "harvirsidhu/filament-cards": "^1.1",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
-        "spatie/laravel-permission": "^8.3"
+        "spatie/laravel-permission": "^8.3",
+        "ext-zip": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

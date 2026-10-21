@@ -3,6 +3,8 @@
 return [
     'name' => 'Konelsis Yönetim Paneli',
     'language' => 'Dil seçimi',
+    // D-224: dar ekranda ust cubuk kisayollarinin toplandigi uc nokta menusu.
+    'more' => 'Diğer',
 
     'actions' => [
         'open' => 'Aç',
@@ -27,6 +29,8 @@ return [
         // D-190: sol menude iki ayri grup.
         'operations_project' => 'Operasyon - Proje',
         'operations_purchasing' => 'Operasyon - Satın alma',
+        // D-228: Genel Gider bu grupta.
+        'finance' => 'Muhasebe / Finans',
         'project_group' => 'Proje Grubu',
         'procurement' => 'Satın Alma',
         'tenders' => 'İhaleler',

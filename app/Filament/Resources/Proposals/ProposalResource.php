@@ -21,6 +21,7 @@ use App\Filament\Support\CodeLine;
 use App\Filament\Support\DraftSupport;
 use App\Filament\Support\FieldGrid;
 use App\Models\Acquisition\Proposal;
+use App\Query\Acquisition\ProposalQueries;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
@@ -38,6 +39,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
@@ -171,6 +173,14 @@ class ProposalResource extends Resource
                 SelectFilter::make('offer_status')
                     ->label(__('proposal.fields.offer_status'))
                     ->options(OfferStatus::class)
+                    ->visible($b29),
+                // D-227: panodaki uyari seridinin teklif uyarilari buradan acilir; sayi = satir.
+                SelectFilter::make('alert')
+                    ->label(__('proposal.alerts.filter'))
+                    ->options(fn (): array => app(ProposalQueries::class)->alertOptions())
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? app(ProposalQueries::class)->applyAlert($query, (string) $data['value'])
+                        : $query)
                     ->visible($b29),
             ])
             ->recordActions([

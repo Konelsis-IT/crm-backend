@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Media;
+namespace App\Infrastructure\Database\Media;
 
 use App\Exceptions\SocialMedia\ImageTooLargeException;
 use App\Exceptions\SocialMedia\UnsupportedMediaException;

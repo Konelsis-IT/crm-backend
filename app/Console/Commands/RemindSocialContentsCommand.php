@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\Platform\Feature;
-use App\Infrastructure\Media\ChunkedUploadStore;
+use App\Http\Middleware\Infrastructure\Media\ChunkedUploadStore;
 use App\Services\Audit\ActorContext;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;

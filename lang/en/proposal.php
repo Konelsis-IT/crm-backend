@@ -130,4 +130,11 @@ return [
         'code_taken' => 'This code is already in use.',
         'duplicate' => 'This record already exists.',
     ],
+    // D-227: dashboard alert strip and the Alert filter of the proposals list.
+    'alerts' => [
+        'filter' => 'Alert',
+        'stale_to_submit' => 'To submit, older than :days days',
+        'stale_submitted' => 'Submitted, no answer for over :days days',
+        'no_amount' => 'No amount entered',
+    ],
 ];

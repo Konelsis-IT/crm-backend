@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use App\Support\Projects\ProjectNames;
+use App\Query\Acquisition\ProposalQueries;
+use App\Models\Project\Project;
+use App\Enums\Acquisition\ProjectScopeType;
 use App\Enums\Report\WorkItemPriority;
 use App\Enums\Procurement\PurchaseOrderStatus;
 use App\Filament\Resources\BusinessCases\BusinessCaseResource;
@@ -100,16 +104,36 @@ final class NewDashboardConfig
     ];
 
     /**
-     * Yonetici panelinde her departman seridinin yumusak renk tonu (D-217;
-     * kullanici 15 Ekim 2026: "her bir departman alanı farklı bir soft bir renk
-     * tonunda olmalı ki kolayca seçilebilsin").
+     * Seritlerin yumusak renk tonu. Yonetici panelinde her departman kendi
+     * tonunda (D-217; kullanici 15 Ekim 2026: "her bir departman alanı farklı
+     * bir soft bir renk tonunda olmalı ki kolayca seçilebilsin"). Departman
+     * panolari ayni renk dilini kullanir (D-227, 19 Ekim 2026: "İş geliştirme
+     * paneli'nde de Yönetici bekleyenlerdeki alanların renk tonları gibi renk
+     * tonları verilmeli. Ortak renk benimsenmeli"): ihale camgobegi, is
+     * gelistirme mavi, teklif mor, proje yesil, satin alma kehribar.
      */
     private const LANE_TONES = [
-        'tenders' => 'teal',
-        'cases' => 'blue',
-        'offers' => 'violet',
-        'approvals' => 'green',
-        'purchasing' => 'amber',
+        'executive' => [
+            'tenders' => 'teal',
+            'cases' => 'blue',
+            'offers' => 'violet',
+            'approvals' => 'green',
+            'purchasing' => 'amber',
+        ],
+        'acquisition' => [
+            'tenders' => 'teal',
+            'investors' => 'blue',
+            'potentials' => 'blue',
+            'to_submit' => 'violet',
+            'awaiting' => 'violet',
+            'concluded' => 'violet',
+        ],
+        'purchasing' => [
+            'entry' => 'amber',
+            'projects' => 'green',
+            'orders' => 'amber',
+            'production' => 'amber',
+        ],
     ];
 
     /**
@@ -166,6 +190,9 @@ final class NewDashboardConfig
     /** @var list<string> */
     private array $panels = DepartmentDashboards::ALL;
 
+    /** @var array<int, list<array{value: string, label: string, color: string}>> */
+    private array $projectTypeCache = [];
+
     public function __construct(
         private readonly NewDashboardQueries $queries,
         private readonly ApprovalQueries $approvals,
@@ -182,7 +209,7 @@ final class NewDashboardConfig
      * @param  list<string>  $panels  DepartmentDashboards sabitleri, sekme sirasiyla
      * @return array<string, mixed>
      */
-    public function make(array $panels = DepartmentDashboards::ALL, ?string $title = null): array
+    public function make(array $panels = DepartmentDashboards::ALL, ?string $title = null, bool $withDocuments = true): array
     {
         $this->viewer = auth()->user() instanceof Personnel ? auth()->user() : null;
         $this->panels = array_values(array_intersect(DepartmentDashboards::ALL, $panels));
@@ -211,7 +238,8 @@ final class NewDashboardConfig
                 'url' => filled($a->action_url) ? (string) $a->action_url : null,
             ])->values()->all(),
             'urgent' => $this->urgent(),
-            'documents' => $this->documents(),
+            // D-226: sablonlar ust cubuktaysa pano alani bos gelir (React alani cizmez).
+            'documents' => $withDocuments ? $this->documents() : ['items' => [], 'panels' => [], 'createUrl' => null],
             'days' => $this->days(),
             'meetings' => $acquisition ? $this->meetings() : null,
             'aging' => array_map(fn (array $buckets): array => $this->buckets($buckets), array_intersect_key(self::PANEL_AGE_BUCKETS, array_flip($this->panels))),
@@ -464,6 +492,8 @@ final class NewDashboardConfig
             'url' => $record instanceof Model ? RecordLinks::detailUrl($record, checkRecord: false) : null,
             'target' => $record instanceof Model ? $this->target($targetType, $record) : null,
             'approve' => $approve,
+            // D-222: isin / kalemin projesinin tipleri (biliniyorsa).
+            'types' => $record instanceof Model && ! $record instanceof TenderNotice ? $this->projectTypes($record->getRelationValue('project')) : [],
         ];
     }
 
@@ -483,7 +513,9 @@ final class NewDashboardConfig
         return [
             'id' => 'p-'.$proposal->getKey(),
             'title' => (string) ($proposal->title ?? $proposal->proposal_no),
-            'codes' => array_values(array_filter([$proposal->proposal_no, $case?->caseCode()?->formatted_code])),
+            // 19 Ekim 2026 kullanici: "verilen tekliflerin siralandigi dashboarddaki kartlarda potansiyel
+            // is'in kodu yazilmasin" - yalniz teklif kodu.
+            'codes' => array_values(array_filter([$proposal->proposal_no])),
             'party' => $case?->primaryParty?->display_name,
             'owner' => $proposal->owner?->full_name,
             'grade' => NewDashboardQueries::grade($case?->heat_score),
@@ -493,6 +525,8 @@ final class NewDashboardConfig
             'amount' => $version?->total_price !== null ? Money::format($version->total_price, $version->currency_code) : null,
             'amountValue' => $version?->total_price !== null ? (float) $version->total_price : null,
             'status' => $mode === 'concluded' ? ($proposal->currentOfferStatus()?->value === 'approved' ? 'won' : 'lost') : ($proposal->is_draft ? 'draft' : null),
+            'kind' => (string) __('new_dashboard.app.card.kinds.proposal'),
+            'types' => self::typeBadges(app(ProposalQueries::class)->scopeTypes($proposal)),
             'url' => RecordLinks::detailUrl($proposal, checkRecord: false),
             'target' => $mode === 'concluded' ? null : $this->target('proposal', $proposal),
         ];
@@ -514,6 +548,7 @@ final class NewDashboardConfig
             'when' => $due instanceof Carbon ? $due->format('d.m.Y') : null,
             'days' => $due instanceof Carbon ? (int) DisplayTime::today()->diffInDays($due, false) : null,
             'status' => $deadline?->deadline_type?->getLabel(),
+            'kind' => (string) __('new_dashboard.app.card.kinds.tender_notice'),
             'url' => RecordLinks::detailUrl($notice, checkRecord: false),
             'target' => $this->target('tender_notice', $notice),
             // D-217: aciliyet rengi (son tarihe kalan gun).
@@ -686,7 +721,7 @@ final class NewDashboardConfig
             $this->projectLane(),
         ];
 
-        // D-215: satin alma modulu kapaliyken (2.8 yayinlanmadan) Satin alma seridi yok.
+        // D-215 / D-229: satin alma akisi (Satin alinacaklar, 2.9) kapaliyken Satin alma seridi yok.
         if (app(DepartmentDashboards::class)->purchasingOpen()) {
             $lanes[] = $this->purchasingLane();
         }
@@ -810,8 +845,8 @@ final class NewDashboardConfig
             'items' => $sorted->values()->take($limit)->all(),
             'department' => $this->department(self::LANE_DEPARTMENTS[$tab][$key] ?? null),
             'listUrl' => $this->listUrl(self::LANE_LISTS[$key] ?? null),
-            // D-217: yonetici panelinde departman seridinin renk tonu.
-            'tone' => $tab === 'executive' ? (self::LANE_TONES[$key] ?? null) : null,
+            // D-217 / D-227: seridin renk tonu (her panelde ayni renk dili).
+            'tone' => self::LANE_TONES[$tab][$key] ?? null,
         ];
     }
 
@@ -865,6 +900,9 @@ final class NewDashboardConfig
             'when' => $item->due_on?->format('d.m.Y'),
             'urgent' => $critical,
             'status' => $item->status?->getLabel(),
+            'kind' => (string) __('new_dashboard.app.card.kinds.work_item'),
+            'project' => $item->project?->getAttribute('display_name'),
+            'types' => $this->projectTypes($item->project),
             'url' => RecordLinks::detailUrl($item, checkRecord: false),
             'target' => $this->target('work_item', $item),
             'level' => $level,
@@ -886,6 +924,8 @@ final class NewDashboardConfig
             'owner' => $case->owner?->full_name,
             'heat' => $case->heat_score !== null ? (int) $case->heat_score : 0,
             'days' => $case->updated_at instanceof Carbon ? (int) $case->updated_at->diffInDays(Carbon::now()) : null,
+            'kind' => (string) __('new_dashboard.app.card.kinds.business_case'),
+            'types' => $this->caseTypes($case),
             'url' => RecordLinks::detailUrl($case, checkRecord: false),
             'target' => $this->target('business_case', $case),
         ];
@@ -904,6 +944,7 @@ final class NewDashboardConfig
             'days' => $request->created_at instanceof Carbon ? (int) $request->created_at->diffInDays(Carbon::now()) : null,
             'amount' => $request->getAttribute('amount') !== null ? Money::format($request->getAttribute('amount'), $request->getAttribute('currency_code')) : null,
             'status' => (string) __('new_dashboard.app.status.pending'),
+            'kind' => (string) __('new_dashboard.app.card.kinds.approval'),
             'url' => RecordLinks::detailUrl($request, checkRecord: false),
             'target' => $this->target('approval_request', $request),
             'approve' => $this->canDecide($request) ? (int) $request->getKey() : null,
@@ -929,6 +970,8 @@ final class NewDashboardConfig
             'when' => $needed instanceof Carbon ? $needed->format('d.m.Y') : null,
             'urgent' => (bool) $request->getAttribute('is_urgent'),
             'status' => $request->status?->getLabel(),
+            'kind' => (string) __('new_dashboard.app.card.kinds.purchase_request'),
+            'types' => $this->projectTypes($request->project),
             'url' => RecordLinks::detailUrl($request, checkRecord: false),
             'target' => $this->target('purchase_request', $request),
             // D-217: aciliyet rengi (gerektigi tarih ve acil isareti).
@@ -952,6 +995,8 @@ final class NewDashboardConfig
             'when' => $needed instanceof Carbon ? $needed->format('d.m.Y') : null,
             'urgent' => (bool) $need->getAttribute('is_urgent'),
             'status' => $need->status?->getLabel(),
+            'kind' => (string) __('new_dashboard.app.card.kinds.purchase_need'),
+            'types' => $this->projectTypes($need->project),
             'url' => RecordLinks::detailUrl($need, checkRecord: false),
             'target' => $this->target('purchase_need', $need),
             'level' => UrgencyRule::level(self::daysLeft($needed), (bool) $need->getAttribute('is_urgent')),
@@ -977,6 +1022,8 @@ final class NewDashboardConfig
             'amount' => $order->getAttribute('total_amount') !== null ? Money::format($order->getAttribute('total_amount'), $order->getAttribute('currency_code')) : null,
             'status' => $order->status?->getLabel(),
             'carrier' => $order->getAttribute('carrier'),
+            'kind' => (string) __('new_dashboard.app.card.kinds.purchase_order'),
+            'types' => $this->projectTypes($order->project),
             'url' => RecordLinks::detailUrl($order, checkRecord: false),
             'target' => $this->target('purchase_order', $order),
             'approve' => $this->approveFor($order),
@@ -1001,6 +1048,8 @@ final class NewDashboardConfig
             'open' => $row['open'],
             'ordered' => $row['ordered'],
             'progress' => $row['open'] > 0 ? (int) round($row['ordered'] * 100 / $row['open']) : 0,
+            'kind' => (string) __('new_dashboard.app.card.kinds.project'),
+            'types' => $this->projectTypes($row['project'] instanceof Model ? $row['project'] : null),
             'url' => $row['project'] instanceof Model ? RecordLinks::detailUrl($row['project'], checkRecord: false) : null,
         ]);
         $pending = $this->visible($this->queries->pendingOrders());
@@ -1023,6 +1072,56 @@ final class NewDashboardConfig
                 $this->lane('purchasing', 'production', $production->map(fn (PurchaseOrder $o): array => $this->order($o, true)), 'left'),
             ],
         ];
+    }
+
+    /**
+     * Proje tipi rozetleri (D-222; kullanici 19 Ekim 2026: "kartlarin uzerinde
+     * projenin turu eksik onu da badge olarak kendi renginde ekle"): deger, ad
+     * ve Filament rengi; simge React'te ayni Heroicon (ProjectScopeType::getIcon).
+     *
+     * @param  iterable<mixed>  $types
+     * @return list<array{value: string, label: string, color: string}>
+     */
+    private static function typeBadges(iterable $types): array
+    {
+        $badges = [];
+
+        foreach ($types as $type) {
+            $enum = $type instanceof ProjectScopeType ? $type : ProjectScopeType::tryFrom((string) ($type instanceof \BackedEnum ? $type->value : $type));
+
+            if ($enum !== null && ! isset($badges[$enum->value])) {
+                $badges[$enum->value] = ['value' => $enum->value, 'label' => $enum->getLabel(), 'color' => $enum->getColor()];
+            }
+        }
+
+        return array_values($badges);
+    }
+
+    /**
+     * Projenin tipleri (B48 proje kapsamlari); proje ekranda tip gostermiyorsa bos.
+     * Ayni proje bir kez okunur.
+     *
+     * @return list<array{value: string, label: string, color: string}>
+     */
+    private function projectTypes(mixed $project): array
+    {
+        if (! $project instanceof Project || ! ProjectNames::scopeTypesEnabled()) {
+            return [];
+        }
+
+        $key = (int) $project->getKey();
+
+        return $this->projectTypeCache[$key] ??= self::typeBadges($project->scopes->pluck('scope_type'));
+    }
+
+    /**
+     * Potansiyel isin tipleri (kapsamlar).
+     *
+     * @return list<array{value: string, label: string, color: string}>
+     */
+    private function caseTypes(BusinessCase $case): array
+    {
+        return self::typeBadges($case->scopes->pluck('scope_type'));
     }
 
     /**

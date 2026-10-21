@@ -66,7 +66,8 @@ final class DeadlineQueries
         'deadline.certification' => ['method' => 'certifications', 'batch' => 'B13'],
         // D-208 (14 Ekim 2026, kullanici: "Tabi bunlar sistem tarafindan otomatik
         // olarak da yapilmalidir"): panonun acil kaynaklari sabah taramasina da girer.
-        // D-215: uyarilar 2.7'de, satin alma 2.8'de acilir; satin alma kaynaklari
+        // D-215 / D-229: uyarilar 2.7'de, satin alma talepleri 2.8'de, satin alinacaklar ve
+        // siparisler 2.9'da acilir; satin alma kaynaklari
         // ekranlari acik degilken taranmaz (module).
         'deadline.work_item' => ['method' => 'workItems', 'batch' => 'B36', 'feature' => Feature::BusinessAlertsWorkPurchasing],
         'deadline.purchase_request' => ['method' => 'purchaseRequests', 'batch' => 'B53', 'feature' => Feature::BusinessAlertsWorkPurchasing, 'module' => Feature::PurchaseRequests],

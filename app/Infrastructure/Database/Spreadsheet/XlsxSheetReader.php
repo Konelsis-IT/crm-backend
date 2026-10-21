@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Spreadsheet;
+namespace App\Infrastructure\Database\Spreadsheet;
 
 use RuntimeException;
 use SimpleXMLElement;

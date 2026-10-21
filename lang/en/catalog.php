@@ -8,6 +8,22 @@ return [
     'label' => 'Material / service',
     'plural' => 'Materials and Services',
 
+    // D-228: general expenses (Accounting / Finance) and administrative staff (Administrative) on their own screens.
+    'general_expense' => [
+        'nav' => 'General Expenses',
+        'label' => 'General expense',
+        'plural' => 'General Expenses',
+        'create' => 'Add general expense',
+        'categories' => 'General expense categories',
+    ],
+    'admin_staff' => [
+        'nav' => 'Administrative Staff',
+        'label' => 'Administrative staff',
+        'plural' => 'Administrative Staff',
+        'create' => 'Add administrative staff',
+        'categories' => 'Administrative staff categories',
+    ],
+
     'tabs' => [
         'all' => 'All',
     ],

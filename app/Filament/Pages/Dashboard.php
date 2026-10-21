@@ -68,6 +68,21 @@ class Dashboard extends BaseDashboard
         return app(DepartmentDashboards::class)->panelsFor($this->viewer());
     }
 
+    /**
+     * Sablonlar ust cubukta (D-226, 19 Ekim 2026 kullanici: "Sablonlar dashboard
+     * yerine artik ustteki menuye alinsin"); menu kapaliysa pano alani durur.
+     */
+    protected function newDashboardShowsTemplates(): bool
+    {
+        return ! FeatureFlags::enabled(Feature::TopbarTemplates);
+    }
+
+    /** Genel bakista sayi seridi yok; serit basliklari sayiyi zaten gosteriyor. */
+    protected function newDashboardShowsKpis(): bool
+    {
+        return false;
+    }
+
     protected function newDashboardTitle(): ?string
     {
         return (string) __('app.dashboard.title');

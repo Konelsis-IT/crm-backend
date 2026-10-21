@@ -78,10 +78,14 @@ class PurchaseRequestResource extends Resource
         return __('purchase_request.navigation');
     }
 
+    /**
+     * D-229 (20 Ekim 2026, kullanici: "Ilk etapta, urun ve satin alma
+     * taleplerini yayina acacak sekilde yapalim"): talepler Satin alinacaklar
+     * ekranindan bagimsiz acilir (kalemler yine purchase_needs satiridir).
+     */
     public static function canAccess(): bool
     {
         return FeatureFlags::enabled(Feature::PurchaseRequests)
-            && FeatureFlags::enabled(Feature::PurchaseNeeds)
             && SchemaReadiness::hasBatch('B53')
             && parent::canAccess();
     }

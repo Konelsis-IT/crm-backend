@@ -48,6 +48,13 @@ use UnitEnum;
  * kullanir. Tek liste sayfasi, tur sekmeleri; ekleme ve duzenleme pencerede,
  * yazma CatalogCategoryService ile. Kod kullanicidan alinmaz (D-130). Silme
  * yok, arsiv var (D-156); satira tiklamak salt okunur ayrinti penceresi (D-125).
+ *
+ * D-228 ek (19 Ekim 2026, kullanici: "idari kadronun ve genel giderin
+ * kategorileri kendi menusu icinde olmali. Malzeme ve Hizmetler tarafini
+ * acmamali"): bu sayfa yalniz Urun / Hizmet agaci; Genel gider ve Idari kadro
+ * kategorileri kendi sayfalarinda (GeneralExpenseCategoryResource,
+ * AdminStaffCategoryResource), kendi menu satirlari secili. `kinds()` sayfanin
+ * agaclari; tek agacta tur alani, sutunu ve sekmeleri yok.
  */
 class CatalogCategoryResource extends Resource
 {
@@ -98,14 +105,40 @@ class CatalogCategoryResource extends Resource
             && parent::canAccess();
     }
 
+    /**
+     * Sayfanin kategori agaclari (D-228 ek). Urun ve Hizmet tek agac (Urun).
+     *
+     * @return list<CatalogItemKind>
+     */
+    public static function kinds(): array
+    {
+        return [CatalogItemKind::Product];
+    }
+
+    public static function singleKind(): bool
+    {
+        return count(static::kinds()) === 1;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereIn('kind', array_map(
+            static fn (CatalogItemKind $kind): string => $kind->value,
+            static::kinds(),
+        ));
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->columns(FieldGrid::MODAL_COLUMNS)->components(FieldGrid::modal([
             Select::make('kind')
                 ->label(__('catalog.category.fields.kind'))
                 ->helperText(__('catalog.category.help.kind'))
-                ->options(self::kindOptions())
-                ->default(CatalogItemKind::Product->value)
+                ->options(static::kindOptions())
+                ->default(static::kinds()[0]->value)
+                // D-228 ek: tek agacli sayfada tur sabit (gizli, yine kaydedilir).
+                ->hidden(static::singleKind())
+                ->dehydratedWhenHidden()
                 ->required()
                 ->native(false)
                 ->live()
@@ -145,7 +178,8 @@ class CatalogCategoryResource extends Resource
                     ->placeholder('-'),
                 TextColumn::make('kind')
                     ->label(__('catalog.category.fields.kind'))
-                    ->badge(),
+                    ->badge()
+                    ->visible(! static::singleKind()),
                 TextColumn::make('items_count')
                     ->label(__('catalog.category.fields.items_count'))
                     ->numeric()
@@ -199,9 +233,9 @@ class CatalogCategoryResource extends Resource
             ->modalWidth(Width::FourExtraLarge)
             // Acik sekmenin turuyle acilir.
             ->fillForm(fn (mixed $livewire): array => [
-                'kind' => is_object($livewire) && property_exists($livewire, 'activeTab') && array_key_exists((string) $livewire->activeTab, self::kindOptions())
+                'kind' => is_object($livewire) && property_exists($livewire, 'activeTab') && array_key_exists((string) $livewire->activeTab, static::kindOptions())
                     ? (string) $livewire->activeTab
-                    : CatalogItemKind::Product->value,
+                    : static::kinds()[0]->value,
             ])
             ->using(function (array $data): Model {
                 try {
@@ -283,7 +317,7 @@ class CatalogCategoryResource extends Resource
     {
         $options = [];
 
-        foreach (CatalogItemKind::cases() as $kind) {
+        foreach (static::kinds() as $kind) {
             if ($kind === CatalogItemKind::Service) {
                 continue;
             }

@@ -242,7 +242,7 @@ class PurchaseNeedResource extends Resource
                     PurchaseNeedColumns::quotation(),
                     PurchaseNeedColumns::order(),
                 ] : []),
-                ...(PurchaseNeedActions::quotationFlow() ? [] : [
+                ...(! PurchaseNeedActions::legacyFlow() ? [] : [
                     TextColumn::make('recommended_quote')
                         ->label(__('purchasing.fields.recommended_quote'))
                         ->state(fn (PurchaseNeed $record): ?string => $record->recommendedQuote?->supplierLabel())
@@ -321,18 +321,20 @@ class PurchaseNeedResource extends Resource
         // onay / siparis bolumleri ve tedarikci teklif kartlari yerine kalemin
         // satin alma teklifi satirlari ve siparisi gorunur.
         $flow = PurchaseNeedActions::quotationFlow();
+        // D-229: eski kalem basina onay / siparis bolumleri yalniz B53 oncesi veritabaninda.
+        $legacy = PurchaseNeedActions::legacyFlow();
 
         return $schema->columns(1)->components([
             Grid::make(['default' => 1, 'xl' => 2])->components([
                 self::itemSection(),
                 self::sourceSection(),
                 self::requestSection(),
-                ...($flow ? [] : [self::approvalSection(), self::orderSection()]),
+                ...($legacy ? [self::approvalSection(), self::orderSection()] : []),
             ]),
             ...($flow ? [self::quotationLinesSection()] : []),
             Section::make(__('purchasing.sections.quotes'))
                 ->icon(Heroicon::OutlinedScale)
-                ->visible(fn (): bool => FeatureFlags::enabled(Feature::PurchaseQuotes) && ! $flow)
+                ->visible(fn (): bool => FeatureFlags::enabled(Feature::PurchaseQuotes) && $legacy)
                 ->schema(fn (PurchaseNeed $record): array => QuoteComparison::cards(
                     app(PurchasingQueries::class)->quotesOf($record),
                     PurchaseNeedActions::quoteCardActions($record),

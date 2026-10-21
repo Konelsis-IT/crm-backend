@@ -73,6 +73,12 @@ final class RecordLinks
     {
         $resource ??= self::resourceFor($record);
 
+        // Ayni modeli birden cok ekran gosteriyorsa kaydin kendi ekrani (D-228:
+        // Malzeme ve Hizmetler / Genel Gider / Idari Kadro).
+        if ($resource !== null && method_exists($resource, 'resourceForRecord')) {
+            $resource = $resource::resourceForRecord($record);
+        }
+
         if ($resource === null || ! self::canAccess($resource)) {
             return null;
         }

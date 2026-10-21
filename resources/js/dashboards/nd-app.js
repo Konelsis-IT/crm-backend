@@ -188,6 +188,13 @@
         download: 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3',
         external: 'M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25',
         checkCircle: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+        // D-222: proje tipi simgeleri (ProjectScopeType::getIcon ile ayni Heroicons).
+        sun: 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+        arrowPath: 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99',
+        beaker: 'M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5',
+        battery: 'M21 10.5h.375c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125H21M4.5 10.5H18V15H4.5v-4.5ZM3.75 18h15A2.25 2.25 0 0 0 21 15.75v-6a2.25 2.25 0 0 0-2.25-2.25h-15A2.25 2.25 0 0 0 1.5 9.75v6A2.25 2.25 0 0 0 3.75 18Z',
+        arrowsRL: 'M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5',
+        cpu: 'M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z',
         folder: 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z',
     };
 
@@ -206,6 +213,189 @@
 
     function Codes(props) {
         return props.codes && props.codes.length ? h('span', { className: 'nd-codes' }, props.codes.join(' · ')) : null;
+    }
+
+    // D-222 (19 Ekim 2026): proje tipi rozeti kendi renginde ve simgesiyle (GES gunes, RES ruzgar...).
+    const TYPE_ICONS = { ges: 'sun', res: 'arrowPath', tm: 'bolt', hes: 'beaker', bes: 'battery', enh_eih: 'arrowsRL', automation: 'cpu' };
+
+    function TypeBadges(props) {
+        const types = props.types || [];
+
+        // Kartta birden fazla tip yalniz simge (adi ustune gelince ve pencerede); tek tip kisa adiyla.
+        const iconOnly = props.compact && types.length > 1;
+
+        return types.length ? h('span', { className: 'nd-types' }, types.map((type) => h('span', { key: type.value, className: cx('nd-type', 'nd-type--' + (type.color || 'gray'), iconOnly && 'is-icon'), title: type.label, 'aria-label': type.label },
+            h(Icon, { name: TYPE_ICONS[type.value] || 'document' }), iconOnly ? null : type.label))) : null;
+    }
+
+    // Tek satir kayan yazi (19 Ekim 2026 kullanici: "Ilgili kartin basligi 2 satirda gorulmesin ...
+    // sigmayan satirlar aciklama ve baslik kisminda ilgili satir alt yazi gibi calissin. donsun
+    // dursun"): sigan metin oldugu gibi durur; sigmayan metin bastan sona kayar, bekler, geri doner.
+    // Hareket azaltma tercihinde kayma yok, uc nokta var.
+    // Kaydirilan alan (D-225, 19 Ekim 2026 kullanici: kaydirma cubugu "gereksiz alan kaybina yol
+    // aciyor ... gosterilecek son satirin orada kaydirilabilir oldugu hafif soluklasan bulaniklasan bir
+    // alan olabilir ve uzerinde asagi ok isareti olabilir"): cubuk gizli; altta devami varsa son satir
+    // solar ve bulaniklasir, ustunde asagi ok. Oka basinca bir sayfa kayar; sona gelince ikisi kaybolur.
+    // Tekerlek ve dokunmayla kaydirma oldugu gibi.
+    function ScrollArea(props) {
+        const ref = useRef(null);
+        const [more, setMore] = useState(false);
+
+        useEffect(() => {
+            const el = ref.current;
+
+            if (!el) {
+                return undefined;
+            }
+
+            const check = () => setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+            check();
+            el.addEventListener('scroll', check, { passive: true });
+            // Boyut (pencere, sigdirma) ve icerik (grup ac / kapa, yeni veri) degisince yeniden bak.
+            const resize = window.ResizeObserver ? new ResizeObserver(check) : null;
+            const mutate = window.MutationObserver ? new MutationObserver(check) : null;
+
+            if (resize) { resize.observe(el); }
+            if (mutate) { mutate.observe(el, { childList: true, subtree: true }); }
+
+            return () => {
+                el.removeEventListener('scroll', check);
+                if (resize) { resize.disconnect(); }
+                if (mutate) { mutate.disconnect(); }
+            };
+        }, []);
+
+        const down = () => {
+            const el = ref.current;
+
+            if (el) {
+                el.scrollBy({ top: Math.max(80, Math.round(el.clientHeight * 0.8)), behavior: 'smooth' });
+            }
+        };
+
+        return h('div', { className: cx('nd-scroll-area', more && 'has-more') },
+            h('div', Object.assign({ ref, className: props.className }, props.attrs || {}), props.children),
+            more ? h('div', { className: 'nd-scroll-more' },
+                h('button', { type: 'button', className: 'nd-scroll-more-btn', title: props.label, 'aria-label': props.label, onClick: down }, h(Icon, { name: 'chevron' }))) : null);
+    }
+
+    function Marquee(props) {
+        const outer = useRef(null);
+        const inner = useRef(null);
+        const [shift, setShift] = useState(0);
+
+        useEffect(() => {
+            const measure = () => {
+                if (!outer.current || !inner.current) { return; }
+                const overflow = inner.current.scrollWidth - outer.current.clientWidth;
+                setShift(overflow > 2 ? overflow : 0);
+            };
+
+            measure();
+            const observer = window.ResizeObserver ? new ResizeObserver(measure) : null;
+
+            if (observer && outer.current) { observer.observe(outer.current); }
+
+            return () => { if (observer) { observer.disconnect(); } };
+        }, [props.children]);
+
+        return h('span', {
+            ref: outer,
+            className: cx('nd-marquee', shift > 0 && 'is-moving', props.className),
+            title: props.title,
+            style: shift > 0 ? { '--nd-shift': (-shift) + 'px', '--nd-marquee-time': Math.min(18, Math.max(6, 4 + shift / 20)).toFixed(1) + 's' } : undefined,
+        }, h('span', { ref: inner, className: 'nd-marquee-text' }, props.children));
+    }
+
+    // Sicaklik kalbi (D-222, 19 Ekim 2026 kullanici: "Sicaklik kelimesini kullanma kalp emojisi
+    // kalbin rengi vs.. burada da calissin kalp + % 'lik degeri gorulsun"): kontrol listesindeki
+    // kalp (konelsis.css .kc-heat), seviyeye gore renk ve atis; 0'da gri, atmaz.
+    const HEART = 'm11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z';
+
+    function heatLevel(heat) {
+        if (!heat || heat <= 0) {
+            return 'none';
+        }
+
+        return heat < 25 ? 'cold' : (heat < 50 ? 'warm' : (heat < 75 ? 'hot' : 'burning'));
+    }
+
+    function Heat(props) {
+        const heat = Number(props.heat) || 0;
+
+        return h('span', { className: cx('kc-heat', 'kc-heat--sm', 'kc-heat--' + heatLevel(heat), 'nd-heat'), title: props.title },
+            h('span', { className: 'kc-heat__heart', 'aria-hidden': 'true' }, h('svg', { viewBox: '0 0 24 24', fill: 'currentColor' }, h('path', { d: HEART }))),
+            h('span', { className: 'kc-heat__value' }, '%' + heat));
+    }
+
+    // Kart penceresi (D-222; kullanici: "uzerine tiklanirsa modal acilsin ve bu modal standart
+    // yonlendirmeden farkli olarak hem yonlendirme sorusuna sahip olsun hemde bu kucuk kartlarin
+    // biraz daha detayli hali seklinde gorulsun. Ama cok detay verip bogma insanlari.").
+    const CardContext = React.createContext(() => {});
+
+    function CardDialog(props) {
+        const { card, onClose, t } = props;
+        const primary = useRef(null);
+
+        useEffect(() => {
+            if (!card) {
+                return undefined;
+            }
+
+            const onKey = (event) => { if (event.key === 'Escape') { onClose(); } };
+            document.addEventListener('keydown', onKey);
+            window.setTimeout(() => { if (primary.current) { primary.current.focus(); } }, 0);
+
+            return () => document.removeEventListener('keydown', onKey);
+        }, [card, onClose]);
+
+        if (!card) {
+            return null;
+        }
+
+        const { item, lane } = card;
+        const kind = item.kind || lane.label;
+        const left = item.mode ? item.mode === 'left' : (lane.age === false && lane.key !== 'projects');
+        const status = item.status ? (STATUS_TONES[item.status] ? t('status.' + item.status) : item.status) : null;
+        const days = item.days === null || item.days === undefined ? null : (left
+            ? h(Pill, { tone: leftTone(item.days) }, item.days < 0 ? t('late_days', { days: -item.days }) : t('left_days', { days: item.days }))
+            : h(Pill, { tone: ageTone(item.days) }, t('age_days', { days: item.days })));
+        const go = (newTab) => {
+            if (!item.url) { return; }
+            if (newTab) { window.open(item.url, '_blank', 'noopener'); onClose(); } else { window.location.assign(item.url); }
+        };
+        // Etiketsiz, birkac satir (19 Ekim 2026: "bu bilgilere gerek yok"): kim / durum,
+        // proje veya firma, tip + kalp + tutar + tarih.
+        const related = [item.project, item.party && item.party !== item.project ? item.party : null].filter(Boolean).join(' · ');
+        const lines = [
+            item.owner || status || (item.priority_label && item.priority !== 'normal') ? h('div', { key: 'who', className: 'nd-dialog-line' },
+                item.owner ? h('span', { className: 'nd-owner' }, h(Avatar, { name: item.owner }), h('span', null, item.owner)) : null,
+                status ? h(Pill, { tone: STATUS_TONES[item.status] || 'blue' }, status) : null,
+                item.priority_label && item.priority !== 'normal' ? h(Pill, { tone: item.priority === 'critical' ? 'red' : (item.priority === 'high' ? 'amber' : 'gray') }, item.priority_label) : null) : null,
+            related ? h('div', { key: 'rel', className: 'nd-dialog-line nd-dialog-muted' }, h(Icon, { name: 'briefcase' }), h('span', null, related)) : null,
+            (item.types && item.types.length) || (item.heat !== undefined && item.heat !== null) || item.amount || item.when || days ? h('div', { key: 'meta', className: 'nd-dialog-line' },
+                h(TypeBadges, { types: item.types }),
+                item.heat !== undefined && item.heat !== null ? h(Heat, { heat: item.heat, title: t('heat_title') }) : null,
+                item.amount ? h('span', { className: 'nd-amount' }, item.amount) : null,
+                item.when ? h('span', { className: 'nd-dialog-date' }, h(Icon, { name: 'calendar' }), item.when) : null,
+                days) : null,
+        ].filter(Boolean);
+
+        return h('div', { className: 'nd-dialog-wrap', 'data-no-link-guard': '', onMouseDown: (event) => { if (event.target === event.currentTarget) { onClose(); } } },
+            h('div', { className: cx('nd-dialog', item.level && 'nd-level-' + item.level), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'nd-dialog-title' },
+                h('div', { className: 'nd-dialog-head' },
+                    h('span', { className: 'nd-dialog-icon' }, h(Icon, { name: LANE_ICONS[lane.key] || 'document' })),
+                    h('div', { className: 'nd-dialog-headtext' },
+                        h('span', { className: 'nd-dialog-kicker' }, kind),
+                        h(Codes, { codes: item.codes })),
+                    h('button', { type: 'button', className: 'nd-popup-close', onClick: onClose, 'aria-label': t('card.close'), title: t('card.close') }, h(Icon, { name: 'x' }))),
+                h('div', { id: 'nd-dialog-title', className: 'nd-dialog-title' }, item.title),
+                lines.length ? h('div', { className: 'nd-dialog-facts' }, lines) : null,
+                item.url ? h('p', { className: 'nd-dialog-question' }, t('card.question', { kind })) : null,
+                h('div', { className: 'nd-dialog-actions' },
+                    h('button', { type: 'button', className: 'nd-btn', onClick: onClose }, t('card.stay')),
+                    item.url ? h('button', { type: 'button', className: 'nd-btn nd-btn-primary', ref: primary, onClick: () => go(false) }, h(Icon, { name: 'arrow' }), t('card.go', { kind })) : null,
+                    item.url ? h('button', { type: 'button', className: 'nd-icon-btn', onClick: () => go(true), title: t('card.new_tab'), 'aria-label': t('card.new_tab') }, h(Icon, { name: 'external' })) : null)));
     }
 
     // ------------------------------------------------------------------ Livewire koprusu (D-208)
@@ -500,6 +690,7 @@
                 h('button', { type: 'button', className: 'nd-popup-close', onClick: () => onDismiss(item), 'aria-label': t('urgent.close'), title: t('urgent.close') }, h(Icon, { name: 'x' }))),
             h('div', { className: 'nd-popup-body' },
                 h('div', { id: 'nd-popup-title', className: 'nd-popup-title' }, item.title),
+                h(TypeBadges, { types: item.types }),
                 h('div', { className: 'nd-popup-meta' },
                     item.meta ? h('span', null, item.meta) : null,
                     item.due ? h('span', null, t('urgent.due', { date: item.due })) : null,
@@ -541,6 +732,7 @@
                             h('span', { className: 'nd-level-dot' }),
                             h('div', { className: 'nd-drawer-main' },
                                 h('a', { href: item.url || '#', className: 'nd-drawer-name' }, item.title),
+                                h(TypeBadges, { types: item.types }),
                                 h('span', { className: 'nd-drawer-sub' }, [item.kindLabel, item.meta, item.due ? t('urgent.due', { date: item.due }) : null].filter(Boolean).join(' · '))),
                             h('div', { className: 'nd-drawer-side' },
                                 h('span', { className: 'nd-drawer-tools' },
@@ -589,15 +781,38 @@
             h('div', { className: 'nd-title' },
                 h('h1', null, config.title || t('title')),
                 h('span', { className: 'nd-today' }, config.today)),
-            h('div', { className: 'nd-tabs', role: 'tablist' }, tabs.map(([key, icon]) => h('button', {
+            // D-221: tek panelde sekme yok (her personel yalniz kendi panelini gorur).
+            tabs.length > 1 ? h('div', { className: 'nd-tabs', role: 'tablist' }, tabs.map(([key, icon]) => h('button', {
                 key, type: 'button', role: 'tab', 'aria-selected': tab === key, className: cx('nd-tab', tab === key && 'is-active'), onClick: () => setTab(key),
-            }, h(Icon, { name: icon }), t('tabs.' + key)))),
+            }, h(Icon, { name: icon }), t('tabs.' + key)))) : null,
             h('div', { className: 'nd-header-actions' },
                 // Panele uygun veri girisi (15 Ekim 2026); yonetici panelinde hepsi.
                 h(EntryMenu, { entry: (config.entry || []).filter((item) => !item.panels || item.panels.indexOf(tab) !== -1), t }),
                 h('button', { type: 'button', className: cx('nd-btn', 'nd-btn-urgent', critical > 0 && 'has-critical'), onClick: openDrawer },
                     h(Icon, { name: 'alert' }), t('urgent_button'),
                     urgentItems.length ? h('span', { className: 'nd-count' }, urgentItems.length) : null)));
+    }
+
+    // Uyari seridi (D-227, 19 Ekim 2026 kullanici: "Pano bilesenleri => 15 Uyari seridi kismini da
+    // dashboard'a alalim. Ama ilgili uyarilar gercekci olmali ve hepsine tiklanabilmeli ... 8
+    // incelenecek rapor var diyorsa ... filtrelenmis seklinde 8 kayit gelecek"). Sunucu sayiyi,
+    // metni ve listenin suzulu adresini verir (DashboardAlerts); sayi listedeki kayit sayisidir.
+    function Alerts(props) {
+        const items = (props.items || []).filter((item) => item.count > 0);
+
+        if (!items.length) {
+            return null;
+        }
+
+        return h('nav', { className: 'nd-alerts', 'aria-label': props.t('alerts_title') }, items.map((item) => h('a', {
+            key: item.key,
+            className: cx('nd-alert', 'nd-tone-' + (item.tone || 'blue')),
+            href: item.url,
+            title: item.title || undefined,
+        },
+            h(Icon, { name: item.icon || 'alert' }),
+            h('span', { className: 'nd-alert-count' }, item.count),
+            h('span', { className: 'nd-alert-text' }, item.text))));
     }
 
     function Kpis(props) {
@@ -732,11 +947,23 @@
 
     function LaneCard(props) {
         const { item, lane, can, t } = props;
-        // Kart satir gibidir (D-125): tiklamak kaydi dogrudan acar; icinde dugmeler var.
+        // D-222: tiklamak kart penceresini acar (biraz daha ayrinti + "sayfasina git" sorusu);
+        // basliga Ctrl / Cmd / Shift / orta tik yeni sekmede acar. Icinde dugmeler var.
+        const openCard = React.useContext(CardContext);
         const open = (event) => {
-            if (item.url && !event.defaultPrevented) {
-                window.location.assign(item.url);
+            if (!event.defaultPrevented) {
+                openCard({ item, lane });
             }
+        };
+        const titleClick = (event) => {
+            event.stopPropagation();
+
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1) {
+                return;
+            }
+
+            event.preventDefault();
+            openCard({ item, lane });
         };
         // Karisik seritte (D-217: proje isi + onay) kart kendi gun turunu tasir (`mode`).
         const left = item.mode ? item.mode === 'left' : (lane.age === false && lane.key !== 'projects');
@@ -745,17 +972,18 @@
         // D-217: aciliyete gore ton (kritik kirmizi, yuksek turuncu, orta sari).
         return h('div', { className: cx('nd-lane-card', item.urgent && 'is-urgent', item.level && 'is-level-' + item.level), role: 'link', tabIndex: 0, onClick: open, onKeyDown: (event) => { if (event.key === 'Enter') { open(event); } } },
             h('div', { className: 'nd-lane-card-top' },
-                h('a', { className: 'nd-lane-card-title', href: item.url || '#', onClick: (event) => event.stopPropagation() }, item.title),
+                h('a', { className: 'nd-lane-card-title', href: item.url || '#', onClick: titleClick }, h(Marquee, { title: item.title }, item.title)),
                 item.urgent ? h(Pill, { tone: 'red' }, t('status.urgent')) : null,
                 h(WarnButtons, { target: item.target, can, t })),
-            (item.codes && item.codes.length) || item.party ? h('span', { className: 'nd-lane-card-sub' }, [(item.codes || []).join(' · '), item.party].filter(Boolean).join(' · ')) : null,
+            (item.codes && item.codes.length) || item.party ? h(Marquee, { className: 'nd-lane-card-sub' }, [(item.codes || []).join(' · '), item.party].filter(Boolean).join(' · ')) : null,
             lane.key === 'projects' ? h('div', { className: 'nd-progress' },
                 h('span', { className: 'nd-progress-track' }, h('span', { className: 'nd-progress-fill', style: { width: (item.progress || 0) + '%' } })),
                 h('span', { className: 'nd-progress-text' }, t('project_progress', { ordered: item.ordered, open: item.open }))) : null,
             h('div', { className: 'nd-lane-card-foot' },
-                item.owner ? h('span', { className: 'nd-owner' }, h(Avatar, { name: item.owner }), h('span', null, item.owner)) : h('span'),
+                // D-222: sorumlunun yalniz avatari (adi ustune gelince ve pencerede); yaninda proje tipi.
+                h('span', { className: 'nd-lane-card-who' }, item.owner ? h(Avatar, { name: item.owner }) : null, h(TypeBadges, { types: item.types, compact: true })),
                 h('span', { className: 'nd-lane-card-tags' },
-                    item.heat !== undefined && item.heat !== null ? h(Pill, { tone: heatTone(item.heat), title: t('heat_title') }, t('heat', { heat: item.heat })) : null,
+                    item.heat !== undefined && item.heat !== null ? h(Heat, { heat: item.heat, title: t('heat_title') }) : null,
                     status ? h(Pill, { tone: STATUS_TONES[item.status] || (item.approve ? 'amber' : 'blue') }, status) : null,
                     h(ApproveButton, { request: item.approve, t }),
                     item.amount ? h('span', { className: 'nd-amount' }, item.amount) : null,
@@ -809,7 +1037,8 @@
     function Lanes(props) {
         const { lanes, icons, tab, can, ageFilter, t } = props;
         const [ref, height] = useFitHeight(360, true);
-        const style = { gridTemplateColumns: 'repeat(' + Math.max(1, lanes.length) + ', minmax(11rem, 1fr))' };
+        // Serit en dar genisligi CSS'te (--nd-lane-min): telefonda serit genisler, yatay kayar.
+        const style = { gridTemplateColumns: 'repeat(' + Math.max(1, lanes.length) + ', minmax(var(--nd-lane-min, 11rem), 1fr))' };
 
         if (height) {
             style.height = height + 'px';
@@ -822,11 +1051,12 @@
             return h('section', { key: lane.key, className: cx('nd-lane', lane.tone && 'nd-lane--' + lane.tone) },
                 h('div', { className: 'nd-lane-head' },
                     h('span', { className: 'nd-lane-name' },
-                        h('span', { className: 'nd-card-title' }, h(Icon, { name: icons[lane.key] || 'document' }), lane.label),
+                        // Baslik tek satir (dar seritte sigmazsa uc nokta, tamami ipucunda).
+                        h('span', { className: 'nd-card-title', title: lane.label }, h(Icon, { name: icons[lane.key] || 'document' }), h('span', { className: 'nd-lane-label' }, lane.label)),
                         lane.oldest ? h('span', { className: 'nd-lane-oldest' }, t('lane_oldest', { days: lane.oldest })) : null),
                     h('span', { className: 'nd-lane-count' }, ageFilter && lane.aging ? t('lane_filtered', { shown: items.length, total: lane.count }) : lane.count),
                     h(DepartmentButtons, { department: lane.department, tab, lane: lane.key, can, t })),
-                h('div', { className: 'nd-lane-body', 'data-no-link-guard': '' }, items.length === 0
+                h(ScrollArea, { className: 'nd-lane-body', attrs: { 'data-no-link-guard': '' }, label: t('scroll_more') }, items.length === 0
                     ? h('div', { className: 'nd-empty nd-empty-sm' }, t('lane_empty'))
                     : (lane.groups
                         ? h(LaneGroups, { lane, items, can, t })
@@ -876,7 +1106,8 @@
         const [ageFilter, setAgeFilter] = useState(null);
 
         return h('div', { className: 'nd-panel' },
-            h(Kpis, { items: kpiItems(panel, data, t) }),
+            config.show_kpis === false ? null : h(Kpis, { items: kpiItems(panel, data, t) }),
+            h(Alerts, { items: data.alerts, t }),
             h(Lanes, { lanes, icons: LANE_ICONS, tab: panel, can, ageFilter, t }),
             h(Bottom, { panel, config, lanes, ageFilter, setAgeFilter, urgentItems, openDrawer, t }));
     }
@@ -918,6 +1149,8 @@
         })();
         const [tab, setTabState] = useState(initialTab);
         const [drawer, setDrawer] = useState(false);
+        const [card, setCard] = useState(null);
+        const closeCard = useCallback(() => setCard(null), []);
         const [fast, setFastState] = useState(() => store('kc-nd-fast', false) === true);
         const urgentItems = config.urgent || [];
         const urgent = useUrgent(urgentItems, fast);
@@ -942,14 +1175,15 @@
         const documents = config.documents || { items: [], panels: {} };
         const openDrawer = () => setDrawer(true);
 
-        return h('div', { className: 'nd-app' },
+        return h(CardContext.Provider, { value: setCard }, h('div', { className: 'nd-app' },
             h(UrgentStrip, { announcements: config.announcements || [], urgent: urgentItems, t }),
             h(Header, { config, panels, tab, setTab, urgentItems, openDrawer, t }),
             h(TemplatesBar, { documents, panel: tab, onOpenAll: () => setTemplates(true), t }),
             h(Panel, { key: tab, panel: tab, config, can, urgentItems, openDrawer, t }),
-            drawer || templates ? null : h(UrgentPopup, { item: urgent.current, waiting: urgent.current ? urgentItems.filter((item) => !(urgent.snooze[item.id] && urgent.snooze[item.id] > urgent.now)).length : 0, fast, onDismiss: urgent.dismiss, onOpenDrawer: openDrawer, can, t }),
+            drawer || templates || card ? null : h(UrgentPopup, { item: urgent.current, waiting: urgent.current ? urgentItems.filter((item) => !(urgent.snooze[item.id] && urgent.snooze[item.id] > urgent.now)).length : 0, fast, onDismiss: urgent.dismiss, onOpenDrawer: openDrawer, can, t }),
             h(UrgentDrawer, { open: drawer, items: urgentItems, urgent, fast, setFast, onClose: () => setDrawer(false), can, t }),
-            h(TemplatesDrawer, { open: templates, documents, panel: tab, onClose: () => setTemplates(false), t }));
+            h(TemplatesDrawer, { open: templates, documents, panel: tab, onClose: () => setTemplates(false), t }),
+            h(CardDialog, { card, onClose: closeCard, t })));
     }
 
     function mount() {

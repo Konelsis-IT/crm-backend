@@ -11,6 +11,8 @@ use App\Models\Acquisition\ProposalDocument;
 use App\Models\Acquisition\ProposalVersionScope;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\Acquisition\ScopeTypes;
+use App\Support\DisplayTime;
+use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
@@ -19,9 +21,68 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
  */
 final class ProposalQueries
 {
+    /** Pano uyari seridinin teklif uyarilari (D-227); Teklifler listesindeki "Uyari" suzgeci ayni sorgu. */
+    public const ALERT_STALE_TO_SUBMIT = 'stale_to_submit';
+
+    public const ALERT_STALE_SUBMITTED = 'stale_submitted';
+
+    public const ALERT_NO_AMOUNT = 'no_amount';
+
+    public const ALERTS = [self::ALERT_STALE_TO_SUBMIT, self::ALERT_STALE_SUBMITTED, self::ALERT_NO_AMOUNT];
+
+    /** Verilecek teklif bu kadar gunden eskiyse uyari. */
+    public const STALE_TO_SUBMIT_DAYS = 14;
+
+    /** Verilen teklif bu kadar gundur cevapsizsa uyari. */
+    public const STALE_SUBMITTED_DAYS = 30;
+
     public function withOfferStatus(Builder $query, OfferStatus $status): Builder
     {
         return $query->where('offer_status', $status->value);
+    }
+
+    /**
+     * Uyari kapsamindaki teklifler (taslak degil, potansiyel isi olan):
+     * 14 gunu gecen verilecek teklif, 30 gunden uzun cevapsiz verilen teklif
+     * (guncel surumun verilis tarihi), tutari girilmemis teklif (guncel surumun
+     * tutari da kapsam satis toplami da bos). Pano sayisi ve listenin suzgeci
+     * bu sorguyu kullanir; ikisi hep ayni kaydi sayar.
+     */
+    public function applyAlert(Builder $query, string $alert): Builder
+    {
+        if (! in_array($alert, self::ALERTS, true)) {
+            return $query;
+        }
+
+        $table = $query->getModel()->getTable();
+        $today = Carbon::now(DisplayTime::zone())->startOfDay();
+        $query->where($table.'.is_draft', false)->whereHas('businessCase');
+
+        return match ($alert) {
+            self::ALERT_STALE_TO_SUBMIT => $query
+                ->where($table.'.offer_status', OfferStatus::ToBeSubmitted->value)
+                ->where($table.'.created_at', '<', $today->copy()->subDays(self::STALE_TO_SUBMIT_DAYS)->utc()),
+            self::ALERT_STALE_SUBMITTED => $query
+                ->where($table.'.offer_status', OfferStatus::Submitted->value)
+                ->whereHas('currentVersion', fn (Builder $version): Builder => $version
+                    ->where('submitted_at', '<', $today->copy()->subDays(self::STALE_SUBMITTED_DAYS)->utc())),
+            default => $query->whereRaw('COALESCE('
+                .'(SELECT v.total_price FROM proposal_versions v WHERE v.id = '.$table.'.current_version_id), '
+                .(SchemaReadiness::hasBatch('B43')
+                    ? '(SELECT SUM(s.total_sales) FROM proposal_version_scopes s WHERE s.proposal_version_id = '.$table.'.current_version_id)'
+                    : 'NULL')
+                .') IS NULL'),
+        };
+    }
+
+    /** @return array<string, string> Uyari => ad (Teklifler listesinin suzgeci). */
+    public function alertOptions(): array
+    {
+        return [
+            self::ALERT_STALE_TO_SUBMIT => (string) __('proposal.alerts.stale_to_submit', ['days' => self::STALE_TO_SUBMIT_DAYS]),
+            self::ALERT_STALE_SUBMITTED => (string) __('proposal.alerts.stale_submitted', ['days' => self::STALE_SUBMITTED_DAYS]),
+            self::ALERT_NO_AMOUNT => (string) __('proposal.alerts.no_amount'),
+        ];
     }
 
     /**

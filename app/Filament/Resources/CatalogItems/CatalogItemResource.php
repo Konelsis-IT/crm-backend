@@ -9,7 +9,9 @@ use App\Enums\Platform\Feature;
 use App\Enums\Procurement\CatalogItemKind;
 use App\Enums\Procurement\UsageArea;
 use App\Exceptions\AbstractException;
+use App\Filament\Resources\AdminStaff\AdminStaffResource;
 use App\Filament\Resources\CatalogCategories\CatalogCategoryResource;
+use App\Filament\Resources\GeneralExpenses\GeneralExpenseResource;
 use App\Filament\Resources\CatalogItems\Pages\CreateCatalogItem;
 use App\Filament\Resources\CatalogItems\Pages\EditCatalogItem;
 use App\Filament\Resources\CatalogItems\Pages\ListCatalogItems;
@@ -59,6 +61,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
@@ -78,6 +81,13 @@ use UnitEnum;
  *
  * Birim (D-194, B54): Ayarlar > Birimler listesinden secilir ve zorunludur;
  * satin alma satirlarinda kalem secilince bu birim gelir ve kilitlenir.
+ *
+ * D-228 (19 Ekim 2026, kullanici: "Malzeme ve Hizmetler kismindaki Genel Gider
+ * ve Idari Kadro'yu ayiralim"): bu ekran yalniz Urun ve Hizmet; Genel gider
+ * Muhasebe / Finans > Genel Gider (GeneralExpenseResource), Idari kadro Idari >
+ * Idari Kadro (AdminStaffResource). Uc ekran ayni tablo ve kurallar; her biri
+ * `kinds()` ile kendi turlerini gosterir. Bir kalemin baglantisi turune gore
+ * dogru ekrana gider (`resourceForRecord`, RecordLinks).
  */
 class CatalogItemResource extends Resource
 {
@@ -117,6 +127,72 @@ class CatalogItemResource extends Resource
         return self::enabled() && parent::canAccess();
     }
 
+    /**
+     * Bu ekranin gosterdigi turler (D-228). Alt ekranlar tek tur dondurur.
+     *
+     * @return list<CatalogItemKind>
+     */
+    public static function kinds(): array
+    {
+        return [CatalogItemKind::Product, CatalogItemKind::Service];
+    }
+
+    /** @return list<string> */
+    public static function kindValues(): array
+    {
+        return array_map(static fn (CatalogItemKind $kind): string => $kind->value, static::kinds());
+    }
+
+    /** Tek turlu ekran mi (Genel Gider, Idari Kadro)? Tur alani, sutunu ve sekmeleri yok. */
+    public static function singleKind(): bool
+    {
+        return count(static::kinds()) === 1;
+    }
+
+    /** @return array<string, string> */
+    public static function kindOptions(): array
+    {
+        $options = [];
+
+        foreach (static::kinds() as $kind) {
+            $options[$kind->value] = (string) $kind->getLabel();
+        }
+
+        return $options;
+    }
+
+    public static function createLabel(): string
+    {
+        return __('catalog.actions.create');
+    }
+
+    /**
+     * Ekranin kategori sayfasi (D-228 ek: Genel gider ve Idari kadro kendi menusunde).
+     *
+     * @return class-string<CatalogCategoryResource>
+     */
+    public static function categoryResource(): string
+    {
+        return CatalogCategoryResource::class;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereIn('kind', static::kindValues());
+    }
+
+    /** Kalemin turune gore ekrani (baglantilar ve detay sayfasi, RecordLinks). */
+    public static function resourceForRecord(Model $record): string
+    {
+        $kind = $record instanceof CatalogItem ? self::kindOf($record->getAttribute('kind')) : null;
+
+        return match ($kind) {
+            CatalogItemKind::GeneralExpense => GeneralExpenseResource::class,
+            CatalogItemKind::AdminStaff => AdminStaffResource::class,
+            default => self::class,
+        };
+    }
+
     /** D-193: Kategoriler sayfasi da bu menu satirinin altindadir (ayri menu yok). */
     public static function getNavigationItemActiveRoutePattern(): string | array
     {
@@ -138,8 +214,11 @@ class CatalogItemResource extends Resource
                     // Tur dugmeleri satir icinde; tur degisince kategori bosalir (agac ture gore).
                     ToggleButtons::make('kind')
                         ->label(__('catalog.fields.kind'))
-                        ->options(CatalogItemKind::class)
-                        ->default(CatalogItemKind::Product->value)
+                        ->options(static::kindOptions())
+                        ->default(static::kinds()[0]->value)
+                        // D-228: tek turlu ekranda tur sabit (gizli, yine kaydedilir).
+                        ->hidden(static::singleKind())
+                        ->dehydratedWhenHidden()
                         ->inline()
                         ->required()
                         ->live()
@@ -232,7 +311,10 @@ class CatalogItemResource extends Resource
         }
 
         $item = $schema->getRecord();
-        $ordersVisible = FeatureFlags::enabled(Feature::PurchaseNeeds) && Gate::allows('viewAny', PurchaseNeed::class);
+        // D-229: tedarikci teklif kartlari teklif ozellikleriyle (2.9); Satin alinacaklar 2.8'de ayri sekmede.
+        $ordersVisible = FeatureFlags::enabled(Feature::PurchaseNeeds)
+            && FeatureFlags::enabled(Feature::PurchaseQuotes)
+            && Gate::allows('viewAny', PurchaseNeed::class);
 
         return $schema->columns(1)->components([
             Tabs::make('catalog-item')
@@ -264,11 +346,13 @@ class CatalogItemResource extends Resource
                     ->wrap(),
                 TextColumn::make('kind')
                     ->label(__('catalog.fields.kind'))
-                    ->badge(),
+                    ->badge()
+                    ->visible(! static::singleKind()),
                 TextColumn::make('usage_area')
                     ->label(__('catalog.fields.usage_area'))
                     ->badge()
-                    ->placeholder('-'),
+                    ->placeholder('-')
+                    ->visible(static::kinds()[0]->hasUsageArea()),
                 TextColumn::make('unit')
                     ->label(__('catalog.fields.unit'))
                     // D-194 (B54): sabit birimin adi; oncesinde serbest metin.
@@ -289,11 +373,14 @@ class CatalogItemResource extends Resource
                     ->placeholder('-'),
                 TextColumn::make('cost_lines_count')
                     ->label(__('catalog.fields.cost_lines_count'))
+                    // D-229: teklif maliyet kalemleri ve satin alinacaklar ikinci etapta.
+                    ->visible(fn (): bool => FeatureFlags::enabled(Feature::CostItems))
                     ->numeric()
                     ->alignEnd()
                     ->sortable(),
                 TextColumn::make('needs_count')
                     ->label(__('catalog.fields.needs_count'))
+                    ->visible(fn (): bool => FeatureFlags::enabled(Feature::PurchaseNeeds))
                     ->numeric()
                     ->alignEnd()
                     ->sortable(),
@@ -317,11 +404,12 @@ class CatalogItemResource extends Resource
                     ->query(fn (Builder $query, array $data): Builder => app(CatalogQueries::class)->archiveScope($query, (string) ($data['value'] ?? 'active'))),
                 SelectFilter::make('kind')
                     ->label(__('catalog.filters.kind'))
-                    ->options(CatalogItemKind::class)
+                    ->options(static::kindOptions())
+                    ->visible(! static::singleKind())
                     ->native(false),
                 SelectFilter::make('catalog_category_id')
                     ->label(__('catalog.filters.category'))
-                    ->options(fn (): array => app(CatalogQueries::class)->categoryOptions())
+                    ->options(fn (): array => app(CatalogQueries::class)->categoryOptions(static::kinds()[0]))
                     ->searchable()
                     ->native(false),
             ])

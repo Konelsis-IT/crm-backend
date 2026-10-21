@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\CatalogItems\Pages;
 
-use App\Enums\Procurement\CatalogItemKind;
 use App\Enums\Procurement\UsageArea;
-use App\Filament\Resources\CatalogCategories\CatalogCategoryResource;
 use App\Filament\Resources\CatalogItems\CatalogItemResource;
 use App\Filament\Support\ActionColors;
 use App\Query\Procurement\CatalogQueries;
@@ -19,9 +17,9 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Katalog listesi (D-189): Tumu, Urun, Hizmet, Genel gider, Idari kadro,
- * ve kullanim yerine gore Sirket ici, Saha sekmeleri (D-190); rozetler
- * arsivde olmayan kalem sayisidir.
+ * Katalog listesi (D-189): Tumu, Urun, Hizmet ve kullanim yerine gore Sirket
+ * ici, Saha sekmeleri (D-190); rozetler arsivde olmayan kalem sayisidir.
+ * Genel gider ve Idari kadro D-228'den beri kendi ekranlarinda (sekmesiz).
  */
 class ListCatalogItems extends ListRecords
 {
@@ -36,10 +34,10 @@ class ListCatalogItems extends ListRecords
                 ->icon(Heroicon::OutlinedFolder)
                 ->color(ActionColors::NEUTRAL)
                 ->outlined()
-                ->visible(fn (): bool => CatalogCategoryResource::canAccess())
-                ->url(fn (): string => CatalogCategoryResource::getUrl('index')),
+                ->visible(fn (): bool => static::getResource()::categoryResource()::canAccess())
+                ->url(fn (): string => static::getResource()::categoryResource()::getUrl('index')),
             CreateAction::make()
-                ->label(__('catalog.actions.create')),
+                ->label(static::getResource()::createLabel()),
         ];
     }
 
@@ -48,7 +46,14 @@ class ListCatalogItems extends ListRecords
      */
     public function getTabs(): array
     {
-        $counts = app(CatalogQueries::class)->kindCounts();
+        // D-228: Genel Gider ve Idari Kadro tek turlu ekranlar; sekme yok.
+        $resource = static::getResource();
+
+        if ($resource::singleKind()) {
+            return [];
+        }
+
+        $counts = array_intersect_key(app(CatalogQueries::class)->kindCounts(), array_flip($resource::kindValues()));
         $screen = app(CatalogScreenQueries::class);
 
         $tabs = [
@@ -56,7 +61,7 @@ class ListCatalogItems extends ListRecords
                 ->badge(array_sum($counts)),
         ];
 
-        foreach (CatalogItemKind::cases() as $kind) {
+        foreach ($resource::kinds() as $kind) {
             $tabs[$kind->value] = Tab::make((string) $kind->getLabel())
                 ->icon($kind->getIcon())
                 ->badge($counts[$kind->value] ?? 0)

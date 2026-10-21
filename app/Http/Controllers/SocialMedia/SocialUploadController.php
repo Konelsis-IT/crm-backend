@@ -10,7 +10,7 @@ use App\Exceptions\RecordNotFoundException;
 use App\Exceptions\SocialMedia\UploadSessionInvalidException;
 use App\Exceptions\StaleRecordException;
 use App\Http\Controllers\Controller;
-use App\Infrastructure\Media\ChunkedUploadStore;
+use App\Http\Middleware\Infrastructure\Media\ChunkedUploadStore;
 use App\Models\Personnel\Personnel;
 use App\Models\SocialMedia\SocialContent;
 use App\Query\SocialMedia\SocialContentQueries;

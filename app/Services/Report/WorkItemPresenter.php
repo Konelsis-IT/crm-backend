@@ -255,7 +255,7 @@ final class WorkItemPresenter
         $kind = $item->link_kind ?? WorkItemLinkKind::None;
         $record = $kind->visible() ? $item->linkedRecord() : null;
 
-        // D-220: satin alinacak kalem Satin alma (2.8) acilana kadar gorunmez.
+        // D-220 / D-229: satin alinacak kalem Satin alinacaklar (2.9) acilana kadar gorunmez.
         if ($kind === WorkItemLinkKind::None || ! $kind->visible() || $record === null) {
             return null;
         }

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Concerns;
 
 use App\Enums\Approval\ApprovalDecisionKind;
+use App\Enums\Platform\Feature;
 use App\Exceptions\AbstractException;
+use App\Filament\Support\DashboardAlerts;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Filament\Support\NewDashboardConfig;
@@ -20,6 +22,7 @@ use App\Query\Ui\NewDashboardQueries;
 use App\Services\Approval\ApprovalRequestService;
 use App\Services\Notification\UrgentWarningService;
 use App\Services\Notification\WarningTarget;
+use App\Services\Platform\FeatureFlags;
 use App\Support\Dashboard\DepartmentDashboards;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -28,6 +31,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
+use Throwable;
 
 /**
  * Departman panosunun (React, D-207 / D-208 / D-212) yonetici islemleri: UI
@@ -53,6 +57,26 @@ trait InteractsWithNewDashboard
     protected function newDashboardTitle(): ?string
     {
         return null;
+    }
+
+    /**
+     * Panelin ustundeki sayi seridi (Verilecek teklif, Sonuc bekleyen...). Genel
+     * bakista yok (19 Ekim 2026 kullanici: "Bu kart alaninin hicbir faydasi yok
+     * ... ilgili islerin siralandigi kartlarin baslik alani zaten ayni bilgiyi
+     * tutuyor"); UI Deneme katalogunda kalir.
+     */
+    protected function newDashboardShowsKpis(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Panonun sablon alani (D-208). Genel bakista ust cubuktaki Sablonlar
+     * menusu acikken yok (D-226); UI Deneme katalogunda kalir.
+     */
+    protected function newDashboardShowsTemplates(): bool
+    {
+        return true;
     }
 
     public function ndApproveAction(): Action
@@ -279,7 +303,30 @@ trait InteractsWithNewDashboard
      */
     protected function newDashboardConfig(): array
     {
-        return app(NewDashboardConfig::class)->make($this->newDashboardPanels(), $this->newDashboardTitle());
+        $config = [
+            ...app(NewDashboardConfig::class)->make($this->newDashboardPanels(), $this->newDashboardTitle(), $this->newDashboardShowsTemplates()),
+            'show_kpis' => $this->newDashboardShowsKpis(),
+        ];
+
+        // D-227: her panelin uyari seridi (kisinin sayilari, suzulu liste adresleri).
+        $viewer = auth()->user();
+
+        if ($viewer instanceof Personnel && FeatureFlags::enabled(Feature::DashboardAlertStrip)) {
+            foreach ((array) ($config['panels'] ?? []) as $panel) {
+                if (! is_array($config[$panel] ?? null)) {
+                    continue;
+                }
+
+                try {
+                    $config[$panel]['alerts'] = app(DashboardAlerts::class)->forPanel((string) $panel, $viewer);
+                } catch (Throwable $exception) {
+                    // Uyari hesaplanamazsa pano yine acilir; serit yalniz o panelde yok.
+                    report($exception);
+                }
+            }
+        }
+
+        return $config;
     }
 
     /** @param  array<string, mixed>  $arguments */

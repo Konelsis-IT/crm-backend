@@ -330,6 +330,29 @@
 
 .nd-panel { display: flex; flex-direction: column; gap: .75rem; }
 
+/* Uyari seridi (D-227): tiklanan, renkli kucuk haplar; sayi kalin. */
+.nd-alerts { display: flex; flex-wrap: wrap; gap: .375rem; }
+
+.nd-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: .3125rem;
+    min-height: 1.625rem;
+    padding: .125rem .625rem;
+    border: 1px solid color-mix(in srgb, var(--nd-tone) 35%, var(--nd-line));
+    border-radius: 999px;
+    background: var(--nd-tone-bg);
+    color: var(--nd-ink);
+    font-size: .75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+}
+
+.nd-alert:hover, .nd-alert:focus-visible { border-color: var(--nd-tone); }
+.nd-alert .nd-icon { width: .875rem; height: .875rem; flex: none; color: var(--nd-tone); }
+.nd-alert-count { color: var(--nd-tone); font-weight: 700; font-variant-numeric: tabular-nums; }
+
 .nd-kpis {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
@@ -672,7 +695,21 @@
 }
 
 .nd-lane-name { display: flex; flex: 1; flex-direction: column; min-width: 0; }
-.nd-lane-head .nd-card-title { display: flex; align-items: flex-start; min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
+/* Baslik tek satir (16 Ekim 2026 kullanici: "başlıklar tek satır butonlar altına gelsin"):
+   kelime ortasindan bolunmez; sigmazsa uc nokta, tamami ipucunda. */
+.nd-lane-head .nd-card-title { display: flex; align-items: center; min-width: 0; line-height: 1.25; white-space: nowrap; }
+.nd-lane-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Dar seritte (telefon, cok sutunlu yonetici paneli) baslik ilk satirda tek
+   basina; sayi ve departman dugmeleri alt satirda. */
+.nd-lane { container-type: inline-size; }
+
+@container (max-width: 20rem) {
+    .nd-lane-head { flex-wrap: wrap; row-gap: .25rem; }
+    .nd-lane-head .nd-lane-name { flex-basis: 100%; }
+    .nd-lane-head .nd-dept { margin-left: auto; }
+}
+
 .nd-lane-count { padding: 0 .4375rem; border-radius: 999px; background: var(--nd-gray-bg); font-size: .75rem; font-weight: 700; }
 .nd-lane-oldest { color: var(--nd-muted); font-size: .6875rem; white-space: nowrap; }
 
@@ -720,7 +757,7 @@
 .nd-lane--violet { --nd-lane-tone: #8b5cf6; }
 .nd-lane--green { --nd-lane-tone: #22c55e; }
 .nd-lane--amber { --nd-lane-tone: #f59e0b; }
-.nd-lane[class*="nd-lane--"] { border-color: color-mix(in srgb, var(--nd-lane-tone) 32%, var(--nd-line)); background: color-mix(in srgb, var(--nd-lane-tone) 7%, var(--nd-surface-2)); }
+.nd-lane[class*="nd-lane--"] { --nd-lane-bg: color-mix(in srgb, var(--nd-lane-tone) 7%, var(--nd-surface-2)); border-color: color-mix(in srgb, var(--nd-lane-tone) 32%, var(--nd-line)); background: var(--nd-lane-bg); }
 .nd-lane[class*="nd-lane--"] .nd-lane-head { border-bottom-color: color-mix(in srgb, var(--nd-lane-tone) 30%, var(--nd-line)); background: color-mix(in srgb, var(--nd-lane-tone) 15%, var(--nd-surface)); box-shadow: inset 0 3px 0 var(--nd-lane-tone); }
 
 /* D-217: gruplu serit (proje basligi ac / kapat). */
@@ -737,9 +774,14 @@
 .nd-group-link:hover { background: var(--nd-surface); color: var(--nd-accent); }
 .nd-group-link .nd-icon { width: .875rem; height: .875rem; }
 .nd-group-body { display: flex; flex-direction: column; gap: .375rem; padding-left: .5rem; border-left: 2px solid color-mix(in srgb, var(--nd-lane-tone, var(--nd-accent)) 35%, transparent); }
-.nd-lane-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .375rem; }
-.nd-lane-card-title { display: -webkit-box; overflow: hidden; font-weight: 600; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.nd-lane-card-sub { overflow: hidden; color: var(--nd-muted); font-size: .6875rem; text-overflow: ellipsis; white-space: nowrap; }
+.nd-lane-card-top { display: flex; align-items: center; justify-content: space-between; gap: .375rem; }
+/* Uyari dugmeleri basligin satirini uzatmaz (19 Ekim 2026: baslik altinda gereksiz bosluk). */
+.nd-lane-card-top .nd-icon-btn { width: 1.25rem; height: 1.25rem; margin-block: -.1875rem; }
+.nd-lane-card-top .nd-icon-btn .nd-icon { width: .8125rem; height: .8125rem; }
+.nd-lane-card-top .nd-lane-card-title { line-height: 1.25; }
+/* Baslik ve aciklama tek satir; sigmazsa kayar (Marquee, 19 Ekim 2026). */
+.nd-lane-card-title { display: block; overflow: hidden; font-weight: 600; white-space: nowrap; }
+.nd-lane-card-sub { display: block; overflow: hidden; color: var(--nd-muted); font-size: .6875rem; white-space: nowrap; }
 /* Dar seritte (alti sutun) sahip bir satir, etiketler alt satira sarar. */
 .nd-lane-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem .375rem; font-size: .75rem; }
 .nd-lane-card-tags { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .25rem; margin-left: auto; min-width: 0; }
@@ -858,6 +900,12 @@
 @media (max-width: 720px) {
     .nd-tabs { width: 100%; overflow-x: auto; }
     .nd-ann-meta { display: none; }
+    /* Telefonda dugmeler basligin altinda solda: menu dugmenin solundan acilir,
+       ekrandan tasmaz (16 Ekim 2026: Yeni kayit menusu soldan kesiliyordu). */
+    .nd-menu-list { left: 0; right: auto; max-width: calc(100vw - 2rem); }
+    .nd-menu-item { white-space: normal; }
+    /* Seritler telefonda daha genis; yatay kayar. */
+    .nd-lanes { --nd-lane-min: 14rem; }
 }
 
 /* ---------------------------------------------------------------- yonetici islemleri (D-208) */
@@ -992,4 +1040,205 @@
     .nd-ticker { overflow-x: auto; mask-image: none; }
     .nd-ticker-track { animation: none; }
     .nd-ticker-run[aria-hidden="true"] { display: none; }
+}
+
+/* ---------------------------------------------------------------- proje tipi ve kart penceresi (D-222) */
+
+/* Kart altinda sorumlunun yalniz avatari, yaninda proje tipi rozetleri (kendi renginde, simgeli). */
+.nd-lane-card-who { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .25rem; min-width: 0; }
+.nd-types { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
+
+/* Kucuk rozet (19 Ekim 2026: "proje tip yazisini badge'ini felan daha kucuk yapmalisin"). */
+.nd-type {
+    --nd-type: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    gap: .125rem;
+    height: .9375rem;
+    padding: 0 .25rem;
+    border: 1px solid color-mix(in srgb, var(--nd-type) 28%, transparent);
+    border-radius: .25rem;
+    background: color-mix(in srgb, var(--nd-type) 10%, transparent);
+    color: var(--nd-type);
+    font-size: .5625rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+
+.nd-type .nd-icon { width: .625rem; height: .625rem; }
+
+/* Sicaklik: kalp + yuzde (kontrol listesindeki kalp, kartta kucuk). */
+.nd-heat { gap: .1875rem; }
+.nd-heat .kc-heat__heart { width: .8125rem; height: .8125rem; filter: none; }
+.nd-heat .kc-heat__value { font-size: .6875rem; }
+.nd-type--warning { --nd-type: var(--warning-700); }
+.nd-type--info { --nd-type: var(--info-600); }
+.nd-type--primary { --nd-type: var(--primary-600); }
+.nd-type--success { --nd-type: var(--success-700); }
+.nd-type--danger { --nd-type: var(--danger-600); }
+.nd-type--gray { --nd-type: var(--gray-600); }
+.dark .nd-type--warning { --nd-type: var(--warning-400); }
+.dark .nd-type--info { --nd-type: var(--info-400); }
+.dark .nd-type--primary { --nd-type: var(--primary-400); }
+.dark .nd-type--success { --nd-type: var(--success-400); }
+.dark .nd-type--danger { --nd-type: var(--danger-400); }
+.dark .nd-type--gray { --nd-type: var(--gray-300); }
+.nd-popup-body .nd-types, .nd-drawer-main .nd-types { margin-top: .125rem; }
+
+.nd-dialog-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgb(0 0 0 / .35);
+}
+
+.nd-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: .625rem;
+    width: 26rem;
+    max-width: 100%;
+    max-height: calc(100vh - 2rem);
+    padding: .875rem 1rem 1rem;
+    overflow: auto;
+    border: 1px solid var(--nd-line);
+    border-top: 4px solid var(--nd-level, var(--nd-accent));
+    border-radius: .875rem;
+    background: var(--nd-surface);
+    box-shadow: var(--nd-shadow-lg);
+    animation: nd-pop .24s cubic-bezier(.2, .9, .3, 1.15);
+}
+
+.nd-dialog-head { display: flex; align-items: center; gap: .625rem; }
+
+.nd-dialog-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--nd-level, var(--nd-accent)) 12%, transparent);
+    color: var(--nd-level, var(--nd-accent));
+    flex: none;
+}
+
+.nd-dialog-icon .nd-icon { width: 1.125rem; height: 1.125rem; }
+.nd-dialog-headtext { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.nd-dialog-kicker { color: var(--nd-muted); font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.nd-dialog-headtext .nd-codes { font-size: .75rem; }
+.nd-dialog-title { font-size: 1rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+
+/* Etiketsiz satirlar (19 Ekim 2026: "bu bilgilere gerek yok"). */
+.nd-dialog-facts { display: grid; gap: .4375rem; padding: .5rem .625rem; border-radius: .625rem; background: var(--nd-surface-2); }
+.nd-dialog-line { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem .5rem; min-width: 0; font-size: .8125rem; }
+.nd-dialog-line .nd-owner { max-width: none; }
+.nd-dialog-muted { color: var(--nd-muted); }
+.nd-dialog-muted > span { min-width: 0; overflow-wrap: anywhere; }
+.nd-dialog-line > .nd-icon, .nd-dialog-date .nd-icon { width: .875rem; height: .875rem; flex: none; }
+.nd-dialog-date { display: inline-flex; align-items: center; gap: .25rem; color: var(--nd-muted); font-size: .75rem; }
+.nd-dialog .nd-heat .kc-heat__heart { width: 1rem; height: 1rem; }
+.nd-dialog .nd-heat .kc-heat__value { font-size: .8125rem; }
+
+.nd-dialog-question { margin: 0; color: var(--nd-ink); font-size: .8125rem; font-weight: 600; }
+.nd-dialog-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; }
+
+@media (max-width: 720px) {
+    .nd-dialog-wrap { align-items: flex-end; padding: .5rem; }
+    .nd-dialog { width: 100%; }
+    .nd-dialog-actions .nd-btn { flex: 1; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nd-dialog { animation: none; }
+}
+
+/* Kartta birden fazla proje tipi: yalniz simge; kartin avatari biraz daha kucuk. */
+.nd-type.is-icon { justify-content: center; width: .9375rem; padding: 0; }
+.nd-lane-card-who .nd-avatar { width: 1.125rem; height: 1.125rem; font-size: .5625rem; }
+
+/* Kart altinda rozetler biraz daha siki (19 Ekim 2026: kart kuculsun). */
+.nd-lane-card-foot .nd-pill { padding: 0 .3125rem; font-size: .625rem; }
+.nd-lane-card-foot .nd-amount { font-size: .6875rem; }
+.nd-lane-card-foot { gap: .1875rem .3125rem; }
+
+/* Tek satir kayan yazi (19 Ekim 2026: "sigmayan satirlar ... alt yazi gibi calissin. donsun dursun"):
+   bastan baslar, bekler, sona kayar, bekler, geri doner. Uzerine gelince durur. */
+/*
+ * Kaydirilan alan (D-225, 19 Ekim 2026 kullanici: kaydirma cubugu "gereksiz alan kaybina yol
+ * aciyor"): cubuk yer kaplamaz; devami varsa altta solan / bulaniklasan serit ve asagi ok
+ * (ScrollArea). Serit zemini --nd-lane-bg (tonlu seritte kendi rengi).
+ */
+.nd-scroll-area { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.nd-scroll-area > .nd-lane-body { scrollbar-width: none; }
+.nd-scroll-area > .nd-lane-body::-webkit-scrollbar { display: none; }
+
+.nd-scroll-more {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 3.5rem;
+    padding-bottom: .375rem;
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--nd-lane-bg, var(--nd-surface-2)) 88%, transparent) 72%);
+    -webkit-backdrop-filter: blur(1.5px);
+    backdrop-filter: blur(1.5px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 55%);
+    mask-image: linear-gradient(to bottom, transparent, #000 55%);
+    pointer-events: none;
+}
+
+.nd-scroll-more-btn {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 1px solid var(--nd-line);
+    border-radius: 999px;
+    background: var(--nd-surface);
+    color: var(--nd-muted);
+    box-shadow: var(--nd-shadow);
+    cursor: pointer;
+    pointer-events: auto;
+    animation: nd-nudge 2.4s ease-in-out infinite;
+}
+
+.nd-scroll-more-btn:hover { color: var(--nd-accent); border-color: var(--nd-accent); animation-play-state: paused; }
+.nd-scroll-more-btn .nd-icon { width: .875rem; height: .875rem; }
+
+@keyframes nd-nudge {
+    0%, 70%, 100% { transform: translateY(0); }
+    80% { transform: translateY(2px); }
+    90% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nd-scroll-more-btn { animation: none; }
+}
+
+.nd-marquee { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
+.nd-marquee-text { display: inline-block; white-space: nowrap; will-change: transform; }
+.nd-marquee.is-moving .nd-marquee-text { animation: nd-marquee var(--nd-marquee-time, 8s) ease-in-out infinite; }
+.nd-lane-card:hover .nd-marquee-text, .nd-lane-card:focus-within .nd-marquee-text { animation-play-state: paused; }
+
+@keyframes nd-marquee {
+    0%, 15% { transform: translateX(0); }
+    45%, 60% { transform: translateX(var(--nd-shift, 0)); }
+    90%, 100% { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nd-marquee.is-moving .nd-marquee-text { animation: none; }
+    .nd-marquee-text { display: inline; }
+    .nd-marquee { text-overflow: ellipsis; }
 }

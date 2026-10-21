@@ -32,6 +32,7 @@ use App\Query\Acquisition\BusinessCaseQueries;
 use App\Query\Document\FixedDocumentQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Support\DisplayTime;
+use App\Support\Projects\ProjectNames;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -131,7 +132,7 @@ final class NewDashboardQueries
         }
 
         return WorkItem::query()
-            ->with(['project', 'personnel:id,full_name'])
+            ->with(['project', ...self::projectScopes(), 'personnel:id,full_name'])
             ->whereNotNull('project_id')
             ->whereIn('status', WorkItemStatus::openValues())
             ->orderByDesc('is_critical')
@@ -307,7 +308,7 @@ final class NewDashboardQueries
     public function casesInOfferPreparation(): Collection
     {
         return BusinessCase::query()
-            ->with(['codes', 'primaryParty:id,display_name', 'owner:id,full_name'])
+            ->with(['codes', 'scopes', 'primaryParty:id,display_name', 'owner:id,full_name'])
             ->where('acquisition_stage', 'offer_preparation')
             ->where('is_draft', false)
             ->oldest('updated_at')
@@ -340,7 +341,7 @@ final class NewDashboardQueries
         }
 
         return PurchaseRequest::query()
-            ->with(['requestedBy:id,full_name', 'project'])
+            ->with(['requestedBy:id,full_name', 'project', ...self::projectScopes()])
             ->whereNull('archived_at')
             ->whereIn('status', [PurchaseRequestStatus::Open->value, PurchaseRequestStatus::InProgress->value])
             ->oldest()
@@ -355,7 +356,7 @@ final class NewDashboardQueries
     public function needsInEntry(): Collection
     {
         return PurchaseNeed::query()
-            ->with(['project', 'purchaseRequest'])
+            ->with(['project', ...self::projectScopes(), 'purchaseRequest'])
             ->whereIn('status', [PurchaseNeedStatus::Open->value, PurchaseNeedStatus::Quoting->value, PurchaseNeedStatus::Recommended->value])
             ->oldest()
             ->get();
@@ -424,7 +425,7 @@ final class NewDashboardQueries
                 ->where(fn ($query) => $query->where('is_urgent', true)->orWhere('needed_by', '<=', $soon))
                 ->get() : collect(),
             'needs' => PurchaseNeed::query()
-                ->with(['project', 'purchaseRequest'])
+                ->with(['project', ...self::projectScopes(), 'purchaseRequest'])
                 ->whereNotIn('status', [PurchaseNeedStatus::Ordered->value, PurchaseNeedStatus::Completed->value, PurchaseNeedStatus::Cancelled->value])
                 ->where(fn ($query) => $query->where('is_urgent', true)->orWhere('needed_by', '<=', $soon))
                 ->get(),
@@ -459,7 +460,7 @@ final class NewDashboardQueries
      */
     public function casesInDevelopment(bool $potential): Collection
     {
-        $query = BusinessCase::query()->with(['codes', 'primaryParty:id,display_name', 'owner:id,full_name']);
+        $query = BusinessCase::query()->with(['codes', 'scopes', 'primaryParty:id,display_name', 'owner:id,full_name']);
 
         return app(BusinessCaseQueries::class)
             ->withKind($query, $potential, true)
@@ -569,7 +570,7 @@ final class NewDashboardQueries
     private function proposals(array $statuses): Collection
     {
         return Proposal::query()
-            ->with(['currentVersion', 'businessCase.codes', 'businessCase.primaryParty:id,display_name', 'owner:id,full_name'])
+            ->with(['currentVersion', ...(SchemaReadiness::hasBatch('B43') ? ['currentVersion.scopes'] : []), 'businessCase.codes', 'businessCase.scopes', 'businessCase.primaryParty:id,display_name', 'owner:id,full_name'])
             ->whereIn('offer_status', array_map(static fn (OfferStatus $status): string => $status->value, $statuses))
             ->get();
     }
@@ -586,9 +587,20 @@ final class NewDashboardQueries
 
         return PurchaseOrder::query()
             ->notArchived()
-            ->with(['project', 'supplier'])
+            ->with(['project', ...self::projectScopes(), 'supplier'])
             ->whereIn('status', array_map(static fn (PurchaseOrderStatus $status): string => $status->value, $statuses))
             ->oldest()
             ->get();
+    }
+
+    /**
+     * Projenin kapsamlari (B48, proje tipi rozetleri; D-222) yalniz tip ekranda
+     * gosteriliyorsa yuklenir.
+     *
+     * @return list<string>
+     */
+    private static function projectScopes(): array
+    {
+        return ProjectNames::scopeTypesEnabled() ? ['project.scopes'] : [];
     }
 }

@@ -82,8 +82,8 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
     }
 
     /**
-     * Ekranda gosterilir ve secilir mi: satin alinacak kalem Satin alma (2.8)
-     * acilmadan gorunmez (D-220: is sistemi 2.7'de, satin alma 2.8'de bekliyor).
+     * Ekranda gosterilir ve secilir mi: satin alinacak kalem Satin alinacaklar
+     * acilmadan gorunmez (D-220; D-229: satin alinacaklar 2.9'da).
      */
     public function visible(): bool
     {

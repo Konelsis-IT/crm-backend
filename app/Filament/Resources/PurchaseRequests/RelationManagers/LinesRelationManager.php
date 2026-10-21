@@ -34,9 +34,10 @@ class LinesRelationManager extends RelationManager
         return __('purchase_request.sections.lines');
     }
 
+    /** D-229: talebin kendi kalemleri; Satin alinacaklar ekrani kapaliyken de gorunur. */
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return PurchaseRequestForm::enabled() && PurchaseNeedResource::canAccess();
+        return PurchaseRequestForm::enabled();
     }
 
     public function isReadOnly(): bool

@@ -8,6 +8,22 @@ return [
     'label' => 'Malzeme / hizmet',
     'plural' => 'Malzeme ve Hizmetler',
 
+    // D-228: Genel gider (Muhasebe / Finans) ve Idari kadro (Idari) kendi ekranlarinda.
+    'general_expense' => [
+        'nav' => 'Genel Gider',
+        'label' => 'Genel gider',
+        'plural' => 'Genel Gider',
+        'create' => 'Genel gider ekle',
+        'categories' => 'Genel gider kategorileri',
+    ],
+    'admin_staff' => [
+        'nav' => 'İdari Kadro',
+        'label' => 'İdari kadro',
+        'plural' => 'İdari Kadro',
+        'create' => 'İdari kadro ekle',
+        'categories' => 'İdari kadro kategorileri',
+    ],
+
     'tabs' => [
         'all' => 'Tümü',
     ],
