@@ -157,17 +157,25 @@ final class PurchaseRequestForm
                     ->inline()
                     ->required()
                     ->live(),
+                // D-230 (21 Ekim 2026, kullanici: "Saha'dan gelen taleplerde proje secimi
+                // zorunludur. Ama sirket ici oldugunda proje alani doldurulmak zorunda degildir"):
+                // proje her iki kullanim yerinde secilebilir, Saha'da zorunlu (servis de denetler).
                 Select::make('project_id')
                     ->label(__('purchase_request.fields.project'))
+                    ->helperText(__('purchase_request.help.project'))
                     ->options(fn (): array => app(ProjectCatalogQueries::class)->projectOptions())
                     ->searchable()
-                    ->visible(fn (Get $get): bool => FormState::value($get('usage_area')) === UsageArea::Field->value)
+                    ->required(fn (Get $get): bool => FormState::value($get('usage_area')) === UsageArea::Field->value)
                     ->native(false),
+                // D-230: "departman degistirilemez olmalidir" - talep edenin departmani;
+                // devre disi alan gonderilmez, servis talep edenin birimini yazar.
                 Select::make('org_unit_id')
                     ->label(__('purchase_request.fields.org_unit'))
+                    ->helperText(__('purchase_request.help.org_unit'))
                     ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
                     ->default($ownUnit)
-                    ->searchable()
+                    ->disabled()
+                    ->selectablePlaceholder(false)
                     ->native(false),
                 DatePicker::make('needed_by')
                     ->label(__('purchase_request.fields.needed_by'))

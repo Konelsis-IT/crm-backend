@@ -53,6 +53,9 @@ return [
 
     'help' => [
         'usage_area' => 'Şirket içi talepler tamamlanınca Şirket içi alımlar\'a yazılır.',
+        // D-230
+        'project' => 'Saha talebinde zorunlu; şirket içi talep bir projeyle ilgiliyse seçebilirsiniz.',
+        'org_unit' => 'Talep edenin departmanı; değiştirilemez.',
         'justification' => 'Neden gerekli? Saha ya da proje neden istiyor?',
         'existing_check' => 'Şirkette var olan ürün / hizmet neden kullanılamıyor?',
         'catalog_item' => 'Malzeme ve Hizmetler\'den seçin; listede yoksa "Listede yok"u açıp adını yazın.',

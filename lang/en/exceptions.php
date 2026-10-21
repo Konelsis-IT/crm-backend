@@ -114,6 +114,8 @@ return [
         'purchase_not_allowed' => 'You are not allowed to do this.',
         'catalog_item_required' => 'This request names an item that is not in the catalog; link it to a catalog item first ("Match to catalog").',
         'purchase_request_incomplete' => 'A purchase request needs an item (from the catalog or by name) and a justification.',
+        // D-230
+        'purchase_project_required' => 'A purchase request for the field needs a project.',
         'purchase_request_required' => 'An in-house purchase must be linked to a purchase request; choose the request first.',
         // D-192 (B53)
         'purchase_quotation_locked' => 'This purchase quotation was ordered, rejected or cancelled; it cannot be changed.',

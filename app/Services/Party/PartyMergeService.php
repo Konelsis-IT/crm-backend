@@ -10,6 +10,7 @@ use App\Enums\Party\PartyStatus;
 use App\Exceptions\Party\PartyMergeNotAllowedException;
 use App\Exceptions\RecordNotFoundException;
 use App\Models\Party\Party;
+use App\Models\Scopes\HidePurchaseOnlyPartiesScope;
 use App\Query\Party\PartyMergeQueries;
 use App\Services\AbstractService;
 use App\Services\Audit\ActivityRecorder;
@@ -65,6 +66,9 @@ final class PartyMergeService extends AbstractService
 
     protected string $subjectType = 'party';
 
+    /** D-232: tedarikci firma (yalniz tedarikci) da birlestirilebilir ("Ayni firma"). */
+    protected array $withoutGlobalScopes = [HidePurchaseOnlyPartiesScope::class];
+
     /** Hedefte bossa kaynaktan doldurulan kurulus profili alanlari. */
     private const PROFILE_FILL = [
         'trade_name', 'registration_no', 'tax_office', 'tax_number', 'founded_year', 'website_url',
@@ -98,6 +102,8 @@ final class PartyMergeService extends AbstractService
         'party_activity_areas' => ['project_type', 'activity_area_id', 'sub_activity_area_id'],
         'contract_parties' => ['contract_version_id', 'contract_role'],
         'business_development_activity_participants' => ['activity_id'],
+        // D-232: bir firmanin tek tedarikci kaydi olur; hedefte varsa kaynaktaki kaynakta kalir.
+        'purchase_suppliers' => [],
     ];
 
     public const ACTION_MOVE = 'move';
@@ -161,7 +167,7 @@ final class PartyMergeService extends AbstractService
             ], static fn (mixed $value): bool => $value !== null && $value !== []));
 
             /** @var Party $fresh */
-            $fresh = Party::query()->with(['organizationProfile', 'personProfile', 'roles'])->findOrFail($to->getKey());
+            $fresh = Party::query()->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)->with(['organizationProfile', 'personProfile', 'roles'])->findOrFail($to->getKey());
 
             return $fresh;
         });
@@ -241,6 +247,7 @@ final class PartyMergeService extends AbstractService
         $targetId = $target instanceof Party ? (int) $target->getKey() : $target;
 
         $rows = Party::query()
+            ->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)
             ->with(['organizationProfile', 'personProfile'])
             ->whereKey(array_unique([$sourceId, $targetId]))
             ->orderBy('id')
@@ -262,6 +269,7 @@ final class PartyMergeService extends AbstractService
     {
         /** @var Party|null $found */
         $found = Party::query()
+            ->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)
             ->with(['organizationProfile', 'personProfile'])
             ->find($party instanceof Party ? $party->getKey() : $party);
 

@@ -218,6 +218,12 @@ final class PurchaseNeedService extends AbstractService
 
         $usage = self::usageValue($data['usage_area'] ?? null) ?? $item?->usageEnum()?->value;
 
+        // D-230: elle acilan kalem ve tek kalemli talep Saha'da projeyle acilir
+        // (kalemli talebin satirlari basliktan gelir, baslik ayrica denetlenir).
+        if (in_array($source, [PurchaseNeedSource::Manual, PurchaseNeedSource::OfficeRequest], true) && blank($data['purchase_request_id'] ?? null)) {
+            PurchaseRequestService::assertProject($usage, $data['project_id'] ?? null);
+        }
+
         return parent::create([
             ...array_intersect_key($data, array_flip(self::EDITABLE)),
             'source' => $source->value,

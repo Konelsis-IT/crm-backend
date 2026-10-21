@@ -114,6 +114,8 @@ return [
         'purchase_not_allowed' => 'Bu işlem için yetkiniz yok.',
         'catalog_item_required' => 'Bu talep katalogda olmayan bir ürün / hizmetle açıldı; önce "Katalogla eşleştir" ile bir katalog kalemine bağlayın.',
         'purchase_request_incomplete' => 'Satın alma talebinde ürün / hizmet (katalogdan ya da adıyla) ve gerekçe zorunludur.',
+        // D-230
+        'purchase_project_required' => 'Saha için açılan satın alma talebinde proje seçimi zorunludur.',
         'purchase_request_required' => 'Şirket içi alım bir satın alma talebine bağlı olmalıdır; önce talebi seçin.',
         // D-192 (B53)
         'purchase_quotation_locked' => 'Bu satın alma teklifi siparişe dönüştü, reddedildi ya da iptal edildi; değiştirilemez.',

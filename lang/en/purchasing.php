@@ -128,6 +128,9 @@ return [
         'justification' => 'Why is it needed? Why does the site or project want it?',
         'existing_check' => 'Why can the product / service the company already has not be used?',
         'usage_area' => 'Completed in-house requests are written to In-house purchases.',
+        // D-230
+        'project' => 'Required for field requests; for in-house requests choose it if the request belongs to a project.',
+        'org_unit' => 'The requester\'s department; cannot be changed.',
         'link_catalog' => 'The requested name is linked to an existing material / service (matched automatically next time) or added to the Materials and Services once as a new item.',
         'supplier_name' => 'Type the name if the company is not registered.',
         'try_rate' => 'TRY value of one unit of the currency; the approval limit is compared in TRY.',

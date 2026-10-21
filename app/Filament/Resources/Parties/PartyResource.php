@@ -16,6 +16,7 @@ use App\Enums\Party\VisitPriority;
 use App\Exceptions\AbstractException;
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\Parties\Pages\CreateParty;
+use App\Filament\Resources\PurchaseSuppliers\PurchaseSupplierResource;
 use App\Filament\Resources\Parties\Pages\EditParty;
 use App\Filament\Resources\Parties\Pages\ListParties;
 use App\Filament\Resources\Parties\Pages\ViewParty;
@@ -147,12 +148,42 @@ class PartyResource extends Resource
     }
 
     /**
+     * D-232: yalniz tedarikci olan firmanin baglantisi Tedarikciler sayfasini
+     * acar (Taraflar'da gorunmez); digerleri Taraflar'da.
+     */
+    public static function resourceForRecord(Model $record): string
+    {
+        if ($record instanceof Party && SchemaReadiness::hasBatch('B58')) {
+            $supplier = $record->relationLoaded('purchaseSupplier')
+                ? $record->getRelation('purchaseSupplier')
+                : $record->purchaseSupplier()->first();
+
+            if ($supplier !== null && (bool) $supplier->getAttribute('purchase_only')) {
+                return PurchaseSupplierResource::class;
+            }
+        }
+
+        return self::class;
+    }
+
+    /**
      * Taraf formu. Dernekler (AssociationResource) ayni formu kullanir
      * ($association = true): tur, taraf tipi, koken, rakip firma ve faaliyet
      * alanlari gizlidir; kayit Dernek / oda tipiyle acilir (CreateAssociation).
+     *
+     * Satin alma tedarikcileri (D-232, PurchaseSupplierResource) de ayni formu
+     * kullanir ($supplier = true): yalniz kurulus; durum, network, ziyaret
+     * onceligi, koken, rakip, taraf tipi ve faaliyet alanlari yok. Tedarikci
+     * bolumu $extraSections ile eklenir.
+     *
+     * @param  list<\Filament\Schemas\Components\Component>  $extraSections
      */
-    public static function partyForm(Schema $schema, bool $association = false): Schema
+    public static function partyForm(Schema $schema, bool $association = false, bool $supplier = false, array $extraSections = []): Schema
     {
+        // Kurulus disi (kisi) secimi yalniz Taraflar'da.
+        $organizationOnly = $association || $supplier;
+        $acquisition = ! $association && ! $supplier;
+
         return $schema->columns(1)->components([
             Section::make(__('party.sections.main'))
                 ->columns(FieldGrid::COLUMNS)
@@ -165,14 +196,14 @@ class PartyResource extends Resource
                             ->native(false)
                             ->disabledOn('edit')
                             ->dehydratedWhenHidden(false)
-                            ->visible(! $association)
+                            ->visible(! $organizationOnly)
                             ->live(),
                         // Kisi tarafi tek ad tasir; kurulusta gorunen ad kisa addan,
                         // kisa ad yoksa uzun addan gelir (D-170, PartyService).
                         TextInput::make('display_name')
                             ->label(__('party.fields.display_name'))
-                            ->required(fn (Get $get): bool => ! self::isOrganization($get, $association))
-                            ->visible(fn (Get $get): bool => ! self::isOrganization($get, $association))
+                            ->required(fn (Get $get): bool => ! self::isOrganization($get, $organizationOnly))
+                            ->visible(fn (Get $get): bool => ! self::isOrganization($get, $organizationOnly))
                             ->maxLength(255)
                             ->columnSpan(FieldGrid::WIDE),
                         // Kisa ad / uzun ad (D-170, 7 Ekim 2026 kullanici talimati): bazi
@@ -181,14 +212,14 @@ class PartyResource extends Resource
                         TextInput::make('organization_profile.trade_name')
                             ->label(__('party.fields.trade_name'))
                             ->helperText(__('party.help.trade_name'))
-                            ->visible(fn (Get $get): bool => self::isOrganization($get, $association))
+                            ->visible(fn (Get $get): bool => self::isOrganization($get, $organizationOnly))
                             ->maxLength(255)
                             ->columnSpan(FieldGrid::WIDE),
                         TextInput::make('organization_profile.legal_name')
                             ->label(__('party.fields.legal_name'))
                             ->helperText(__('party.help.legal_name'))
-                            ->required(fn (Get $get): bool => self::isOrganization($get, $association))
-                            ->visible(fn (Get $get): bool => self::isOrganization($get, $association))
+                            ->required(fn (Get $get): bool => self::isOrganization($get, $organizationOnly))
+                            ->visible(fn (Get $get): bool => self::isOrganization($get, $organizationOnly))
                             ->maxLength(255)
                             ->columnSpan(FieldGrid::WIDE),
                         Select::make('country_code')
@@ -199,6 +230,9 @@ class PartyResource extends Resource
                             ->native(false),
                         Select::make('status')
                             ->label(__('party.fields.status'))
+                            // D-232: tedarikcide durum yok (servis Aktif yazar).
+                            ->visible(! $supplier)
+                            ->dehydrated(! $supplier)
                             // D-170: "Birlestirildi" yalniz birlestirme servisiyle yazilir.
                             ->options(fn (?Party $record): array => $record?->status === PartyStatus::Merged
                                 ? PartyStatus::options()
@@ -213,15 +247,15 @@ class PartyResource extends Resource
                             ->helperText(__('party.help.network_note'))
                             ->maxLength(255)
                             ->columnSpan(FieldGrid::WIDE)
-                            ->visible(fn (): bool => SchemaReadiness::hasBatch('B28'))
-                            ->dehydrated(fn (): bool => SchemaReadiness::hasBatch('B28')),
+                            ->visible(fn (): bool => ! $supplier && SchemaReadiness::hasBatch('B28'))
+                            ->dehydrated(fn (): bool => ! $supplier && SchemaReadiness::hasBatch('B28')),
                         Select::make('visit_priority')
                             ->label(__('party.fields.visit_priority'))
                             ->options(VisitPriority::class)
                             ->native(false)
                             ->placeholder('-')
-                            ->visible(fn (): bool => SchemaReadiness::hasBatch('B28'))
-                            ->dehydrated(fn (): bool => SchemaReadiness::hasBatch('B28')),
+                            ->visible(fn (): bool => ! $supplier && SchemaReadiness::hasBatch('B28'))
+                            ->dehydrated(fn (): bool => ! $supplier && SchemaReadiness::hasBatch('B28')),
                         // Koken ve rakip firma (B33, D-107): firma duzeyinde; rakip
                         // isaretini ilgili personel verir.
                         Select::make('origin')
@@ -229,14 +263,14 @@ class PartyResource extends Resource
                             ->options(PartyOrigin::class)
                             ->native(false)
                             ->placeholder('-')
-                            ->visible(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33'))
-                            ->dehydrated(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33')),
+                            ->visible(fn (): bool => $acquisition && SchemaReadiness::hasBatch('B33'))
+                            ->dehydrated(fn (): bool => $acquisition && SchemaReadiness::hasBatch('B33')),
                         Checkbox::make('is_competitor')
                             ->label(__('party.fields.is_competitor'))
                             ->helperText(__('party.help.is_competitor'))
                             ->inline(false)
-                            ->visible(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33'))
-                            ->dehydrated(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33')),
+                            ->visible(fn (): bool => $acquisition && SchemaReadiness::hasBatch('B33'))
+                            ->dehydrated(fn (): bool => $acquisition && SchemaReadiness::hasBatch('B33')),
                 ])),
             // Taraf tipi (D-95, 16 Eylul 2026 kullanici karari): yeni taraf en az bir
             // tiple acilir; satirlar "Taraf tipi" penceresiyle ayni alanlari tasir ve
@@ -247,7 +281,7 @@ class PartyResource extends Resource
                 ->description(__('party.help.role_codes'))
                 ->icon(Heroicon::OutlinedTag)
                 ->visibleOn('create')
-                ->visible(! $association)
+                ->visible($acquisition)
                 ->components([
                     Repeater::make('party_roles')
                         ->label(__('party_role.plural'))
@@ -299,7 +333,7 @@ class PartyResource extends Resource
             Section::make(__('party.sections.activity_areas'))
                 ->description(__('party.help.activity_areas'))
                 ->icon(Heroicon::OutlinedSquares2x2)
-                ->visible(fn (): bool => ! $association && SchemaReadiness::hasBatch('B33'))
+                ->visible(fn (): bool => $acquisition && SchemaReadiness::hasBatch('B33'))
                 ->components([
                     Repeater::make('activity_areas')
                         ->label(__('party.sections.activity_areas'))
@@ -448,6 +482,7 @@ class PartyResource extends Resource
                 ])),
             // Surum damgasi her taraf turunde gonderilmeli; gizli bolum icinde
             // kalirsa dehydrate edilmez ve eski surum denetimi calismaz.
+            ...$extraSections,
             Hidden::make('row_version')->hiddenOn('create'),
         ]);
     }

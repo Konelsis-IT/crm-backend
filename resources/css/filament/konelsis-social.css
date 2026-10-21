@@ -625,6 +625,10 @@ button.ks-chip__main:hover:not(:disabled) { background: var(--ks-surface-2); }
 .ks-field__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
 .ks-field__label { font-size: 0.8125rem; font-weight: 600; color: var(--ks-text); }
 .ks-field__required { color: var(--ks-accent); font-weight: 700; }
+/* D-231: "*" yerine kucuk "(zorunlu)" (sistemin geri kalaniyla ayni). */
+.ks-field__required { margin-inline-start: 0.25rem; font-size: 0; }
+.ks-field__required::after { content: "(zorunlu)"; font-size: 0.6875rem; font-weight: 400; }
+html[lang|="en"] .ks-field__required::after { content: "(required)"; }
 .ks-field__counter { font-size: 0.75rem; color: var(--ks-text-muted); font-variant-numeric: tabular-nums; }
 .ks-field__control { min-width: 0; display: flex; flex-direction: column; }
 .ks-field__hint { font-size: 0.75rem; color: var(--ks-text-muted); }

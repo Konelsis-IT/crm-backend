@@ -21,7 +21,9 @@ use App\Models\Party\PartyMeetingNote;
 use App\Models\Party\PartyRole;
 use App\Models\Party\PersonProfile;
 use App\Models\Personnel\Personnel;
+use App\Models\Procurement\PurchaseSupplier;
 use App\Models\Reference\Country;
+use App\Models\Scopes\HidePurchaseOnlyPartiesScope;
 use App\Models\WorkRequest\WorkRequest;
 use App\Policies\PartyPolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -55,6 +57,18 @@ class Party extends Model
             'origin' => PartyOrigin::class,
             'is_competitor' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // D-232: yalniz satin alma tedarikcisi olan firma Taraflar tarafinda gorunmez.
+        static::addGlobalScope(new HidePurchaseOnlyPartiesScope);
+    }
+
+    /** Satin alma tedarikci listesindeki kaydi (D-232, B58); yoksa null. */
+    public function purchaseSupplier(): HasOne
+    {
+        return $this->hasOne(PurchaseSupplier::class, 'party_id');
     }
 
     public function country(): BelongsTo

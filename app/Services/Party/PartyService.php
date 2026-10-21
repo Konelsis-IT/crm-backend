@@ -10,6 +10,7 @@ use App\Exceptions\InvalidTransitionException;
 use App\Exceptions\RecordArchivedException;
 use App\Models\Party\OrganizationProfile;
 use App\Models\Party\Party;
+use App\Models\Scopes\HidePurchaseOnlyPartiesScope;
 use App\Models\Party\PersonProfile;
 use App\Services\AbstractService;
 use App\Services\Audit\ActorContext;
@@ -44,6 +45,9 @@ final class PartyService extends AbstractService
 {
     /** @var list<string> */
     protected array $with = ['country', 'organizationProfile', 'personProfile', 'roles'];
+
+    /** D-232: yalniz tedarikci olan firmalar da (Tedarikciler ekrani) bu servisle yazilir. */
+    protected array $withoutGlobalScopes = [HidePurchaseOnlyPartiesScope::class];
 
     protected string $orderBy = 'display_name';
 
@@ -363,10 +367,11 @@ final class PartyService extends AbstractService
 
     private function generatePartyNo(): string
     {
-        $sequence = Party::query()->count() + 1;
+        // D-232: numara siralamasi gizli (yalniz tedarikci) firmalari da sayar.
+        $sequence = Party::query()->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)->count() + 1;
         $partyNo = sprintf('PTY-%05d', $sequence);
 
-        while (Party::query()->where('party_no', $partyNo)->exists()) {
+        while (Party::query()->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)->where('party_no', $partyNo)->exists()) {
             $sequence++;
             $partyNo = sprintf('PTY-%05d', $sequence);
         }

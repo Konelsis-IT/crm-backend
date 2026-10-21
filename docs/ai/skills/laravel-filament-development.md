@@ -120,6 +120,10 @@ There is exactly one date input in this project. Every date-related field, on ev
 - Reference implementation: the "Tarihler ve durum" section of `app/Filament/Resources/Projects/RelationManagers/SupplyItemsRelationManager.php`.
 
 Any other date input type, format, or size is forbidden. `tools/safe-verify.php` fails on `DateTimePicker`, `->native(false)`, a non-`d.m.Y` display format, or `->seconds()` under `app/Filament`.
+### Required field mark (user decision, 2026-10-21, D-231)
+
+Required fields show a small "(zorunlu)" ("(required)" in English) after the label instead of "*". It is done once in `konelsis.css` on Filament's required-mark classes (field label, fieldset, table repeater header) and in `konelsis-social.css` for the social React forms. Keep using `->required()`; never add "(zorunlu)" to label texts, and give any new custom form the same small mark.
+
 ### Create-and-create-another button is removed (user decision, 2026-09-16)
 
 The "Oluştur & yeni oluştur" (create & create another) button is disabled system-wide and must never come back in any resource, page, relation manager, action, or new development:
@@ -283,6 +287,17 @@ Every structure in the system can carry work (user: "sistemdeki bütün yapılar
 ### Topbar on narrow screens (user decision, 2026-10-19, D-224)
 
 The user chose an overflow menu ("A'dan devam edelim ekran boyutuna göre o 3 noktadaki menüler dolacak"). `TopbarShortcuts::moreMenu()` is a Filament action group (⋮, "Diğer") that repeats every topbar shortcut in three sections: pages, quick actions, language. Everything is always rendered; `konelsis.css` alone decides what shows where: below 1440px TR / EN and Kontrol matrisi move into the menu (p4), below 768px Tüm bildirimler and İş panosu (p2), below 640px Hızlı işlemler (p1) and the global search collapses to a magnifier that opens across the topbar. At 1440px and wider the ⋮ is hidden. A new topbar shortcut gets a priority class on the inline element (`kc-tb-pN`, 1 = moved last) and a twin item in `moreMenu()` with the same access check (`kc-tb-more-pN`); never let the topbar wrap or scroll sideways.
+
+### Purchasing suppliers are separate from Taraflar (user decision, 2026-10-21, D-232, B58)
+
+Operasyon - Satın alma > Tedarikçiler is its own list (user: "taraflar kısmındaki tedarikçiler ile buradakini birbirine karıştırmayalım ... oraya eklemeye veya oradakileri bu yeni listeye taşımaya çalışma"). A supplier is a `Party` (organization) with a `purchase_suppliers` membership; `purchase_only = 1` firms are hidden from Taraflar by the `HidePurchaseOnlyPartiesScope` global scope.
+
+- Never bypass the scope in a Taraflar list, select, search, export or report. Only code that must see every party bypasses it: party write services (`AbstractService::$withoutGlobalScopes`), merges, the supplier screens (`PurchaseSupplierQueries`) and purchasing records' `supplier()` relations. A new purchasing relation to a supplier adds `->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)`.
+- Purchasing supplier selects use `PurchasingQueries::supplierOptions()` / `supplierLabel()` (the supplier list when `PurchaseSupplierQueries::enabled()`), never a Party select.
+- Never add a purchase-only supplier to Taraflar or move Taraflar firms into the list on your own. A firm in both lists is one party only when the user has said it is the same firm; do that merge in the data (import or correction seeder), never as a screen step that asks again (user: "Taraflarda da var mı? kısmını niye tutuyoruz kaldır"). Propose only names that are really the same, not similar names; ask the user once and show what each record does.
+- A merged duplicate keeps its archived supplier record (`purchase_only = 1`) so it stays hidden from Taraflar; the target gets its own membership first. A party has at most one supplier record (`PartyMergeService::UNIQUE_KEYS['purchase_suppliers']`). Merged parties never appear in the supplier list (`PurchaseSupplierQueries::base()`).
+- A Taraflar firm that is also a supplier keeps its own structure (user: "var olan faaliyet hizmet alanlarını kaldırmak yok var olan yapıyı bozmak yok"): only the membership (`purchase_only = 0`), service areas and note are added (`attachExisting()`, areas never detached); activity areas, roles, contacts and notes stay.
+- Supplier imports go through `PurchaseSupplierService::createSupplier()` with long and short names (`legal_name` / `trade_name`, D-170) and adopt an existing supplier with the same name. User-confirmed Taraflar firms are joined with `attachExisting()`; their names change only while still as imported (`SeedGuard::allowingUpdates`).
 
 ### Table interaction standard (user decision, 2026-09-25, D-125)
 

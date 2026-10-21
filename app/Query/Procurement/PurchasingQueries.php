@@ -86,6 +86,12 @@ final class PurchasingQueries
      */
     public function supplierOptions(string $search = '', int $limit = 50): array
     {
+        // D-232 (21 Ekim 2026 kullanici: tedarikci "yeni tedarikci listesinden"):
+        // liste kuruluysa yalniz satin alma tedarikcileri.
+        if (PurchaseSupplierQueries::enabled()) {
+            return app(PurchaseSupplierQueries::class)->options($search, $limit);
+        }
+
         $query = Party::query()
             ->whereNull('archived_at')
             ->withExists(['roles as is_supplier' => fn (Builder $roles): Builder => $roles
@@ -107,7 +113,8 @@ final class PurchasingQueries
 
     public function supplierLabel(mixed $id): ?string
     {
-        return blank($id) ? null : $this->parties->displayName((int) $id);
+        // D-232: yalniz tedarikci olan firma Taraflar kapsaminda gizli; etiket yine gelir.
+        return blank($id) ? null : app(PurchaseSupplierQueries::class)->label($id);
     }
 
     /** Dovizin son girilen TL kuru (teklif formunu doldurmak icin). */

@@ -113,6 +113,12 @@ class DatabaseSeeder extends Seeder
         // ORKOM taraflari ve kisiler, METGUN ve Kirsehir TM / ENH projeleri, gorev ve sorumluluklar,
         // isler + notlar, proje dokumanlari, satin alinacak kalemler ve bagli isleri).
         WorkTracking20261016Seeder::class,
+        // D-232 (B58): satin alma tedarikci listesi 21.10 (34 hizmet alani, 250 firma, kisa / uzun ad).
+        // Taraflar'da da olan 14 firma Taraflar kaydina eklenir (yapisi degismez); digerleri yalniz tedarikci.
+        PurchaseSuppliers20261021Seeder::class,
+        // D-232 ek: aktarimin ilk hali calismis veritabaninda ayni firmalari birlestirir (7 cift + Taraflar'daki
+        // 14 firma), kisa / uzun ad ve notu yazar; ilk hali calismamis veritabaninda hicbir sey yapmaz.
+        PurchaseSupplierMerges20261021Seeder::class,
     ];
 
     /**

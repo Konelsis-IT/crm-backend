@@ -10,6 +10,7 @@ use App\Enums\Party\PartyKind;
 use App\Exceptions\Personnel\SelfParentNotAllowedException;
 use App\Models\Party\ContactRelationship;
 use App\Models\Party\Party;
+use App\Models\Scopes\HidePurchaseOnlyPartiesScope;
 use App\Services\AbstractService;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
@@ -118,7 +119,8 @@ final class ContactRelationshipService extends AbstractService
             throw SelfParentNotAllowedException::make();
         }
 
-        $kinds = Party::query()->whereKey([$organizationId, $contactId])->pluck('party_kind', 'id');
+        // D-232: tedarikci firmanin kisileri de (yalniz tedarikci olan firma gizli kapsamda).
+        $kinds = Party::query()->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class)->whereKey([$organizationId, $contactId])->pluck('party_kind', 'id');
 
         if ($kinds->get($organizationId) !== PartyKind::Organization || $kinds->get($contactId) !== PartyKind::Person) {
             throw SelfParentNotAllowedException::make();

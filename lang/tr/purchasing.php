@@ -130,6 +130,9 @@ return [
         'justification' => 'Neden gerekli? Saha ya da proje neden istiyor?',
         'existing_check' => 'Şirkette var olan ürün / hizmet neden kullanılamıyor?',
         'usage_area' => 'Şirket içi talepler tamamlanınca Şirket içi alımlar\'a yazılır.',
+        // D-230
+        'project' => 'Saha talebinde zorunlu; şirket içi talep bir projeyle ilgiliyse seçebilirsiniz.',
+        'org_unit' => 'Talep edenin departmanı; değiştirilemez.',
         'link_catalog' => 'Talep edilen ad listedeki var olan malzeme / hizmete bağlanır (bir sonraki talepte kendiliğinden eşleşir) ya da Malzeme ve Hizmetler\'e bir kez yeni kalem olarak eklenir.',
         'supplier_name' => 'Firma kayıtlı değilse adını yazın.',
         'try_rate' => '1 birim dövizin TL karşılığı; onay sınırı TL ile karşılaştırılır.',

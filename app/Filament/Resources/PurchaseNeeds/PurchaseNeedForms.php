@@ -59,11 +59,13 @@ final class PurchaseNeedForms
                 ->inline()
                 ->required()
                 ->live(),
+            // D-230: proje her iki kullanim yerinde secilebilir, Saha'da zorunlu (servis de denetler).
             Select::make('project_id')
                 ->label(__('purchasing.fields.project'))
+                ->helperText(__('purchasing.help.project'))
                 ->options(fn (): array => app(ProjectCatalogQueries::class)->projectOptions())
                 ->searchable()
-                ->visible(fn (Get $get): bool => $manual || FormState::value($get('usage_area')) === UsageArea::Field->value)
+                ->required(fn (Get $get): bool => FormState::value($get('usage_area')) === UsageArea::Field->value)
                 ->native(false),
             Select::make('catalog_item_id')
                 ->label(__('purchasing.fields.catalog_item'))
@@ -111,11 +113,14 @@ final class PurchaseNeedForms
             Toggle::make('is_urgent')
                 ->label(__('purchasing.fields.is_urgent'))
                 ->inline(false),
+            // D-230: departman degistirilemez (kisinin departmani; gonderilmez, servis yazar).
             Select::make('org_unit_id')
                 ->label(__('purchasing.fields.org_unit'))
+                ->helperText(__('purchasing.help.org_unit'))
                 ->options(fn (): array => app(OrganizationQueries::class)->orgUnitOptions())
                 ->default($ownUnit)
-                ->searchable()
+                ->disabled()
+                ->selectablePlaceholder(false)
                 ->native(false),
             Textarea::make('specification')
                 ->label(__('purchasing.fields.specification'))

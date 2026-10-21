@@ -6,6 +6,7 @@ namespace App\Models\Procurement;
 
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Party\Party;
+use App\Models\Scopes\HidePurchaseOnlyPartiesScope;
 use App\Models\Reference\Currency;
 use App\Policies\PurchaseQuotePolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -52,7 +53,8 @@ class PurchaseQuote extends Model
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Party::class, 'supplier_party_id');
+        // D-232: tedarikci listesindeki firma (yalniz tedarikci olsa da).
+        return $this->belongsTo(Party::class, 'supplier_party_id')->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class);
     }
 
     public function currency(): BelongsTo

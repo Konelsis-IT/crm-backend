@@ -8,6 +8,7 @@ use App\Enums\Procurement\PurchaseOrderStatus;
 use App\Models\Approval\ApprovalRequest;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Party\Party;
+use App\Models\Scopes\HidePurchaseOnlyPartiesScope;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Reference\Currency;
@@ -81,7 +82,8 @@ class PurchaseOrder extends Model
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Party::class, 'supplier_party_id');
+        // D-232: tedarikci listesindeki firma (yalniz tedarikci olsa da).
+        return $this->belongsTo(Party::class, 'supplier_party_id')->withoutGlobalScope(HidePurchaseOnlyPartiesScope::class);
     }
 
     public function project(): BelongsTo

@@ -118,6 +118,9 @@ final class PermissionSubjects
         'CatalogItemAlias' => 'CatalogItem',
         // D-194 (B54): Ayarlar > Birimler; kendi anahtari yoksa Malzeme ve Hizmetler yetkisi.
         'UnitOfMeasure' => 'CatalogItem',
+        // D-232 (B58): tedarikciler ve hizmet alanlari; kendi anahtari yoksa Malzeme ve Hizmetler yetkisi.
+        'PurchaseSupplier' => 'CatalogItem',
+        'PurchaseServiceArea' => 'CatalogItem',
         'PurchaseQuote' => 'PurchaseNeed',
         // D-192 (B53): kalemli talep, satin alma teklifleri ve siparisler satin alma yetkisini paylasir.
         'PurchaseRequest' => 'PurchaseNeed',

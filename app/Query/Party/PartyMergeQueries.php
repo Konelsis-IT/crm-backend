@@ -52,6 +52,8 @@ final class PartyMergeQueries
         'purchase_quotations' => ['supplier_party_id'],
         'purchase_orders' => ['supplier_party_id'],
         'company_purchases' => ['supplier_party_id'],
+        // D-232 (B58): tedarikci listesi uyeligi.
+        'purchase_suppliers' => ['party_id'],
         'commercial_clarifications' => ['customer_contact_party_id'],
         'transmittals' => ['recipient_party_id'],
         'work_requests' => ['customer_party_id'],

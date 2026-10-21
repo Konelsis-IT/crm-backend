@@ -87,6 +87,7 @@ final class SchemaReadiness
         'B55' => 'proposal_versions.offer_status',     // Her teklif surumunun kendi teklif durumu (D-195)
         'B56' => 'work_items.item_no',                 // Is kodu IS-YYYY-NNNN (D-204)
         'B57' => 'work_items.legacy_no',               // Is sistemi: oncelik, coklu sorumlu, notlar, belgeler, tekrarli isler (D-219; grubun son kolonu)
+        'B58' => 'purchase_supplier_areas',            // Satin alma tedarikci listesi, hizmet alanlari (D-232; grubun son tablosu)
     ];
 
     /** @var array<string, bool> */

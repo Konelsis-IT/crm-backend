@@ -9,6 +9,7 @@ use App\Enums\Procurement\PurchaseNeedStatus;
 use App\Enums\Procurement\PurchaseRequestStatus;
 use App\Enums\Procurement\UsageArea;
 use App\Exceptions\InvalidTransitionException;
+use App\Exceptions\Procurement\PurchaseProjectRequiredException;
 use App\Exceptions\Procurement\PurchaseRequestIncompleteException;
 use App\Exceptions\RecordArchivedException;
 use App\Models\Personnel\Personnel;
@@ -75,6 +76,8 @@ final class PurchaseRequestService extends AbstractService
             throw PurchaseRequestIncompleteException::make();
         }
 
+        self::assertProject($data['usage_area'] ?? null, $data['project_id'] ?? null);
+
         return $this->transactions->run(function () use ($data, $lines): PurchaseRequest {
             $actor = $this->actorModel();
             $header = array_intersect_key($data, array_flip(self::HEADER));
@@ -113,6 +116,13 @@ final class PurchaseRequestService extends AbstractService
                 throw PurchaseRequestIncompleteException::make();
             }
 
+            if (array_key_exists('usage_area', $data) || array_key_exists('project_id', $data)) {
+                self::assertProject(
+                    array_key_exists('usage_area', $data) ? $data['usage_area'] : $request->getAttribute('usage_area'),
+                    array_key_exists('project_id', $data) ? $data['project_id'] : $request->getAttribute('project_id'),
+                );
+            }
+
             /** @var PurchaseRequest $request */
             $request = parent::update($request, array_intersect_key($data, array_flip([...self::HEADER, 'row_version'])));
 
@@ -124,6 +134,19 @@ final class PurchaseRequestService extends AbstractService
 
             return $request->refresh();
         });
+    }
+
+    /**
+     * D-230 (21 Ekim 2026): Saha'ya talep projeyle acilir; Sirket ici talepte
+     * proje istege bagli.
+     */
+    public static function assertProject(mixed $usage, mixed $projectId): void
+    {
+        $value = $usage instanceof UsageArea ? $usage->value : (is_string($usage) ? $usage : null);
+
+        if ($value === UsageArea::Field->value && blank($projectId)) {
+            throw PurchaseProjectRequiredException::make();
+        }
     }
 
     /** Talebi iptal eder: islenmemis kalemler de iptal olur; siparisi verilmis kalem varsa iptal edilemez. */

@@ -41,6 +41,8 @@ use App\Models\Procurement\CostList;
 use App\Models\Procurement\CostListLine;
 use App\Models\Procurement\PurchaseNeed;
 use App\Models\Procurement\PurchaseOrder;
+use App\Models\Procurement\PurchaseServiceArea;
+use App\Models\Procurement\PurchaseSupplier;
 use App\Models\Procurement\PurchaseOrderLine;
 use App\Models\Procurement\PurchaseQuotation;
 use App\Models\Procurement\PurchaseQuotationDocument;
@@ -228,6 +230,8 @@ enum Feature: string
     case PurchaseQuotations = 'procurement.quotations';
     case PurchaseQuotationsAi = 'procurement.quotations.ai';
     case PurchaseOrders = 'procurement.orders';
+    // D-232 (B58): satin alma tedarikci listesi (taraf yapisinda, hizmet alanlariyla).
+    case PurchaseSuppliers = 'procurement.suppliers';
     // D-194 (B54): sabit birimler (Ayarlar > Birimler).
     case Units = 'procurement.units';
 
@@ -409,6 +413,7 @@ enum Feature: string
             self::PurchaseQuotes => [PurchaseQuote::class],
             self::CompanyPurchases => [CompanyPurchase::class],
             self::PurchaseRequests => [PurchaseRequest::class],
+            self::PurchaseSuppliers => [PurchaseSupplier::class, PurchaseServiceArea::class],
             self::PurchaseQuotations => [PurchaseQuotation::class, PurchaseQuotationLine::class, PurchaseQuotationDocument::class],
             self::PurchaseOrders => [PurchaseOrder::class, PurchaseOrderLine::class],
             self::StageGates => [ProjectStageInstance::class],
@@ -508,6 +513,7 @@ enum Feature: string
             self::PurchaseNeeds => ['Satın alma: Satın alınacaklar', 'Operasyon - Satın alma > Satın alınacaklar (D-192 adı; eski Sipariş kalemleri; B53 ile her kalemin bağlı teklif ve siparişi, toplu "Teklif iste"):Tümü / Teklif grubunun gönderdiği / Projenin onayladığı / Satın alma talepleri / Termin geçmiş / Acil / Şirket içi / Saha sekmeleri, proje onayı, satın alma talebi (ürün, marka / model, özellikler, gerekçe; D-190), katalogla eşleştirme, sipariş ver ve tamamla (onay sınırı: 4.000 ₺\'ye kadar Satın alma müdürü, üstü Yönetim kurulu başkanı). Kapanınca ekran görünmez.', 'D-189 / D-229', '2.8'],
             self::PurchaseQuotes => ['Satın alma: Tedarikçi teklifleri', 'Sipariş kaleminde birden fazla tedarikçi teklifi, kartlarla karşılaştırma (fiyat ve teslim farkı yeşil / kırmızı) ve önerilen teklif. Kapanınca teklif bölümü görünmez.', 'D-189 / D-229', '2.9'],
             self::CompanyPurchases => ['Satın alma: Şirket içi alımlar', 'Operasyon - Satın alma > Şirket içi alımlar: satın alma talebine bağlı (alanlar talepten dolar, D-190) alınmış ofis ürünleri, yazılım ve hizmetler, yenileme dönemleri, yaklaşan yenilemeler ve önümüzdeki 12 ayın yenileme gideri. Kapanınca ekran görünmez.', 'D-189 / D-229', '2.9'],
+            self::PurchaseSuppliers => ['Satın alma: Tedarikçiler', 'Operasyon - Satın alma > Tedarikçiler: satın almanın kendi tedarikçi listesi (Taraflar\'daki tedarikçilerden ayrı); firma bilgileri, kişiler, adresler ve hizmet alanları (Hizmet alanları sayfası); Taraflar\'da da olan firma iki listede tek kayıt. Satın alma teklifi ve siparişte tedarikçi bu listeden seçilir. Kapanınca ekran görünmez; yalnız tedarikçi olan firmalar Taraflar\'da yine görünmez.', 'D-232', '2.8'],
             self::PurchaseRequests => ['Satın alma: Kalemli satın alma talebi', 'Talepler ve Satın alınacaklar ekranında "Satın alma talebi aç": bir talepte birden fazla kalem (Kalem ekle, Toplu kalem ekle, tümünü küçült / genişlet), kalem başlığında rozetler; gerekçe ve kullanım yeri talep başlığında. Her kalem Satın alınacaklar\'a düşer. Kapanınca talep tek kalemli açılır.', 'D-192', '2.8'],
             self::PurchaseQuotations => ['Satın alma: Satın alma teklifleri', 'Operasyon - Satın alma > Satın alma teklifleri: tedarikçi teklifleri kalemli tutulur (miktar, birim fiyat, indirim, opsiyon), belgeler eklenir, teklifler karşılaştırılır, en uygun teklif seçilir, standart PDF görünümü. Satın alınacaklar\'dan seçilen kalemler toplu teklife eklenir. Kapanınca ekran görünmez.', 'D-192 / D-229', '2.9'],
             self::PurchaseQuotationsAi => ['Satın alma: Konelsis AI teklif okuma', 'Satın alma teklifinde yüklenen PDF / Word / Excel / fotoğraf belgeleri Konelsis AI ile okunur: belge teklif mi diye bakılır, tedarikçi, tarih, para birimi ve kalemler doldurulur, kalemler Malzeme ve Hizmetler\'de eşleşir; olmayanlar açılır ve "Konelsis AI olarak yeni oluşturduğum ürünler" penceresinde gösterilir. Kapanınca alanlar yalnız elle doldurulur.', 'D-192 / D-229', '2.9'],

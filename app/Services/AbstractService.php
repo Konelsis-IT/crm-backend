@@ -153,10 +153,18 @@ abstract class AbstractService
         });
     }
 
+    /**
+     * Servisin kimligi belli kayit uzerinde calisirken asacagi genel kapsamlar
+     * (D-232: taraf servisleri yalniz tedarikci olan firmalari da gormeli).
+     *
+     * @var list<class-string>
+     */
+    protected array $withoutGlobalScopes = [];
+
     /** Servisin modeli icin taze bir sorgu. */
     protected function query(): Builder
     {
-        $query = $this->newModel()->newQuery();
+        $query = $this->newModel()->newQuery()->withoutGlobalScopes($this->withoutGlobalScopes);
 
         return $this->with === [] ? $query : $query->with($this->with);
     }
@@ -247,7 +255,7 @@ abstract class AbstractService
     protected function lockForUpdate(Model|int|string $record): Model
     {
         $key = $record instanceof Model ? $record->getKey() : $record;
-        $model = $this->newModel()->newQuery()->lockForUpdate()->whereKey($key)->first();
+        $model = $this->newModel()->newQuery()->withoutGlobalScopes($this->withoutGlobalScopes)->lockForUpdate()->whereKey($key)->first();
 
         if ($model === null) {
             throw RecordNotFoundException::make();

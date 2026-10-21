@@ -1498,6 +1498,37 @@ body:has(#konelsis-chat-root) .fi-main {
 }
 
 /*
+ * Zorunlu alan isareti (D-231, 21 Ekim 2026 kullanici: "Butun projede zorunlu
+ * alanlar * yerine parantez icinde daha kucuk font ile (zorunlu) yazilsin"):
+ * Filament'in "*" isareti (alan etiketi, alan grubu, tablo tekrarlayici
+ * basligi) gizlenir, yerine kucuk "(zorunlu)" yazilir; Ingilizcede
+ * "(required)". Renk Filament'in zorunlu rengi kalir.
+ */
+.fi-fo-field-label-required-mark,
+.fi-fieldset-label-required-mark,
+.fi-fo-table-repeater-header-required-mark {
+    top: 0;
+    margin-inline-start: 0.25rem;
+    font-size: 0;
+    line-height: 1;
+    vertical-align: baseline;
+}
+
+.fi-fo-field-label-required-mark::after,
+.fi-fieldset-label-required-mark::after,
+.fi-fo-table-repeater-header-required-mark::after {
+    content: "(zorunlu)";
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+html[lang|="en"] .fi-fo-field-label-required-mark::after,
+html[lang|="en"] .fi-fieldset-label-required-mark::after,
+html[lang|="en"] .fi-fo-table-repeater-header-required-mark::after {
+    content: "(required)";
+}
+
+/*
  * Dar ekranda uc nokta menusu (D-224, 19 Ekim 2026 kullanici: "ekran boyutuna
  * gore o 3 noktadaki menuler dolacak"). Menu App\Filament\Support\TopbarShortcuts
  * ::moreMenu (Filament eylem grubu); burada yalniz hangi genislikte neyin

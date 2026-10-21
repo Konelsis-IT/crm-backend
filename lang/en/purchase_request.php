@@ -52,6 +52,9 @@ return [
 
     'help' => [
         'usage_area' => 'Completed in-house requests are written to In-house purchases.',
+        // D-230
+        'project' => 'Required for field requests; for in-house requests choose it if the request belongs to a project.',
+        'org_unit' => 'The requester\'s department; cannot be changed.',
         'justification' => 'Why is it needed? Why does the site or project want it?',
         'existing_check' => 'Why can the product / service the company already has not be used?',
         'catalog_item' => 'Pick it from the Materials and Services; if it is not there, switch on "Not in the list" and type its name.',

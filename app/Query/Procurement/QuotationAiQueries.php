@@ -62,6 +62,11 @@ final class QuotationAiQueries
      */
     public function supplierPartyId(?string $taxNumber, ?string $name): ?int
     {
+        // D-232: tedarikci listesi kuruluysa yalniz satin alma tedarikcileri aranir.
+        if (PurchaseSupplierQueries::enabled()) {
+            return app(PurchaseSupplierQueries::class)->partyIdByTaxOrName($taxNumber, $name);
+        }
+
         $digits = preg_replace('/\D+/', '', (string) $taxNumber) ?? '';
 
         if (strlen($digits) >= 10) {
