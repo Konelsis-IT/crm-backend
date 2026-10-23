@@ -36,7 +36,7 @@ class OrganizationStructureSeeder extends ProtectedSeeder
             ['YONETIM', 'Yönetim'],
             ['IS_GELISTIRME', 'İş Geliştirme'],
             ['TEKLIF', 'Teklif'],
-            ['PROJE', 'Proje'],
+            ['PROJE', 'Projelendirme'], // D-234: proje grubu = Projelendirme
             ['SATIN_ALMA', 'Satın Alma'],
             ['MUHASEBE', 'Muhasebe'],
             ['YAZILIM', 'Yazılım'],

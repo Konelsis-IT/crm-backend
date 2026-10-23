@@ -23,6 +23,32 @@ class OperationGroupDefinition extends Model
     use HasAuditColumns;
     use MirrorsTurkishFields;
 
+    /** D-234: Projelendirme is kolunun kodu (eski adi "Proje"; kod degismedi). */
+    public const DESIGN_CODE = 'PROJECT';
+
+    /**
+     * D-239 (23 Ekim 2026, kullanici: "Operasyon gruplari ile Organizasyon
+     * birimleri bir arada calissin tek arayuz tek ozellik olarak kalsin"): her
+     * grup bir departmandir. Ilk alti grubun departman kodu; sonradan
+     * Organizasyon birimlerinden acilan grubun kodu departmanin kodudur.
+     */
+    public const UNIT_CODES = [
+        'PROJECT' => 'PROJE',
+        'PROCUREMENT' => 'SATIN_ALMA',
+        'ACCOUNTING' => 'MUHASEBE',
+        'LOGISTICS' => 'LOJISTIK',
+        'FIELD' => 'SAHA',
+        'SOFTWARE' => 'YAZILIM',
+    ];
+
+    /** Departmanin grup kodu. */
+    public static function codeForUnit(string $unitCode): string
+    {
+        $legacy = array_search($unitCode, self::UNIT_CODES, true);
+
+        return is_string($legacy) ? $legacy : $unitCode;
+    }
+
     /**
      * @return array<string, string>
      */

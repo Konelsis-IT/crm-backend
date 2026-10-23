@@ -14,7 +14,7 @@ return [
         'is_hard_gate' => 'Hard gate',
         'name_tr' => 'Name',
         'owner_group' => 'Owner group',
-        'owner_group_definition' => 'Owner group definition',
+        'owner_group_definition' => 'Owner department',
         'reason' => 'Reason',
         'sequence_no' => 'Sequence no',
         'stage_code' => 'Gate code',

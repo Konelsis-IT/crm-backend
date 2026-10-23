@@ -43,7 +43,7 @@ return [
         'deadline_stage_condition' => 'Koşullu geçiş şartı: :subject (:context)',
         'deadline_recovery_action' => 'Telafi aksiyonu son tarihi: :subject (:context)',
         'deadline_work_package' => 'İş paketi planlı bitiş: :subject (:context)',
-        'deadline_project_finish' => 'Proje planlı bitiş: :subject',
+        'deadline_project_finish' => 'Taahhüt planlı bitiş: :subject',
         'deadline_tender' => 'İhale son tarihi: :subject (:context)',
         'deadline_contract_milestone' => 'Sözleşme kilometre taşı: :subject (:context)',
         'deadline_contract_obligation' => 'Sözleşme yükümlülüğü: :subject (:context)',

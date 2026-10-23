@@ -33,7 +33,7 @@ return [
         'sequence_no' => 'Boş bırakılırsa sona eklenir. Sıralı modda adımlar bu sıraya göre işler.',
         'decision_rule' => 'Adımda birden fazla onaycı bulunursa: herhangi biri yeter / hepsi onaylamalı / çoğunluk.',
         'sla_minutes' => 'Boşsa sürümün genel süresi kullanılır.',
-        'resolver' => 'Onaycı talep anında bulunur: doğrudan kişi/pozisyon, talep sahibinin amiri, birim yöneticisi, konunun projesindeki rol ya da RBAC rolü.',
+        'resolver' => 'Onaycı talep anında bulunur: doğrudan kişi/pozisyon, talep sahibinin amiri, birim yöneticisi, konunun taahhüdündeki rol ya da RBAC rolü.',
         'is_optional' => 'Onaycı bulunamazsa adım atlanır; zorunlu adımda talep hiç açılmaz.',
         'allows_delegation' => 'Onaycının geçerli vekili bu adımda onun adına karar verebilir.',
         'relation' => 'Adımlar yalnız taslak sürümde düzenlenir.',

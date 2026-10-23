@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\OrgUnits\Schemas;
 
 use App\Models\Personnel\OrgUnit;
+use App\Query\Project\ProjectCatalogQueries;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -42,6 +43,17 @@ final class OrgUnitInfolist
                         ->badge()
                         ->color('gray'),
                     TextEntry::make('status')->label(__('org_unit.fields.status'))->badge(),
+                    // D-239: taahhutlerde calisma (eski operasyon grubu).
+                    TextEntry::make('in_projects')
+                        ->label(__('org_unit.fields.in_projects'))
+                        ->state(function (OrgUnit $record): string {
+                            $sort = app(ProjectCatalogQueries::class)->unitsInProjects()[(string) $record->code] ?? null;
+
+                            return $sort !== null ? __('org_unit.fields.in_projects_value', ['sort' => $sort]) : __('org_unit.fields.in_projects_no');
+                        })
+                        ->badge()
+                        ->color(fn (string $state): string => $state === __('org_unit.fields.in_projects_no') ? 'gray' : 'success')
+                        ->visible(fn (): bool => OrgUnitProjectSettings::enabled()),
                 ]),
         ]);
     }

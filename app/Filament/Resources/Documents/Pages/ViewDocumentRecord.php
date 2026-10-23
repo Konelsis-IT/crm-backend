@@ -60,7 +60,7 @@ class ViewDocumentRecord extends ViewRecord
         $document = $this->getRecord();
         $workspace = app(DocumentWorkspace::class);
         $revision = $document->displayRevision();
-        $previewUrl = $revision === null ? null : FileLinks::revisionPreview($revision);
+        $previewUrl = $revision === null ? null : FileLinks::bestPreview($revision);
         $downloadUrl = $revision === null ? null : FileLinks::revisionOriginal($revision, 'download');
 
         // D-181 (9 Ekim 2026 kullanici: basliktaki dugmeler cok uzun): Yeni surum,

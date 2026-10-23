@@ -47,9 +47,18 @@ use Throwable;
  * Indir dugmeleri oldugu icin kullanici onayli Blade gorunumudur
  * (filament.components.template-menu); uc nokta menusune gecmez, dar ekranda
  * simge olarak ust cubukta kalir. Is panosu ve Sablonlar etiketi xl'den itibaren.
+ *
+ * Akilli is ekle (D-235, 22 Ekim 2026 kullanici: "ustte Is panosu, Sablonlar
+ * ortasina ilgili akilli is ekle butonu eklenecek. Ismi cok kisa olabilir"):
+ * Sablonlar ile Is panosu arasinda kisa adli dugme; sayfa degistirmez, her
+ * sayfadaki Akilli is ekle penceresini acar. Dar ekranda Is panosuyla birlikte
+ * uc nokta menusune gecer.
  */
 final class TopbarShortcuts
 {
+    /** Akilli is ekle penceresini acan olay (work-quick.js GlobalQuick dinler). */
+    private const SMART_ADD_JS = "window.dispatchEvent(new CustomEvent('kq-open'))";
+
     public static function render(): Htmlable
     {
         $user = auth()->user();
@@ -67,6 +76,11 @@ final class TopbarShortcuts
             fn (): string => QuickActionSettings::canAccess() ? self::quickActions((int) $user->getKey()) : '',
             fn (): string => ($templates = self::templateMenu($user)) !== null
                 ? view('filament.components.template-menu', ['menu' => $templates])->render()
+                : '',
+            // Akilli is ekle (D-235): Sablonlar ile Is panosu arasinda; her sayfada
+            // ayni pencereyi acar (filament.work.quick-global, work-quick.js).
+            fn (): string => WorkAppConfig::quickAvailable()
+                ? self::smartAddButton()->extraAttributes(['class' => 'kc-tb-p2'])->toHtml()
                 : '',
             // Simgeler sayfanin kendi simgesidir (24 Eylul 2026: daha anlasilir
             // simgeler - Is panosu is listesi panosu, Kontrol matrisi kontrol listesi).
@@ -109,6 +123,20 @@ final class TopbarShortcuts
             ->labeledFrom('xl')
             ->tooltip($label)
             ->color(request()->routeIs($routeName) ? 'primary' : 'gray');
+    }
+
+    /** Ust cubuktaki Akilli is ekle dugmesi: sayfa degismeden pencereyi acar. */
+    private static function smartAddButton(): Action
+    {
+        return Action::make('smartAdd')
+            ->label(__('work_item.ui.qa_topbar'))
+            ->icon(Heroicon::OutlinedBolt)
+            ->alpineClickHandler(self::SMART_ADD_JS)
+            ->button()
+            ->size('xs')
+            ->labeledFrom('xl')
+            ->tooltip(__('work_item.ui.qa_title'))
+            ->color(ActionColors::CREATE);
     }
 
     /** Zilin yanindaki simge dugmesi (Tum bildirimleri gor). */
@@ -163,6 +191,15 @@ final class TopbarShortcuts
         if (NotificationResource::canAccess()) {
             $pages[] = self::menuItem('moreAllNotifications', __('notification_inbox.open_all'), Heroicon::OutlinedQueueList, NotificationResource::getUrl(), 2)
                 ->color(request()->routeIs(NotificationResource::getRouteBaseName().'.*') ? 'primary' : 'gray');
+        }
+
+        if (WorkAppConfig::quickAvailable()) {
+            $pages[] = Action::make('moreSmartAdd')
+                ->label(__('work_item.ui.qa_title'))
+                ->icon(Heroicon::OutlinedBolt)
+                ->alpineClickHandler(self::SMART_ADD_JS)
+                ->color('gray')
+                ->extraAttributes(['class' => 'kc-tb-more-p2']);
         }
 
         if (WorkBoard::canAccess()) {

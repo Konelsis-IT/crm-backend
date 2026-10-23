@@ -16,7 +16,7 @@ return [
         'package_code' => 'Paket kodu',
         'planned_finish_on' => 'Planlanan bitiş',
         'planned_start_on' => 'Planlanan başlangıç',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'project_workstream' => 'Adım (departman)',
         'reason' => 'Gerekçe',
         'status' => 'Durum',

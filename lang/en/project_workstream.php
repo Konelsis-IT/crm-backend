@@ -1,11 +1,11 @@
 <?php
 
 return [
-    'label' => 'Workstream',
-    'plural' => 'Workstreams',
+    'label' => 'Department',
+    'plural' => 'Departments',
 
     'sections' => [
-        'main' => 'Workstream details',
+        'main' => 'Department details',
     ],
 
     'fields' => [
@@ -13,7 +13,7 @@ return [
         'actual_start_on' => 'Actual start',
         'block_reason' => 'Block reason',
         'created_at' => 'Created at',
-        'group' => 'Group',
+        'group' => 'Department',
         'owner' => 'Owner',
         'planned_finish_on' => 'Planned finish',
         'planned_start_on' => 'Planned start',
@@ -24,8 +24,8 @@ return [
     ],
 
     'relation' => [
-        'title' => 'Workstreams',
-        'empty' => 'No workstreams yet.',
+        'title' => 'Departments',
+        'empty' => 'No departments yet.',
     ],
 
     'actions' => [

@@ -11,6 +11,7 @@ use App\Filament\Pages\UiCostItems;
 use App\Filament\Pages\UiDashboardComponents;
 use App\Filament\Pages\UiDashboardGallery;
 use App\Filament\Pages\UiNewDashboardApp;
+use App\Filament\Pages\UiReportLab;
 use App\Http\Controllers\Dashboard\DashboardExportController;
 use App\Filament\NavigationGroup;
 use Filament\Navigation\NavigationGroup as FilamentNavigationGroup;
@@ -35,6 +36,9 @@ use App\Http\Controllers\Work\ControlMatrixController;
 use App\Http\Controllers\Work\WorkBoardController;
 use App\Http\Controllers\Work\WorkInsightController;
 use App\Http\Controllers\Work\WorkItemFileController;
+use App\Http\Controllers\Work\WorkItemFilePreviewController;
+use App\Http\Controllers\Work\WorkItemHistoryController;
+use App\Http\Controllers\Work\WorkItemThreadController;
 use App\Http\Controllers\WorkRequest\WorkRequestFileController;
 use App\Http\Controllers\Files\RevisionFileController;
 use App\Http\Controllers\Files\RevisionPreviewController;
@@ -64,7 +68,9 @@ use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\FeatureRegistry;
 use App\Services\Platform\SchemaReadiness;
 use App\Filament\Support\ReleaseNotesSchema;
+use App\Filament\Resources\WorkItems\Pages\ListWorkItems;
 use App\Filament\Support\TopbarShortcuts;
+use App\Filament\Support\WorkAppConfig;
 use App\Support\ReleaseNotes;
 use App\Support\RoleLabels;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -112,7 +118,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2.25rem')
             ->favicon(asset('images/konelsis-favicon.png'))
             ->colors([
-                'primary' => Color::Red,
+                'primary' => Color::Sky,
                 // Is panosu "Bekleniyor" durumu (B36, D-115).
                 'violet' => Color::Violet,
                 // Dugme tonlari (D-147 / D-148, ActionColors): turuncu (Duzenle,
@@ -301,12 +307,36 @@ class AdminPanelProvider extends PanelProvider
                         // D-219: dort seviyeli kritiklik.
                         Route::post('items/{item}/priority', [WorkBoardController::class, 'priority'])->name('items.priority');
                         Route::post('items/{item}/delete', [WorkBoardController::class, 'destroy'])->name('items.delete');
+                        // D-240: Isler listesi (React) ve is arsivi.
+                        Route::get('items', [WorkBoardController::class, 'listItems'])->name('items.list');
+                        Route::post('items/{item}/archive', [WorkBoardController::class, 'archive'])->name('items.archive');
+                        Route::post('items/{item}/unarchive', [WorkBoardController::class, 'unarchive'])->name('items.unarchive');
+                        // D-241: isin cevaplari ve belgeleri (Akilli is penceresi).
+                        // D-244: cevaplar ve belgeler kendi anahtariyla (2.9.1).
+                        Route::middleware([RequireFeature::for(Feature::WorkItemsExtended), RequireFeature::for(Feature::WorkItemThread)])->group(function (): void {
+                            Route::get('items/{item}/thread', [WorkItemThreadController::class, 'show'])->name('items.thread');
+                            Route::post('items/{item}/replies', [WorkItemThreadController::class, 'reply'])->name('items.replies');
+                            Route::post('items/{item}/files', [WorkItemThreadController::class, 'upload'])->name('items.files');
+                            Route::post('item-files/{file}/remove', [WorkItemThreadController::class, 'removeFile'])->name('items.files.remove');
+                        });
+                        // D-248: isin Gecmis sekmesi (2.9.1).
+                        Route::get('items/{item}/history', WorkItemHistoryController::class)
+                            ->middleware(RequireFeature::for(Feature::WorkItemHistory))
+                            ->name('items.history');
                         Route::post('reorder', [WorkBoardController::class, 'reorder'])->name('reorder');
                         Route::post('suggestions/{activity}/card', [WorkBoardController::class, 'fromSuggestion'])->name('suggestions.card');
                         Route::post('suggestions/{activity}/dismiss', [WorkBoardController::class, 'dismiss'])->name('suggestions.dismiss');
                         Route::post('suggestions/{activity}/restore', [WorkBoardController::class, 'restore'])->name('suggestions.restore');
                         Route::get('lookup/links', [WorkBoardController::class, 'links'])->name('lookup.links');
                         Route::get('lookup/parties', [WorkBoardController::class, 'parties'])->name('lookup.parties');
+                        // D-233: Hizli is ekle secenekleri; D-235: sunucu aramasi ve tek is.
+                        Route::get('quick/options', [WorkBoardController::class, 'quickOptions'])
+                            ->middleware(RequireFeature::for(Feature::WorkQuickAdd))
+                            ->name('quick.options');
+                        Route::get('quick/search', [WorkBoardController::class, 'quickSearch'])
+                            ->middleware(RequireFeature::for(Feature::WorkQuickAdd))
+                            ->name('quick.search');
+                        Route::get('items/{item}', [WorkBoardController::class, 'show'])->name('items.show');
                         Route::get('day', [WorkBoardController::class, 'day'])->name('day');
                         Route::post('day', [WorkBoardController::class, 'closeDay'])->name('day.close');
                         Route::get('week', [WorkBoardController::class, 'week'])->name('week');
@@ -335,6 +365,8 @@ class AdminPanelProvider extends PanelProvider
                     Route::get('work-request/{file}', WorkRequestFileController::class)->middleware(RequireFeature::for(Feature::WorkRequests))->name('work-request');
                     // D-219: is belgeleri (filament.admin.files.work-item).
                     Route::get('work-item/{file}', WorkItemFileController::class)->middleware(RequireFeature::for(Feature::WorkItemsExtended))->name('work-item');
+                    // D-243: is belgesinin Excel / CSV / Word onizlemesi (filament.admin.files.work-item-preview).
+                    Route::get('work-item/{file}/preview', WorkItemFilePreviewController::class)->middleware([RequireFeature::for(Feature::WorkItemsExtended), RequireFeature::for(Feature::WorkItemThread), RequireFeature::for(Feature::DocumentOfficePreview)])->name('work-item-preview');
                     // D-176 "Tum belgeleri indir": filament.admin.files.bundle.proposal / .business-case
                     Route::middleware(RequireFeature::for(Feature::DocumentBundles))->prefix('bundles')->name('bundle.')->group(function (): void {
                         Route::get('proposals/{proposal}', [DocumentBundleController::class, 'proposal'])->whereNumber('proposal')->name('proposal');
@@ -495,6 +527,15 @@ class AdminPanelProvider extends PanelProvider
                     ? view('filament.chat.launcher')
                     : '',
             )
+            // Akilli is ekle penceresi her sayfada (D-235): ust cubuk dugmesi ve
+            // Isler listesinden duzenleme. Sohbet kancasindan sonra, sayfaya ozel
+            // React betiklerinden once (kapsamsiz kancalar once cizilir).
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => WorkAppConfig::smartOn()
+                    ? view('filament.work.quick-global')
+                    : '',
+            )
             // Sosyal Medya React betikleri (D-106): yalniz o sayfada ve sohbet
             // kancasindan SONRA (kapsamsiz kancalar once cizilir), boylece belge
             // sirasi react, react-dom, konelsis-chat, social-* olur.
@@ -513,13 +554,25 @@ class AdminPanelProvider extends PanelProvider
             // work-core + ekranin betigi; yalniz ilgili sayfada.
             ->renderHook(
                 PanelsRenderHook::BODY_END,
-                fn () => view('filament.work.scripts', ['screens' => ['work-board']]),
+                fn () => view('filament.work.scripts', ['screens' => ['work-quick', 'work-board']]),
                 scopes: WorkBoard::class,
             )
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.work.scripts', ['screens' => ['work-matrix']]),
                 scopes: ControlMatrix::class,
+            )
+            // UI Deneme > Rapor yazma denemesi (D-240): Akilli is yazma alaniyla.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.work.scripts', ['screens' => ['work-quick', 'report-lab']]),
+                scopes: UiReportLab::class,
+            )
+            // Isler listesi (D-240, React): yalniz Akilli is ekle acikken.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => WorkAppConfig::smartOn() ? view('filament.work.scripts', ['screens' => ['work-list']]) : '',
+                scopes: ListWorkItems::class,
             )
             ->renderHook(
                 PanelsRenderHook::BODY_END,

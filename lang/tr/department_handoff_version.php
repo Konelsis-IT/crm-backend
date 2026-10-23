@@ -12,7 +12,7 @@ return [
         'comment' => 'Yorum',
         'created_at' => 'Oluşturulma',
         'decision' => 'Karar',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'reason' => 'Gerekçe',
         'snapshot_hash' => 'Snapshot hash\'i',
         'status' => 'Durum',

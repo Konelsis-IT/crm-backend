@@ -29,7 +29,7 @@ return [
         'requested_by' => 'Talep eden',
         'org_unit' => 'Departman',
         'usage_area' => 'Kullanım yeri',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'needed_by' => 'Termin',
         'is_urgent' => 'Acil',
         'justification' => 'Gerekçe',
@@ -54,9 +54,9 @@ return [
     'help' => [
         'usage_area' => 'Şirket içi talepler tamamlanınca Şirket içi alımlar\'a yazılır.',
         // D-230
-        'project' => 'Saha talebinde zorunlu; şirket içi talep bir projeyle ilgiliyse seçebilirsiniz.',
+        'project' => 'Saha talebinde zorunlu; şirket içi talep bir taahhütle ilgiliyse seçebilirsiniz.',
         'org_unit' => 'Talep edenin departmanı; değiştirilemez.',
-        'justification' => 'Neden gerekli? Saha ya da proje neden istiyor?',
+        'justification' => 'Neden gerekli? Saha ya da taahhüt neden istiyor?',
         'existing_check' => 'Şirkette var olan ürün / hizmet neden kullanılamıyor?',
         'catalog_item' => 'Malzeme ve Hizmetler\'den seçin; listede yoksa "Listede yok"u açıp adını yazın.',
         'specification' => 'Ör. bilgisayar için işlemci, bellek, disk, ekran; yazılım için sürüm ve kullanıcı sayısı.',

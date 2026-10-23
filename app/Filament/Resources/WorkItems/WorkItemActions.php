@@ -161,6 +161,46 @@ final class WorkItemActions
             ->url(fn (): string => WorkBoard::getUrl());
     }
 
+    /**
+     * Akilli is ekle penceresiyle yeni is (D-235; kullanici 22 Ekim 2026: "Isler
+     * sekmesindeki is ekle butonunu ayni modal yapalim"). Sunucuya gitmez: her
+     * sayfadaki pencere (filament.work.quick-global) "kq-open" olayini dinler.
+     */
+    public static function smartCreate(): Action
+    {
+        return Action::make('smartCreate')
+            ->label(__('work_item.actions.create'))
+            ->icon(Heroicon::OutlinedBolt)
+            ->color(ActionColors::CREATE)
+            ->visible(fn (): bool => auth()->user()?->can('create', WorkItem::class) ?? false)
+            ->alpineClickHandler("window.dispatchEvent(new CustomEvent('kq-open'))");
+    }
+
+    /**
+     * Isler tablosunda isi Akilli is ekle penceresinde duzenler (D-235: "Duzeltilme
+     * modali da yine ayni sekilde akilli is ekle modaliyla ayni olacak").
+     */
+    public static function smartEdit(): Action
+    {
+        return Action::make('smartEdit')
+            ->label(__('work_item.actions.edit'))
+            ->tooltip(__('work_item.actions.edit'))
+            ->icon(Heroicon::OutlinedPencilSquare)
+            ->iconButton()
+            ->color(ActionColors::EDIT)
+            ->visible(fn (WorkItem $record): bool => auth()->user()?->can('update', $record) ?? false)
+            ->alpineClickHandler(fn (WorkItem $record): string => self::smartEditJs($record));
+    }
+
+    /**
+     * Isi Akilli is ekle penceresinde acan olay. D-241: Duzenle dugmesi dogrudan
+     * duzenler ($mode edit); satir tiklamasi okuma gorunumunu acar (view).
+     */
+    public static function smartEditJs(WorkItem $record, string $mode = 'edit'): string
+    {
+        return "window.dispatchEvent(new CustomEvent('kq-edit', { detail: { id: ".(int) $record->getKey().", mode: '".($mode === 'view' ? 'view' : 'edit')."' } }))";
+    }
+
     public static function delete(): Action
     {
         return Action::make('deleteItem')

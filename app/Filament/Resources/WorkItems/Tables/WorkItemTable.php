@@ -10,16 +10,19 @@ use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
 use App\Enums\Report\WorkWaitingKind;
 use App\Exceptions\AbstractException;
+use App\Filament\Resources\WorkItems\WorkItemActions;
 use App\Filament\Resources\WorkItems\WorkItemResource;
 use App\Filament\Support\CodeLine;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Project\Project;
 use App\Models\Report\WorkItem;
 use App\Filament\Support\PersonnelSelect;
+use App\Filament\Support\WorkAppConfig;
 use App\Query\Report\WorkItemQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Services\Report\WorkItemPresenter;
+use App\Services\Report\WorkItemSentence;
 use App\Services\Report\WorkItemService;
 use App\Support\Projects\ProjectNames;
 use App\Support\WorkDurationFormat;
@@ -40,6 +43,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -52,25 +56,59 @@ final class WorkItemTable
 {
     public static function make(Table $table, bool $forPersonnel = false): Table
     {
+        // D-235: Akilli is ekle acikken tek sutun (rozetli okunus), satir ve
+        // Duzenle Akilli is ekle penceresini acar; is detay sayfasina gidilmez.
+        $smart = WorkAppConfig::smartOn();
+
         return $table
-            ->columns(self::columns($forPersonnel))
+            ->columns($smart ? self::sentenceColumns() : self::columns($forPersonnel))
+            // D-240: arsivdeki is listede yok (Isler sayfasinda Arsiv suzgeciyle gorunur).
+            ->modifyQueryUsing(fn (Builder $query): Builder => $smart ? $query->notArchived()->with(app(WorkItemQueries::class)->relations()) : $query->notArchived())
             // D-216: ust yonetimin talep ettigi acik isler once, sonra en yeni.
             ->defaultSort(fn (Builder $query): Builder => app(WorkItemQueries::class)->listOrder($query))
             ->searchable()
             ->filters(self::filters($forPersonnel), layout: FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns($forPersonnel ? 3 : 4)
             ->groups(self::groups($forPersonnel))
-            ->recordActions($forPersonnel ? [] : [
-                ViewAction::make()->iconButton(),
-                EditAction::make()->iconButton(),
-            ])
-            ->recordUrl(fn (WorkItem $record): string => WorkItemResource::getUrl('view', ['record' => $record]))
+            ->recordActions(match (true) {
+                $smart => [WorkItemActions::smartEdit()],
+                $forPersonnel => [],
+                default => [
+                    ViewAction::make()->iconButton(),
+                    EditAction::make()->iconButton(),
+                ],
+            })
+            ->recordUrl($smart ? null : fn (WorkItem $record): string => WorkItemResource::getUrl('view', ['record' => $record]))
             ->toolbarActions($forPersonnel ? [] : [self::bulkActions()])
             ->paginated([10, 25, 50, 100])
             ->defaultPaginationPageOption(25)
             ->emptyStateIcon(Heroicon::OutlinedQueueList)
             ->emptyStateHeading(__('work_item.table.empty'))
             ->emptyStateDescription(__('work_item.table.empty_help'));
+    }
+
+    /**
+     * Tek sutun (D-235; kullanici 22 Ekim 2026: "Is olusturulurken yazilan text ve
+     * badge yapisiyla yine ayni sekilde isler sekmesinde tablo yerine tek sutunda
+     * tum isler ayni sekilde listeli sekilde yazilsin"): baslik, not ve Akilli is
+     * ekle rozetleri (WorkItemSentence). Satira tiklamak isi pencerede acar.
+     *
+     * @return list<TextColumn>
+     */
+    private static function sentenceColumns(): array
+    {
+        return [
+            TextColumn::make('sentence')
+                ->label(__('work_item.table.item'))
+                ->state(fn (WorkItem $record): Htmlable => app(WorkItemSentence::class)->html($record))
+                ->html()
+                ->wrap()
+                ->searchable(query: fn (Builder $query, string $search): Builder => app(WorkItemQueries::class)->applySearch($query, $search))
+                ->extraCellAttributes(fn (WorkItem $record): array => [
+                    'x-on:click' => WorkItemActions::smartEditJs($record, 'view'),
+                    'class' => 'cursor-pointer',
+                ]),
+        ];
     }
 
     /**
@@ -151,7 +189,7 @@ final class WorkItemTable
                 ->badge()
                 ->color('gray')
                 ->placeholder('–')
-                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                ->visible(fn (): bool => WorkItemQueries::extendedUi() && WorkItemQueries::disciplineUi())
                 ->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('requester')
                 ->label(__('work_item.table.requester'))
@@ -274,7 +312,7 @@ final class WorkItemTable
                 ->label(__('work_item.filters.discipline'))
                 ->options(WorkDiscipline::class)
                 ->multiple()
-                ->visible(fn (): bool => WorkItemQueries::extendedUi()),
+                ->visible(fn (): bool => WorkItemQueries::extendedUi() && WorkItemQueries::disciplineUi()),
             Filter::make('long_waiting')
                 ->label(__('work_item.filters.long_waiting'))
                 ->toggle()

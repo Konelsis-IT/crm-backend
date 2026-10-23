@@ -16,7 +16,7 @@ return [
         'locale' => 'Language',
         'margin_pct' => 'Margin (%)',
         'preparer' => 'Prepared by',
-        'project_group_opinion_document_revision' => 'Project group opinion',
+        'project_group_opinion_document_revision' => 'Design engineering opinion',
         'proposal' => 'Proposal',
         'reason' => 'Reason',
         'status' => 'Status',

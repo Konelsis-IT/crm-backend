@@ -36,6 +36,7 @@ use App\Models\Report\WorkItem;
 use App\Models\Report\WorkItemFile;
 use App\Models\Report\WorkItemNote;
 use App\Models\Report\WorkSuggestionDismissal;
+use App\Models\Scopes\HideSystemAccountScope;
 use App\Models\WorkRequest\WorkRequest;
 use App\Query\Report\ReportQueries;
 use App\Query\Report\WorkItemQueries;
@@ -44,6 +45,7 @@ use App\Reports\Templates\DailyWorkReportTemplate;
 use App\Reports\Templates\WeeklyWorkReportTemplate;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Services\AbstractService;
+use App\Services\Authorization\SystemAccount;
 use App\Services\Document\FileObjectService;
 use App\Services\Audit\ActivityInput;
 use App\Services\Audit\ActivityRecorder;
@@ -118,7 +120,16 @@ final class WorkItemService extends AbstractService
         $this->assertWaiting($status, $attributes);
         $assignees = $this->assigneeIds($data, $me, null);
 
-        return $this->transactions->run(fn (): WorkItem => $this->persistNew($attributes, $status, $now, $assignees));
+        return $this->transactions->run(function () use ($attributes, $status, $now, $assignees, $data): WorkItem {
+            $item = $this->persistNew($attributes, $status, $now, $assignees);
+            $changes = $this->syncExtraLinks($item, $data);
+
+            if ($changes !== []) {
+                $this->recordActivity($item, 'updated', $changes);
+            }
+
+            return $item;
+        });
     }
 
     /**
@@ -176,6 +187,24 @@ final class WorkItemService extends AbstractService
 
             return $this->writeNote($item, $body, $source, $notedAt);
         });
+    }
+
+    /**
+     * Ise cevap (D-241; kullanici 23 Ekim 2026: "Ve her personel duzeltme yapamaz.
+     * Ise karsi cevap yazilabilir olmasi lazim"): isi gorebilen yazar (not olarak
+     * saklanir, kaynak bos, yazan belli); isin sorumlusu ve diger sorumlulari
+     * (yazan haric) zilde haber alir (kullanici: "Evet, bildirim gitsin").
+     */
+    public function reply(Model|int|string $record, string $body): WorkItemNote
+    {
+        $note = $this->addNote($record, $body);
+        $item = $note->workItem;
+
+        if ($item instanceof WorkItem) {
+            $this->notifyReply($item, $note);
+        }
+
+        return $note;
     }
 
     /**
@@ -386,14 +415,17 @@ final class WorkItemService extends AbstractService
                 $this->syncAssignees($item, $assignees);
             }
 
+            $linkChanges = $this->syncExtraLinks($item, $data);
+
             // Ozet yeni proje/ana is/sorumlu adlarini okusun.
             $item->unsetRelations();
 
             $this->notifyAwaited($item, $waitingBefore);
-            $changes = $this->diff($before, $this->summary($item));
+            $changes = [...$this->diff($before, $this->summary($item)), ...$linkChanges];
 
             if ($changes !== []) {
                 $this->recordActivity($item, 'updated', $changes);
+                $this->notifyCreator($item, $changes);
             }
 
             if ($previousDay !== $item->work_on?->format('Y-m-d')) {
@@ -450,12 +482,14 @@ final class WorkItemService extends AbstractService
             $this->notifyAwaited($item, $before);
 
             if ($changed || $item->wasChanged()) {
-                $this->recordActivity($item, 'status_changed', array_filter([
+                $changes = array_filter([
                     'durum' => ['onceki' => $from?->getLabel(), 'yeni' => $target->getLabel()],
                     'kimden_bekleniyor' => $target === WorkItemStatus::Waiting ? $item->waitingLabel() : null,
                     'saat' => $item->wasChanged('work_hours') ? $item->work_hours : null,
                     'not' => filled($extra['note'] ?? null) ? trim((string) $extra['note']) : null,
-                ], static fn ($value): bool => $value !== null && $value !== ''));
+                ], static fn ($value): bool => $value !== null && $value !== '');
+                $this->recordActivity($item, 'status_changed', $changes);
+                $this->notifyCreator($item, $changed ? $changes : array_diff_key($changes, ['durum' => true]));
             }
 
             // D-216: "Talebi tamamlandı olarak kapat?" sorusuna evet.
@@ -500,6 +534,47 @@ final class WorkItemService extends AbstractService
                     $this->recordActivity($item, 'reordered', ['sira' => $position, 'durum' => $status->getLabel()]);
                 }
             }
+        });
+    }
+
+    /**
+     * Isi arsive al (D-240, B61; D-156: silme yok, yalniz archived_at). Arsivdeki
+     * is panoda ve listelerde varsayilan olarak gorunmez.
+     */
+    public function archive(Model|int|string $record): WorkItem
+    {
+        return $this->transactions->run(function () use ($record): WorkItem {
+            /** @var WorkItem $item */
+            $item = $this->lockForUpdate($record);
+
+            if ($item->isArchived()) {
+                return $item;
+            }
+
+            $item->forceFill(['archived_at' => Carbon::now('UTC')]);
+            $this->saveWithoutVersion($item);
+            $this->recordActivity($item, 'archived');
+
+            return $item;
+        });
+    }
+
+    /** Isi arsivden geri al (D-240). */
+    public function restore(Model|int|string $record): WorkItem
+    {
+        return $this->transactions->run(function () use ($record): WorkItem {
+            /** @var WorkItem $item */
+            $item = $this->lockForUpdate($record);
+
+            if (! $item->isArchived()) {
+                return $item;
+            }
+
+            $item->forceFill(['archived_at' => null]);
+            $this->saveWithoutVersion($item);
+            $this->recordActivity($item, 'restored');
+
+            return $item;
         });
     }
 
@@ -893,6 +968,110 @@ final class WorkItemService extends AbstractService
     }
 
     /**
+     * Ek bagli kayitlar (D-233, B59; kullanici 21 Ekim 2026: "Birden fazla
+     * bağlanabilsin"): teklif, is gelistirme ve ihale; D-235 (B60) ile belge,
+     * talep, gorusme ve satin alma turleri de. Isin ilk bagli kaydi
+     * linked_*_id kolonunda kalir; gelen listedeki digerleri tur tablosuna
+     * yazilir, listede olmayan ek kayit kaldirilir. Anahtar yoksa ya da B59 /
+     * ozellik kapaliysa dokunulmaz. Hareket kaydi icin degisiklik doner.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, array{onceki: string|null, yeni: string|null}>
+     */
+    private function syncExtraLinks(WorkItem $item, array $data): array
+    {
+        if (! array_key_exists('extra_links', $data) || ! WorkItemQueries::multiLinks()) {
+            return [];
+        }
+
+        $wanted = [];
+
+        foreach (WorkItemLinkKind::multiple() as $kind) {
+            $wanted[$kind->value] = [];
+        }
+
+        foreach ((array) $data['extra_links'] as $row) {
+            $kind = WorkItemLinkKind::tryFrom(self::rawValue(is_array($row) ? ($row['kind'] ?? null) : null));
+            $id = is_array($row) && filled($row['id'] ?? null) ? (int) $row['id'] : 0;
+
+            // D-238: ozelligi acilmamis tur yeni eklenmez (arayuz zaten sunmaz).
+            if ($kind === null || $kind->extra() === null || $id <= 0 || ! $kind->visible()) {
+                continue;
+            }
+
+            // Ilk bagli kayit ek listede tekrar tutulmaz.
+            if ($item->link_kind === $kind && (int) $item->getAttribute((string) $kind->column()) === $id) {
+                continue;
+            }
+
+            if (! $this->queries->linkExists($kind, $id)) {
+                throw LinkedRecordNotFoundException::make();
+            }
+
+            $wanted[$kind->value][$id] = true;
+        }
+
+        $before = [];
+        $after = [];
+
+        foreach (WorkItemLinkKind::multiple() as $kind) {
+            // Ozelligi kapali turun var olan ek baglantilarina dokunulmaz.
+            if (! $kind->visible()) {
+                continue;
+            }
+
+            $extra = (array) $kind->extra();
+            $relation = $item->{$extra['relation']}();
+            $current = $relation->pluck($extra['table'].'.'.$extra['column'])->map(fn ($id): int => (int) $id)->all();
+            $ids = array_map('intval', array_keys($wanted[$kind->value]));
+            $remove = array_values(array_diff($current, $ids));
+            $add = array_values(array_diff($ids, $current));
+
+            if ($remove !== []) {
+                $relation->detach($remove);
+            }
+
+            foreach ($add as $id) {
+                $relation->attach($id, ['created_by_personnel_id' => $this->actor->personnelId()]);
+            }
+
+            if ($remove !== [] || $add !== []) {
+                $before[] = $this->linkCodes($kind, $current);
+                $after[] = $this->linkCodes($kind, $ids);
+            }
+        }
+
+        foreach (WorkItemLinkKind::multiple() as $kind) {
+            $item->unsetRelation(((array) $kind->extra())['relation']);
+        }
+
+        if ($before === []) {
+            return [];
+        }
+
+        $join = static fn (array $parts): ?string => ($text = implode(', ', array_filter($parts))) === '' ? null : $text;
+
+        return ['ek_bagli_kayitlar' => ['onceki' => $join($before), 'yeni' => $join($after)]];
+    }
+
+    /**
+     * Hareket kaydi icin "TKLF-2026-0001 · Ad" listesi.
+     *
+     * @param  list<int>  $ids
+     */
+    private function linkCodes(WorkItemLinkKind $kind, array $ids): string
+    {
+        $labels = [];
+
+        foreach ($ids as $id) {
+            $row = $this->queries->searchLinks($kind, '', $id)[0] ?? null;
+            $labels[] = $row !== null ? trim(($row['no'] !== null ? $row['no'].' · ' : '').$row['label']) : '#'.$id;
+        }
+
+        return implode(', ', $labels);
+    }
+
+    /**
      * Diger sorumlular (D-219): ana sorumlu listede tutulmaz; cikan satir
      * silinir, yeni gelen yazan kisiyle eklenir.
      *
@@ -1169,7 +1348,7 @@ final class WorkItemService extends AbstractService
 
         // Bagli kayit.
         if (array_key_exists('link_kind', $data)) {
-            $attributes = [...$attributes, ...$this->linkAttributes($data)];
+            $attributes = [...$attributes, ...$this->linkAttributes($data, $item)];
         }
 
         // Ana is: kendisi, alt karti ya da alt kartin altindaki kart secilemez.
@@ -1342,7 +1521,7 @@ final class WorkItemService extends AbstractService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function linkAttributes(array $data): array
+    private function linkAttributes(array $data, ?WorkItem $item = null): array
     {
         $kind = WorkItemLinkKind::tryFrom(self::rawValue($data['link_kind'] ?? null)) ?? WorkItemLinkKind::None;
         $id = filled($data['link_id'] ?? null) ? (int) $data['link_id'] : null;
@@ -1354,6 +1533,13 @@ final class WorkItemService extends AbstractService
 
         if ($kind === WorkItemLinkKind::None || $id === null) {
             return $attributes;
+        }
+
+        // D-238: ozelligi acilmamis tur (or. Siparisler 2.9.2) yeni baglanamaz; isin var olan baglantisi korunur.
+        $existing = $item !== null && $item->link_kind === $kind && (int) $item->getAttribute((string) $kind->column()) === $id;
+
+        if (! $kind->visible() && ! $existing) {
+            throw LinkedRecordNotFoundException::make();
         }
 
         if (! $this->queries->linkExists($kind, $id)) {
@@ -1615,6 +1801,113 @@ final class WorkItemService extends AbstractService
             'warning',
             $actions,
         );
+    }
+
+    /** Cevap bildirimi (D-241): sorumlu + diger sorumlular, yazan ve ulasilamayanlar haric. */
+    private function notifyReply(WorkItem $item, WorkItemNote $note): void
+    {
+        $writerId = $this->actor->personnelId();
+        $ids = array_values(array_unique(array_filter(
+            [(int) $item->personnel_id, ...$item->assigneeIds()],
+            static fn (int $id): bool => $id > 0 && $id !== $writerId,
+        )));
+
+        if ($ids === []) {
+            return;
+        }
+
+        $recipients = Personnel::query()->whereKey($ids)->get()->filter(static fn (Personnel $person): bool => $person->isReachable())->values();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        $this->notifier->send(
+            $recipients,
+            __('work_item.notifications.reply.title', ['name' => $this->writerName()]),
+            __('work_item.notifications.reply.body', [
+                'text' => Str::limit(Str::squish((string) $note->body), 160, '…'),
+                'work' => $this->workLabel($item),
+            ]),
+            Heroicon::OutlinedChatBubbleLeftRight,
+            'info',
+            $this->openActions($item, 'work_item.notifications.reply.open'),
+        );
+    }
+
+    /**
+     * Isi olusturana bildirim (D-248; kullanici 23 Ekim 2026: "isin durumunu
+     * tarihini degistirirken, isi ilk olusturan kisi kendi degilse isi olusturan
+     * bilgilendirilmelidir"): durum, baslangic, termin ya da efor degistiyse ve
+     * degistiren olusturan degilse zil. Olusturan yoksa, gizli hesapsa (kapsam
+     * getirmez) ya da ulasilamiyorsa gitmez. Ozellik kapaliyken gitmez.
+     *
+     * @param  array<string, mixed>  $changes  hareket kaydina yazilan degisiklikler
+     */
+    private function notifyCreator(WorkItem $item, array $changes): void
+    {
+        $watched = array_intersect_key($changes, array_flip(WorkItemHistory::CREATOR_FIELDS));
+        $creatorId = (int) $item->getAttribute('created_by_personnel_id');
+
+        if ($watched === [] || $creatorId <= 0 || $creatorId === $this->actor->personnelId() || ! FeatureFlags::enabled(Feature::WorkItemHistory)) {
+            return;
+        }
+
+        $creator = Personnel::query()->find($creatorId);
+
+        if (! $creator instanceof Personnel || ! $creator->isReachable()) {
+            return;
+        }
+
+        $lines = [];
+
+        foreach ($watched as $field => $value) {
+            $lines[] = WorkItemHistory::changeText((string) $field, $value);
+        }
+
+        $this->notifier->send(
+            [$creator],
+            __('work_item.notifications.changed.title', ['name' => $this->writerName()]),
+            __('work_item.notifications.changed.body', ['changes' => implode(' · ', $lines), 'work' => $this->workLabel($item)]),
+            Heroicon::OutlinedArrowPath,
+            'info',
+            $this->openActions($item, 'work_item.notifications.changed.open'),
+        );
+    }
+
+    /** Islemi yapanin adi; personel degistirmede (D-120, D-148) gizli hesap kapsam disinda okunur, "Sistem" gorunur. */
+    private function writerName(): string
+    {
+        $writerId = $this->actor->personnelId();
+        $writer = $writerId !== null ? Personnel::query()->withoutGlobalScope(HideSystemAccountScope::class)->find($writerId) : null;
+
+        return $writer instanceof Personnel && app(SystemAccount::class)->is($writer) ? (string) __('activity.system') : (string) ($writer?->full_name ?? '');
+    }
+
+    private function workLabel(WorkItem $item): string
+    {
+        return trim(($item->getAttribute('item_no') ? $item->getAttribute('item_no').' · ' : '').Str::limit((string) $item->title, 80, '…'));
+    }
+
+    /**
+     * "Isi ac" dugmesi: Isler listesi isi okuma penceresinde acar (?item=).
+     *
+     * @return list<Action>
+     */
+    private function openActions(WorkItem $item, string $label): array
+    {
+        try {
+            return [
+                Action::make('open')
+                    ->label(__($label))
+                    ->button()
+                    ->url(WorkItemResource::getUrl('index').'?item='.(int) $item->getKey())
+                    ->markAsRead(),
+            ];
+        } catch (Throwable) {
+            // Rota yoksa dugmesiz bildirim.
+            return [];
+        }
     }
 
     private function summary(WorkItem $item): array

@@ -9,7 +9,7 @@ return [
     ],
 
     'fields' => [
-        'group' => 'Adım (operasyon grubu)',
+        'group' => 'Departman',
         'code' => 'Kod',
         'name_tr' => 'Ad',
         'kind' => 'Sayım kuralı',
@@ -23,8 +23,8 @@ return [
     ],
 
     'help' => [
-        'kind' => 'Projede hangi verinin sayılacağını belirler; sayı "en az" değerine ulaşınca beklenti karşılanmış olur.',
-        'is_mandatory' => 'Zorunlu beklentiler karşılanmadan proje bir sonraki adıma (gerekçesiz) geçemez.',
+        'kind' => 'Taahhütte hangi verinin sayılacağını belirler; sayı "en az" değerine ulaşınca beklenti karşılanmış olur.',
+        'is_mandatory' => 'Zorunlu beklentiler karşılanmadan taahhüt bir sonraki adıma (gerekçesiz) geçemez.',
     ],
 
     'relation' => [

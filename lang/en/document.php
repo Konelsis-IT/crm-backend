@@ -109,6 +109,8 @@ return [
         'unavailable' => 'This file cannot be previewed; please download it.',
         'too_large' => 'The file is too large to preview; please download it.',
         'note' => 'The preview shows the content only; download the file for formatting, formulas, images and charts.',
+        // D-243: the Word preview shows images too.
+        'note_word' => 'The preview shows the text, tables and images; download the file for page layout and charts.',
     ],
 
     'actions' => [

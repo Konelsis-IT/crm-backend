@@ -9,7 +9,7 @@ return [
     ],
 
     'fields' => [
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'recipient_party' => 'Alıcı taraf',
         'transmittal_no' => 'Tutanak no',
         'recipient_description' => 'Alıcı',

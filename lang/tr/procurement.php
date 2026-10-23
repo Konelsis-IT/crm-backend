@@ -90,7 +90,7 @@ return [
         'delivery_period' => 'Teslim dönemi',
         'carrier' => 'Taşıyıcı',
         'tracking_no' => 'Takip no',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'quotation' => 'Teklif',
         'option' => 'Opsiyon',
         'cancelled' => 'İptal',

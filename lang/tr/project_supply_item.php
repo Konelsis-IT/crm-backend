@@ -11,7 +11,7 @@ return [
     ],
 
     'fields' => [
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'workstream' => 'Adım (departman)',
         'item_kind' => 'Tür',
         'item_code' => 'Kalem kodu',
@@ -36,7 +36,7 @@ return [
 
     'help' => [
         'item_code' => 'Katalog gelene kadar serbest kod (örn. PV-550, INV-1500).',
-        'currency' => 'Boş bırakılırsa projenin para birimi kullanılır.',
+        'currency' => 'Boş bırakılırsa taahhüdün para birimi kullanılır.',
     ],
 
     'relation' => [
@@ -61,17 +61,17 @@ return [
     ],
 
     'filters' => [
-        'my_step' => 'Odağı satın almada olan projeler',
+        'my_step' => 'Odağı satın almada olan taahhütler',
     ],
 
     // D-196: proje sayfasi satin alma kayitlarina bagli (ProjectPurchasing).
     'purchasing' => [
         'needs_title' => 'Satın alma',
-        'needs_empty' => 'Bu proje için satın alma talebi yok.',
+        'needs_empty' => 'Bu taahhüt için satın alma talebi yok.',
         'orders_title' => 'Lojistik',
-        'orders_empty' => 'Bu projenin siparişi yok.',
+        'orders_empty' => 'Bu taahhüdün siparişi yok.',
         'software_title' => 'Yazılım',
-        'software_empty' => 'Bu proje için yazılım kalemi yok.',
+        'software_empty' => 'Bu taahhüt için yazılım kalemi yok.',
     ],
 
     'legacy' => [

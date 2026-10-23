@@ -18,6 +18,7 @@ use App\Models\Report\WorkItem;
 use App\Query\Report\WorkItemQueries;
 use App\Services\Platform\SchemaReadiness;
 use App\Services\Report\WorkItemPresenter;
+use App\Services\Report\WorkItemSentence;
 use App\Services\Report\WorkItemService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
@@ -194,6 +195,77 @@ final class WorkBoardController extends Controller
         });
     }
 
+    /**
+     * Isler listesi (D-240, React): isin okunusu (rozetli tek metin), yetkiler,
+     * arsiv durumu; en son eklenen ustte, sayfa sayfa.
+     */
+    public function listItems(Request $request): JsonResponse
+    {
+        $me = $this->me($request);
+        Gate::forUser($me)->authorize('viewAny', WorkItem::class);
+        $rules = [
+            'q' => ['nullable', 'string', 'max:200'],
+            'archive' => ['nullable', Rule::in(['active', 'archived', 'all'])],
+            'range' => ['nullable', Rule::in(WorkItemQueries::RANGES)],
+            // D-241: sayfalar (1 2 3 ...).
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', Rule::in(WorkItemQueries::LIST_PER_PAGE)],
+            'person' => ['nullable', 'array'], 'unit' => ['nullable', 'array'], 'project' => ['nullable', 'array'],
+            'status' => ['nullable', 'array'], 'category' => ['nullable', 'array'],
+            'priority' => ['nullable', 'array'], 'discipline' => ['nullable', 'array'],
+            'start' => ['nullable', 'array'], 'start.*' => ['date_format:Y-m-d'],
+            'due' => ['nullable', 'array'], 'due.*' => ['date_format:Y-m-d'],
+            'hours' => ['nullable', 'array'], 'hours.*' => ['numeric', 'min:0', 'max:999'],
+            'requester' => ['nullable', 'array'], 'requester.*' => ['string', 'max:250'],
+            'waiting' => ['nullable', 'array'], 'waiting.*' => ['string', 'max:250'],
+            'team' => ['nullable', 'boolean'],
+        ];
+
+        foreach (array_keys(WorkItemQueries::LIST_LINK_FILTERS) as $key) {
+            $rules[$key] = ['nullable', 'array'];
+        }
+
+        $data = $this->validated($request, $rules);
+        $perPage = (int) ($data['per_page'] ?? WorkItemQueries::LIST_PER_PAGE[0]);
+        $page = (int) ($data['page'] ?? 1);
+        $result = $this->queries->listItems($me, $data, ($page - 1) * $perPage, $perPage);
+        $sentence = new WorkItemSentence($this->presenter);
+        $gate = Gate::forUser($me);
+
+        return response()->json([
+            'total' => $result['total'],
+            'page' => $page,
+            'per_page' => $perPage,
+            'items' => $result['rows']->map(fn (WorkItem $item): array => [
+                'id' => (int) $item->getKey(),
+                'item_no' => $item->getAttribute('item_no'),
+                'sentence' => $sentence->segments($item),
+                'archived' => $item->isArchived(),
+                'notes_count' => (int) ($item->getAttribute('notes_count') ?? 0),
+                'files_count' => (int) ($item->getAttribute('files_count') ?? 0),
+                'can' => ['update' => $gate->allows('update', $item), 'archive' => SchemaReadiness::hasBatch('B61') && $gate->allows('delete', $item)],
+            ])->values()->all(),
+        ]);
+    }
+
+    /** Isi arsive al (D-240, D-156: silme yerine). */
+    public function archive(Request $request, WorkItem $item): JsonResponse
+    {
+        $me = $this->me($request);
+        Gate::forUser($me)->authorize('delete', $item);
+
+        return $this->respond(fn (): array => ['ok' => true, 'archived' => $this->service->archive($item)->isArchived()]);
+    }
+
+    /** Isi arsivden geri al (D-240). */
+    public function unarchive(Request $request, WorkItem $item): JsonResponse
+    {
+        $me = $this->me($request);
+        Gate::forUser($me)->authorize('delete', $item);
+
+        return $this->respond(fn (): array => ['ok' => true, 'archived' => $this->service->restore($item)->isArchived()]);
+    }
+
     /** Sutun ici sira. */
     public function reorder(Request $request): JsonResponse
     {
@@ -258,6 +330,39 @@ final class WorkBoardController extends Controller
         $kind = WorkItemLinkKind::tryFrom((string) $request->query('kind')) ?? WorkItemLinkKind::None;
 
         return response()->json(['items' => $this->queries->searchLinks($kind, (string) $request->query('q', ''))]);
+    }
+
+    /**
+     * Hizli is ekleme (D-233) secenekleri: personel (atanabilir mi), departman,
+     * proje, teklif, is gelistirme ve ihale; pencere acilinca bir kez.
+     */
+    public function quickOptions(Request $request): JsonResponse
+    {
+        $me = $this->me($request);
+        Gate::forUser($me)->authorize('create', WorkItem::class);
+
+        return response()->json($this->queries->quickOptions($me));
+    }
+
+    /**
+     * Akilli is ekle aramasi (D-235): yazarken sunucuda aranan turler - belge,
+     * talep, gorusme, satin alinacak, siparis, urun / hizmet ve taraf (talep
+     * eden / bekletici icin). Kapali turler gelmez.
+     */
+    public function quickSearch(Request $request): JsonResponse
+    {
+        $this->me($request);
+
+        return response()->json(['items' => $this->queries->quickSearch((string) $request->query('q', ''))]);
+    }
+
+    /** Tek is (D-235): Isler listesinden ya da ust cubuktan acilan duzenleme penceresi. */
+    public function show(Request $request, WorkItem $item): JsonResponse
+    {
+        $me = $this->me($request);
+        Gate::forUser($me)->authorize('view', $item);
+
+        return response()->json(['card' => $this->cardOf($item, $me)]);
     }
 
     /** Taraf aramasi (kimden bekleniyor). */
@@ -371,6 +476,10 @@ final class WorkBoardController extends Controller
             'requester_text' => ['nullable', 'string', 'max:200'],
             'link_kind' => ['nullable', Rule::enum(WorkItemLinkKind::class)],
             'link_id' => ['nullable', 'integer'],
+            // D-233 (B59): ek teklif / is gelistirme / ihale.
+            'extra_links' => ['nullable', 'array', 'max:30'],
+            'extra_links.*.kind' => ['required', Rule::in(array_map(static fn (WorkItemLinkKind $kind): string => $kind->value, WorkItemLinkKind::multiple()))],
+            'extra_links.*.id' => ['required', 'integer'],
             'work_hours' => ['nullable', 'numeric', 'min:0', 'max:999'],
             'note' => ['nullable', 'string', 'max:2000'],
         ];

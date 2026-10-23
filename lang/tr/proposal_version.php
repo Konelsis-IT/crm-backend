@@ -16,7 +16,7 @@ return [
         'locale' => 'Dil',
         'margin_pct' => 'Marj (%)',
         'preparer' => 'Hazırlayan',
-        'project_group_opinion_document_revision' => 'Proje Grubu görüşü',
+        'project_group_opinion_document_revision' => 'Projelendirme görüşü',
         'proposal' => 'Teklif',
         'reason' => 'Gerekçe',
         'status' => 'Durum',

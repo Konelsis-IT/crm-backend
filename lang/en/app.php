@@ -30,7 +30,7 @@ return [
         'operations_purchasing' => 'Operations - Purchasing',
         // D-228: General expenses live here.
         'finance' => 'Accounting / Finance',
-        'project_group' => 'Project Group',
+        'project_group' => 'Design engineering',
         'procurement' => 'Procurement',
         'tenders' => 'Tenders',
         'administrative' => 'Administrative',

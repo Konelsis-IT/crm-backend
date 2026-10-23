@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Platform;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -88,6 +89,11 @@ final class SchemaReadiness
         'B56' => 'work_items.item_no',                 // Is kodu IS-YYYY-NNNN (D-204)
         'B57' => 'work_items.legacy_no',               // Is sistemi: oncelik, coklu sorumlu, notlar, belgeler, tekrarli isler (D-219; grubun son kolonu)
         'B58' => 'purchase_supplier_areas',            // Satin alma tedarikci listesi, hizmet alanlari (D-232; grubun son tablosu)
+        'B59' => 'work_item_tender_notices',           // Ise birden fazla teklif / is gelistirme / ihale (D-233; grubun son tablosu)
+        'B60' => 'work_item_catalog_items',            // Ise siparis, urun / hizmet; her bagli kayit turu icin birden fazla baglanti (D-235; grubun son tablosu)
+        // Kontrol kurali imzasi: "check:<kural>:<deger>" (kuralin metninde deger geciyorsa uygulanmis).
+        'B60A' => 'check:ck_work_items_link_kind_enum:purchase_order', // Isin ilk bagli kaydi siparis / urun-hizmet (D-238)
+        'B61' => 'work_items.archived_at',             // Is arsivi (D-240)
     ];
 
     /** @var array<string, bool> */
@@ -131,6 +137,10 @@ final class SchemaReadiness
             return false;
         }
 
+        if (str_starts_with($signature, 'check:')) {
+            return self::checkAllows(...array_slice(explode(':', $signature, 3), 1));
+        }
+
         if (! str_contains($signature, '.')) {
             return self::hasTable($signature);
         }
@@ -143,6 +153,28 @@ final class SchemaReadiness
 
         try {
             return Schema::hasColumn($table, $column);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Kontrol kurali degeri taniyor mu (MySQL; kural yoksa ya da baska bir
+     * veritabaniysa kisit yok sayilir). Okunamazsa "uygulanmadi".
+     */
+    private static function checkAllows(string $name, string $value): bool
+    {
+        try {
+            if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+                return true;
+            }
+
+            $clause = DB::table('information_schema.CHECK_CONSTRAINTS')
+                ->where('CONSTRAINT_SCHEMA', DB::connection()->getDatabaseName())
+                ->where('CONSTRAINT_NAME', $name)
+                ->value('CHECK_CLAUSE');
+
+            return $clause === null || str_contains((string) $clause, "'".$value."'");
         } catch (Throwable) {
             return false;
         }

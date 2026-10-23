@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Proje onay kapısı',
-    'plural' => 'Proje onay kapıları',
+    'label' => 'Taahhüt onay kapısı',
+    'plural' => 'Taahhüt onay kapıları',
 
     'sections' => [
         'main' => 'Onay kapısı bilgileri',
@@ -18,7 +18,7 @@ return [
         'name' => 'Ad',
         'owner' => 'Sahip',
         'passed_at' => 'Geçiş',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'reason' => 'Gerekçe',
         'remediation_due_on' => 'Telafi tarihi',
         'requirement' => 'Gereksinim',

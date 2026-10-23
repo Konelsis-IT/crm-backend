@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Proje kararı',
-    'plural' => 'Proje kararları',
+    'label' => 'Taahhüt kararı',
+    'plural' => 'Taahhüt kararları',
 
     'sections' => [
         'main' => 'Karar bilgileri',

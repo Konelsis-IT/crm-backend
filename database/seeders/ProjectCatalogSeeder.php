@@ -116,7 +116,7 @@ class ProjectCatalogSeeder extends ProtectedSeeder
     private function seedOperationGroups(): void
     {
         $groups = [
-            ['PROJECT', 'Proje', 'Project', 1],
+            ['PROJECT', 'Projelendirme', 'Design engineering', 1], // D-234
             ['PROCUREMENT', 'Satın Alma', 'Procurement', 2],
             ['ACCOUNTING', 'Muhasebe', 'Accounting', 3],
             ['LOGISTICS', 'Lojistik', 'Logistics', 4],

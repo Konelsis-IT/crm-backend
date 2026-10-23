@@ -406,7 +406,7 @@ final class NewDashboardConfig
             'size' => $file !== null && $file->byte_size !== null ? $this->bytes((int) $file->byte_size) : null,
             'updated' => $document->updated_at instanceof Carbon ? DisplayTime::format($document->updated_at, 'd.m.Y') : null,
             'download' => $download,
-            'open' => FileLinks::revisionView($revision) ?? FileLinks::revisionPreview($revision),
+            'open' => FileLinks::bestPreview($revision),
             'url' => RecordLinks::detailUrl($document, checkRecord: false),
         ];
     }

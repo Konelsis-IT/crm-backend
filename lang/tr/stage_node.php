@@ -14,7 +14,7 @@ return [
         'is_hard_gate' => 'Zorunlu onay kapısı',
         'name_tr' => 'Ad',
         'owner_group' => 'Sahip grup',
-        'owner_group_definition' => 'Sahip grup tanımı',
+        'owner_group_definition' => 'Sorumlu departman',
         'reason' => 'Gerekçe',
         'sequence_no' => 'Sıra no',
         'stage_code' => 'Onay kapısı kodu',

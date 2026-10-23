@@ -8,13 +8,13 @@ return [
     'plural' => 'Proje tipi koordinatörleri',
     'nav' => 'Proje tipi koordinatörleri',
     'title' => 'Proje tipi koordinatörleri',
-    'subheading' => 'Koordinatör, proje müdürlerinden bağımsız olarak o proje tipinin bütün projeleriyle ilgilenir ve görüşür. Her tipin bir koordinatörü olur; seçimi boşaltmak koordinatörü kaldırır, eski atama geçmişte kalır.',
+    'subheading' => 'Koordinatör, proje müdürlerinden bağımsız olarak o proje tipinin bütün taahhütleriyle ilgilenir ve görüşür. Her tipin bir koordinatörü olur; seçimi boşaltmak koordinatörü kaldırır, eski atama geçmişte kalır.',
 
     'columns' => [
         'type' => 'Proje tipi',
         'coordinator' => 'Koordinatör',
         'since' => 'Atandığı tarih',
-        'project_count' => 'Proje sayısı',
+        'project_count' => 'Taahhüt sayısı',
     ],
 
     'fields' => [
@@ -33,7 +33,7 @@ return [
         'none' => 'Atanmadı',
         'badge' => ':type koordinatörü',
         'project_item' => ':type: :name',
-        'projects' => ':count proje',
+        'projects' => ':count taahhüt',
         'since' => ':date tarihinden beri',
     ],
 

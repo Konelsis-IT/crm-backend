@@ -31,6 +31,9 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
     case MeetingPlan = 'meeting_plan';
     // D-219 (B57): satin alinacak kalem; her kalem bir is olarak da gorunur.
     case PurchaseNeed = 'purchase_need';
+    // D-235 (B60): satin alma siparisi ve urun / hizmet (Malzeme ve Hizmetler).
+    case PurchaseOrder = 'purchase_order';
+    case CatalogItem = 'catalog_item';
 
     /** FK kolonu; None icin null. */
     public function column(): ?string
@@ -45,6 +48,8 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
             self::WorkRequest => 'linked_work_request_id',
             self::MeetingPlan => 'linked_meeting_plan_id',
             self::PurchaseNeed => 'linked_purchase_need_id',
+            self::PurchaseOrder => 'linked_purchase_order_id',
+            self::CatalogItem => 'linked_catalog_item_id',
         };
     }
 
@@ -61,6 +66,8 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
             self::WorkRequest => 'linkedWorkRequest',
             self::MeetingPlan => 'linkedMeetingPlan',
             self::PurchaseNeed => 'linkedPurchaseNeed',
+            self::PurchaseOrder => 'linkedPurchaseOrder',
+            self::CatalogItem => 'linkedCatalogItem',
         };
     }
 
@@ -75,10 +82,15 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
         )));
     }
 
-    /** Kolonu veritabaninda var mi (satin alinacak kalem B57 ile gelir). */
+    /** Kolonu veritabaninda var mi (satin alinacak kalem B57, siparis ve urun / hizmet B60 ile gelir). */
     public function available(): bool
     {
-        return $this !== self::PurchaseNeed || SchemaReadiness::hasBatch('B57');
+        return match ($this) {
+            self::PurchaseNeed => SchemaReadiness::hasBatch('B57'),
+            // B60A: link_kind kontrol kurali bu iki degeri tanimadan ilk bagli kayit olamazlar (D-238).
+            self::PurchaseOrder, self::CatalogItem => SchemaReadiness::hasBatch('B60') && SchemaReadiness::hasBatch('B60A'),
+            default => true,
+        };
     }
 
     /**
@@ -87,7 +99,58 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
      */
     public function visible(): bool
     {
-        return $this->available() && ($this !== self::PurchaseNeed || FeatureFlags::enabled(Feature::PurchaseNeeds));
+        return $this->available() && match ($this) {
+            self::PurchaseNeed => FeatureFlags::enabled(Feature::PurchaseNeeds),
+            // D-235: satin alma yayina girdikce (siparis 2.9, Malzeme ve Hizmetler 2.8).
+            self::PurchaseOrder => FeatureFlags::enabled(Feature::PurchaseOrders),
+            self::CatalogItem => FeatureFlags::enabled(Feature::Catalog),
+            default => true,
+        };
+    }
+
+    /**
+     * Ek bagli kayit tablosu (D-233, B59): bir ise birden fazla teklif, is
+     * gelistirme ve ihale. Diger turler tek kayittir; null doner.
+     *
+     * @return array{table: string, column: string, relation: string}|null
+     */
+    public function extra(): ?array
+    {
+        return match ($this) {
+            self::Proposal => ['table' => 'work_item_proposals', 'column' => 'proposal_id', 'relation' => 'extraProposals'],
+            self::BusinessCase => ['table' => 'work_item_business_cases', 'column' => 'business_case_id', 'relation' => 'extraBusinessCases'],
+            self::TenderNotice => ['table' => 'work_item_tender_notices', 'column' => 'tender_notice_id', 'relation' => 'extraTenderNotices'],
+            // D-235 (B60): diger turler de birden fazla baglanir.
+            self::Document => ['table' => 'work_item_documents', 'column' => 'document_id', 'relation' => 'extraDocuments'],
+            self::WorkRequest => ['table' => 'work_item_work_requests', 'column' => 'work_request_id', 'relation' => 'extraWorkRequests'],
+            self::MeetingPlan => ['table' => 'work_item_meeting_plans', 'column' => 'meeting_plan_id', 'relation' => 'extraMeetingPlans'],
+            self::PurchaseNeed => ['table' => 'work_item_purchase_needs', 'column' => 'purchase_need_id', 'relation' => 'extraPurchaseNeeds'],
+            self::PurchaseOrder => ['table' => 'work_item_purchase_orders', 'column' => 'purchase_order_id', 'relation' => 'extraPurchaseOrders'],
+            self::CatalogItem => ['table' => 'work_item_catalog_items', 'column' => 'catalog_item_id', 'relation' => 'extraCatalogItems'],
+            default => null,
+        };
+    }
+
+    /**
+     * Birden fazla baglanabilen turler (D-233: teklif, is gelistirme, ihale;
+     * D-235: belge, talep, gorusme ve satin alma turleri de). Ek kayit tablosu
+     * uygulanmis olan turler doner: B59 ilk uc tur, B60 digerleri.
+     *
+     * @return list<self>
+     */
+    public static function multiple(): array
+    {
+        $kinds = [self::Proposal, self::BusinessCase, self::TenderNotice];
+
+        if (SchemaReadiness::hasBatch('B60')) {
+            foreach ([self::Document, self::WorkRequest, self::MeetingPlan, self::PurchaseNeed, self::PurchaseOrder, self::CatalogItem] as $kind) {
+                if ($kind->available()) {
+                    $kinds[] = $kind;
+                }
+            }
+        }
+
+        return $kinds;
     }
 
     /**
@@ -111,8 +174,10 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
         $options = self::options();
         unset($options[self::None->value]);
 
-        if (! self::PurchaseNeed->visible()) {
-            unset($options[self::PurchaseNeed->value]);
+        foreach ([self::PurchaseNeed, self::PurchaseOrder, self::CatalogItem] as $kind) {
+            if (! $kind->visible()) {
+                unset($options[$kind->value]);
+            }
         }
 
         return $options;
@@ -130,6 +195,8 @@ enum WorkItemLinkKind: string implements HasIcon, HasLabel
             self::WorkRequest => Heroicon::OutlinedInboxArrowDown,
             self::MeetingPlan => Heroicon::OutlinedChatBubbleLeftRight,
             self::PurchaseNeed => Heroicon::OutlinedShoppingCart,
+            self::PurchaseOrder => Heroicon::OutlinedClipboardDocumentCheck,
+            self::CatalogItem => Heroicon::OutlinedCube,
         };
     }
 }

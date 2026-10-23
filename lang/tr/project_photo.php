@@ -24,7 +24,7 @@ return [
 
     'help' => [
         'files' => 'Birden fazla fotoğraf seçebilirsiniz; ilk fotoğraf otomatik olarak kapak görseli olur.',
-        'is_cover' => 'İşaretlenirse proje kartında ve çalışma alanının başında bu fotoğraf gösterilir.',
+        'is_cover' => 'İşaretlenirse taahhüt kartında ve çalışma alanının başında bu fotoğraf gösterilir.',
     ],
 
     'relation' => [

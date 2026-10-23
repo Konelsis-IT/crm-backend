@@ -19,6 +19,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\On;
 
 /**
  * Personel karti > Isler sekmesi (B36, D-115; Filament tablosu): Isler
@@ -61,6 +62,10 @@ class WorkItemsRelationManager extends RelationManager
     {
         return true;
     }
+
+    /** Akilli is penceresi kaydetti (D-235): sekmedeki liste guncel kayitlari okur. */
+    #[On('kq-saved')]
+    public function refreshAfterSmartSave(): void {}
 
     public function table(Table $table): Table
     {

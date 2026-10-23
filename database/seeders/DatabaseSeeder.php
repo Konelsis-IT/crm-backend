@@ -119,6 +119,8 @@ class DatabaseSeeder extends Seeder
         // D-232 ek: aktarimin ilk hali calismis veritabaninda ayni firmalari birlestirir (7 cift + Taraflar'daki
         // 14 firma), kisa / uzun ad ve notu yazar; ilk hali calismamis veritabaninda hicbir sey yapmaz.
         PurchaseSupplierMerges20261021Seeder::class,
+        // D-234: "PROJE" departmani ve "PROJECT" is kolu "Projelendirme" (ad hala "Proje" ise).
+        Naming20261022Seeder::class,
     ];
 
     /**

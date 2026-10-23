@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Proje bileşeni',
-    'plural' => 'Proje bileşenleri',
+    'label' => 'Taahhüt bileşeni',
+    'plural' => 'Taahhüt bileşenleri',
 
     'sections' => [
         'main' => 'Bileşen bilgileri',

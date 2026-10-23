@@ -51,12 +51,26 @@ final class WorkCategoryCatalog
      * @var array<string, list<string>>
      */
     private const POSITION_SETS = [
+        // D-245 (23 Ekim 2026 kullanici, Huseyin Gunes'in listesi): YAZILIM, IT, DEVREYE_ALMA,
+        // MEDYA, SERVIS, MUHASEBE, FINANS, IK, ISG, KALITE, SATIN_ALMA, PROJE (Taahhut),
+        // IS_GELISTIRME, TEKLIF, YONETIM, HUKUK, INSAAT, ATOLYE, SAHA, BORSA, YATIRIMLAR, ROMANYA.
         'YKB' => [
-            'construction', 'projects', 'legal', 'stock_market', 'finance', 'hr_isg', 'quality', 'service', 'it_media',
-            'software_commissioning', 'new_investments', 'existing_investments', 'romania', 'business_development',
-            'proposal', 'rents', 'internal_order', 'purchasing',
+            'software', 'it', 'commissioning', 'media', 'service', 'accounting', 'finance', 'hr', 'isg', 'quality',
+            'purchasing', 'projects', 'business_development', 'proposal', 'management', 'legal', 'construction',
+            'workshop', 'field', 'stock_market', 'investments', 'romania',
         ],
     ];
+
+    /**
+     * Listeden cikan eski kodlar (D-245): birlesik kategoriler B62 ile ilk
+     * karsiligina tasinir (it_media -> it, hr_isg -> hr, software_commissioning ->
+     * software, new_investments / existing_investments -> investments); Kiralar ve
+     * Sirket ici duzen listede yok. Tasima uygulanana kadar kayitli deger gecerli
+     * sayilir (is duzenlenince kategori silinmez) ama secim listelerinde cikmaz.
+     *
+     * @var list<string>
+     */
+    private const RETIRED = ['it_media', 'hr_isg', 'software_commissioning', 'new_investments', 'existing_investments', 'rents', 'internal_order'];
 
     /**
      * Birden fazla departmanda calisanin seti (D-218): gorev seti varsa o, yoksa
@@ -164,7 +178,7 @@ final class WorkCategoryCatalog
 
     public function isKnown(string $category): bool
     {
-        return in_array($category, $this->allCodes(), true);
+        return in_array($category, $this->allCodes(), true) || in_array($category, self::RETIRED, true);
     }
 
     public function label(?string $category): ?string

@@ -14,7 +14,9 @@ use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Resources\MeetingPlans\MeetingPlanResource;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Proposals\ProposalResource;
+use App\Filament\Resources\CatalogItems\CatalogItemResource;
 use App\Filament\Resources\PurchaseNeeds\PurchaseNeedResource;
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\Reports\ReportResource;
 use App\Filament\Resources\TenderNotices\TenderNoticeResource;
 use App\Filament\Resources\WorkItems\WorkItemResource;
@@ -32,10 +34,18 @@ use App\Models\Party\PartyMeetingNote;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Project\ProjectPhoto;
+use App\Models\Procurement\CatalogItem;
 use App\Models\Procurement\PurchaseNeed;
+use App\Models\Procurement\PurchaseOrder;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Report\Report;
 use App\Models\Report\WorkItem;
+use App\Models\Report\WorkItemFile;
+use App\Models\Report\WorkItemNote;
+use App\Models\Scopes\HideSystemAccountScope;
+use App\Services\Audit\ActorContext;
+use App\Services\Authorization\SystemAccount;
+use App\Filament\Support\FileLinks;
 use App\Enums\Platform\Feature;
 use App\Models\WorkRequest\WorkRequest;
 use App\Query\Report\WorkItemQueries;
@@ -117,6 +127,8 @@ final class WorkItemPresenter
         return [
             'id' => (int) $item->getKey(),
             'title' => (string) $item->title,
+            // Is kodu (B56, D-204); Akilli is penceresinin alt basligi (D-235).
+            'item_no' => $item->getAttribute('item_no'),
             'status' => $item->status?->value,
             'status_label' => $item->status?->getLabel(),
             'is_critical' => (bool) $item->is_critical,
@@ -138,6 +150,11 @@ final class WorkItemPresenter
             'waiting' => $waiting,
             'requester' => $this->requester($item),
             'link' => $link,
+            // D-233 (B59): ek bagli kayitlar.
+            'links' => $this->extraLinks($item),
+            // D-235: Akilli is ekle okunusu (metin + rozetler); kart tiklaninca ve duzenlemede.
+            'sentence' => (new WorkItemSentence($this))->segments($item),
+            'work_hours' => $item->work_hours !== null ? (float) $item->work_hours : null,
             // D-216: talebe bagli is ve yonetim onceligi.
             'request' => $this->request($item, $viewer),
             'management' => $this->management($item),
@@ -175,7 +192,8 @@ final class WorkItemPresenter
             'assignees' => $ready ? $item->assignees->map(fn (Personnel $person): array => $this->person($person))->values()->all() : [],
             'for_everyone' => $ready && (bool) $item->getAttribute('for_everyone'),
             'discipline' => $discipline instanceof WorkDiscipline ? $discipline->value : null,
-            'discipline_label' => $discipline instanceof WorkDiscipline ? $discipline->getLabel() : null,
+            // D-245: deger kalir (eski pencere geri yollar, silinmez), etiket ekranda yok.
+            'discipline_label' => $discipline instanceof WorkDiscipline && WorkItemQueries::disciplineUi() ? $discipline->getLabel() : null,
             'notes_count' => (int) ($item->getAttribute('notes_count') ?? 0),
             'files_count' => (int) ($item->getAttribute('files_count') ?? 0),
             'legacy_no' => $ready ? $item->getAttribute('legacy_no') : null,
@@ -192,6 +210,78 @@ final class WorkItemPresenter
             'name' => (string) $person->full_name,
             'initials' => self::initials((string) $person->full_name),
         ];
+    }
+
+    /**
+     * Isin cevaplari ve belgeleri (D-241): Akilli is penceresinin okuma
+     * gorunumu. Cevaplar eskiden yeniye (sohbet sirasi); aktarilan notun yazani
+     * bos, kaynagi dolu. Belge kaldirma yalniz isi duzenleyebilene.
+     *
+     * @return array{notes: list<array<string, mixed>>, files: list<array<string, mixed>>}
+     */
+    public function thread(WorkItem $item, Personnel $viewer): array
+    {
+        $zone = DisplayTime::zone();
+        $gate = Gate::forUser($viewer);
+
+        // Yazan gizli hesap kapsami disinda okunur (D-148): personel degistirmede (D-120)
+        // kayit gercek hesabin adina yazilir ve ekranda "Sistem" gorunur; "aktarilan not"
+        // yalniz yazani olmayan (ice aktarilan) nottur. Kendi cevabim: kaydi yazan hesap.
+        $writerId = app(ActorContext::class)->personnelId() ?? (int) $viewer->getKey();
+        $system = app(SystemAccount::class);
+
+        $notes = $item->notes()
+            ->with(['author' => fn ($query) => $query->withoutGlobalScope(HideSystemAccountScope::class)->select(['id', 'full_name'])])
+            ->get()->reverse()->values()
+            ->map(function (WorkItemNote $note) use ($zone, $writerId, $system): array {
+                $author = $note->author;
+                $name = $author instanceof Personnel ? ($system->is($author) ? (string) __('activity.system') : (string) $author->full_name) : null;
+
+                return [
+                    'id' => (int) $note->getKey(),
+                    'body' => (string) $note->body,
+                    'source' => $note->source,
+                    'at' => $note->noted_at?->copy()->timezone($zone)->format('d.m.Y H:i'),
+                    'author' => $name !== null ? ['id' => (int) $author->getKey(), 'name' => $name, 'initials' => self::initials($name)] : null,
+                    'mine' => (int) $note->getAttribute('created_by_personnel_id') === $writerId,
+                ];
+            })->all();
+
+        // D-243: gorseller isin icinde (kucuk gorsel), belgeler indirmeden onizlenir.
+        $files = $item->files()->with('fileObject:id,original_name,byte_size,mime_type')->get()
+            ->filter(static fn (WorkItemFile $file): bool => $file->fileObject !== null)
+            ->values()
+            ->map(fn (WorkItemFile $file): array => [
+                'id' => (int) $file->getKey(),
+                'name' => (string) $file->fileObject?->original_name,
+                'size' => (int) ($file->fileObject?->byte_size ?? 0),
+                'at' => $file->created_at?->copy()->timezone($zone)->format('d.m.Y H:i'),
+                'kind' => self::fileKind($file),
+                'thumb' => $file->fileObject?->isImage() ? FileLinks::workItemFile($file, 'inline', 'thumbnail') : null,
+                'url' => FileLinks::workItemFile($file),
+                'preview' => FileLinks::workItemPreview($file),
+                'download' => FileLinks::workItemFile($file, 'download'),
+                'can_remove' => $gate->allows('delete', $file),
+            ])->all();
+
+        return ['notes' => $notes, 'files' => $files];
+    }
+
+    /** Belgenin onizleme turu: image | pdf | sheet | word | text | other. */
+    private static function fileKind(WorkItemFile $file): string
+    {
+        $object = $file->fileObject;
+        $extension = strtolower(pathinfo((string) $object?->original_name, PATHINFO_EXTENSION));
+
+        return match (true) {
+            $object === null => 'other',
+            $object->isImage() && $object->isInlinePreviewable() => 'image',
+            $object->mime_type === 'application/pdf' => 'pdf',
+            in_array($extension, ['xlsx', 'xlsm', 'ods', 'csv'], true) => 'sheet',
+            $extension === 'docx' => 'word',
+            $object->mime_type === 'text/plain' => 'text',
+            default => 'other',
+        };
     }
 
     public static function initials(string $name): string
@@ -273,6 +363,39 @@ final class WorkItemPresenter
     }
 
     /**
+     * Ek bagli kayitlar (D-233, B59): ilk bagli kayittan sonraki teklifler, is
+     * gelistirme kayitlari ve ihaleler; ozellik kapaliyken bos.
+     *
+     * @return list<array{kind: string, kind_label: string, id: int, no: string|null, label: string, url: string|null}>
+     */
+    public function extraLinks(WorkItem $item): array
+    {
+        if (! WorkItemQueries::multiLinks()) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach (WorkItemLinkKind::multiple() as $kind) {
+            $relation = ((array) $kind->extra())['relation'];
+
+            foreach ($item->{$relation} as $record) {
+                [$no, $label] = $this->linkText($kind, $record);
+                $rows[] = [
+                    'kind' => $kind->value,
+                    'kind_label' => $kind->getLabel(),
+                    'id' => (int) $record->getKey(),
+                    'no' => $no,
+                    'label' => $label,
+                    'url' => $this->recordUrl($kind, $record),
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
      * Bagli kaydin numarasi ve adi.
      *
      * @return array{0: string|null, 1: string}
@@ -288,6 +411,9 @@ final class WorkItemPresenter
             $record instanceof WorkRequest => [$record->request_no, (string) $record->title],
             $record instanceof PurchaseNeed => [$record->purchaseRequest?->request_no, (string) $record->title],
             $record instanceof MeetingPlan => [$record->planned_on?->format('d.m.Y'), trim((string) ($record->party?->display_name ?? '').($record->subject ? ' · '.$record->subject : ''), ' ·')],
+            // D-235 (B60)
+            $record instanceof PurchaseOrder => [$record->order_no, (string) ($record->supplier_name ?? $record->order_no)],
+            $record instanceof CatalogItem => [$record->code, (string) $record->name],
             default => [null, (string) $kind->getLabel()],
         };
     }
@@ -305,6 +431,8 @@ final class WorkItemPresenter
             WorkItemLinkKind::WorkRequest => WorkRequestResource::getUrl('view', ['record' => $record]),
             WorkItemLinkKind::MeetingPlan => MeetingPlanResource::getUrl('view', ['record' => $record]),
             WorkItemLinkKind::PurchaseNeed => PurchaseNeedResource::getUrl('view', ['record' => $record]),
+            WorkItemLinkKind::PurchaseOrder => PurchaseOrderResource::getUrl('view', ['record' => $record]),
+            WorkItemLinkKind::CatalogItem => CatalogItemResource::getUrl('view', ['record' => $record]),
             WorkItemLinkKind::None => null,
         });
     }

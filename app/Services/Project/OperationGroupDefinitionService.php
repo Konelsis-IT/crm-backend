@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Project;
 
+use App\Enums\Shared\ActiveStatus;
 use App\Exceptions\CodeAlreadyInUseException;
+use App\Models\Personnel\OrgUnit;
 use App\Models\Project\OperationGroupDefinition;
+use App\Query\Project\ProjectCatalogQueries;
 use App\Services\AbstractService;
 use App\Services\Support\CodeGenerator;
 use Illuminate\Database\Eloquent\Model;
@@ -44,5 +47,33 @@ final class OperationGroupDefinitionService extends AbstractService
         unset($data['code']);
 
         return parent::update($record, $data);
+    }
+
+    /**
+     * Departmanin taahhutlerde calismasi (D-239: operasyon grubu = departman,
+     * Organizasyon birimleri ekranindan). Acilinca grup departmanin adiyla
+     * acilir ya da etkinlesir; kapatilinca pasife alinir (silinmez: taahhutlerin
+     * Departmanlar satirlari ona bagli). Ad departmanla ayni tutulur.
+     */
+    public function syncForUnit(OrgUnit $unit, bool $inProjects, int $sortOrder): ?OperationGroupDefinition
+    {
+        $group = app(ProjectCatalogQueries::class)->groupForUnit((string) $unit->code);
+        $data = [
+            'name_tr' => (string) $unit->name,
+            'default_sort_order' => max(0, min(255, $sortOrder)),
+            'status' => $inProjects ? ActiveStatus::Active->value : ActiveStatus::Inactive->value,
+        ];
+
+        if ($group === null) {
+            if (! $inProjects) {
+                return null;
+            }
+
+            /** @var OperationGroupDefinition */
+            return $this->create([...$data, 'code' => OperationGroupDefinition::codeForUnit((string) $unit->code)]);
+        }
+
+        /** @var OperationGroupDefinition */
+        return $this->update($group, $data);
     }
 }

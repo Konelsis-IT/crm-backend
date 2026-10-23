@@ -9,7 +9,7 @@ return [
     ],
 
     'fields' => [
-        'group' => 'Step (operation group)',
+        'group' => 'Department',
         'code' => 'Code',
         'name_tr' => 'Name',
         'kind' => 'Counting rule',

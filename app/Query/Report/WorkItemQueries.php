@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Query\Report;
 
+use App\Enums\Acquisition\BusinessDevelopmentKind;
 use App\Enums\Platform\Feature;
 use App\Enums\Report\ReportStatus;
 use App\Enums\Report\WorkItemLinkKind;
 use App\Enums\Report\WorkItemSource;
 use App\Enums\Report\WorkItemStatus;
+use App\Enums\Report\WorkWaitingKind;
 use App\Models\Acquisition\BusinessCase;
 use App\Models\Acquisition\Contract;
 use App\Models\Acquisition\Proposal;
@@ -24,7 +26,9 @@ use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
 use App\Models\Project\ProjectPhoto;
+use App\Models\Procurement\CatalogItem;
 use App\Models\Procurement\PurchaseNeed;
+use App\Models\Procurement\PurchaseOrder;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\Report\Report;
 use App\Models\Report\WorkItem;
@@ -38,6 +42,7 @@ use App\Reports\Templates\WeeklyWorkReportTemplate;
 use App\Reports\Work\WorkSuggestionCatalog;
 use App\Services\Platform\FeatureFlags;
 use App\Services\Platform\SchemaReadiness;
+use App\Services\Report\WorkItemSentence;
 use App\Support\DisplayTime;
 use App\Support\Projects\ProjectNames;
 use Illuminate\Database\Eloquent\Builder;
@@ -129,12 +134,109 @@ final class WorkItemQueries
             ...WorkItemLinkKind::relations(),
             // D-219 (B57): diger sorumlular.
             ...(self::extended() ? ['assignees:id,full_name'] : []),
+            // D-233 (B59) / D-235 (B60): ek bagli kayitlar.
+            ...(self::multiLinks() ? self::extraRelations() : []),
         ];
+    }
+
+    /**
+     * Ek bagli kayit iliskileri (uygulanmis tablolar); ilk uc tur dar kolonla,
+     * gorusme ve satin alinacak kalem okunus icin gereken iliskiyle.
+     *
+     * @return list<string>
+     */
+    private static function extraRelations(): array
+    {
+        $narrow = [
+            WorkItemLinkKind::Proposal->value => 'extraProposals:proposals.id,proposal_no,title',
+            WorkItemLinkKind::BusinessCase->value => 'extraBusinessCases:business_cases.id,title',
+            WorkItemLinkKind::TenderNotice->value => 'extraTenderNotices:tender_notices.id,external_notice_id,title',
+            // Okunusta taraf adi ve talep numarasi da yazilir (WorkItemPresenter::linkText).
+            WorkItemLinkKind::MeetingPlan->value => 'extraMeetingPlans.party',
+            WorkItemLinkKind::PurchaseNeed->value => 'extraPurchaseNeeds.purchaseRequest',
+        ];
+
+        return array_map(
+            static fn (WorkItemLinkKind $kind): string => $narrow[$kind->value] ?? (string) ((array) $kind->extra())['relation'],
+            WorkItemLinkKind::multiple(),
+        );
     }
 
     public function newQuery(): Builder
     {
         return WorkItem::query()->with($this->relations());
+    }
+
+    /** D-233 (B59): ise birden fazla teklif / is gelistirme / ihale; tablo var ve ozellik acik. */
+    public static function multiLinks(): bool
+    {
+        return SchemaReadiness::hasBatch('B59') && FeatureFlags::enabled(Feature::WorkItemMultiLinks);
+    }
+
+    /**
+     * Hizli is ekleme (D-233) secenekleri: rozet olabilecek her kayit, tek
+     * yuklemede (istemci yazarken aninda suzer). Personelde `assignable`:
+     * kisinin bu kisiye is yazip yazamayacagi (baskasina is yazma kurali
+     * degismedi: amiri, departman yoneticisi ya da tum kartlari goren).
+     *
+     * @return array{people: list<array<string, mixed>>, units: list<array<string, mixed>>, projects: list<array<string, mixed>>, proposals: list<array<string, mixed>>, cases: list<array<string, mixed>>, tenders: list<array<string, mixed>>}
+     */
+    public function quickOptions(Personnel $me): array
+    {
+        $units = $this->units();
+        $all = $this->seesAll($me);
+        $team = $all ? [] : array_flip($this->reports->teamPersonnelIds((int) $me->getKey()));
+        $people = [];
+
+        foreach ($this->people() as $id => $person) {
+            $people[] = [
+                'id' => $id,
+                'label' => $person['name'],
+                'sub' => $person['unit'] !== null ? ($units[$person['unit']]['name'] ?? null) : null,
+                'assignable' => $all || $id === (int) $me->getKey() || isset($team[$id]),
+            ];
+        }
+
+        // Proje ve is gelistirme isverenin adiyla da bulunur ("#aksa" -> Aksa'nin projeleri).
+        $projects = SchemaReadiness::hasBatch('B17')
+            ? Project::query()->with(['businessCode:id,formatted_code', 'customerParty:id,display_name'])->orderByDesc('id')->get([...ProjectNames::columns(), 'project_business_code_id', 'customer_party_id'])
+                ->map(fn (Project $project): array => [
+                    'id' => (int) $project->getKey(),
+                    'label' => (string) $project->display_name,
+                    'long' => (string) $project->name,
+                    'code' => $project->businessCode?->formatted_code,
+                    'party' => $project->customerParty?->display_name,
+                ])->values()->all()
+            : [];
+
+        $cases = BusinessCase::query()
+            ->with(['codes:id,business_case_id,code_kind,formatted_code', 'primaryParty:id,display_name'])
+            ->orderByDesc('id')
+            ->get()
+            ->map(function (BusinessCase $case): array {
+                $kind = BusinessDevelopmentKind::tryFrom((string) $case->developmentKind());
+
+                return [
+                    'id' => (int) $case->getKey(),
+                    'label' => (string) $case->title,
+                    'code' => $case->caseCode()?->formatted_code,
+                    'sub' => $kind?->getLabel() ?? $case->acquisition_stage?->getLabel(),
+                    'party' => $case->primaryParty?->display_name,
+                ];
+            })->values()->all();
+
+        return [
+            'people' => $people,
+            'units' => array_map(fn (int $id, array $unit): array => ['id' => $id, 'label' => $unit['name'], 'code' => $unit['code']], array_keys($units), $units),
+            'projects' => $projects,
+            'proposals' => Proposal::query()->orderByDesc('id')->get(['id', 'proposal_no', 'title'])
+                ->map(fn (Proposal $proposal): array => ['id' => (int) $proposal->getKey(), 'label' => (string) $proposal->title, 'code' => $proposal->proposal_no])
+                ->values()->all(),
+            'cases' => $cases,
+            'tenders' => TenderNotice::query()->orderByDesc('id')->get(['id', 'external_notice_id', 'title'])
+                ->map(fn (TenderNotice $notice): array => ['id' => (int) $notice->getKey(), 'label' => (string) $notice->title, 'code' => $notice->external_notice_id])
+                ->values()->all(),
+        ];
     }
 
     /** D-219 (B57): oncelik, diger sorumlular, tum ekip, notlar ve belgeler hazir mi? */
@@ -144,6 +246,17 @@ final class WorkItemQueries
     }
 
     /** Ekranlarda D-219 alanlari: B57 uygulanmis ve ozellik acik (work.items.extended). */
+    /**
+     * Is grubu (D-219) ekranlarda (D-245, 23 Ekim 2026 kullanici: "Kategori ile
+     * is grubunu birlestirelim ... Taahhut'e ozel simdilik olmasin"): kapali.
+     * Kayitli deger veritabaninda kalir; hicbir ekranda gosterilmez, secilmez,
+     * suzulmez ve kaydederken silinmez. Geri acmak icin true dondurmek yeter.
+     */
+    public static function disciplineUi(): bool
+    {
+        return false;
+    }
+
     public static function extendedUi(): bool
     {
         return self::extended() && FeatureFlags::enabled(Feature::WorkItemsExtended);
@@ -308,7 +421,7 @@ final class WorkItemQueries
      */
     public function board(Personnel $viewer, string $scope, array $params): Collection
     {
-        $query = $this->newQuery()->withCount(['children', ...(self::extended() ? ['notes', 'files'] : [])]);
+        $query = $this->newQuery()->notArchived()->withCount(['children', ...(self::extended() ? ['notes', 'files'] : [])]);
         $me = (int) $viewer->getKey();
         $projects = array_values(array_filter(array_map('intval', $params['projects'] ?? [])));
         $units = array_values(array_filter(array_map('intval', $params['units'] ?? [])));
@@ -398,14 +511,25 @@ final class WorkItemQueries
             ->get();
     }
 
-    /** Is listesi siralamasi (D-216): ust yonetimin talep ettigi acik isler once, sonra en yeni. */
+    /**
+     * Is listesi siralamasi. D-236 (kullanici 22 Ekim 2026: "Isler listesinde en
+     * yeni is en ustte durmalidir"): en son eklenen is en ustte, isin tarihi
+     * sirayi degistirmez; 2.9.2 ile acilir (D-237, D-244; work.board.refresh). Kapaliyken
+     * D-216: ust yonetimin talep ettigi acik isler once, sonra is tarihine gore.
+     */
     public function listOrder(Builder $query): Builder
     {
+        $model = $query->getModel();
+
+        if (FeatureFlags::enabled(Feature::WorkBoardRefresh)) {
+            return $query->orderByDesc($model->qualifyColumn('created_at'))->orderByDesc($model->qualifyColumn('id'));
+        }
+
         if (SchemaReadiness::hasBatch('B37')) {
             app(ManagementPriorityQueries::class)->openFirst($query, 'requester_personnel_id', 'status', WorkItemStatus::openValues());
         }
 
-        return $query->orderByDesc($query->getModel()->qualifyColumn('work_at'));
+        return $query->orderByDesc($model->qualifyColumn('work_at'));
     }
 
     /**
@@ -415,7 +539,7 @@ final class WorkItemQueries
     public function personnelRange(int $personnelId, Carbon $from, Carbon $to): Builder
     {
         return $this->applyRange(
-            WorkItem::query()->with(['project:'.ProjectNames::select()])->where('work_items.personnel_id', $personnelId),
+            WorkItem::query()->notArchived()->with(['project:'.ProjectNames::select()])->where('work_items.personnel_id', $personnelId),
             $from,
             $to,
         );
@@ -488,7 +612,7 @@ final class WorkItemQueries
         $today = self::today();
         [$groupSql, $bindings] = $this->agendaGroupSql($today);
 
-        $query = WorkItem::query()
+        $query = WorkItem::query()->notArchived()
             ->select('work_items.*')
             ->selectRaw($groupSql.' as agenda_group', $bindings)
             ->with(['project:'.ProjectNames::select(), 'personnel:id,full_name,photo_path', ...(self::extended() ? ['assignees:id,full_name'] : [])]);
@@ -532,7 +656,7 @@ final class WorkItemQueries
         $today = self::today();
         [$groupSql, $bindings] = $this->agendaGroupSql($today);
 
-        $query = $this->applyAgendaScope(WorkItem::query(), $viewer, $scope);
+        $query = $this->applyAgendaScope(WorkItem::query()->notArchived(), $viewer, $scope);
         $this->applyAgendaFilters($query, $filters);
         $this->applyRange($query, $today, $today->copy()->addDay());
 
@@ -557,7 +681,7 @@ final class WorkItemQueries
     public function agendaFacets(Personnel $viewer, string $scope): array
     {
         $today = self::today();
-        $query = $this->applyAgendaScope(WorkItem::query(), $viewer, $scope);
+        $query = $this->applyAgendaScope(WorkItem::query()->notArchived(), $viewer, $scope);
         $this->applyRange($query, $today, $today->copy()->addDay());
 
         $projectIds = (clone $query)->whereNotNull('work_items.project_id')->distinct()->pluck('work_items.project_id')->map(fn ($id): int => (int) $id)->all();
@@ -685,7 +809,7 @@ final class WorkItemQueries
     /** Kisinin ana is olarak secebilecegi kartlar (acik, ust karti olmayan). */
     public function parentOptions(int $personnelId, ?int $exceptId = null): array
     {
-        return WorkItem::query()
+        return WorkItem::query()->notArchived()
             ->whereNull('parent_id')
             ->where('personnel_id', $personnelId)
             ->when($exceptId !== null, fn (Builder $query) => $query->whereKeyNot($exceptId))
@@ -850,7 +974,7 @@ final class WorkItemQueries
         $fromYmd = $from->format('Y-m-d');
         $toYmd = $to->format('Y-m-d');
 
-        return $this->newQuery()
+        return $this->newQuery()->notArchived()
             ->where('work_items.personnel_id', $personnelId)
             ->where(function (Builder $inner) use ($fromYmd, $toYmd): void {
                 $inner->whereBetween('work_items.work_on', [$fromYmd, $toYmd])
@@ -878,7 +1002,7 @@ final class WorkItemQueries
             return new Collection;
         }
 
-        return $this->applyVisible($this->newQuery(), $viewer)
+        return $this->applyVisible($this->newQuery()->notArchived(), $viewer)
             ->whereIn('work_items.id', $ids)
             ->orderBy('work_items.project_id')
             ->orderBy('work_items.sort_order')
@@ -950,7 +1074,7 @@ final class WorkItemQueries
     /** Kisinin acik kart sayisi (sekme rozeti). */
     public function openCount(int $personnelId): int
     {
-        return WorkItem::query()
+        return WorkItem::query()->notArchived()
             ->where('personnel_id', $personnelId)
             ->whereIn('status', WorkItemStatus::openValues())
             ->count();
@@ -1007,6 +1131,15 @@ final class WorkItemQueries
                 ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where('title', 'like', $like))
                 ->orderByDesc('id')->limit(20)->get()
                 ->map(fn (PurchaseNeed $need): array => ['id' => (int) $need->getKey(), 'no' => $need->purchaseRequest?->request_no, 'label' => trim((string) $need->title.($need->project !== null ? ' · '.$need->project->display_name : '')), 'project_id' => $need->project_id !== null ? (int) $need->project_id : null]),
+            // D-235 (B60): siparis (SIP kodu, tedarikci) ve urun / hizmet (ad, kod).
+            WorkItemLinkKind::PurchaseOrder => ! WorkItemLinkKind::PurchaseOrder->available() ? collect() : PurchaseOrder::query()
+                ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('order_no', 'like', $like)->orWhere('supplier_name', 'like', $like)))
+                ->orderByDesc('id')->limit(20)->get()
+                ->map(fn (PurchaseOrder $order): array => ['id' => (int) $order->getKey(), 'no' => $order->order_no, 'label' => (string) ($order->supplier_name ?? $order->order_no), 'project_id' => $order->project_id !== null ? (int) $order->project_id : null]),
+            WorkItemLinkKind::CatalogItem => ! WorkItemLinkKind::CatalogItem->available() ? collect() : CatalogItem::query()
+                ->when($onlyId !== null, fn (Builder $q) => $q->whereKey($onlyId), fn (Builder $q) => $q->where(fn (Builder $w) => $w->where('name', 'like', $like)->orWhere('code', 'like', $like)))
+                ->orderBy('name')->limit(20)->get()
+                ->map(fn (CatalogItem $item): array => ['id' => (int) $item->getKey(), 'no' => $item->code, 'label' => (string) $item->name, 'project_id' => null]),
             WorkItemLinkKind::None => collect(),
         };
 
@@ -1038,7 +1171,215 @@ final class WorkItemQueries
             ->all();
     }
 
+    /**
+     * Akilli is ekle sunucu aramasi (D-235): belge, talep, gorusme, satin
+     * alinacak, siparis, urun / hizmet (gorunen turler, en fazla 5) ve taraf
+     * (talep eden / bekletici, en fazla 6). Kucuk listeler quickOptions() ile
+     * pencere acilinca gelir; bunlar yazarken aranir.
+     *
+     * @return list<array{type: string, id: int, label: string, code: string|null, sub: string|null}>
+     */
+    public function quickSearch(string $term): array
+    {
+        $term = trim($term);
+
+        if (mb_strlen($term) < 2) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ([WorkItemLinkKind::Document, WorkItemLinkKind::WorkRequest, WorkItemLinkKind::MeetingPlan, WorkItemLinkKind::PurchaseNeed, WorkItemLinkKind::PurchaseOrder, WorkItemLinkKind::CatalogItem] as $kind) {
+            if (! $kind->visible()) {
+                continue;
+            }
+
+            foreach (array_slice($this->searchLinks($kind, $term), 0, 5) as $row) {
+                $rows[] = ['type' => WorkItemSentence::LINK_TYPES[$kind->value] ?? $kind->value, 'id' => $row['id'], 'label' => $row['label'], 'code' => $row['no'], 'sub' => null];
+            }
+        }
+
+        foreach (array_slice($this->searchParties($term), 0, 6) as $row) {
+            $rows[] = ['type' => 'party', 'id' => $row['id'], 'label' => $row['label'], 'code' => null, 'sub' => null];
+        }
+
+        return $rows;
+    }
+
     /** Isler listesi aramasi: is adi, proje adi, bagli kayit numarasi. */
+    /** Isler listesinde sayfa basina is (D-241); ilki varsayilan. */
+    public const LIST_PER_PAGE = [25, 50, 100];
+
+    /** Isler listesi suzgec anahtari -> bagli kayit turu (Akilli is ekle rozet turleri). */
+    public const LIST_LINK_FILTERS = [
+        'proposal' => WorkItemLinkKind::Proposal,
+        'case' => WorkItemLinkKind::BusinessCase,
+        'tender' => WorkItemLinkKind::TenderNotice,
+        'document' => WorkItemLinkKind::Document,
+        'request' => WorkItemLinkKind::WorkRequest,
+        'meeting' => WorkItemLinkKind::MeetingPlan,
+        'need' => WorkItemLinkKind::PurchaseNeed,
+        'order' => WorkItemLinkKind::PurchaseOrder,
+        'catalog' => WorkItemLinkKind::CatalogItem,
+    ];
+
+    /**
+     * Isler listesi (D-240, React; kullanici 23 Ekim 2026: "Isler kisminin
+     * arayuzunu react tablosu ile yapalim ... Filtreleme islemini ise ayni
+     * sekilde Akilli is ekle'de elle eklenen alanlardaki gibi secilebilir").
+     * Suzgecler (D-241: "Filtre kismi tum Alanlar ve Baglantilar kismini
+     * kapsamalidir"): kisi (sorumlu ya da diger sorumlu), departman, taahhut,
+     * bagli kayitlar (ilk ya da ek; LIST_LINK_FILTERS), durum, baslangic,
+     * termin, efor, kategori, talep eden, bekletici, kritiklik, is grubu, Tum
+     * ekip, tarih araligi, arsiv (aktif / arsiv / tumu), arama. Sira: en son
+     * eklenen ustte. Not ve belge sayilari (D-219) satirda.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{rows: Collection<int, WorkItem>, total: int}
+     */
+    public function listItems(Personnel $viewer, array $filters, int $offset, int $limit): array
+    {
+        $ids = static fn (string $key): array => array_values(array_filter(array_map('intval', (array) ($filters[$key] ?? [])), static fn (int $id): bool => $id > 0));
+        $values = static fn (string $key): array => array_values(array_filter(array_map('strval', (array) ($filters[$key] ?? [])), static fn (string $value): bool => $value !== ''));
+        $query = $this->applyVisible($this->newQuery(), $viewer);
+        $archive = (string) ($filters['archive'] ?? 'active');
+
+        if (SchemaReadiness::hasBatch('B61')) {
+            match ($archive) {
+                'archived' => $query->whereNotNull('work_items.archived_at'),
+                'all' => $query,
+                default => $query->whereNull('work_items.archived_at'),
+            };
+        }
+
+        if (($people = $ids('person')) !== []) {
+            $query->where(function (Builder $inner) use ($people): void {
+                $inner->whereIn('work_items.personnel_id', $people);
+
+                if (self::extended()) {
+                    $inner->orWhereHas('assignees', fn (Builder $assignee): Builder => $assignee->whereIn('personnel.id', $people));
+                }
+            });
+        }
+
+        if (($units = $ids('unit')) !== []) {
+            $query->whereIn('work_items.org_unit_id', $units);
+        }
+
+        if (($projects = $ids('project')) !== []) {
+            $query->whereIn('work_items.project_id', $projects);
+        }
+
+        foreach (self::LIST_LINK_FILTERS as $key => $kind) {
+            if (($linked = $ids($key)) === [] || $kind->column() === null) {
+                continue;
+            }
+
+            $query->where(function (Builder $inner) use ($kind, $linked): void {
+                $inner->where(fn (Builder $primary): Builder => $primary->where('work_items.link_kind', $kind->value)->whereIn('work_items.'.$kind->column(), $linked));
+
+                if (self::multiLinks() && in_array($kind, WorkItemLinkKind::multiple(), true)) {
+                    $extra = (array) $kind->extra();
+                    $inner->orWhereHas($extra['relation'], fn (Builder $relation): Builder => $relation->whereIn($extra['table'].'.'.$extra['column'], $linked));
+                }
+            });
+        }
+
+        if (($statuses = $values('status')) !== []) {
+            $this->applyStatuses($query, $statuses);
+        }
+
+        if (($categories = $values('category')) !== []) {
+            $query->whereIn('work_items.category_code', $categories);
+        }
+
+        if (($priorities = $values('priority')) !== [] && self::extended()) {
+            $this->applyPriorities($query, $priorities);
+        }
+
+        if (($disciplines = $values('discipline')) !== [] && self::extended()) {
+            $query->whereIn('work_items.discipline', $disciplines);
+        }
+
+        // Baslangic / termin: secilen gunler.
+        foreach (['start' => 'work_on', 'due' => 'due_on'] as $key => $column) {
+            $days = array_values(array_filter($values($key), static fn (string $day): bool => preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1));
+
+            if ($days !== []) {
+                $query->whereIn('work_items.'.$column, $days);
+            }
+        }
+
+        $hours = array_values(array_filter(array_map('floatval', $values('hours')), static fn (float $value): bool => $value > 0));
+
+        if ($hours !== []) {
+            $query->whereIn('work_items.work_hours', $hours);
+        }
+
+        // Talep eden / bekletici: "personnel:12", "party:5" ya da "text:Ad".
+        foreach (['requester', 'waiting'] as $prefix) {
+            $this->applySources($query, $prefix, $values($prefix));
+        }
+
+        if (! empty($filters['team']) && self::extended()) {
+            $query->where('work_items.for_everyone', true);
+        }
+
+        if (in_array($filters['range'] ?? null, self::RANGES, true) && $filters['range'] !== 'range') {
+            $this->applyDateFilter($query, (string) $filters['range'], null, null);
+        }
+
+        if (filled($filters['q'] ?? null)) {
+            $this->applySearch($query, (string) $filters['q']);
+        }
+
+        $total = (clone $query)->count();
+        $rows = $this->listOrder($query)
+            ->when(self::extended(), fn (Builder $counts): Builder => $counts->withCount(['notes', 'files']))
+            ->offset(max(0, $offset))
+            ->limit(max(1, min(100, $limit)))
+            ->get();
+
+        return ['rows' => $rows, 'total' => $total];
+    }
+
+    /**
+     * Talep eden ya da bekletici suzgeci (Akilli is ekle'nin kaynak rozeti).
+     *
+     * @param  list<string>  $sources
+     */
+    private function applySources(Builder $query, string $prefix, array $sources): void
+    {
+        $rows = [];
+
+        foreach ($sources as $source) {
+            [$kind, $ref] = array_pad(explode(':', $source, 2), 2, '');
+            $kind = WorkWaitingKind::tryFrom($kind);
+
+            if ($kind !== null && $ref !== '') {
+                $rows[] = [$kind, $ref];
+            }
+        }
+
+        if ($rows === []) {
+            return;
+        }
+
+        $query->where(function (Builder $inner) use ($prefix, $rows): void {
+            foreach ($rows as [$kind, $ref]) {
+                $inner->orWhere(function (Builder $one) use ($prefix, $kind, $ref): void {
+                    $one->where('work_items.'.$prefix.'_kind', $kind->value);
+
+                    match (true) {
+                        $kind === WorkWaitingKind::Personnel => $one->where('work_items.'.$prefix.'_personnel_id', (int) $ref),
+                        $kind === WorkWaitingKind::Party && ctype_digit($ref) => $one->where('work_items.'.$prefix.'_party_id', (int) $ref),
+                        default => $one->where('work_items.'.$prefix.'_text', $ref),
+                    };
+                });
+            }
+        });
+    }
+
     public function applySearch(Builder $query, string $search): Builder
     {
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($search)).'%';
@@ -1140,6 +1481,27 @@ final class WorkItemQueries
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->get();
+    }
+
+    /**
+     * Isin Gecmis sekmesi (D-248): son adimlar eskiden yeniye. Sutun ici siralama
+     * adim sayilmaz. Yapan gizli hesapsa (D-120) kapsam onu getirmez, "Sistem" yazilir.
+     *
+     * @return Collection<int, PersonnelActivity>
+     */
+    public function historyFor(int $itemId, int $limit = 500): Collection
+    {
+        return PersonnelActivity::query()
+            ->with('personnel:id,full_name')
+            ->where('subject_type', 'work_item')
+            ->where('subject_id', (string) $itemId)
+            ->where('action_code', '!=', 'work_item.reordered')
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
     }
 
     /**

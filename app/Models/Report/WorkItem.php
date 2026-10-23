@@ -21,7 +21,9 @@ use App\Models\Party\Party;
 use App\Models\Personnel\OrgUnit;
 use App\Models\Personnel\Personnel;
 use App\Models\Project\Project;
+use App\Models\Procurement\CatalogItem;
 use App\Models\Procurement\PurchaseNeed;
+use App\Models\Procurement\PurchaseOrder;
 use App\Models\Project\ProjectSupplyItem;
 use App\Models\WorkRequest\WorkRequest;
 use App\Policies\WorkItemPolicy;
@@ -31,6 +33,7 @@ use App\Support\DisplayTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -54,6 +57,7 @@ use Illuminate\Support\Carbon;
     'source', 'source_activity_id', 'work_hours', 'note', 'sort_order',
     // D-219 (B57): oncelik, tum ekip, is grubu, satin alinacak kalem, tekrarli is donemi, eski no.
     'priority', 'for_everyone', 'discipline', 'linked_purchase_need_id', 'recurring_work_id', 'period_key', 'legacy_no',
+    'linked_purchase_order_id', 'linked_catalog_item_id',
     'status_changed_at', 'started_at', 'completed_at', 'progress_seconds', 'waiting_seconds', 'blocked_seconds',
 ])]
 #[UsePolicy(WorkItemPolicy::class)]
@@ -90,6 +94,7 @@ class WorkItem extends Model
             'status_changed_at' => 'datetime',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'archived_at' => 'datetime',
             'work_hours' => 'decimal:2',
             'sort_order' => 'integer',
             'progress_seconds' => 'integer',
@@ -162,6 +167,60 @@ class WorkItem extends Model
         return $this->belongsTo(TenderNotice::class, 'linked_tender_notice_id');
     }
 
+    /** D-233 (B59): ilk bagli kayittan sonraki ek teklifler. */
+    public function extraProposals(): BelongsToMany
+    {
+        return $this->belongsToMany(Proposal::class, 'work_item_proposals', 'work_item_id', 'proposal_id')->orderBy('work_item_proposals.id');
+    }
+
+    /** D-233 (B59): ek is gelistirme kayitlari (potansiyel is / yatirimci projesi). */
+    public function extraBusinessCases(): BelongsToMany
+    {
+        return $this->belongsToMany(BusinessCase::class, 'work_item_business_cases', 'work_item_id', 'business_case_id')->orderBy('work_item_business_cases.id');
+    }
+
+    /** D-233 (B59): ek ihaleler. */
+    public function extraTenderNotices(): BelongsToMany
+    {
+        return $this->belongsToMany(TenderNotice::class, 'work_item_tender_notices', 'work_item_id', 'tender_notice_id')->orderBy('work_item_tender_notices.id');
+    }
+
+    /** D-235 (B60): ek belgeler. */
+    public function extraDocuments(): BelongsToMany
+    {
+        return $this->belongsToMany(Document::class, 'work_item_documents', 'work_item_id', 'document_id')->orderBy('work_item_documents.id');
+    }
+
+    /** D-235 (B60): ek talepler. */
+    public function extraWorkRequests(): BelongsToMany
+    {
+        return $this->belongsToMany(WorkRequest::class, 'work_item_work_requests', 'work_item_id', 'work_request_id')->orderBy('work_item_work_requests.id');
+    }
+
+    /** D-235 (B60): ek gorusmeler. */
+    public function extraMeetingPlans(): BelongsToMany
+    {
+        return $this->belongsToMany(MeetingPlan::class, 'work_item_meeting_plans', 'work_item_id', 'meeting_plan_id')->orderBy('work_item_meeting_plans.id');
+    }
+
+    /** D-235 (B60): ek satin alinacak kalemler. */
+    public function extraPurchaseNeeds(): BelongsToMany
+    {
+        return $this->belongsToMany(PurchaseNeed::class, 'work_item_purchase_needs', 'work_item_id', 'purchase_need_id')->orderBy('work_item_purchase_needs.id');
+    }
+
+    /** D-235 (B60): ek siparisler. */
+    public function extraPurchaseOrders(): BelongsToMany
+    {
+        return $this->belongsToMany(PurchaseOrder::class, 'work_item_purchase_orders', 'work_item_id', 'purchase_order_id')->orderBy('work_item_purchase_orders.id');
+    }
+
+    /** D-235 (B60): ek urun / hizmetler. */
+    public function extraCatalogItems(): BelongsToMany
+    {
+        return $this->belongsToMany(CatalogItem::class, 'work_item_catalog_items', 'work_item_id', 'catalog_item_id')->orderBy('work_item_catalog_items.id');
+    }
+
     public function linkedDocument(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'linked_document_id');
@@ -220,6 +279,18 @@ class WorkItem extends Model
         return $this->assignees->map(fn (Personnel $person): int => (int) $person->getKey())->values()->all();
     }
 
+    /** D-240 (B61): arsivde mi (D-156: yalniz archived_at). */
+    public function isArchived(): bool
+    {
+        return $this->getAttribute('archived_at') !== null;
+    }
+
+    /** D-240: arsivdeki isler pano, listeler, oneriler ve uyarilarda gorunmez (B61 yoksa suzgec yok). */
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return SchemaReadiness::hasBatch('B61') ? $query->whereNull($query->qualifyColumn('archived_at')) : $query;
+    }
+
     /** Oncelik (B57 oncesi kayitta kritik bayragindan). */
     public function priorityLevel(): WorkItemPriority
     {
@@ -232,6 +303,18 @@ class WorkItem extends Model
     public function linkedPurchaseNeed(): BelongsTo
     {
         return $this->belongsTo(PurchaseNeed::class, 'linked_purchase_need_id');
+    }
+
+    /** D-235 (B60): satin alma siparisi. */
+    public function linkedPurchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'linked_purchase_order_id');
+    }
+
+    /** D-235 (B60): urun / hizmet (Malzeme ve Hizmetler kalemi). */
+    public function linkedCatalogItem(): BelongsTo
+    {
+        return $this->belongsTo(CatalogItem::class, 'linked_catalog_item_id');
     }
 
     public function sourceActivity(): BelongsTo

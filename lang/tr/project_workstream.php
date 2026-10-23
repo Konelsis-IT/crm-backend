@@ -1,11 +1,11 @@
 <?php
 
 return [
-    'label' => 'Workstream',
-    'plural' => 'Workstream\'ler',
+    'label' => 'Departman',
+    'plural' => 'Departmanlar',
 
     'sections' => [
-        'main' => 'Workstream bilgileri',
+        'main' => 'Departman bilgileri',
     ],
 
     'fields' => [
@@ -13,19 +13,19 @@ return [
         'actual_start_on' => 'Fiili başlangıç',
         'block_reason' => 'Blokaj gerekçesi',
         'created_at' => 'Oluşturulma',
-        'group' => 'Grup',
+        'group' => 'Departman',
         'owner' => 'Sahip',
         'planned_finish_on' => 'Planlanan bitiş',
         'planned_start_on' => 'Planlanan başlangıç',
         'progress_pct' => 'İlerleme (%)',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'reason' => 'Gerekçe',
         'status' => 'Durum',
     ],
 
     'relation' => [
-        'title' => 'Workstream\'ler',
-        'empty' => 'Henüz workstream yok.',
+        'title' => 'Departmanlar',
+        'empty' => 'Henüz departman yok.',
     ],
 
     'actions' => [

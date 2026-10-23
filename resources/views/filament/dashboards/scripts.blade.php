@@ -13,7 +13,7 @@
     use Filament\Support\Facades\FilamentAsset;
 @endphp
 
-@unless (ReactRuntime::providedByChat())
+@unless (ReactRuntime::loaded())
     <script src="{{ FilamentAsset::getScriptSrc('react', package: 'konelsis') }}" defer></script>
     <script src="{{ FilamentAsset::getScriptSrc('react-dom', package: 'konelsis') }}" defer></script>
 @endunless

@@ -30,7 +30,7 @@ return [
     ],
 
     'fields' => [
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'document_no' => 'Doküman no',
         'title' => 'Başlık',
         'document_type' => 'Doküman tipi',
@@ -57,13 +57,13 @@ return [
     ],
 
     'help' => [
-        'project' => 'Belge bir projeye bağlıysa seçin; proje raporları ve devir manifestleri bu bağ üzerinden dallanır.',
+        'project' => 'Belge bir taahhüde bağlıysa seçin; taahhüt raporları ve devir manifestleri bu bağ üzerinden dallanır.',
         'document_no' => 'Doküman tipine göre otomatik üretilir.',
         'classification' => 'Boş bırakılırsa doküman tipinin varsayılanı kullanılır.',
         'retention_policy' => 'Boş bırakılırsa doküman tipinin varsayılanı kullanılır.',
         'identity' => 'Belgenin adı, tipi ve dili. Doküman numarası tipin önekinden otomatik üretilir.',
         'ownership' => 'Belgeden kim sorumlu, hangi birime ait, ne kadar gizli ve ne kadar süre saklanacak.',
-        'context' => 'Belgenin bağlı olduğu proje; boş bırakılabilir.',
+        'context' => 'Belgenin bağlı olduğu taahhüt; boş bırakılabilir.',
         'initial_content' => 'Belgenin aslını yükleyin ya da belgeyi burada yazın; ilk revizyon (01) taslak olarak açılır.',
         'title' => 'Belgenin listelerde ve kartta görünen adı.',
         'document_type' => 'Tip; numaralandırma, varsayılan gizlilik sınıfı ve saklama politikası buradan gelir.',
@@ -110,6 +110,8 @@ return [
         'unavailable' => 'Bu dosya önizlenemiyor; lütfen indirin.',
         'too_large' => 'Dosya önizleme için çok büyük; lütfen indirin.',
         'note' => 'Önizleme yalnız içeriği gösterir; biçim, formül, görsel ve grafikler için dosyayı indirin.',
+        // D-243: Word onizlemesi gorselleri de gosterir.
+        'note_word' => 'Önizleme metni, tabloları ve görselleri gösterir; sayfa düzeni ve grafikler için dosyayı indirin.',
     ],
 
     'actions' => [

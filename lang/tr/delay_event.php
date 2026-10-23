@@ -16,7 +16,7 @@ return [
         'detected_at' => 'Tespit tarihi',
         'evidence_document_revision' => 'Evidence document revision',
         'is_excusable' => 'Mazur görülebilir',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'reason' => 'Gerekçe',
         'status' => 'Durum',
         'workstream' => 'Adım (departman)',

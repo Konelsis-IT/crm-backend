@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Operation group',
-    'plural' => 'Operation groups',
+    'label' => 'Contract department',
+    'plural' => 'Contract departments',
 
     'sections' => [
         'main' => 'Group details',

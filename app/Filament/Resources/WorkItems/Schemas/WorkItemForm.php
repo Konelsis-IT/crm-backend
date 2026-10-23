@@ -138,7 +138,8 @@ final class WorkItemForm
                 ->options(WorkDiscipline::class)
                 ->placeholder('–')
                 ->native(false)
-                ->visible(fn (): bool => WorkItemQueries::extendedUi())
+                // D-245: is grubu ekranlarda yok (gizli alan kaydedilmez, deger korunur).
+                ->visible(fn (): bool => WorkItemQueries::extendedUi() && WorkItemQueries::disciplineUi())
                 ->columnSpan(FieldGrid::NORMAL),
             // D-216: Tamamlandi secilince bagli acik talep icin "Talebi tamamlandı olarak kapat?".
             Toggle::make('close_request')

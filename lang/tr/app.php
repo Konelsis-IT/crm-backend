@@ -27,11 +27,11 @@ return [
         'acquisition' => 'İş Alım',
         'operations' => 'Operasyon',
         // D-190: sol menude iki ayri grup.
-        'operations_project' => 'Operasyon - Proje',
+        'operations_project' => 'Operasyon - Taahhüt',
         'operations_purchasing' => 'Operasyon - Satın alma',
         // D-228: Genel Gider bu grupta.
         'finance' => 'Muhasebe / Finans',
-        'project_group' => 'Proje Grubu',
+        'project_group' => 'Projelendirme',
         'procurement' => 'Satın Alma',
         'tenders' => 'İhaleler',
         'administrative' => 'İdari',

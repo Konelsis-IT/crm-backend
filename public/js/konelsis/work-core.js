@@ -643,7 +643,7 @@
                 type: 'button',
                 role: 'radio',
                 'aria-checked': String(item.value === value),
-                className: cx({ on: item.value === value }),
+                className: cx(item.className, { on: item.value === value }),
                 onClick: () => onChange(item.value),
             }, item.label)),
         );

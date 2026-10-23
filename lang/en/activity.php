@@ -346,6 +346,8 @@ return [
         'work_item.created' => 'Work card created',
         'work_item.updated' => 'Work card updated',
         'work_item.deleted' => 'Work card deleted',
+        'work_item.archived' => 'Work item archived',
+        'work_item.restored' => 'Work item restored from archive',
         'work_item.status_changed' => 'Work card status changed',
         'work_item.reordered' => 'Work card reordered',
         'work_item.added_late' => 'Work card added to a closed day',

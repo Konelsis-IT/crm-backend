@@ -47,6 +47,29 @@ final class ProjectCatalogQueries
             ->all();
     }
 
+    /** Departmanin taahhut grubu (D-239; yoksa null). */
+    public function groupForUnit(string $unitCode): ?OperationGroupDefinition
+    {
+        return OperationGroupDefinition::query()->where('code', OperationGroupDefinition::codeForUnit($unitCode))->first();
+    }
+
+    /**
+     * Taahhutlerde calisan departmanlar: departman kodu => sira (D-239; liste
+     * sutunu icin tek sorgu).
+     *
+     * @return array<string, int>
+     */
+    public function unitsInProjects(): array
+    {
+        $out = [];
+
+        foreach (OperationGroupDefinition::query()->where('status', 'active')->get(['code', 'default_sort_order']) as $group) {
+            $out[OperationGroupDefinition::UNIT_CODES[$group->code] ?? (string) $group->code] = (int) $group->default_sort_order;
+        }
+
+        return $out;
+    }
+
     /**
      * Operasyon gruplari (adimlar); anahtar id, deger Turkce ad.
      *

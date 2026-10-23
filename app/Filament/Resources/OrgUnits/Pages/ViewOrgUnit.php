@@ -8,6 +8,7 @@ use App\Filament\Concerns\HasRecordHeading;
 use App\Exceptions\Personnel\SelfParentNotAllowedException;
 use App\Exceptions\StaleRecordException;
 use App\Filament\Resources\OrgUnits\OrgUnitResource;
+use App\Filament\Resources\OrgUnits\Schemas\OrgUnitProjectSettings;
 use App\Filament\Support\DomainNotifications;
 use App\Models\Personnel\OrgUnit;
 use App\Services\Personnel\OrgUnitService;
@@ -28,7 +29,11 @@ class ViewOrgUnit extends ViewRecord
             EditAction::make()
                 ->using(function (OrgUnit $record, array $data): Model {
                     try {
-                        return app(OrgUnitService::class)->update($record, $data);
+                        $unit = app(OrgUnitService::class)->update($record, OrgUnitProjectSettings::unitData($data));
+                        // D-239: taahhutlerde calisma (operasyon grubu).
+                        OrgUnitProjectSettings::save($unit, $data);
+
+                        return $unit;
                     } catch (StaleRecordException | SelfParentNotAllowedException $exception) {
                         DomainNotifications::failure($exception);
 

@@ -13,10 +13,12 @@ use App\Filament\Resources\OrgUnits\Pages\ListOrgUnits;
 use App\Filament\Resources\OrgUnits\Pages\ViewOrgUnit;
 use App\Filament\Resources\OrgUnits\RelationManagers\UnitPersonnelRelationManager;
 use App\Filament\Resources\OrgUnits\Schemas\OrgUnitInfolist;
+use App\Filament\Resources\OrgUnits\Schemas\OrgUnitProjectSettings;
 use App\Filament\Support\DomainNotifications;
 use App\Filament\Support\FieldGrid;
 use App\Models\Personnel\OrgUnit;
 use App\Query\Personnel\OrganizationQueries;
+use App\Query\Project\ProjectCatalogQueries;
 use App\Services\Personnel\OrgUnitService;
 use App\Enums\Platform\Feature;
 use App\Services\Platform\FeatureFlags;
@@ -122,6 +124,8 @@ class OrgUnitResource extends Resource
                         ->native(false),
                     Hidden::make('row_version')->hiddenOn('create'),
                 ])),
+            // D-239: operasyon grubu = departman (eski Ayarlar > Operasyon gruplari).
+            OrgUnitProjectSettings::section(),
         ]);
     }
 
@@ -142,6 +146,16 @@ class OrgUnitResource extends Resource
                 TextColumn::make('personnel_count')
                     ->label(__('org_unit.fields.personnel_count'))
                     ->counts('personnel'),
+                // D-239: taahhutlerde calisan departman ve sirasi.
+                TextColumn::make('in_projects')
+                    ->label(__('org_unit.fields.in_projects_short'))
+                    ->state(fn (OrgUnit $record): ?string => array_key_exists((string) $record->code, $inProjects = self::unitsInProjects())
+                        ? __('org_unit.fields.in_projects_value', ['sort' => $inProjects[(string) $record->code]])
+                        : null)
+                    ->badge()
+                    ->color('success')
+                    ->placeholder('–')
+                    ->visible(fn (): bool => OrgUnitProjectSettings::enabled()),
                 TextColumn::make('status')
                     ->label(__('org_unit.fields.status'))
                     ->badge(),
@@ -152,7 +166,10 @@ class OrgUnitResource extends Resource
                 EditAction::make()
                     ->using(function (OrgUnit $record, array $data): Model {
                         try {
-                            return app(OrgUnitService::class)->update($record, $data);
+                            $unit = app(OrgUnitService::class)->update($record, OrgUnitProjectSettings::unitData($data));
+                            OrgUnitProjectSettings::save($unit, $data);
+
+                            return $unit;
                         } catch (StaleRecordException | SelfParentNotAllowedException $exception) {
                             DomainNotifications::failure($exception);
 
@@ -162,6 +179,18 @@ class OrgUnitResource extends Resource
             ])
             ->toolbarActions([])
             ->defaultSort('name');
+    }
+
+    /**
+     * Taahhutlerde calisan departmanlar (istek boyunca bir kez okunur).
+     *
+     * @return array<string, int>
+     */
+    private static function unitsInProjects(): array
+    {
+        static $cache = null;
+
+        return $cache ??= app(ProjectCatalogQueries::class)->unitsInProjects();
     }
 
     /** Birime bagli personel (D-116). */

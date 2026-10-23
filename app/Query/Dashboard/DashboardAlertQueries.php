@@ -67,7 +67,7 @@ final class DashboardAlertQueries
     /** Kisinin gorebildigi acik kritik isler. */
     public function criticalWork(Personnel $viewer): int
     {
-        $query = $this->work->applyStatuses($this->work->applyVisible(WorkItem::query(), $viewer), ['open']);
+        $query = $this->work->applyStatuses($this->work->applyVisible(WorkItem::query()->notArchived(), $viewer), ['open']);
 
         return (WorkItemQueries::extendedUi()
             ? $this->work->applyPriorities($query, ['critical'])

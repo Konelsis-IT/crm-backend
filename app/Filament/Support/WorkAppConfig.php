@@ -22,7 +22,9 @@ use App\Query\Report\WorkItemQueries;
 use App\Reports\Work\WorkCategoryCatalog;
 use App\Services\Authorization\ExecutiveDirectory;
 use App\Services\Platform\FeatureFlags;
+use App\Services\Platform\SchemaReadiness;
 use App\Services\Report\WorkItemPresenter;
+use App\Services\Report\WorkItemSentence;
 use App\Support\DisplayTime;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -40,6 +42,12 @@ final class WorkAppConfig
 {
     /** Uc adindaki kayit kimligi yer tutucusu (istemci __ID__ ile degistirir). */
     private const PLACEHOLDER = 987654321;
+
+    /** work-core.js'in kendi metinleri (ust cubuk penceresi yalniz bunlari ve qa_* tasir). */
+    private const CORE_LABELS = [
+        'cancel', 'clear', 'close', 'error_generic', 'forbidden', 'loading', 'network_error', 'no_results',
+        'retry', 'search', 'select', 'session_expired', 'stale', 'yes', 'save', 'saved',
+    ];
 
     /**
      * @return array<string, mixed>
@@ -75,6 +83,11 @@ final class WorkAppConfig
                 'week' => self::route('filament.admin.work.week'),
                 'week_close' => self::route('filament.admin.work.week.close'),
                 'freeze' => self::route('filament.admin.work.freeze'),
+                'quick_options' => FeatureFlags::enabled(Feature::WorkQuickAdd) ? self::route('filament.admin.work.quick.options') : null,
+                'quick_search' => FeatureFlags::enabled(Feature::WorkQuickAdd) ? self::route('filament.admin.work.quick.search') : null,
+                'show' => self::route('filament.admin.work.items.show', ['item' => self::PLACEHOLDER]),
+                ...self::threadEndpoints(),
+                ...self::historyEndpoints(),
             ],
             'urls' => [
                 'reports' => self::safe(fn (): string => ReportResource::getUrl('index')),
@@ -88,6 +101,17 @@ final class WorkAppConfig
                 'compact' => FeatureFlags::enabled(Feature::WorkBoardCompact),
                 // D-219: kritiklik, coklu sorumlu, Tum ekip, is grubu (B57 + work.items.extended).
                 'extended' => WorkItemQueries::extendedUi(),
+                // D-233: Hizli is ekle ve ise birden fazla bagli kayit (B59).
+                'quick_add' => FeatureFlags::enabled(Feature::WorkQuickAdd),
+                // D-237: Raporlastir, kapsam renkleri, Panoyu dondur'un kalkmasi (2.9.1; D-244: 2.9.2).
+                'refresh' => FeatureFlags::enabled(Feature::WorkBoardRefresh),
+                'multi_links' => WorkItemQueries::multiLinks(),
+                // D-235: Akilli is ekle'deki bagli kayit turleri (satin alma yayina girdikce)
+                // ve birden fazla baglanabilen turler (B59 / B60).
+                'link_types' => self::quickLinkTypes(),
+                'multi_kinds' => self::multiKinds(),
+                // D-236: sesle yazma (Akilli is ekle'nin alt ozelligi).
+                'voice' => FeatureFlags::enabled(Feature::WorkVoice),
             ],
             'can' => [
                 'team' => $me !== null && Gate::forUser($me)->allows('viewTeam', WorkItem::class),
@@ -241,6 +265,143 @@ final class WorkAppConfig
      *
      * @return array<string, mixed>
      */
+    /**
+     * Isler listesi (D-240, React; resources/js/work/work-list.js): liste ve
+     * arsiv uclari, suzgec secim pencereleri icin oneri uclari.
+     *
+     * @return array<string, mixed>
+     */
+    public static function workList(): array
+    {
+        $me = self::me();
+
+        return [
+            ...self::base('work-list'),
+            'endpoints' => [
+                'list' => self::route('filament.admin.work.items.list'),
+                'archive' => self::route('filament.admin.work.items.archive', ['item' => self::PLACEHOLDER]),
+                'unarchive' => self::route('filament.admin.work.items.unarchive', ['item' => self::PLACEHOLDER]),
+                'quick_options' => self::route('filament.admin.work.quick.options'),
+                'quick_search' => self::route('filament.admin.work.quick.search'),
+            ],
+            'features' => [
+                'extended' => WorkItemQueries::extendedUi(),
+                'multi_links' => WorkItemQueries::multiLinks(),
+                'link_types' => self::quickLinkTypes(),
+                'multi_kinds' => self::multiKinds(),
+                // D-240: Arsiv suzgeci ve Arsivle (B61).
+                'archive' => SchemaReadiness::hasBatch('B61'),
+                // D-244: satirdaki cevap / belge sayilari cevaplar ve belgelerle (2.9.1) gelir.
+                'thread' => self::threadOn(),
+            ],
+            'can' => [
+                'team' => $me !== null && Gate::forUser($me)->allows('viewTeam', WorkItem::class),
+                'all' => $me !== null && Gate::forUser($me)->allows('viewAll', WorkItem::class),
+            ],
+            'options' => [...self::options(), 'per_page' => WorkItemQueries::LIST_PER_PAGE],
+        ];
+    }
+
+    /**
+     * Ust cubuktaki "Akilli is" dugmesinin her sayfadaki penceresi (D-235;
+     * kullanici: "üstte İş panosu, Şablonlar ortasına ilgili akıllı iş ekle
+     * butonu eklenecek"). Pano verisi yok; yalniz pencerenin ihtiyaci.
+     *
+     * @return array<string, mixed>
+     */
+    public static function quick(): array
+    {
+        $me = self::me();
+        $base = self::base('work-quick');
+        // Her sayfaya yazilir: yalniz pencerenin ve cekirdegin etiketleri.
+        $base['labels'] = array_filter(
+            $base['labels'],
+            static fn (mixed $value, string $key): bool => str_starts_with($key, 'qa_') || in_array($key, self::CORE_LABELS, true),
+            ARRAY_FILTER_USE_BOTH,
+        );
+
+        return [
+            ...$base,
+            'endpoints' => [
+                'store' => self::route('filament.admin.work.items.store'),
+                'update' => self::route('filament.admin.work.items.update', ['item' => self::PLACEHOLDER]),
+                'show' => self::route('filament.admin.work.items.show', ['item' => self::PLACEHOLDER]),
+                'quick_options' => self::route('filament.admin.work.quick.options'),
+                'quick_search' => self::route('filament.admin.work.quick.search'),
+                ...self::threadEndpoints(),
+                ...self::historyEndpoints(),
+            ],
+            'features' => [
+                'extended' => WorkItemQueries::extendedUi(),
+                'quick_add' => true,
+                'multi_links' => WorkItemQueries::multiLinks(),
+                'link_types' => self::quickLinkTypes(),
+                'multi_kinds' => self::multiKinds(),
+                // D-236: sesle yazma (Akilli is ekle'nin alt ozelligi).
+                'voice' => FeatureFlags::enabled(Feature::WorkVoice),
+            ],
+            'can' => [
+                'team' => $me !== null && Gate::forUser($me)->allows('viewTeam', WorkItem::class),
+                'all' => $me !== null && Gate::forUser($me)->allows('viewAll', WorkItem::class),
+                'create' => $me !== null && Gate::forUser($me)->allows('create', WorkItem::class),
+            ],
+            'options' => self::options(),
+        ];
+    }
+
+    /**
+     * Akilli is ekle bu istekte acik mi (D-235): oturum, B36, Is panosu ve
+     * Akilli is ekle ozellikleri. Acikken her sayfada pencere koku cizilir,
+     * Isler listesi tek sutunlu okunusa gecer ve is detay sayfasina gidilmez.
+     */
+    public static function smartOn(): bool
+    {
+        return self::me() !== null
+            && SchemaReadiness::hasBatch('B36')
+            && FeatureFlags::enabled(Feature::WorkBoard)
+            && FeatureFlags::enabled(Feature::WorkQuickAdd);
+    }
+
+    /** Ust cubuk dugmesi: Akilli is ekle acik ve kisi is yazabiliyor. */
+    public static function quickAvailable(): bool
+    {
+        $me = self::me();
+
+        return $me !== null && self::smartOn() && Gate::forUser($me)->allows('create', WorkItem::class);
+    }
+
+    /**
+     * Akilli is ekle'de sunulan bagli kayit turleri (rozet turu); belge, talep,
+     * gorusme her zaman, satin alma turleri ozellik acilinca (D-235).
+     *
+     * @return list<string>
+     */
+    private static function quickLinkTypes(): array
+    {
+        $types = [];
+
+        foreach ([WorkItemLinkKind::Document, WorkItemLinkKind::WorkRequest, WorkItemLinkKind::MeetingPlan, WorkItemLinkKind::PurchaseNeed, WorkItemLinkKind::PurchaseOrder, WorkItemLinkKind::CatalogItem] as $kind) {
+            if ($kind->visible()) {
+                $types[] = WorkItemSentence::LINK_TYPES[$kind->value];
+            }
+        }
+
+        return $types;
+    }
+
+    /**
+     * Birden fazla baglanabilen turler, rozet adiyla (D-233, D-235).
+     *
+     * @return list<string>
+     */
+    private static function multiKinds(): array
+    {
+        return array_values(array_map(
+            static fn (WorkItemLinkKind $kind): string => WorkItemSentence::LINK_TYPES[$kind->value] ?? $kind->value,
+            WorkItemLinkKind::multiple(),
+        ));
+    }
+
     private static function base(string $app): array
     {
         $me = self::me();
@@ -287,7 +448,8 @@ final class WorkAppConfig
             'category_sets' => $categories->sets(),
             // D-219: kritiklik (dusukten kritige) ve is grubu.
             'priorities' => array_map(fn (WorkItemPriority $priority): array => ['value' => $priority->value, 'label' => $priority->getLabel()], WorkItemPriority::cases()),
-            'disciplines' => array_map(fn (WorkDiscipline $discipline): array => ['value' => $discipline->value, 'label' => $discipline->getLabel()], WorkDiscipline::cases()),
+            // D-245: is grubu kapaliyken bos liste (React secim, oneri ve suzgec gostermez).
+            'disciplines' => WorkItemQueries::disciplineUi() ? array_map(fn (WorkDiscipline $discipline): array => ['value' => $discipline->value, 'label' => $discipline->getLabel()], WorkDiscipline::cases()) : [],
             'category_labels' => array_combine($categories->allCodes(), array_map(fn (string $code): string => (string) $categories->label($code), $categories->allCodes())),
         ];
     }
@@ -328,6 +490,46 @@ final class WorkAppConfig
     /**
      * @param  array<string, mixed>  $parameters
      */
+    /**
+     * Isin cevaplari ve belgeleri (D-241): Akilli is penceresinin okuma
+     * gorunumu; is ayrintilari (work.items.extended) ya da cevaplar ve belgeler
+     * (D-244, work.board.quick_add.thread, 2.9.1) kapaliyken bos. Bos olunca
+     * okuma penceresinde yalniz is gorunur, yazarken belge eklenmez.
+     *
+     * @return array<string, string|null>
+     */
+    private static function threadEndpoints(): array
+    {
+        if (! self::threadOn()) {
+            return [];
+        }
+
+        return [
+            'thread' => self::route('filament.admin.work.items.thread', ['item' => self::PLACEHOLDER]),
+            'replies' => self::route('filament.admin.work.items.replies', ['item' => self::PLACEHOLDER]),
+            'files' => self::route('filament.admin.work.items.files', ['item' => self::PLACEHOLDER]),
+            'file_remove' => self::route('filament.admin.work.items.files.remove', ['file' => self::PLACEHOLDER]),
+        ];
+    }
+
+    /** Cevaplar ve belgeler acik mi (D-244): is ayrintilari + kendi anahtari. */
+    public static function threadOn(): bool
+    {
+        return WorkItemQueries::extendedUi() && FeatureFlags::enabled(Feature::WorkItemThread);
+    }
+
+    /**
+     * Isin Gecmis sekmesi (D-248, 2.9.1); kapaliyken uc yazilmaz, sekme cizilmez.
+     *
+     * @return array<string, string|null>
+     */
+    private static function historyEndpoints(): array
+    {
+        return FeatureFlags::enabled(Feature::WorkItemHistory)
+            ? ['history' => self::route('filament.admin.work.items.history', ['item' => self::PLACEHOLDER])]
+            : [];
+    }
+
     private static function route(string $name, array $parameters = []): ?string
     {
         $url = self::safe(fn (): string => route($name, $parameters, absolute: false));

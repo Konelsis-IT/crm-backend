@@ -13,7 +13,7 @@ return [
         'level' => 'Seviye',
         'name' => 'Ad',
         'parent' => 'Üst',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'reason' => 'Gerekçe',
         'sort_order' => 'Sıra',
         'status' => 'Durum',

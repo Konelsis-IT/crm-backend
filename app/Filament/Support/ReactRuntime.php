@@ -31,4 +31,17 @@ final class ReactRuntime
             && SchemaReadiness::hasBatch('B12A')
             && FeatureFlags::enabled(Feature::Chat);
     }
+
+    /**
+     * React bu istekte panel genelinde (sayfaya ozel betiklerden once) yukleniyor
+     * mu: sohbet baslaticisi ya da her sayfadaki Akilli is ekle penceresi (D-235,
+     * filament.work.quick-global). Sayfaya ozel React betikleri (sosyal medya,
+     * gorusme takvimi, is panosu, panolar, kontrol listesi) bu durumda React'i
+     * yeniden eklemez. Kapsamsiz kancalar kapsamlilardan once cizildigi icin
+     * React her zaman sayfa betiklerinden once gelir.
+     */
+    public static function loaded(): bool
+    {
+        return self::providedByChat() || WorkAppConfig::smartOn();
+    }
 }

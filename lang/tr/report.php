@@ -31,7 +31,7 @@ return [
         'help' => 'Bu dönemde yazdığınız kayıtlar öneri olarak geldi; işaretli olanlar rapora girer. İstemediğinizin işaretini kaldırın.',
         'contact' => 'Görüşülen: :name',
         'proposals' => 'Teklif: :list',
-        'project' => 'Proje: :name',
+        'project' => 'Taahhüt: :name',
         'none' => 'Kayıt yok.',
         'columns' => [
             'date' => 'Tarih',
@@ -100,7 +100,7 @@ return [
         'author_org_unit' => 'Departman',
         'subject' => 'İlgili kayıt',
         'subject_personnel' => 'İlgili personel',
-        'subject_project' => 'İlgili proje',
+        'subject_project' => 'İlgili taahhüt',
         'subject_component' => 'İlgili ürün / bileşen',
         'subject_proposal' => 'İlgili teklif',
         'subject_business_case' => 'İlgili potansiyel iş',
@@ -129,7 +129,7 @@ return [
         'tag' => 'Etiket',
         'title' => 'İş',
         'status' => 'Durum',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'work_hours' => 'Saat',
         'description' => 'Not',
     ],
@@ -259,7 +259,7 @@ return [
             ],
             'help' => [
                 'meetings' => 'Bu gün yazdığınız görüşme notları (taraf, potansiyel iş, teklif). İşaretli olanlar rapora girer; istemediğinizin işaretini kaldırın.',
-                'written_reports' => 'Bu gün proje, potansiyel iş ve tekliflere yazdığınız raporlar. İşaretli olanlar rapora girer.',
+                'written_reports' => 'Bu gün taahhüt, potansiyel iş ve tekliflere yazdığınız raporlar. İşaretli olanlar rapora girer.',
             ],
         ],
         'weekly_work' => [
@@ -275,7 +275,7 @@ return [
             ],
             'help' => [
                 'meetings' => 'Bu hafta yazdığınız görüşme notları (taraf, potansiyel iş, teklif). İşaretli olanlar rapora girer; istemediğinizin işaretini kaldırın.',
-                'written_reports' => 'Bu hafta proje, potansiyel iş ve tekliflere yazdığınız raporlar. İşaretli olanlar rapora girer.',
+                'written_reports' => 'Bu hafta taahhüt, potansiyel iş ve tekliflere yazdığınız raporlar. İşaretli olanlar rapora girer.',
             ],
         ],
         'monthly_work' => [
@@ -290,8 +290,8 @@ return [
             ],
         ],
         'project_status' => [
-            'name' => 'Proje durum raporu',
-            'description' => 'Seçilen proje için ilerleme yüzdeleri, genel durum, riskler, sonraki adımlar ve karar bekleyen konular.',
+            'name' => 'Taahhüt durum raporu',
+            'description' => 'Seçilen taahhüt için ilerleme yüzdeleri, genel durum, riskler, sonraki adımlar ve karar bekleyen konular.',
             'fields' => [
                 'progress_pct' => 'Fiziksel ilerleme (%)',
                 'planned_pct' => 'Planlanan ilerleme (%)',
@@ -427,7 +427,7 @@ return [
         ],
         'coordination_board' => [
             'name' => 'Koordinasyon panosu',
-            'description' => 'Yönetim panosunun o günkü hali: tüm aktif projelerin kartları, dondurulmuş.',
+            'description' => 'Yönetim panosunun o günkü hali: tüm aktif taahhütlerin kartları, dondurulmuş.',
             'fields' => [
                 'summary' => 'Özet',
             ],

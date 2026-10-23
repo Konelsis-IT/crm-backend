@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Operasyon grubu',
-    'plural' => 'Operasyon grupları',
+    'label' => 'Taahhüt departmanı',
+    'plural' => 'Taahhüt departmanları',
 
     'sections' => [
         'main' => 'Grup bilgileri',

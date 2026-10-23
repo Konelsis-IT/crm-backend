@@ -39,7 +39,7 @@ return [
         'case_after_save' => 'İhale potansiyel iş seçmeden kaydedilir. Potansiyel iş bu ihaleden açılır ve ihale seçili gelir.',
         'no_case_yet' => 'Bu ihaleden henüz potansiyel iş açılmadı.',
         'proposal_after_case' => 'Teklif, ihaleden potansiyel iş açıldıktan sonra hazırlanır.',
-        'project_after_case' => 'Proje, teklif kazanıldığında açılır.',
+        'project_after_case' => 'Taahhüt, teklif kazanıldığında açılır.',
     ],
 
     'steps' => [

@@ -232,7 +232,7 @@ final class ProjectOpener
             ->get();
 
         if ($groups->isEmpty()) {
-            throw HandoffNotAcceptableException::make(['reason' => 'operasyon grubu katalogu bos']);
+            throw HandoffNotAcceptableException::make(['reason' => 'taahhütlerde çalışan departman yok (Organizasyon birimleri > Taahhütlerde çalışır)']);
         }
 
         $workstreams = [];

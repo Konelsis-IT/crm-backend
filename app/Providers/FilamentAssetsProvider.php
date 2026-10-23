@@ -42,6 +42,7 @@ use Throwable;
  *   analiz panosu ve personel kartindaki Dikkat karti (React). Hepsi
  *   `loadedOnRequest()`: resources/views/filament/work/app.blade.php ve
  *   attention-card.blade.php stili, filament.work.scripts betikleri yukler.
+ *   work-quick.js (D-233): Is panosunun "Hizli is ekle" penceresi; panodan once yuklenir.
  * - konelsis-checklist.css ve checklist-board.js (D-157): potansiyel is
  *   sihirbazindaki teklif oncesi kontrol listesi tahtasi (React) ve Kaydet /
  *   Ileri ozeti. `loadedOnRequest()`: filament.acquisition.checklist-scripts
@@ -99,7 +100,13 @@ final class FilamentAssetsProvider extends ServiceProvider
             // Is panosu (B36, D-115): cekirdek + dort ekran; yalniz ilgili sayfada.
             Css::make('konelsis-work', resource_path('css/filament/konelsis-work.css'))->loadedOnRequest(),
             Js::make('work-core', resource_path('js/work/work-core.js'))->loadedOnRequest(),
+            // D-233: Is panosundaki "Hizli is ekle" penceresi (rozetli tek metin; kullanici onayi 21 Ekim 2026).
+            Js::make('work-quick', resource_path('js/work/work-quick.js'))->loadedOnRequest(),
             Js::make('work-board', resource_path('js/work/work-board.js'))->loadedOnRequest(),
+            // D-240: Isler listesi (React; Akilli is ekle acikken).
+            Js::make('work-list', resource_path('js/work/work-list.js'))->loadedOnRequest(),
+            // D-240: UI Deneme > Rapor yazma denemesi.
+            Js::make('report-lab', resource_path('js/work/report-lab.js'))->loadedOnRequest(),
             Js::make('work-matrix', resource_path('js/work/work-matrix.js'))->loadedOnRequest(),
             Js::make('work-analysis', resource_path('js/work/work-analysis.js'))->loadedOnRequest(),
             Js::make('work-attention', resource_path('js/work/work-attention.js'))->loadedOnRequest(),

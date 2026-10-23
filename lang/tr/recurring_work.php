@@ -28,7 +28,7 @@ return [
         'month_day' => 'Ayın günü',
         'priority' => 'Kritiklik',
         'org_unit' => 'Departman',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'category' => 'Kategori',
         'starts_on' => 'Başlangıç',
         'ends_on' => 'Bitiş',

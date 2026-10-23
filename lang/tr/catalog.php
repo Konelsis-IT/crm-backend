@@ -77,10 +77,10 @@ return [
 
     'relations' => [
         'cost_lines' => [
-            'title' => 'Teklif ve projeler',
+            'title' => 'Teklif ve taahhütler',
             'empty' => 'Bu kalemi isteyen teklif maliyet satırı yok.',
             'proposal' => 'Teklif',
-            'project' => 'Proje',
+            'project' => 'Taahhüt',
             'path' => 'Excel\'deki yeri',
             'quantity' => 'Miktar',
             'unit_cost' => 'Birim maliyet',
@@ -95,7 +95,7 @@ return [
             'need' => 'Satın alınacak kalem',
             'status' => 'Durum',
             'proposal' => 'Teklif',
-            'project' => 'Proje',
+            'project' => 'Taahhüt',
             'quantity' => 'Miktar',
             'recommended' => 'Önerilen teklif',
             'needed_by' => 'Termin',

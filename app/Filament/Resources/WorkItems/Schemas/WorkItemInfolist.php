@@ -76,7 +76,7 @@ final class WorkItemInfolist
                                 ->badge()
                                 ->color('gray')
                                 ->placeholder('–')
-                                ->visible(fn (): bool => WorkItemQueries::extendedUi()),
+                                ->visible(fn (): bool => WorkItemQueries::extendedUi() && WorkItemQueries::disciplineUi()),
                             TextEntry::make('legacy_no')
                                 ->label(__('work_item.fields.legacy_no'))
                                 ->fontFamily('mono')
@@ -123,6 +123,17 @@ final class WorkItemInfolist
                                 ->url(fn (WorkItem $record): ?string => app(WorkItemPresenter::class)->link($record)['url'] ?? null)
                                 ->color('primary')
                                 ->placeholder('–')
+                                ->columnSpan(['default' => 1, 'md' => 2]),
+                            // D-233 (B59): ek bagli kayitlar (teklif / is gelistirme / ihale).
+                            TextEntry::make('extra_links')
+                                ->label(__('work_item.fields.extra_links'))
+                                ->state(fn (WorkItem $record): array => array_map(
+                                    static fn (array $link): string => $link['kind_label'].' · '.trim(($link['no'] !== null ? $link['no'].' ' : '').$link['label']),
+                                    app(WorkItemPresenter::class)->extraLinks($record),
+                                ))
+                                ->listWithLineBreaks()
+                                ->bulleted()
+                                ->visible(fn (WorkItem $record): bool => app(WorkItemPresenter::class)->extraLinks($record) !== [])
                                 ->columnSpan(['default' => 1, 'md' => 2]),
                         ]),
                     Section::make(__('work_item.sections.durations'))

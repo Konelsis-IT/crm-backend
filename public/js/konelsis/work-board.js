@@ -59,7 +59,92 @@
         waiting: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
         done: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
         blocked: 'm9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+        // D-235 Raporlastir: o-document-chart-bar, o-sun, o-calendar-days, o-arrow-right.
+        report: 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z',
+        sun: 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+        week: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z',
+        arrow: 'M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3',
+        down: 'm19.5 8.25-7.5 7.5-7.5-7.5',
     };
+
+    /*
+     * Sigdirilmis pano (D-241, work.board.refresh; kullanici 23 Ekim 2026: "is
+     * panosunda planlandi devam ediyor vs.. yapisi ayni genel bakistaki gibi uzun
+     * yazilar satir arttirmayacak ayni satirda kayan yazi gorulecek, ve asagi dogru
+     * suruklenme isi icin asagi ok butonu ile kaydirilacak alanda tasma olmayacak.
+     * Sayfa gereksiz buyumeyecek"). Genel bakistaki Marquee ve ScrollArea'nin
+     * (nd-app.js, D-225) ayni davranisi: sigmayan yazi kayar, bekler, geri doner;
+     * sutun kendi icinde kayar, cubuk gizli, altta devami varsa soluk alan ve ok.
+     */
+    function Marquee(props) {
+        const outer = useRef(null);
+        const inner = useRef(null);
+        const [shift, setShift] = useState(0);
+
+        useEffect(() => {
+            const measure = () => {
+                if (!outer.current || !inner.current) { return; }
+                // Kartin menu dugmesi icin birakilan sag bosluk sayilmaz.
+                const style = window.getComputedStyle(outer.current);
+                const room = outer.current.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+                const overflow = inner.current.scrollWidth - room;
+                setShift(overflow > 2 ? overflow : 0);
+            };
+
+            measure();
+            const observer = window.ResizeObserver ? new ResizeObserver(measure) : null;
+
+            if (observer && outer.current) { observer.observe(outer.current); }
+
+            return () => { if (observer) { observer.disconnect(); } };
+        }, [props.text]);
+
+        return h('div', {
+            ref: outer,
+            className: cx('kw-marquee', shift > 0 && 'is-moving', props.className),
+            title: props.title,
+            style: shift > 0 ? { '--kw-shift': (-shift) + 'px', '--kw-marquee-time': Math.min(18, Math.max(6, 4 + shift / 20)).toFixed(1) + 's' } : undefined,
+        }, h('span', { ref: inner, className: cx('kw-marquee-text', props.innerClassName) }, props.children));
+    }
+
+    function ScrollArea(props) {
+        const { bodyRef, className, label, children } = props;
+        const own = useRef(null);
+        const ref = bodyRef || own;
+        const [more, setMore] = useState(false);
+
+        useEffect(() => {
+            const el = ref.current;
+
+            if (!el) { return undefined; }
+
+            const check = () => setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+            check();
+            el.addEventListener('scroll', check, { passive: true });
+            const resize = window.ResizeObserver ? new ResizeObserver(check) : null;
+            const mutate = window.MutationObserver ? new MutationObserver(check) : null;
+
+            if (resize) { resize.observe(el); }
+            if (mutate) { mutate.observe(el, { childList: true, subtree: true }); }
+
+            return () => {
+                el.removeEventListener('scroll', check);
+                if (resize) { resize.disconnect(); }
+                if (mutate) { mutate.disconnect(); }
+            };
+        }, []);
+
+        const down = () => {
+            const el = ref.current;
+
+            if (el) { el.scrollBy({ top: Math.max(80, Math.round(el.clientHeight * 0.8)), behavior: 'smooth' }); }
+        };
+
+        return h('div', { className: cx('kw-scroll-area', more && 'has-more') },
+            h('div', { ref, className }, children),
+            more ? h('div', { className: 'kw-scroll-more' },
+                h('button', { type: 'button', className: 'kw-scroll-more-btn', title: label, 'aria-label': label, onClick: down }, h(Icon, { name: 'down' }))) : null);
+    }
 
     function Icon(props) {
         return h('svg', {
@@ -481,7 +566,13 @@
 
         // Talep kodu ust satirda (D-216); ayni kod iki kez yazmaz.
         if (card.link && !card.request) {
-            return h(Tag, { kind: 'link', href: card.link.url || undefined, title: card.link.label }, card.link.no || card.link.kind_label);
+            const tag = h(Tag, { kind: 'link', href: card.link.url || undefined, title: card.link.label }, card.link.no || card.link.kind_label);
+            const more = card.links || [];
+
+            // D-233 (B59): ek bagli kayitlar "+N" (uzerine gelince liste).
+            return more.length
+                ? h(Fragment, null, tag, ' ', h(Tag, { kind: 'link', title: more.map((link) => link.kind_label + ': ' + (link.no ? link.no + ' · ' : '') + link.label).join('\n') }, t('qa_more_links', { n: more.length })))
+                : tag;
         }
 
         if (card.hours) {
@@ -495,6 +586,8 @@
         const { card, onEdit, onStatus, onCritical, onPriority, onDelete } = props;
         const { t, config } = useApp();
         const extended = !!(config.features && config.features.extended);
+        // D-235: Akilli is ekle acikken is detay sayfasina gidilmez.
+        const smart = !!(config.features && config.features.quick_add && window.KonelsisWorkQuick);
 
         return h(Dropdown, {
             align: 'end',
@@ -509,7 +602,7 @@
                 draggable: false,
             }, '···'),
         }, (close) => h('div', { onClick: (event) => event.stopPropagation() },
-            card.can && card.can.update ? h(Opt, { plain: true, onClick: () => { close(); onEdit(card); } }, t('menu_edit')) : null,
+            card.can && card.can.update ? h(Opt, { plain: true, onClick: () => { close(); onEdit(card, 'edit'); } }, t('menu_edit')) : null,
             card.can && card.can.update ? h(Opt, { sub: true }, t('menu_status')) : null,
             card.can && card.can.update ? (config.options.statuses || []).map((status) => h(Opt, {
                 key: status.value,
@@ -530,7 +623,7 @@
             }, row.label)) : null,
             card.can && card.can.update && extended ? h('div', { className: 'kw-divider' }) : null,
             card.link && card.link.url ? h(Opt, { plain: true, onClick: () => { close(); window.location.assign(card.link.url); } }, t('menu_open_record')) : null,
-            card.url ? h(Opt, { plain: true, onClick: () => { close(); window.location.assign(card.url); } }, t('menu_detail')) : null,
+            card.url && !smart ? h(Opt, { plain: true, onClick: () => { close(); window.location.assign(card.url); } }, t('menu_detail')) : null,
             card.can && card.can.delete ? h(Opt, { plain: true, danger: true, onClick: () => { close(); onDelete(card); } }, t('menu_delete')) : null,
         ));
     }
@@ -542,21 +635,10 @@
 
         const extended = !!(config.features && config.features.extended);
         const others = extended ? (card.assignees || []) : [];
+        // D-241 (work.board.refresh): uzun yazilar tek satirda kayar.
+        const fit = !!(config.features && config.features.refresh);
 
-        return h('article', {
-            className: cx('kw-card', { critical: card.is_critical, 'prio-high': extended && card.priority === 'high', mgmt: card.management, new: isNew, ghost }),
-            'data-card-id': card.id,
-            draggable,
-            tabIndex: 0,
-            'aria-label': card.title,
-            onClick: () => handlers.onOpen(card),
-            onKeyDown: (event) => { if (event.key === 'Enter' && event.target === event.currentTarget) { handlers.onOpen(card); } },
-            onDragStart: draggable ? (event) => dragStart(event, card) : undefined,
-            onDragEnd: draggable ? dragEnd : undefined,
-        },
-        h(CardMenu, { card, onEdit: handlers.onOpen, onStatus: handlers.onStatus, onCritical: handlers.onCritical, onPriority: handlers.onPriority, onDelete: handlers.onDelete }),
-        h('div', { className: 'kw-title' }, card.title),
-        h('div', { className: 'kw-meta' },
+        const meta = [
             // D-216: ust yonetimin istedigi is ve bagli talebin kodu her gorunumde.
             card.management ? h(Tag, { kind: 'mgmt', title: t('management_hint') }, t('management_tag')) : null,
             card.request ? h(Tag, { kind: 'link', href: card.request.url || undefined, title: t('request_tag_hint', { title: card.request.title }) }, card.request.no) : null,
@@ -572,8 +654,27 @@
             extended && card.notes_count ? h(Tag, { title: t('notes_hint') }, t('notes_n', { n: card.notes_count })) : null,
             extended && card.files_count ? h(Tag, { title: t('files_hint') }, t('files_n', { n: card.files_count })) : null,
             isNew ? h(Tag, { kind: 'newc' }, t('new_tag')) : null,
-        ),
-        card.parent ? h('div', { className: 'kw-sub' }, '↳ ' + t('parent_of', { title: card.parent.title })) : null,
+        ].filter(Boolean).map((el, index) => window.React.cloneElement(el, { key: 'm' + index }));
+        const metaText = [card.request && card.request.no, card.unit && card.unit.name, card.project && card.project.name, card.category_label, card.priority_label, card.discipline_label].filter(Boolean).join('|');
+        const parentText = card.parent ? '↳ ' + t('parent_of', { title: card.parent.title }) : null;
+
+        return h('article', {
+            className: cx('kw-card', { critical: card.is_critical, 'prio-high': extended && card.priority === 'high', mgmt: card.management, new: isNew, ghost }),
+            'data-card-id': card.id,
+            draggable,
+            tabIndex: 0,
+            'aria-label': card.title,
+            onClick: () => handlers.onOpen(card),
+            onKeyDown: (event) => { if (event.key === 'Enter' && event.target === event.currentTarget) { handlers.onOpen(card); } },
+            onDragStart: draggable ? (event) => dragStart(event, card) : undefined,
+            onDragEnd: draggable ? dragEnd : undefined,
+        },
+        h(CardMenu, { card, onEdit: handlers.onOpen, onStatus: handlers.onStatus, onCritical: handlers.onCritical, onPriority: handlers.onPriority, onDelete: handlers.onDelete }),
+        fit ? h(Marquee, { className: 'kw-title', text: card.title, title: card.title }, card.title) : h('div', { className: 'kw-title' }, card.title),
+        fit
+            ? (meta.length ? h(Marquee, { className: 'kw-meta', innerClassName: 'kw-meta-in', text: metaText }, meta) : null)
+            : h('div', { className: 'kw-meta' }, meta),
+        parentText ? (fit ? h(Marquee, { className: 'kw-sub', text: parentText, title: parentText }, parentText) : h('div', { className: 'kw-sub' }, parentText)) : null,
         h('div', { className: 'kw-foot' },
             type !== 'panom' && card.personnel
                 ? h('span', { className: 'kw-who', title: others.length ? others.map((p) => p.name).join(', ') : undefined },
@@ -596,8 +697,11 @@
 
     function Column(props) {
         const { status, label, cards, lane, type, drag, dropAt, setDropAt, onDrop, newIds, handlers, dragStart, dragEnd, compact } = props;
-        const { t } = useApp();
+        const { t, config } = useApp();
         const ref = useRef(null);
+        const bodyRef = useRef(null);
+        // D-241 (work.board.refresh): sutun kendi icinde kayar (ok), pano sayfayi buyutmez.
+        const fit = !!(config.features && config.features.refresh);
         const isTarget = drag && dropAt && dropAt.status === status && dropAt.lane === lane;
         const others = drag ? cards.filter((card) => card.id !== drag.id) : cards;
         const n = cards.length;
@@ -651,6 +755,18 @@
                 event.preventDefault();
                 event.dataTransfer.dropEffect = 'move';
                 const index = indexAt(event.clientY);
+                const body = fit ? bodyRef.current : null;
+
+                // Surukerken sutunun alt / ust kenarina yaklasinca sutun kayar.
+                if (body) {
+                    const rect = body.getBoundingClientRect();
+
+                    if (event.clientY > rect.bottom - 48) {
+                        body.scrollTop += 14;
+                    } else if (event.clientY < rect.top + 36) {
+                        body.scrollTop -= 14;
+                    }
+                }
 
                 if (!dropAt || dropAt.status !== status || dropAt.index !== index || dropAt.lane !== lane) {
                     setDropAt({ status, index, lane });
@@ -670,7 +786,9 @@
                 h('span', { className: 'kw-col-title' }, label),
                 h('span', { className: 'kw-n', title: t('cards_n', { n }) }, countLabel))
             : h('div', { className: 'kw-col-head' }, h('i', null), label, h('span', { className: 'kw-n' }, countLabel)),
-        children.length ? children : h('div', { className: 'kw-col-empty' }, '–'),
+        fit
+            ? h(ScrollArea, { bodyRef, className: 'kw-col-body', label: t('col_more') }, children.length ? children : h('div', { className: 'kw-col-empty' }, '–'))
+            : (children.length ? children : h('div', { className: 'kw-col-empty' }, '–')),
         );
     }
 
@@ -784,6 +902,8 @@
             waiting: waitingFromCard(card),
             requester: requesterFromCard(card),
             link: card && card.link ? { kind: card.link.kind, id: card.link.id, label: (card.link.no ? card.link.no + ' · ' : '') + card.link.label } : { kind: '', id: null, label: null },
+            // D-233 (B59): ek bagli kayitlar (Hizli is ekle'den); burada yalniz kaldirilir.
+            extra_links: card && card.links ? card.links : [],
             note: card ? card.note || '' : '',
             parent_id: card && card.parent ? card.parent.id : null,
             personnel_id: card && card.personnel ? card.personnel.id : me.id,
@@ -802,6 +922,7 @@
         // D-219: kritiklik ve paylasim (diger sorumlu / Tum ekip yalniz baskasina is yazabilene).
         const extended = !!(config.features && config.features.extended);
         const canShare = extended && !!(config.can && (config.can.team || config.can.all));
+        const multiLinks = !!(config.features && config.features.multi_links);
         const people = config.options.people || [];
         const ownerId = scope !== 'mine' ? form.personnel_id : me.id;
         const assigneeOptions = people.filter((p) => p.value !== ownerId && form.assignees.indexOf(p.value) === -1).map((p) => ({ value: p.value, label: p.label }));
@@ -839,6 +960,10 @@
             if (!linkLocked) {
                 payload.link_kind = form.link.kind && form.link.id ? form.link.kind : null;
                 payload.link_id = form.link.kind && form.link.id ? form.link.id : null;
+            }
+
+            if (editing && multiLinks) {
+                payload.extra_links = form.extra_links.map((link) => ({ kind: link.kind, id: link.id }));
             }
 
             if (scope !== 'mine') {
@@ -906,7 +1031,8 @@
                 h(Toggle, { checked: form.critical, label: form.critical ? t('yes') : t('no'), onChange: (value) => set({ critical: value }) })) : null,
             extended ? h(Field, { label: t('field_priority'), size: 'lg' },
                 h(Seg, { items: config.options.priorities || [], value: form.priority, label: t('field_priority'), onChange: (value) => set({ priority: value }) })) : null,
-            extended ? h(Field, { label: t('field_discipline') },
+            // D-245: is grubu kapaliyken alan yok (deger formda kalir, silinmez).
+            extended && (config.options.disciplines || []).length ? h(Field, { label: t('field_discipline') },
                 h(Select, { value: form.discipline, options: config.options.disciplines || [], placeholder: '–', onChange: (value) => set({ discipline: value || null }) })) : null,
             canShare ? h(Field, { label: t('field_assignees'), full: true, help: t('field_assignees_help') },
                 h('div', { className: 'kw-chips-edit' },
@@ -928,6 +1054,11 @@
                 h(WaitingPicker, { value: form.waiting, invalid: !!errors.waiting, onChange: (waiting) => set({ waiting }) })),
             h(Field, { label: t('field_link'), full: true },
                 h(LinkPicker, { value: form.link, locked: linkLocked, onChange: (link) => set({ link }) })),
+            multiLinks && form.extra_links.length && window.KonelsisWorkQuick ? h(Field, { label: t('qa_extra_links'), full: true, help: t('qa_extra_links_help') },
+                h(window.KonelsisWorkQuick.ExtraLinks, {
+                    links: form.extra_links,
+                    onRemove: (link) => set({ extra_links: form.extra_links.filter((row) => !(row.kind === link.kind && row.id === link.id)) }),
+                })) : null,
             h(Field, { label: t('field_note'), full: true },
                 h(Input, { value: form.note, placeholder: t('optional'), onChange: (value) => set({ note: value }) })),
         ));
@@ -1212,33 +1343,6 @@
         ));
     }
 
-    function FreezeModal(props) {
-        const { cards, onClose, onDone } = props;
-        const app = useApp();
-        const { t, config, api } = app;
-        const [summary, setSummary] = useState('');
-        const [busy, setBusy] = useState(false);
-
-        const freeze = () => {
-            setBusy(true);
-            api.post(config.endpoints.freeze, { ids: cards.map((card) => card.id), summary }).then((json) => {
-                onDone(json.report, t('frozen', { no: json.report.no }));
-                onClose();
-            }).catch(app.fail).finally(() => setBusy(false));
-        };
-
-        return h(Modal, {
-            title: t('freeze_title'),
-            size: 'small',
-            onClose,
-            footer: [
-                h(Btn, { key: 'c', onClick: onClose }, t('cancel')),
-                h(Btn, { key: 's', variant: 'primary', disabled: busy || !cards.length, onClick: freeze }, t('freeze_submit')),
-            ],
-        }, h('p', { className: 'kw-info' }, t('freeze_text', { n: cards.length })),
-        h(Field, { label: t('summary'), help: t('summary_help') }, h(TextArea, { value: summary, onChange: setSummary })));
-    }
-
     /* ------------------------------------------------------------------ */
     /* Oneriler                                                             */
     /* ------------------------------------------------------------------ */
@@ -1351,6 +1455,63 @@
     /* Hizli satir                                                          */
     /* ------------------------------------------------------------------ */
 
+    /**
+     * Raporlastir (D-235; kullanici 22 Ekim 2026: "Haftalik - Gunluk rapora donustur
+     * butonunu raporlastir butonu olarak guncelle ... kare kart tasarimi seklinde
+     * ... 2 tur rapor secimi"): secilen kart o raporun penceresini acar.
+     */
+    /** Panoyu dondur (work.board.refresh kapaliyken; 2.9.2 ile kalkar). */
+    function FreezeModal(props) {
+        const { cards, onClose, onDone } = props;
+        const app = useApp();
+        const { t, config, api } = app;
+        const [summary, setSummary] = useState('');
+        const [busy, setBusy] = useState(false);
+
+        const freeze = () => {
+            setBusy(true);
+            api.post(config.endpoints.freeze, { ids: cards.map((card) => card.id), summary }).then((json) => {
+                onDone(json.report, t('frozen', { no: json.report.no }));
+                onClose();
+            }).catch(app.fail).finally(() => setBusy(false));
+        };
+
+        return h(Modal, {
+            title: t('freeze_title'),
+            size: 'small',
+            onClose,
+            footer: [
+                h(Btn, { key: 'c', onClick: onClose }, t('cancel')),
+                h(Btn, { key: 's', variant: 'primary', disabled: busy || !cards.length, onClick: freeze }, t('freeze_submit')),
+            ],
+        }, h('p', { className: 'kw-info' }, t('freeze_text', { n: cards.length })),
+        h(Field, { label: t('summary'), help: t('summary_help') }, h(TextArea, { value: summary, onChange: setSummary })));
+    }
+
+    function ReportChoice(props) {
+        const { onClose, onPick } = props;
+        const { t, config } = useApp();
+        const kinds = [
+            { key: 'day', icon: 'sun', title: t('report_day_title'), text: t('report_day_text'), meta: fmt.date(config.today) + ' ' + fmt.dayName(config.today) },
+            { key: 'week', icon: 'week', title: t('report_week_title'), text: t('report_week_text'), meta: t('report_week_meta') },
+        ];
+
+        return h(Modal, { title: t('report_choice_title'), sub: t('report_choice_sub'), size: 'kw-report-modal', onClose },
+            h('div', { className: 'kw-report-choice' }, kinds.map((kind) => h('button', {
+                key: kind.key,
+                type: 'button',
+                className: 'kw-report-card kw-report-' + kind.key,
+                'data-autofocus': kind.key === 'day' ? 'true' : undefined,
+                onClick: () => onPick(kind.key),
+            },
+            h('span', { className: 'kw-report-ic' }, h(Icon, { name: kind.icon })),
+            h('strong', { className: 'kw-report-title' }, kind.title),
+            h('span', { className: 'kw-report-text' }, kind.text),
+            h('span', { className: 'kw-report-go' }, h('span', null, kind.meta), h(Icon, { name: 'arrow' })),
+            ))),
+        );
+    }
+
     function QuickRow(props) {
         const { onAdd, defaultProject, busy, autoFocus } = props;
         const app = useApp();
@@ -1432,6 +1593,15 @@
         const compact = !!(config.features && config.features.compact);
         const [filtersOpen, setFiltersOpen] = useState(false);
         const [quickOpen, setQuickOpen] = useState(false);
+        // D-235 (22 Ekim 2026): Akilli is ekle acikken panoda hep acik yazma alani
+        // vardir; kart ve Duzenle ayni pencereyi acar, Is ekle / Hizli is ekle kalkar.
+        const Smart = window.KonelsisWorkQuick || null;
+        const smart = !!(config.features && config.features.quick_add && config.endpoints.quick_options && Smart);
+        const smartCreate = smart && !(config.can && config.can.create === false);
+        // D-237: Raporlastir, kapsam renkleri ve Panoyu dondur'un kalkmasi 2.9.2 ile acilir (D-244)
+        // (work.board.refresh); kapaliyken iki rapor dugmesi ve Panoyu dondur durur.
+        const refresh = !!(config.features && config.features.refresh);
+        const openCard = (card) => setModal(smart ? { kind: 'quick', card } : { kind: 'item', card });
 
         const setScope = (next) => {
             setScopeState(next);
@@ -1502,6 +1672,20 @@
             }
         }, []);
 
+        // Akilli is penceresi (pano, ust cubuk) ve acik yazma alani kaydedince kart panoya gelir.
+        useEffect(() => {
+            if (!smart) { return undefined; }
+
+            const onSaved = (event) => {
+                const detail = (event && event.detail) || {};
+                (detail.cards || []).forEach((card) => upsert(card, !detail.editing));
+            };
+
+            window.addEventListener('kq-saved', onSaved);
+
+            return () => window.removeEventListener('kq-saved', onSaved);
+        }, [smart, upsert]);
+
         const removeCard = (id) => setData((previous) => ({ ...previous, cards: previous.cards.filter((row) => row.id !== id) }));
 
         const visibleCards = useMemo(() => data.cards.filter((card) => matches(card, filters, null)), [data.cards, filters]);
@@ -1513,7 +1697,7 @@
 
             return api.post(config.endpoints.store, payload).then((json) => {
                 upsert(json.card, true);
-                app.toast({ text: t('created'), tone: 'ok', action: { label: t('open'), onClick: () => setModal({ kind: 'item', card: json.card }) } });
+                app.toast({ text: t('created'), tone: 'ok', action: { label: t('open'), onClick: () => openCard(json.card) } });
                 return true;
             }).catch((err) => {
                 app.fail(err);
@@ -1629,7 +1813,7 @@
         const onCreatedFromSuggestion = (card, suggestion) => {
             upsert(card, true);
             setData((previous) => ({ ...previous, suggestions: previous.suggestions.filter((row) => row.id !== suggestion.id) }));
-            app.toast({ text: t('created'), tone: 'ok', action: { label: t('open'), onClick: () => setModal({ kind: 'item', card }) } });
+            app.toast({ text: t('created'), tone: 'ok', action: { label: t('open'), onClick: () => openCard(card) } });
         };
 
         const onReport = (report, text) => {
@@ -1638,7 +1822,16 @@
         };
 
         const handlers = {
-            onOpen: (card) => { if (card.can && card.can.update) { setModal({ kind: 'item', card }); } else if (card.url) { window.location.assign(card.url); } },
+            // D-241: karta tiklamak isi okuma gorunumunde acar; Duzenle (menu) dogrudan duzenler.
+            onOpen: (card, mode) => {
+                if (smart) {
+                    setModal({ kind: 'quick', card, mode: mode === 'edit' ? 'edit' : 'view' });
+                } else if (card.can && card.can.update) {
+                    setModal({ kind: 'item', card });
+                } else if (card.url) {
+                    window.location.assign(card.url);
+                }
+            },
             onStatus: (card, status) => requestStatus(card, status, null),
             onCritical: toggleCritical,
             onPriority: setPriority,
@@ -1794,7 +1987,8 @@
             })),
         );
 
-        const actions = [h(Btn, { key: 'q', onClick: () => setModal({ kind: 'item', card: null }) }, t('quick_item'))];
+        // D-235: Akilli is ekle acikken is panodaki acik alandan (ya da ust cubuktan) eklenir.
+        const actions = smart ? [] : [h(Btn, { key: 'q', onClick: () => setModal({ kind: 'item', card: null }) }, t('quick_item'))];
 
         // Sade gorunumde (D-167) Yoksayilanlar dugme degil, Filtreler panelindeki bir suzgectir.
         if (scope === 'mine' && !compact) {
@@ -1802,10 +1996,16 @@
         }
 
         // Gunluk ve haftalik rapor kisinin kendi kartlarindan uretilir; kapsamdan bagimsizdir.
-        actions.push(h(Btn, { key: 'd', onClick: () => setModal({ kind: 'day' }) }, t('close_day')));
-        actions.push(h(Btn, { key: 'w', variant: 'primary', onClick: () => setModal({ kind: 'week' }) }, t('close_week')));
+        // D-235: tek dugme (Raporlastir); gunluk / haftalik secimi kare kartlarla.
+        if (refresh) {
+            actions.push(h(Btn, { key: 'r', variant: 'primary', className: 'kw-report-btn', onClick: () => setModal({ kind: 'report' }) }, h(Icon, { name: 'report' }), t('report_button')));
+        } else {
+            actions.push(h(Btn, { key: 'd', onClick: () => setModal({ kind: 'day' }) }, t('close_day')));
+            actions.push(h(Btn, { key: 'w', variant: 'primary', onClick: () => setModal({ kind: 'week' }) }, t('close_week')));
+        }
 
-        if (scope === 'all') {
+        // D-235 (22 Ekim 2026, kullanici: "Is panosundan Panoyu dondur secenegini kaldir"): 2.9.2 ile kalkar (D-244).
+        if (!refresh && scope === 'all') {
             actions.push(h(Btn, { key: 'f', onClick: () => setModal({ kind: 'freeze' }) }, t('freeze')));
         }
 
@@ -1826,7 +2026,8 @@
                 key: 'scope',
                 label: t('filter_scope'),
                 value: scope,
-                items: allowed.map((value) => ({ value, label: t('scope_' + value) })),
+                // D-235: her kapsamin secili rengi ayri yumusak ton (kw-scope-*).
+                items: allowed.map((value) => ({ value, label: t('scope_' + value), className: refresh ? 'kw-scope-' + value : undefined })),
                 onChange: setScope,
             });
 
@@ -1914,7 +2115,7 @@
 
         const toolbar = compact ? h('div', { className: 'kw-toolbar' },
             h('div', { className: 'kw-toolbar-side' },
-                h(Btn, { className: 'kw-toggle-btn', 'aria-expanded': String(quickOpen), 'aria-controls': 'kw-quick-panel', onClick: () => setQuickOpen(!quickOpen) },
+                smart ? null : h(Btn, { className: 'kw-toggle-btn', 'aria-expanded': String(quickOpen), 'aria-controls': 'kw-quick-panel', onClick: () => setQuickOpen(!quickOpen) },
                     h(Icon, { name: 'plus', strokeWidth: 2.2 }), t('quick_open')),
             ),
             h('div', { className: 'kw-toolbar-side end' },
@@ -1933,9 +2134,13 @@
             ),
         ) : null;
 
-        const quickPanel = compact && quickOpen
-            ? h('div', { id: 'kw-quick-panel', className: 'kw-quick-panel' }, h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject, autoFocus: true }))
-            : null;
+        let quickPanel = null;
+
+        if (smart) {
+            quickPanel = smartCreate ? h(Smart.InlineComposer, { key: 'kq-inline' }) : null;
+        } else if (compact && quickOpen) {
+            quickPanel = h('div', { id: 'kw-quick-panel', className: 'kw-quick-panel' }, h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject, autoFocus: true }));
+        }
 
         const filterPanel = compact && filtersOpen
             ? h('div', { id: 'kw-filter-panel', className: 'kw-filter-panel', role: 'region', 'aria-label': t('filters_heading') },
@@ -1948,7 +2153,7 @@
             )
             : null;
 
-        return h('div', { className: cx('kw-app', { 'kw-compact': compact }) }, h('div', { className: 'kw-panel' },
+        return h('div', { className: cx('kw-app', { 'kw-compact': compact, 'kw-fit': refresh }) }, h('div', { className: 'kw-panel' },
             h('div', { className: 'kw-topbar' },
                 h('div', null,
                     h('div', { className: 'kw-crumbs' }, reportsUrl ? h('a', { href: reportsUrl }, t('reports')) : t('reports'), ' › ', t('board_title')),
@@ -1972,7 +2177,7 @@
                 onRestore: restore,
                 onBack: compact ? () => setDismissedMode(false) : undefined,
             }) : null,
-            compact ? null : h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject }),
+            compact || smart ? null : h(QuickRow, { onAdd: addQuick, busy, defaultProject: soleProject }),
             data.limited ? h('p', { className: 'kw-notice' }, t('limited', { n: 600 })) : null,
             error ? h(State, { error, onRetry: load }) : null,
             loading && !data.cards.length ? h(State, { loading: true }) : null,
@@ -2006,6 +2211,9 @@
                         );
                     }))) : null,
             modal && modal.kind === 'item' ? h(ItemModal, { card: modal.card, scope, cards: data.cards, defaultProject: soleProject, onClose: () => setModal(null), onSaved: (card, isNew) => { upsert(card, isNew); app.toast({ text: isNew ? t('created') : t('saved'), tone: 'ok' }); } }) : null,
+            modal && modal.kind === 'quick' && Smart ? h(Smart.QuickAddModal, { key: modal.card ? 'e' + modal.card.id + (modal.mode || '') : 'new', card: modal.card || null, mode: modal.mode || 'view', onClose: () => setModal(null) }) : null,
+            modal && modal.kind === 'report' ? h(ReportChoice, { onClose: () => setModal(null), onPick: (kind) => setModal({ kind }) }) : null,
+            modal && modal.kind === 'freeze' ? h(FreezeModal, { cards: visibleCards, onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'day' ? h(DayModal, { onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'week' ? h(WeekModal, { onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'suggestion' ? h(SuggestionModal, {
@@ -2017,7 +2225,6 @@
                 onRestore: restore,
             }) : null,
             modal && modal.kind === 'make' ? h(MakeCardModal, { suggestion: modal.suggestion, onClose: () => setModal(null), onCreated: onCreatedFromSuggestion }) : null,
-            modal && modal.kind === 'freeze' ? h(FreezeModal, { cards: visibleCards, onClose: () => setModal(null), onDone: onReport }) : null,
             modal && modal.kind === 'prompt' ? h(PromptPop, {
                 kind: modal.prompt,
                 card: modal.card,

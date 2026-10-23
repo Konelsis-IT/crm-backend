@@ -14,7 +14,7 @@
 
 <link rel="stylesheet" href="{{ FilamentAsset::getStyleHref('konelsis-checklist', package: 'konelsis') }}" />
 
-@unless (ReactRuntime::providedByChat())
+@unless (ReactRuntime::loaded())
     <script src="{{ FilamentAsset::getScriptSrc('react', package: 'konelsis') }}" defer></script>
     <script src="{{ FilamentAsset::getScriptSrc('react-dom', package: 'konelsis') }}" defer></script>
 @endunless

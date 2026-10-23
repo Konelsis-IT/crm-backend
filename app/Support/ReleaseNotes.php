@@ -66,14 +66,44 @@ final class ReleaseNotes
                         'Sağ üst menüde Sürüm notları penceresi; tam yetkili kişiler için UI Deneme kataloğu.',
                         'UI Deneme\'de departman panoları: üstteki seçiciyle Genel, Teklif - İş Geliştirme ve Yönetici panoları arasında geçilerek ekranın departmana göre nasıl değiştiği görülüyor. Sıkı, borsa ekranı gibi yoğun düzen: her zaman görünen gösterge bandı (açık potansiyel iş değeri, kaçan fırsat, verilen teklif, kazanma oranı, haftanın hareketleri), birleşik grafikler, hücre içi çubuk ve küçük çizgi grafikli teklif tablosu, sütun seçimi, görünen tablonun Excel ve PDF\'i, satıra tıklayınca ayrıntı penceresi. Yanında numaralı bileşen kataloğu var; beğendiklerinizi numarasıyla seçebilirsiniz. Durum düğmeleri bu denemede kayıt değiştirmiyor.',
                         'UI Deneme\'de Maliyet kalemleri: Kartal RES Hibrit GES 38,8 MWp maliyet Excel\'inin gerçek kalemleriyle numaralı tasarım seçenekleri. Kalemler Ürün/Hizmet, İdari Kadro ve Genel Giderler sekmelerinde kategorilerine göre gruplu, sıkı bir onay listesi olarak görünüyor; her kalemde hangi departmanın onayladığı, beklediği ya da reddettiği küçük işaretlerle, grup ve sekme başına onay ilerlemesi ve grubu toplu onaylama var. İcmal bazı seçeneklerde ayrı sekme, bazılarında sekmelerin üstünde genel toplam şeridi, sekme içi toplamlar, sağda özet paneli ya da maliyet şelalesi olarak gösteriliyor. Tutarlar TL, $ ya da € olarak görülebiliyor (Excel\'deki kur tablosuyla). Excel yüklendiğinde kalemlerin var olan katalogla eşleştirilmesi (katalogda / yeni / benzer kalem seçimi) ayrı bir adımda gösteriliyor. Excel\'deki satır rengi fiyat durumu olarak okunuyor: yeşil fiyatı kesin, sarı fiyatı henüz netleşmemiş kalem; netleşmeyenler satırda işaretli, süzülebiliyor ve toplamlarda ayrıca görünüyor. 7-9 numaralı seçenekler diğerlerinin birleşimleri (hepsi bir arada; şerit, sekme içi toplamlar ve İcmal sekmesi; fiyat ve onay odaklı). Deneme ekranı; kayıt değiştirmiyor.',
+                        'UI Deneme\'de Rapor yazma: bütün rapor tipleri solda gruplu (çalışma, kayıt, personel, sistemin hazırladıkları), seçilen rapor tek sade sayfa. Metin alanlarına düz yazılıyor; kişi ya da kayıt adı yazınca öneriden seçilip rozet oluyor. Puan, seçim, yüzde ve sayı alanları üstte tek kartta. Çalışma raporlarında dönemin işleri panodan geliyor, görüşme notları ve yazılan raporlar işaretli öneri olarak duruyor. Rapordan iş çıkarmak için: plan alanının her satırı ayrı bir iş (yarın ya da gelecek pazartesi başlar), plan alanı olmayan raporlarda "Bu rapordan çıkan işler"; bir metin alanındaki "Satırları işe dönüştür" ve bir görüşme notundaki "İşe dönüştür" satırları iş listesine taşıyor; konu (taahhüt, teklif, iş geliştirme) seçilince yeni işler onun rozetiyle başlıyor. "Düz yazı" raporun tamamını tek metin olarak gösteriyor. Deneme ekranı; kayıt değiştirmiyor.',
                     ],
                 ],
             ],
-            // D-229: satin almanin ikinci etabi (2.8 yalniz urunler ve satin alma talepleri).
+            // D-236: sesle yazma (D-237, 23 Ekim 2026: 2.9.5; D-244: 2.9.6).
             [
-                'version' => '2.9',
+                'version' => '2.9.6',
+                'date' => '22.10.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Sesle yaz: Akıllı iş ekle\'nin araç çubuğundaki "Sesle yaz" ile konuştukça iş yazılıyor; söylenen cümle önce silik, bitince yazı olarak yerleşiyor. Söylediklerinizdeki kişi, departman, taahhüt, teklif, iş geliştirme, ihale, tarih ("yarın", "dün", "yirmi beş ekim", "geçen cuma", "gelecek hafta"), efor ("iki saat", "3 saatlik"), durum, kritiklik ("kritiklik seviyesi yüksek", "acil"), kategori ve Tüm ekip altta "Bulunanlar" olarak öneriliyor; "Özgür bekletti" denince Özgür Bekletici, "Hüseyin Bey istedi" denince Talep eden olarak da öneriliyor; kodu söylenen belge, talep, görüşme ve satın alma kayıtları da aranıyor. Tıklayınca rozet oluyor (tarih ve kayıtlar ifadenin yerine geçer, diğerleri cümleyi bozmadan eklenir), "Tümünü ekle" ile hepsi birden. Söylenen ilk kişi Sorumlu olur; kayıt başlar başlamaz yer tutucu yazı kalkar. Chrome ve Edge\'de çalışır; mikrofon izni ve güvenli (https) bağlantı gerekir.',
+                    ],
+                ],
+            ],
+            // D-234: Projelendirme ekrani (yeni konu; D-244: 2.9.3).
+            [
+                'version' => '2.9.3',
+                'date' => '22.10.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'Operasyon - Taahhüt › Projelendirme: Projelendirme ekibinin taahhütleri sekmelerde. Devam eden (ekibin işi sürüyor), Sırada (henüz başlamadı ya da bekliyor), Takip edilecek (ekibin işi bitti ama taahhüt sürüyor: revizyonlar, saha soruları, son durum) ve Tümü. Satırda taahhüdün kodu, proje tipi, işvereni, Projelendirme durumu, sorumlusu, ilerlemesi, ekibin açık iş sayısı ve proje müdürü; satıra tıklayınca taahhüdün sayfası açılıyor. Ekibe özel bilgiler sonraki sürümlerde eklenecek.',
+                    ],
+                ],
+            ],
+            // D-229: satin almanin ikinci etabi ve kodla gidecekken anahtara alinan pano duzenlemeleri
+            // (D-235, D-236; work.board.refresh). D-237 (23 Ekim 2026, kullanici): 2.9.1; D-244: 2.9.2. D-241: sigdirilmis pano
+            // (tek satir kayan yazi, sutun ici kaydirma) ayni anahtarla.
+            [
+                'version' => '2.9.2',
                 'date' => '20.10.2026',
                 'groups' => [
+                    self::IMPROVEMENTS => [
+                        'İş panosunda "Günlük rapora dönüştür" ve "Haftalık rapora dönüştür" yerine tek "Raporlaştır" düğmesi: iki kare karttan Günlük rapor ya da Haftalık rapor seçiliyor, seçilen raporun penceresi açılıyor.',
+                        'İş panosunda Kendi kartlarım, Ekibim ve Tüm şirket seçiliyken her biri kendi yumuşak renginde (mavi, yeşil, mor) görünüyor.',
+                        'İş panosundan "Panoyu dondur" kaldırıldı.',
+                        'İş panosu sütunları Genel bakıştaki gibi: kartlardaki uzun yazılar satır artırmıyor, tek satırda kayarak okunuyor; her sütun kendi içinde kayıyor (altta soluk alan ve aşağı ok, kaydırma çubuğu yok), kart sürüklerken sütunun altına gelince sütun aşağı kayıyor. Pano sayfayı gereksiz büyütmüyor.',
+                        'İşler listesinde en son eklenen iş en üstte; işin tarihi (geçmiş ya da ileri) sırayı değiştirmiyor.',
+                    ],
                     self::FEATURES => [
                         'Teklif kapsamında Maliyet listesi: her proje tipinin kapsam bölümünde, kapsam listesinin hemen yanında maliyet listesi (Excel) yükleniyor; birden fazla dosya eklenebiliyor, aynı adlı dosya o listenin yeni revizyonu oluyor. Maliyet listeleri teklif sayfasındaki kapsam kartında ve Sürümler penceresinde indirme bağlantısıyla, tüm belgeler ZIP\'inde "Maliyet listeleri" klasöründe duruyor. Satın almaya ve projeye gidecek ürün ve maliyetlerin ilk adımı.',
                         'Teklif sayfasında Maliyet kalemleri sekmesi: kapsamdaki maliyet listesi Excel\'i "Excel\'den aktar" ile Ürün/Hizmet, İdari kadro ve Genel giderler kalemlerine ayrılıyor. Her kalem Malzeme ve Hizmetler\'deki karşılığına bağlanıyor, her yüklemede yeni kayıt açılmıyor; benzer adlı kalem için seçim isteniyor. Excel\'deki yeşil satırlar "Fiyatı kesin", sarı satırlar "Netleşmedi" olarak görünüyor. Seçilen kalemler termin ve acil bilgisiyle satın almaya gönderiliyor.',
@@ -92,6 +122,57 @@ final class ReleaseNotes
                         'Genel bakışta Satın alma paneli: Satın Alma çalışanları Satın alma panelini (Veri girişi, Devam eden proje, Bekleyen sipariş, Üretim süreci) görüyor; Yönetici panelinde Satın alma sütunu ekleniyor. ACİL şeritte ve Dün · Bugün · Yarın\'da satın alma talepleri, satın alınacaklar, onay bekleyen ve teslimi yaklaşan siparişler de görünüyor.',
                         'Otomatik uyarılara siparişlerin beklenen teslim tarihi eklendi.',
                         'Satın alma tekliflerinde ve siparişlerde tedarikçi Operasyon - Satın alma > Tedarikçiler listesinden seçiliyor; Konelsis AI belgedeki tedarikçiyi de bu listede arıyor.',
+                    ],
+                ],
+            ],
+            // D-244 (23 Ekim 2026, kullanici: "Ise cevap + zil bildirimi; surukle-birak belge, ilerleme cubugu,
+            // iste gorseller, uygulama icinde onizleme, belge'nin ise eklenmesi vs.. Bunu sonraki asamaya alalim"):
+            // work.board.quick_add.thread. D-248: work.board.quick_add.history (Gecmis sekmesi + olusturana zil).
+            [
+                'version' => '2.9.1',
+                'date' => '23.10.2026',
+                'groups' => [
+                    self::FEATURES => [
+                        'İşe cevap ve belge: okuma penceresinin altında "Cevaplar" ve "Belgeler". İşi görebilen herkes cevap yazabiliyor (Ctrl+Enter ile gönderilir) ve belge yükleyebiliyor (seçerek ya da sürükleyip bırakarak); cevap yazılınca işin sorumlusu ve diğer sorumluları zilde haber alıyor, bildirimden iş açılıyor. Belgeyi işten kaldırmak yalnız işi düzenleyebilene açık. İşler listesinde cevap ve belge sayısı satırda görünüyor. Belgeyi okuma penceresinin üstüne sürükleyip bırakmak da yetiyor; her belge kendi ilerleme çubuğuyla yükleniyor, üstte kaç belgenin yüklendiği ve toplam yüzde görünüyor.',
+                        'İşe eklenen görseller işin içinde: okuma penceresinde küçük resimler halinde görünüyor, tıklayınca büyüyor. PDF, Excel, Word ve metin belgeleri indirmeden, aynı pencerede önizleniyor; görsel olmayan belgeler türüne göre renkli simgeyle listeleniyor.',
+                        'İş yazarken belge: belgeyi yazının üstüne sürükleyip bırakın ya da satırdaki ataç düğmesiyle seçin. Belgeler satırın altında bekliyor (× ile çıkarılıyor), iş kaydedilince o işe tek tek yükleniyor; her belgenin kutucuğu yüklendikçe doluyor ve yüzdesi görünüyor. İş panosundaki yazma alanında, üst çubuktaki Akıllı iş penceresinde ve işi düzenlerken çalışıyor.',
+                        'İşin geçmişi: okuma penceresinde "Geçmiş" sekmesi. İşte kimin, ne zaman, ne yaptığı gün gün ve adım adım görünüyor: işi kim oluşturdu, durumu kim ne zaman neyden neye çevirdi, başlangıç, termin, efor, kritiklik ve sorumlular nasıl değişti, kim cevap yazdı, hangi belgeyi kim ekledi ya da kaldırdı, iş ne zaman arşive alındı. Adımlar silinmiyor; eski işlerin geçmişi de görünüyor.',
+                        'İşi oluşturana haber: işin durumu, başlangıcı, termini ya da eforu işi oluşturan dışında biri tarafından değiştirilince oluşturan zilde haber alıyor; bildirimde ne değiştiği (örneğin "Durum: Devam ediyor → Tamamlandı") yazıyor ve bildirimden iş açılıyor.',
+                    ],
+                ],
+            ],
+            // D-233 / D-235 / D-236 ek: Akilli is ekle her yerde ve ise birden fazla bagli kayit; D-234 adlandirma
+            // (kodla gider). D-237 (23 Ekim 2026, kullanici): 2.9. D-240: ifade onerileri, React Isler
+            // listesi, Duz yazi (Akilli is ekle ile acilir), Arsivle (B61) ve tek metin okunus (kodla gider).
+            // D-241: sayfalar ve sira no, tum Alanlar / Baglantilar suzgecleri, once okuma penceresi, cevaplar ve
+            // belgeler (+ zil), satir yerinde Duz yazi (Akilli is ekle ile acilir).
+            [
+                'version' => '2.9',
+                'date' => '22.10.2026',
+                'groups' => [
+                    // D-239 (23 Ekim 2026): kodla gider. D-243: belge onizlemesi her yerde (kodla gider).
+                    // D-245: is grubu kalkti, kategori listesi (kodla gider; B62 eski kodlari tasir).
+                    self::IMPROVEMENTS => [
+                        'İşlerde ayrı "İş grubu" alanı kalktı; işler yalnız kategoriyle gruplanıyor. Yönetim kurulu başkanının kategori listesi yenilendi: Yazılım, IT, Devreye alma, Medya, Servis, Muhasebe, Finans, İK, İSG, Kalite, Satın alma, Taahhüt, İş geliştirme, Teklif, Yönetim, Hukuk, İnşaat, Atölye, Saha, Borsa, Yatırımlar, Romanya. Eski birleşik kategoriler ilk karşılığına geçti (IT / Medya → IT, İK / İSG → İK, Yazılım / Devreye alma → Yazılım, Yeni ve Mevcut yatırımlar → Yatırımlar); "Taahhütler" kategorisinin adı "Taahhüt".',
+                        'Word belgeleri de indirmeden önizleniyor: Doküman sayfasındaki önizle düğmesi, revizyonlar, taahhüt belgeleri ve doküman ayrıntısı artık yalnız PDF\'i değil Excel ve Word dosyalarını da açıyor. Word önizlemesinde belgedeki görseller, ortalı / sağa dayalı paragraflar ve altı çizili yazılar da görünüyor.',
+                        'Operasyon grupları ayrı bir liste olmaktan çıktı: Ayarlar > Operasyon grupları menüsü kalktı. Bir departmanın taahhütlerde çalışıp çalışmadığı ve sırası artık Organizasyon birimlerinde, departmanın "Taahhütlerde" bölümünden seçiliyor (Personel > Organizasyon birimleri). Taahhüt sayfasındaki "Workstream\'ler" listesinin adı "Departmanlar" oldu; departman sekmeleri olduğu gibi duruyor.',
+                    ],
+                    self::NOTES => [
+                        'Yeni adlar: sözleşmeyle üstlenilen ana iş artık "Taahhüt" (sol menüde Operasyon - Taahhüt › Taahhütler; kodlar PRJ-YYYY-NNNN olarak kalıyor). Çizim ve tasarım yapan proje grubu artık "Projelendirme" (departman ve iş kolu). Önceki sürüm notlarında "proje" geçen yerler taahhüt ekranlarını anlatıyor; "Proje tipi", "Proje müdürü" ve "Yatırımcı projesi" adları değişmedi.',
+                    ],
+                    self::FEATURES => [
+                        'Akıllı iş ekle: işi tek bir metinle yazıyorsunuz, örneğin "Proje çizimi bitirilecek #aksa #melih". Personel, departman, taahhüt, teklif, iş geliştirme ve ihale; adı, kısa adı ya da koduyla yazmaya başlayınca (Öm → Ömer) altta önerilir, seçince panodaki rengiyle rozet olarak metnin içine yerleşir. # tüm listeleri, @ personeli açar; taahhütler işverenin adıyla da bulunur (#aksa → Aksa\'nın taahhütleri). Öneriler yazdığınız ifadenin tamamına bakar: "devam e" yazınca Devam ediyor, "Pozantı res" yazınca önce Pozantı RES, ardından "res" ile başlayan diğer kayıtlar gelir; seçilen ifadenin tamamı rozet olur.',
+                        'İş panosunda iş ekleme alanı hep açık: eski "İş ekle" ve "Hızlı iş ekle" düğmeleri yerine panonun üstündeki yazma alanı. Üstte Personel, Departman, Taahhüt, Teklif, İş geliştirme ve İhale düğmeleri; "Alanlar" menüsünde Durum, Başlangıç, Termin, Efor (iş süresi), Kategori, Talep eden, Bekletici, Kritiklik ve Tüm ekip; "Bağlantılar" menüsünde Belge, Talep ve Görüşme, satın alma açıldıkça Satın alınacak, Sipariş ve Ürün / Hizmet.',
+                        'Üstteki düğmelerle seçilenler de cümlenin devamına eklenir. Her işin 2. satırında yalnız sabit iki rozet: durum (seçilmezse Planlandı; bekletici eklenirse Bekliyor) ve Sorumlu (seçilmezse Sorumlu: Ben). Yazdığınız ilk kişi Sorumlu olur, sonraki kişiler diğer sorumludur; bu iki rozete tıklayınca değiştirilir. Aynı bilgi ikinci kez gösterilmiyor; altta yalnız uyarı varsa uyarı çıkıyor.',
+                        'Önceki günlerin işleri de kaydediliyor: "dün", "evvelsi gün", "geçen cuma", "geçen hafta" ya da 15.10 gibi geçmiş tarihler yazılabiliyor, tarih penceresinde Dün, Geçen hafta, Geçen cuma seçenekleri var. "2s", "1,5 saat", "90dk" efor olarak, "tamamlandı", "devam ediyor" gibi durum adları durum olarak öneriliyor.',
+                        'Satırda "Çoğalt": yazılan iş, bütün rozetleriyle hemen altına kopyalanıyor; yalnız değişen kısmı düzeltip kaydediyorsunuz. Art arda birden fazla iş: "Yeni iş" ya da Ctrl+Enter ile yeni satır, Ctrl+S ile hepsi birlikte kaydedilir. Başkasına iş verme yetkisi değişmedi: yalnız iş verebileceğiniz kişiler önerilir.',
+                        'Üst çubukta Şablonlar ile İş panosu arasında "Akıllı iş" düğmesi: hangi sayfadaysanız aynı pencere açılıyor, iş oradan yazılıyor.',
+                        'Rozet yazıldığı ifadenin yerinde kalıyor: işi yazarken, kaydedince açtığınızda, İşler listesinde ve personel kartının İşler sekmesinde aynı tek metin olarak görünüyor; ayrı başlık gösterilmiyor.',
+                        'İşler listesi yenilendi: her iş yazıldığı gibi tek metin (renkli rozetler, son satırda durum ve Sorumlu), başında sıra numarası (1, 2, 3 …); altta sayfalar (1 2 3 …) ve sayfada 25 / 50 / 100 iş. Süzgeçler Akıllı iş ekle\'deki gibi seçiliyor: Personel, Departman, Taahhüt, Teklif, İş geliştirme, İhale düğmeleri; "Alanlar" menüsünde Durum, Başlangıç, Termin, Efor, Kategori, Talep eden, Bekletici (açıksa Kritiklik ve Tüm ekip); "Bağlantılar" menüsünde Belge, Talep, Görüşme ve açık satın alma kayıtları; "Tarih" menüsünde Bugün, Dün, Bu hafta, Geçen hafta, Bu ay. Seçilenler üstte rozet olarak duruyor, × ile kalkıyor; arama kutusu metinde arıyor.',
+                        'İşe tıklayınca iş önce okuma penceresinde açılıyor; düzenlemek için "Düzenle" düğmesine basılıyor (yalnız işi düzenleme yetkisi olana görünüyor). "Yeni iş" ve İşler listesindeki Düzenle aynı Akıllı iş penceresini açıyor; iş detay sayfasına gidilmiyor. İş panosunda karta tıklayınca da iş okuma penceresinde açılıyor; kart menüsündeki Düzenle doğrudan düzenler.',
+                        'İşlerde Arşivle: iş silinmiyor, arşive alınıyor (bildirimdeki "Geri al" ile hemen geri alınabiliyor). İşler listesinde Aktif / Arşivlenenler / Tümü seçimi; arşivlenen iş panoda, raporlarda, uyarılarda ve önerilerde görünmüyor.',
+                        'Rozetli / Düz yazı: her iş satırı yerinde düz yazıya çevrilip geri rozetliye alınabiliyor (altında ayrı alan açılmıyor; düz yazı düzenlenemiyor). İşler listesi düz yazıyla açılıyor ve bir tıkla rozetliye geçiyor; seçtiğiniz görünüm sonraki açılışta da kalıyor. Satıra tıklayınca iş, satır nasıl görünüyorsa (düz yazı ya da rozetli) o şekilde açılıyor; Düzenle\'ye basınca düzenleme her zaman rozetli geliyor. Durum, Sorumlu, başlangıç, termin, efor ve kritiklik metnin içinde değil, işin alt satırında duruyor ve iki görünümde de rozet olarak görünüyor; yazarken "yarın" gibi bir tarih ya da kritiklik seçince rozet doğrudan alt satıra geçiyor. Düz yazıda öteki rozetler (kişi, departman, taahhüt, teklif, kategori...) kalın yazıyla görünüyor. "Kopyala" her satırda sabit düğme: işin düz metnini ve alt satırını (durum · Sorumlu · tarihler · kritiklik) panoya alıyor.',
+                        'Bir işe her türden birden fazla kayıt bağlanabiliyor: teklif, iş geliştirme, ihale, belge, talep, görüşme ve satın alma kayıtları. Kartta "+2" gibi işaret, iş okunuşunda hepsi rozet olarak görünür.',
                     ],
                 ],
             ],

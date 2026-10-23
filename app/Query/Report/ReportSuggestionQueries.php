@@ -184,7 +184,7 @@ final class ReportSuggestionQueries
             $bindings = $open;
         }
 
-        $query = WorkItem::query()
+        $query = WorkItem::query()->notArchived()
             ->select('work_items.*')
             ->selectRaw($relevance.' as report_relevance', $bindings)
             ->with(['project:'.ProjectNames::select()])

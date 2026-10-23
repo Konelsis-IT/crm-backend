@@ -46,6 +46,7 @@ use App\Models\Report\Report;
 use App\Models\WorkRequest\WorkRequest;
 use App\Support\Projects\ProjectNames;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -182,6 +183,13 @@ class Project extends Model
     public function workstreams(): HasMany
     {
         return $this->hasMany(ProjectWorkstream::class, 'project_id');
+    }
+
+    /** D-234: taahhudun Projelendirme is kolu (operasyon grubu PROJECT). */
+    public function designWorkstream(): HasOne
+    {
+        return $this->hasOne(ProjectWorkstream::class, 'project_id')
+            ->whereHas('group', fn (Builder $group): Builder => $group->where('code', OperationGroupDefinition::DESIGN_CODE));
     }
 
     public function focusHistories(): HasMany

@@ -52,7 +52,7 @@ return [
         'generated_output_source' => 'Çıktı kaynağı',
         'report_schedule_target' => 'Rapor hedefi',
         'inventory_source' => 'Stok kaynağı',
-        'project_change_source' => 'Proje değişiklik kaynağı',
+        'project_change_source' => 'Taahhüt değişiklik kaynağı',
     ],
     'classification_code' => [
         'public' => 'Kamuya açık',
@@ -98,7 +98,7 @@ return [
         'closed_at' => 'Kapanış tarihi',
         'archived_at' => 'Arşivlenme tarihi',
         'separation' => 'İşten ayrılış',
-        'project_close' => 'Proje kapanışı',
+        'project_close' => 'Taahhüt kapanışı',
         'manual' => 'Elle',
     ],
     'retention_disposition' => [
@@ -171,7 +171,7 @@ return [
     'reporting_scope_type' => [
         'all' => 'Genel',
         'org_unit' => 'Organizasyon birimi',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'functional_area' => 'Fonksiyon alanı',
     ],
     'document_discipline' => [
@@ -482,7 +482,7 @@ return [
     'business_code_kind' => [
         'potential' => 'Potansiyel iş (POTIS)',
         'offer' => 'Teklif (TKLF)',
-        'project' => 'Proje (PRJ)',
+        'project' => 'Taahhüt (PRJ)',
     ],
     'business_code_status' => [
         'active' => 'Aktif',
@@ -911,7 +911,7 @@ return [
         'failed' => 'Okunamadı',
     ],
     'purchase_need_status' => [
-        'awaiting_project' => 'Proje onayı bekliyor',
+        'awaiting_project' => 'Taahhüt onayı bekliyor',
         'open' => 'Sipariş bekliyor',
         'quoting' => 'Teklif toplanıyor',
         'recommended' => 'Teklif önerildi',
@@ -941,7 +941,7 @@ return [
     'expectation_kind' => [
         'site_address' => 'Saha adresi',
         'planned_dates' => 'Plan tarihleri',
-        'components' => 'Proje bileşenleri',
+        'components' => 'Taahhüt bileşenleri',
         'documents' => 'Dokümanlar',
         'drawings' => 'Çizim ve planlar',
         'photos' => 'Saha fotoğrafları',
@@ -1175,7 +1175,7 @@ return [
         'line_manager' => 'Doğrudan amir',
         'org_unit_manager' => 'Birim yöneticisi',
         'functional_manager' => 'Konunun birim yöneticisi',
-        'project_role' => 'Proje rolü',
+        'project_role' => 'Taahhüt rolü',
         'functional_area_role' => 'Fonksiyonel alan rolü',
         'executive' => 'Üst yönetim',
         'rbac_role' => 'Sistem rolü',
@@ -1244,7 +1244,7 @@ return [
     'delegation_scope_type' => [
         'all' => 'Tümü',
         'org_unit' => 'Birim',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'functional_area' => 'Fonksiyonel alan',
         'approval_policy' => 'Onay politikası',
     ],
@@ -1276,7 +1276,7 @@ return [
         'company' => 'Şirket',
         'functional_area' => 'Fonksiyonel alan',
         'department' => 'Departman',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'group' => 'Grup',
         'direct' => 'Birebir',
     ],
@@ -1333,7 +1333,7 @@ return [
         'daily' => 'Günlük',
         'weekly' => 'Haftalık',
         'monthly' => 'Aylık',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'product' => 'Ürün / bileşen',
         'proposal' => 'Teklif',
         'business_case' => 'Potansiyel iş',
@@ -1349,7 +1349,7 @@ return [
     'report_subject_kind' => [
         'none' => 'Yok',
         'personnel' => 'Personel',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'component' => 'Ürün / bileşen',
         'proposal' => 'Teklif',
         'business_case' => 'Potansiyel iş',
@@ -1407,6 +1407,8 @@ return [
         'work_request' => 'Talep',
         'meeting_plan' => 'Görüşme',
         'purchase_need' => 'Satın alınacak',
+        'purchase_order' => 'Sipariş',
+        'catalog_item' => 'Ürün / Hizmet',
     ],
     // D-219 (B57)
     'work_item_priority' => [

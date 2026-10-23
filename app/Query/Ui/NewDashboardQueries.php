@@ -131,7 +131,7 @@ final class NewDashboardQueries
             return collect();
         }
 
-        return WorkItem::query()
+        return WorkItem::query()->notArchived()
             ->with(['project', ...self::projectScopes(), 'personnel:id,full_name'])
             ->whereNotNull('project_id')
             ->whereIn('status', WorkItemStatus::openValues())
@@ -429,7 +429,7 @@ final class NewDashboardQueries
                 ->whereNotIn('status', [PurchaseNeedStatus::Ordered->value, PurchaseNeedStatus::Completed->value, PurchaseNeedStatus::Cancelled->value])
                 ->where(fn ($query) => $query->where('is_urgent', true)->orWhere('needed_by', '<=', $soon))
                 ->get(),
-            'work' => SchemaReadiness::hasBatch('B36') ? WorkItem::query()
+            'work' => SchemaReadiness::hasBatch('B36') ? WorkItem::query()->notArchived()
                 ->with('personnel:id,full_name')
                 ->whereNotIn('status', ['done', 'cancelled', 'blocked'])
                 ->where(fn ($query) => $query->where('is_critical', true)->orWhere('due_on', '<=', DisplayTime::today()->addDays(3)->format('Y-m-d')))

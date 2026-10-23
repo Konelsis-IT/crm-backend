@@ -41,8 +41,8 @@ return [
 
     'project' => [
         'dependency_cycle' => 'Bu bağımlılık bir döngü oluşturuyor; izin verilmiyor.',
-        'same_project_required' => 'Bağlanan kayıtlar aynı projeye ait olmalı.',
-        'project_component_duplicate' => 'Bu bileşen projede zaten tanımlı; aynı bileşen ikinci kez eklenemez.',
+        'same_project_required' => 'Bağlanan kayıtlar aynı taahhüde ait olmalı.',
+        'project_component_duplicate' => 'Bu bileşen taahhütte zaten tanımlı; aynı bileşen ikinci kez eklenemez.',
         'allocation_exceeded' => 'Dağılım yüzdelerinin toplamı 100\'ü aşamaz (şu an :total).',
         // D-175
         'coordinator_not_active' => 'Proje tipi koordinatörü olarak yalnız aktif bir personel seçilebilir.',
@@ -106,7 +106,7 @@ return [
         'cost_list_already_imported' => 'Bu maliyet listesi bu teklif sürümüne zaten aktarıldı.',
         'cost_line_not_matched' => '":line" kalemi katalogda eşleşmedi; önce benzer kalemlerden birini seçin ya da yeni kalem olarak ekleyin.',
         'purchase_need_closed' => 'Bu sipariş kalemi kapalı ya da arşivde; değiştirilemez.',
-        'project_approval_pending' => 'Bu kalem henüz proje tarafından onaylanmadı; proje onayı olmadan satın almaya düşmez.',
+        'project_approval_pending' => 'Bu kalem henüz taahhüt tarafından onaylanmadı; taahhüt onayı olmadan satın almaya düşmez.',
         'purchase_approval_required' => 'Bu sipariş onaysız tamamlanamaz. Onaylaması gereken merci: :approvers.',
         'purchase_quote_required' => 'Önce bir tedarikçi teklifini önerilen teklif olarak seçin.',
         'purchase_quote_rate_required' => 'Dövizli teklifte TL kuru girilmelidir; onay sınırı TL ile karşılaştırılır.',
@@ -115,13 +115,13 @@ return [
         'catalog_item_required' => 'Bu talep katalogda olmayan bir ürün / hizmetle açıldı; önce "Katalogla eşleştir" ile bir katalog kalemine bağlayın.',
         'purchase_request_incomplete' => 'Satın alma talebinde ürün / hizmet (katalogdan ya da adıyla) ve gerekçe zorunludur.',
         // D-230
-        'purchase_project_required' => 'Saha için açılan satın alma talebinde proje seçimi zorunludur.',
+        'purchase_project_required' => 'Saha için açılan satın alma talebinde taahhüt seçimi zorunludur.',
         'purchase_request_required' => 'Şirket içi alım bir satın alma talebine bağlı olmalıdır; önce talebi seçin.',
         // D-192 (B53)
         'purchase_quotation_locked' => 'Bu satın alma teklifi siparişe dönüştü, reddedildi ya da iptal edildi; değiştirilemez.',
         'purchase_quotation_not_selected' => 'Sipariş yalnız seçili satın alma teklifinden açılır; önce teklifi "En uygun teklif" olarak seçin.',
         'purchase_quotation_empty' => 'Teklifte fiyatı girilmiş kalem yok; önce kalem ve birim fiyat girin.',
-        'purchase_need_not_quotable' => '":title" kalemi teklife eklenemez: proje onayı bekliyor, siparişe girmiş ya da kapalı.',
+        'purchase_need_not_quotable' => '":title" kalemi teklife eklenemez: taahhüt onayı bekliyor, siparişe girmiş ya da kapalı.',
         'quotation_line_catalog_required' => '":line" kalemi Malzeme ve Hizmetler\'de eşleşmedi; önce listeden seçin ya da yeni kalem olarak ekleyin.',
         'purchase_order_closed' => 'Bu sipariş tamamlandı, iptal edildi ya da arşivde; değiştirilemez.',
         'purchase_order_exists' => 'Bu teklif zaten siparişe dönüştü.',

@@ -405,7 +405,7 @@ final class DeadlineQueries
      */
     private function workItems(CarbonImmutable $from, CarbonImmutable $until): array
     {
-        return WorkItem::query()
+        return WorkItem::query()->notArchived()
             ->with('project')
             ->whereNotIn('status', ['done', 'cancelled', 'blocked'])
             ->whereNotNull('due_on')

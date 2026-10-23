@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Workstream bağımlılığı',
-    'plural' => 'Workstream bağımlılıkları',
+    'label' => 'Departman bağımlılığı',
+    'plural' => 'Departman bağımlılıkları',
 
     'sections' => [
         'main' => 'Bağımlılık bilgileri',
@@ -14,7 +14,7 @@ return [
         'is_hard' => 'Hard bağımlılık',
         'lag_days' => 'Gecikme (gün)',
         'predecessor' => 'Öncül',
-        'predecessor_workstream' => 'Predecessor workstream',
+        'predecessor_workstream' => 'Önceki departman',
         'reason' => 'Gerekçe',
         'status' => 'Durum',
         'waiver' => 'Muaf tutan',

@@ -38,6 +38,12 @@ use ZipArchive;
  * Cikti sablonsuz, kendi icinde tam bir HTML sayfasidir (yeni Blade / JS yok);
  * butun metin kacislanir, sayfa betik calistirmaz (denetleyici CSP basligi
  * script-src vermez). Yetki karari cagiran denetleyicidedir.
+ *
+ * D-243 (23 Ekim 2026, kullanici: "Word goruntulememizde olsun ... tum belge
+ * okumalarinda word'de on izlenebilir"): Word'de gomulu gorseller (png, jpeg,
+ * gif, bmp, webp; data: adresi, gorsel basina 3 MB, toplam 12 MB), paragraf
+ * hizasi ve alti cizili yazi da gosterilir; is belgeleri de ayni onizlemeyi
+ * kullanir (WorkItemFilePreviewController).
  */
 final class OfficePreviewService
 {
@@ -58,6 +64,36 @@ final class OfficePreviewService
 
     private const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
+    private const DRAWING_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+
+    private const RELATION_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+    private const WP_NS = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+
+    private const VML_NS = 'urn:schemas-microsoft-com:vml';
+
+    /** Word gorselleri: tur, gorsel basina ve toplam sinir. */
+    private const IMAGE_TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'bmp' => 'image/bmp', 'webp' => 'image/webp'];
+
+    private const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+
+    private const MAX_IMAGES_BYTES = 12 * 1024 * 1024;
+
+    /** Onizleme sayfalarinin guvenlik basligi: betik yok; satir ici stil ve gomulu (data:) gorsel. */
+    public const CONTENT_SECURITY_POLICY = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
+
+    /** Word islenirken acik arsiv. */
+    private ?ZipArchive $zip = null;
+
+    /** @var array<string, string> Word gorsel iliskileri: kimlik => arsivdeki yol. */
+    private array $relations = [];
+
+    /** Bu belgede gomulen gorsellerin toplam boyutu. */
+    private int $imageBytes = 0;
+
+    /** Pencere icinde gosterim: ust serit yok, sekme baglantilari kipi korur. */
+    private bool $embed = false;
+
     /** Dosya adi onizlenebilen turde mi (uzantiya gore). */
     public static function supports(?string $fileName): bool
     {
@@ -69,9 +105,13 @@ final class OfficePreviewService
 
     /**
      * Onizleme sayfasinin HTML'i. $sheet: tablo dosyasinda gosterilecek sayfa (0'dan).
+     * $embed (D-243): pencere icinde gosterilir; dosya adi ve indir dugmesi pencerededir,
+     * sayfada tekrar edilmez.
      */
-    public function render(FileObject $file, int $sheet, string $downloadUrl): string
+    public function render(FileObject $file, int $sheet, string $downloadUrl, bool $embed = false): string
     {
+        $this->embed = $embed;
+
         $name = (string) $file->original_name;
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 
@@ -87,7 +127,7 @@ final class OfficePreviewService
             if ($extension === self::WORD_EXTENSION) {
                 [$html, $truncated] = $this->word($path);
 
-                return $this->page($name, $downloadUrl, [], null, $html, $truncated ? __('document.preview.paragraph_limit') : null);
+                return $this->page($name, $downloadUrl, [], null, $html, $truncated ? __('document.preview.paragraph_limit') : null, __('document.preview.note_word'));
             }
 
             $sheet = min(max($sheet, 0), self::MAX_SHEETS - 1);
@@ -317,18 +357,33 @@ final class OfficePreviewService
             throw new \RuntimeException('zip');
         }
 
+        // Gorseller paragraflar islenirken arsivden okunur; arsiv sonda kapanir.
+        $this->zip = $zip;
+        $this->imageBytes = 0;
+
         try {
-            $stat = $zip->statName('word/document.xml');
-
-            // Sikistirma bombasina karsi: acilmis XML de sinirli.
-            if ($stat === false || (int) $stat['size'] > 4 * self::MAX_BYTES) {
-                throw new \RuntimeException('size');
-            }
-
-            $xml = (string) $zip->getFromName('word/document.xml');
+            return $this->wordBody($zip);
         } finally {
             $zip->close();
+            $this->zip = null;
+            $this->relations = [];
         }
+    }
+
+    /**
+     * @return array{0: string, 1: bool}
+     */
+    private function wordBody(ZipArchive $zip): array
+    {
+        $stat = $zip->statName('word/document.xml');
+
+        // Sikistirma bombasina karsi: acilmis XML de sinirli.
+        if ($stat === false || (int) $stat['size'] > 4 * self::MAX_BYTES) {
+            throw new \RuntimeException('size');
+        }
+
+        $xml = (string) $zip->getFromName('word/document.xml');
+        $this->relations = $this->wordRelations($zip);
 
         $document = new DOMDocument;
 
@@ -339,6 +394,10 @@ final class OfficePreviewService
 
         $xpath = new DOMXPath($document);
         $xpath->registerNamespace('w', self::WORD_NS);
+        $xpath->registerNamespace('a', self::DRAWING_NS);
+        $xpath->registerNamespace('r', self::RELATION_NS);
+        $xpath->registerNamespace('wp', self::WP_NS);
+        $xpath->registerNamespace('v', self::VML_NS);
         $body = $xpath->query('/w:document/w:body')->item(0);
 
         if (! $body instanceof DOMElement) {
@@ -380,22 +439,29 @@ final class OfficePreviewService
 
         $style = (string) ($xpath->query('w:pPr/w:pStyle/@w:val', $paragraph)->item(0)?->nodeValue ?? '');
         $isList = $xpath->query('w:pPr/w:numPr', $paragraph)->length > 0;
+        // D-243: paragraf hizasi (orta, sag, iki yana).
+        $align = match ((string) ($xpath->query('w:pPr/w:jc/@w:val', $paragraph)->item(0)?->nodeValue ?? '')) {
+            'center' => ' class="c"',
+            'right', 'end' => ' class="r"',
+            'both', 'distribute' => ' class="j"',
+            default => '',
+        };
 
         if ($text === '') {
             return '<p class="empty"></p>';
         }
 
         if (preg_match('/^(?:Title|KonuBa)/i', $style) === 1) {
-            return '<h1>'.$text.'</h1>';
+            return '<h1'.$align.'>'.$text.'</h1>';
         }
 
         if (preg_match('/^(?:Heading|Balk|Baslik|Başlık)\s*([1-6])/iu', $style, $match) === 1) {
             $level = min(6, (int) $match[1] + 1);
 
-            return '<h'.$level.'>'.$text.'</h'.$level.'>';
+            return '<h'.$level.$align.'>'.$text.'</h'.$level.'>';
         }
 
-        return $isList ? '<p class="li">• '.$text.'</p>' : '<p>'.$text.'</p>';
+        return $isList ? '<p class="li">• '.$text.'</p>' : '<p'.$align.'>'.$text.'</p>';
     }
 
     private function runs(DOMXPath $xpath, DOMElement $paragraph): string
@@ -418,6 +484,7 @@ final class OfficePreviewService
                     't' => e($child->textContent),
                     'tab' => '&emsp;',
                     'br', 'cr' => '<br>',
+                    'drawing', 'pict' => $this->wordImage($xpath, $child),
                     default => '',
                 };
             }
@@ -432,6 +499,10 @@ final class OfficePreviewService
 
             if (self::flag($xpath, $run, 'i')) {
                 $text = '<em>'.$text.'</em>';
+            }
+
+            if (self::underlined($xpath, $run)) {
+                $text = '<u>'.$text.'</u>';
             }
 
             $html .= $text;
@@ -451,6 +522,92 @@ final class OfficePreviewService
         $value = strtolower($node->getAttributeNS(self::WORD_NS, 'val'));
 
         return ! in_array($value, ['0', 'false', 'off'], true);
+    }
+
+    private static function underlined(DOMXPath $xpath, DOMElement $run): bool
+    {
+        $node = $xpath->query('w:rPr/w:u', $run)->item(0);
+
+        return $node instanceof DOMElement && ! in_array(strtolower($node->getAttributeNS(self::WORD_NS, 'val')), ['', 'none', '0', 'false'], true);
+    }
+
+    /**
+     * Gorsel iliskileri (word/_rels/document.xml.rels): kimlik => arsivdeki yol.
+     *
+     * @return array<string, string>
+     */
+    private function wordRelations(ZipArchive $zip): array
+    {
+        $xml = $zip->getFromName('word/_rels/document.xml.rels');
+
+        if (! is_string($xml) || $xml === '' || strlen($xml) > self::MAX_BYTES) {
+            return [];
+        }
+
+        $document = new DOMDocument;
+
+        if (! $document->loadXML($xml, LIBXML_NONET | LIBXML_COMPACT)) {
+            return [];
+        }
+
+        $relations = [];
+
+        foreach ($document->getElementsByTagName('Relationship') as $relation) {
+            if (! $relation instanceof DOMElement || ! str_ends_with($relation->getAttribute('Type'), '/image') || $relation->getAttribute('TargetMode') === 'External') {
+                continue;
+            }
+
+            // Hedef word/ klasorune goredir ("media/image1.png"); ust klasore cikan yol alinmaz.
+            $target = ltrim(str_replace('\\', '/', $relation->getAttribute('Target')), '/');
+
+            if ($target !== '' && ! str_contains($target, '..')) {
+                $relations[$relation->getAttribute('Id')] = str_starts_with($target, 'word/') ? $target : 'word/'.$target;
+            }
+        }
+
+        return $relations;
+    }
+
+    /**
+     * Gomulu gorsel (D-243): DrawingML (a:blip r:embed) ya da eski VML
+     * (v:imagedata r:id); boyut wp:extent'ten (EMU), sayfaya sigar. Sinir asilirsa
+     * ya da tur desteklenmezse gorsel atlanir.
+     */
+    private function wordImage(DOMXPath $xpath, DOMElement $node): string
+    {
+        if ($this->zip === null) {
+            return '';
+        }
+
+        $id = (string) ($xpath->query('.//a:blip/@r:embed', $node)->item(0)?->nodeValue
+            ?? $xpath->query('.//v:imagedata/@r:id', $node)->item(0)?->nodeValue
+            ?? '');
+        $path = $this->relations[$id] ?? null;
+        $type = self::IMAGE_TYPES[strtolower(pathinfo((string) $path, PATHINFO_EXTENSION))] ?? null;
+
+        if ($path === null || $type === null) {
+            return '';
+        }
+
+        $stat = $this->zip->statName($path);
+        $size = $stat === false ? 0 : (int) $stat['size'];
+
+        if ($size <= 0 || $size > self::MAX_IMAGE_BYTES || $this->imageBytes + $size > self::MAX_IMAGES_BYTES) {
+            return '';
+        }
+
+        $bytes = $this->zip->getFromName($path);
+
+        if (! is_string($bytes) || $bytes === '') {
+            return '';
+        }
+
+        $this->imageBytes += $size;
+        $width = (int) round(((int) ($xpath->query('.//wp:extent/@cx', $node)->item(0)?->nodeValue ?? 0)) / 9525);
+        $alt = (string) ($xpath->query('.//wp:docPr/@descr', $node)->item(0)?->nodeValue ?? '');
+
+        return '<img class="img" src="data:'.$type.';base64,'.base64_encode($bytes).'" alt="'.e($alt).'"'
+            .($width > 0 ? ' style="width:'.min($width, 1600).'px"' : '').'>';
     }
 
     private function wordTable(DOMXPath $xpath, DOMElement $table): string
@@ -492,7 +649,7 @@ final class OfficePreviewService
      *
      * @param  list<string>  $sheets
      */
-    private function page(string $name, string $downloadUrl, array $sheets, ?int $active, string $content, ?string $limit = null): string
+    private function page(string $name, string $downloadUrl, array $sheets, ?int $active, string $content, ?string $limit = null, ?string $note = null): string
     {
         $tabs = '';
 
@@ -503,20 +660,20 @@ final class OfficePreviewService
                 $label = $sheet !== '' ? $sheet : (string) ($index + 1);
                 $tabs .= $index === $active
                     ? '<span class="tab on">'.e($label).'</span>'
-                    : '<a class="tab" href="?sheet='.$index.'">'.e($label).'</a>';
+                    : '<a class="tab" href="?sheet='.$index.($this->embed ? '&amp;embed=1' : '').'">'.e($label).'</a>';
             }
 
             $tabs .= '</nav>';
         }
 
-        $notes = '<p class="note">'.e(__('document.preview.note')).($limit !== null ? ' '.e($limit) : '').'</p>';
+        $notes = '<p class="note">'.e($note ?? __('document.preview.note')).($limit !== null ? ' '.e($limit) : '').'</p>';
 
         return '<!doctype html><html lang="'.e(app()->getLocale()).'"><head><meta charset="utf-8">'
             .'<meta name="viewport" content="width=device-width, initial-scale=1">'
             .'<title>'.e(__('document.preview.title', ['name' => $name])).'</title>'
             .'<style>'.self::STYLE.'</style></head><body>'
-            .'<header><span class="name" title="'.e($name).'">'.e($name).'</span>'
-            .'<a class="dl" href="'.e($downloadUrl).'">'.e(__('document.preview.download')).'</a></header>'
+            .($this->embed ? '' : '<header><span class="name" title="'.e($name).'">'.e($name).'</span>'
+                .'<a class="dl" href="'.e($downloadUrl).'">'.e(__('document.preview.download')).'</a></header>')
             .$tabs.'<main>'.$notes.$content.'</main></body></html>';
     }
 
@@ -547,5 +704,9 @@ final class OfficePreviewService
         .doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 { margin: 16px 0 8px; line-height: 1.3; }
         .doc .scroll { margin: 8px 0 12px; }
         .doc table.word td { white-space: normal; }
+        .doc .c { text-align: center; }
+        .doc .r { text-align: right; }
+        .doc .j { text-align: justify; }
+        .doc img.img { display: inline-block; max-width: 100%; height: auto; margin: 4px 0; vertical-align: middle; }
         CSS;
 }

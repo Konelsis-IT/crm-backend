@@ -312,7 +312,7 @@ final class DocumentWorkspace
         }
 
         if (! $publicLinks) {
-            $previewUrl = FileLinks::revisionPreview($revision);
+            $previewUrl = FileLinks::bestPreview($revision);
             $downloadUrl = FileLinks::revisionOriginal($revision, 'download');
         }
 

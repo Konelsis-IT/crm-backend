@@ -59,7 +59,7 @@ return [
     ],
 
     'send_form' => [
-        'description' => 'Seçilen kalemler sipariş kalemi olur ve proje onayından sonra satın almanın listesine düşer. Tutarı olmayan, katalogla eşleşmeyen ya da daha önce gönderilmiş kalem atlanır.',
+        'description' => 'Seçilen kalemler sipariş kalemi olur ve taahhüt onayından sonra satın almanın listesine düşer. Tutarı olmayan, katalogla eşleşmeyen ya da daha önce gönderilmiş kalem atlanır.',
         'needed_by' => 'Termin',
         'is_urgent' => 'Acil',
         'note' => 'Not',
@@ -68,6 +68,6 @@ return [
     'messages' => [
         'imported' => ':count kalem aktarıldı: :matched katalogda eşleşti, :new yeni, :similar benzer',
         'matched' => 'Kalem kataloğa bağlandı.',
-        'sent' => ':created kalem satın almaya gönderildi (proje onayı bekliyor); eşleşmeyen :unmatched, atlanan :skipped',
+        'sent' => ':created kalem satın almaya gönderildi (taahhüt onayı bekliyor); eşleşmeyen :unmatched, atlanan :skipped',
     ],
 ];

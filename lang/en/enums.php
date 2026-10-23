@@ -1405,6 +1405,8 @@ return [
         'work_request' => 'Request',
         'meeting_plan' => 'Meeting',
         'purchase_need' => 'Purchase need',
+        'purchase_order' => 'Order',
+        'catalog_item' => 'Product / service',
     ],
     // D-219 (B57)
     'work_item_priority' => [

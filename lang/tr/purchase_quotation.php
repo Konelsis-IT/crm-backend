@@ -47,7 +47,7 @@ return [
         'selected_by' => 'Seçen',
         'selected_at' => 'Seçilme tarihi',
         'order' => 'Sipariş',
-        'projects' => 'Proje',
+        'projects' => 'Taahhüt',
         'archived_at' => 'Arşive alındı',
         'general_discount' => 'Genel indirim',
         'subtotal' => 'Ara toplam',
@@ -72,7 +72,7 @@ return [
         'is_cancelled' => 'İptal',
         'note' => 'Not',
         'flags' => 'Durum',
-        'source' => 'İlgili talep / proje',
+        'source' => 'İlgili talep / taahhüt',
     ],
 
     'help' => [
@@ -176,7 +176,7 @@ return [
         'delivery_until' => 'Teslim dönemi bitiş',
         'expected_delivery_on' => 'Beklenen teslim',
         'payment_terms' => 'Ödeme şartları',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'note' => 'Not',
     ],
 
@@ -187,7 +187,7 @@ return [
         'day_unit' => 'gün',
         'expired' => 'Süresi geçti',
         'no_supplier' => 'Tedarikçi seçilmedi',
-        'several_projects' => ':count proje',
+        'several_projects' => ':count taahhüt',
     ],
 
     'filters' => [

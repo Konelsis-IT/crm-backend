@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Proje bileşeni',
-    'plural' => 'Proje bileşenleri',
+    'label' => 'Taahhüt bileşeni',
+    'plural' => 'Taahhüt bileşenleri',
 
     'sections' => [
         'main' => 'Bileşen bilgileri',
@@ -46,6 +46,6 @@ return [
 
     'validation' => [
         'code_taken' => 'Bu kod zaten kullanılıyor.',
-        'duplicate' => 'Bu bileşen projede zaten tanımlı; aynı bileşen ikinci kez eklenemez.',
+        'duplicate' => 'Bu bileşen taahhütte zaten tanımlı; aynı bileşen ikinci kez eklenemez.',
     ],
 ];

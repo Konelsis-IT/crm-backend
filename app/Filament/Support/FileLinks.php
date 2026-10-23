@@ -78,6 +78,17 @@ final class FileLinks
         return self::previewFor(self::originalRow($revision));
     }
 
+    /**
+     * Revizyonun en iyi onizlemesi (D-243; kullanici 23 Ekim 2026: "Word
+     * goruntulememizde olsun ... tum belge okumalarinda word'de on izlenebilir"):
+     * Excel / CSV / Word onizleme sayfasi ya da PDF / gorsel / metin satir ici;
+     * onizleme ozelligi kapaliysa eskisi gibi yalniz satir ici turler.
+     */
+    public static function bestPreview(DocumentRevision $revision): ?string
+    {
+        return self::revisionView($revision) ?? self::revisionPreview($revision);
+    }
+
     /** Gorsel revizyonlar icin kucuk gorsel; gorsel degilse null. */
     public static function revisionThumbnail(DocumentRevision $revision): ?string
     {
@@ -99,13 +110,36 @@ final class FileLinks
         ]);
     }
 
-    /** Is belgesi (D-219). */
-    public static function workItemFile(WorkItemFile $file, string $disposition = 'inline'): string
+    /** Is belgesi (D-219); $variant thumbnail: gorselin kucugu (D-243). */
+    public static function workItemFile(WorkItemFile $file, string $disposition = 'inline', string $variant = 'original'): string
     {
-        return route(self::routeName('files.work-item'), [
+        return route(self::routeName('files.work-item'), array_filter([
             'file' => $file->getKey(),
+            'variant' => $variant === 'thumbnail' ? 'thumbnail' : null,
             'disposition' => $disposition,
-        ]);
+        ]));
+    }
+
+    /**
+     * Is belgesinin indirmeden goruntuleme baglantisi (D-243): PDF / gorsel /
+     * metin satir ici, Excel / CSV / Word onizleme sayfasi (documents.office_preview);
+     * onizlenemiyorsa null.
+     */
+    public static function workItemPreview(WorkItemFile $file): ?string
+    {
+        $object = $file->fileObject;
+
+        if ($object === null) {
+            return null;
+        }
+
+        if ($object->isInlinePreviewable()) {
+            return self::workItemFile($file);
+        }
+
+        return FeatureFlags::enabled(Feature::DocumentOfficePreview) && OfficePreviewService::supports($object->original_name)
+            ? route(self::routeName('files.work-item-preview'), ['file' => $file->getKey()])
+            : null;
     }
 
     private static function originalRow(DocumentRevision $revision): ?DocumentRevisionFile

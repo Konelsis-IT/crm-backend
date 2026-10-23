@@ -223,8 +223,8 @@ class DocumentsRelationManager extends RelationManager
                 Action::make('preview')
                     ->label(__('document_revision.actions.preview'))
                     ->icon(Heroicon::OutlinedEye)
-                    ->visible(fn (Document $record): bool => $record->currentRevision !== null && FileLinks::revisionPreview($record->currentRevision) !== null)
-                    ->url(fn (Document $record): ?string => $record->currentRevision === null ? null : FileLinks::revisionPreview($record->currentRevision))
+                    ->visible(fn (Document $record): bool => $record->currentRevision !== null && FileLinks::bestPreview($record->currentRevision) !== null)
+                    ->url(fn (Document $record): ?string => $record->currentRevision === null ? null : FileLinks::bestPreview($record->currentRevision))
                     ->openUrlInNewTab(),
                 Action::make('download')
                     ->label(__('document_revision.actions.download'))

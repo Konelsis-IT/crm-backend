@@ -11,12 +11,12 @@ return [
     'fields' => [
         'accepted_at' => 'Kabul tarihi',
         'created_at' => 'Oluşturulma',
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'reason' => 'Gerekçe',
         'sla_due_at' => 'SLA termini',
-        'source_workstream' => 'Kaynak workstream',
+        'source_workstream' => 'Kaynak departman',
         'status' => 'Durum',
-        'target_workstream' => 'Hedef workstream',
+        'target_workstream' => 'Hedef departman',
         'trigger_stage_instance' => 'Tetikleyen onay kapısı',
     ],
 

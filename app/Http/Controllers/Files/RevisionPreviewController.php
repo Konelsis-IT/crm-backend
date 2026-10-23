@@ -41,8 +41,8 @@ final class RevisionPreviewController extends Controller
             'Content-Type' => 'text/html; charset=UTF-8',
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, max-age=0, no-cache',
-            // Onizleme sayfasi betik calistirmaz; yalniz satir ici stil.
-            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+            // Onizleme sayfasi betik calistirmaz; yalniz satir ici stil ve (Word) gomulu gorseller.
+            'Content-Security-Policy' => OfficePreviewService::CONTENT_SECURITY_POLICY,
             'Referrer-Policy' => 'same-origin',
         ]);
     }

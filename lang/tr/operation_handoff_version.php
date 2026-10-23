@@ -19,7 +19,7 @@ return [
         'planned_finish_on' => 'Planlanan bitiş',
         'planned_start_on' => 'Planlanan başlangıç',
         'project_manager' => 'Proje müdürü',
-        'project_name' => 'Proje adı',
+        'project_name' => 'Taahhüt adı',
         'proposal_version' => 'Teklif sürümü',
         'reason' => 'Gerekçe',
         'site_location' => 'Saha konumu',

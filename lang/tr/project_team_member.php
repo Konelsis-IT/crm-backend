@@ -2,14 +2,14 @@
 
 return [
     'label' => 'Ekip üyesi',
-    'plural' => 'Proje ekibi',
+    'plural' => 'Taahhüt ekibi',
 
     'sections' => [
         'main' => 'Görevlendirme',
     ],
 
     'fields' => [
-        'project' => 'Proje',
+        'project' => 'Taahhüt',
         'personnel' => 'Personel',
         'workstream' => 'Adım (departman)',
         'team_role' => 'Görev',
@@ -24,11 +24,11 @@ return [
     ],
 
     'help' => [
-        'allocation_pct' => 'Personelin bu projeye ayırdığı zaman payı.',
+        'allocation_pct' => 'Personelin bu taahhüde ayırdığı zaman payı.',
     ],
 
     'relation' => [
-        'title' => 'Proje ekibi',
+        'title' => 'Taahhüt ekibi',
         'empty' => 'Henüz ekip üyesi eklenmemiş.',
     ],
 
